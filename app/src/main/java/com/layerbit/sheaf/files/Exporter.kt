@@ -30,10 +30,10 @@ class Exporter(private val context: Context) {
      * to [writeTo]. The two halves are separate because the picker is an async round trip
      * through another process and the write should not be tangled up in that.
      */
-    fun createDocumentIntent(suggestedName: String): Intent =
+    fun createDocumentIntent(suggestedName: String, mimeType: String = PDF_MIME): Intent =
         Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = PDF_MIME
+            type = mimeType
             putExtra(Intent.EXTRA_TITLE, suggestedName)
         }
 
@@ -64,8 +64,35 @@ class Exporter(private val context: Context) {
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", source.file)
         return Intent.createChooser(
             Intent(Intent.ACTION_SEND).apply {
-                type = PDF_MIME
+                type = source.mimeType
                 putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            },
+            null
+        )
+    }
+
+    /**
+     * Share several results at once.
+     *
+     * PDF to images produces one file per page, and saving forty pages through forty separate
+     * system pickers is not something anyone would do twice. ACTION_SEND_MULTIPLE hands the
+     * whole set to one app in one gesture.
+     */
+    fun shareIntent(sources: List<SheafFile>): Intent {
+        if (sources.size == 1) return shareIntent(sources.first())
+
+        val uris = ArrayList(
+            sources.map { FileProvider.getUriForFile(context, "${context.packageName}.files", it.file) }
+        )
+        // A mixed set has no single type; the generic one still reaches every app that can
+        // take a stream, which is what matters.
+        val type = sources.map { it.mimeType }.distinct().singleOrNull() ?: "*/*"
+
+        return Intent.createChooser(
+            Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                this.type = type
+                putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             },
             null

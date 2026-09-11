@@ -25,10 +25,11 @@ class Workspace(private val context: Context) {
      * @param baseName the human name the result should carry, without extension.
      * @param step short tag for what produced it, e.g. "merged", "pages-3-9". It ends up in
      *   the filename so a half-finished chain is readable in a file listing while debugging.
+     * @param extension without the dot. Not every result is a PDF.
      */
-    fun newOutput(baseName: String, step: String): File {
+    fun newOutput(baseName: String, step: String, extension: String = "pdf"): File {
         val safe = baseName.sanitisedForFilesystem().let { it.substringBeforeLast('.', it) }
-        return File(root, "${System.nanoTime()}-$step-$safe.pdf")
+        return File(root, "${System.nanoTime()}-$step-$safe.$extension")
     }
 
     /** Total bytes currently held in scratch. Shown in Settings, and drives [trimTo]. */

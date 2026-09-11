@@ -114,18 +114,22 @@ dependencies {
     // the only thing on Android that reliably does.
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
+    // Apache-2.0. Everything structural - merge, split, page tree, encryption, content
+    // streams - goes through this, behind PdfSurgeon. The platform renderer stays the
+    // viewer's engine because it is faster and allocates less; this is the write side.
+    //
+    // Needs PDFBoxResourceLoader.init(context) before first use, which SheafApplication does.
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
 }
 
 // DEPENDENCIES DELIBERATELY NOT HERE YET
 //
-// P0 runs entirely on android.graphics.pdf, which ships with the platform. That is the point:
-// it proves the PdfEngine seam with zero third-party surface, so the first real library lands
-// behind an interface that already has a working implementation to be checked against.
+// The viewer still runs entirely on android.graphics.pdf, which ships with the platform and
+// allocates less than PDFBox does per page. PDFBox is the write side only, behind PdfSurgeon.
 //
-// Arriving in P1, behind that same seam:
-//   com.tom-roush:pdfbox-android   Apache-2.0  merge/split/encrypt/forms/content streams
 // Arriving in P2:
 //   com.google.mlkit:text-recognition (BUNDLED)  OCR - never the -unbundled build, which
 //                                                downloads its model and would need network

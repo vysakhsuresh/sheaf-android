@@ -3,6 +3,7 @@ package com.layerbit.sheaf.ops
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.files.Workspace
 import com.layerbit.sheaf.pdf.PdfEngine
+import com.layerbit.sheaf.pdf.PdfSurgeon
 
 /**
  * Every tool in Sheaf, expressed as one shape.
@@ -22,10 +23,14 @@ import com.layerbit.sheaf.pdf.PdfEngine
  */
 interface Op {
 
-    /** Stable identity, used in saved presets and in job records. Never change a published one. */
-    val id: String
+    /**
+     * Which tool this is. Configuration lives in the instance - a compress at Strong and a
+     * compress at Light are two instances of the same [tool], which is what a saved preset
+     * will serialise once presets arrive.
+     */
+    val tool: ToolId
 
-    /** What this operation is called in the UI. */
+    /** What this run is called, including its settings: "Compress (Balanced)". */
     val title: String
 
     /** How many inputs this makes sense for. Checked before a run is offered. */
@@ -65,7 +70,10 @@ interface Op {
 /** What an operation is given to work with. Assembled once per job. */
 class OpContext(
     val workspace: Workspace,
+    /** Reading and rasterising. */
     val engine: PdfEngine,
+    /** Restructuring and writing. */
+    val surgeon: PdfSurgeon,
     /**
      * Passwords the user supplied for encrypted inputs, keyed by input file path.
      *

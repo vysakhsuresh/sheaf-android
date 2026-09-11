@@ -80,6 +80,23 @@ than new machinery.
 The competition sells "process twenty files at once" as the paid tier. Here it falls out of
 the signature. Resist any pull towards a convenient `fun run(input: SheafFile): SheafFile`.
 
+## What it does
+
+| Tool | What it does |
+|---|---|
+| Merge | Join several PDFs, reorderable |
+| Split | Every N pages, single pages, or by ranges |
+| Extract pages | Keep only the pages you name |
+| Organise pages | Thumbnail grid: reorder, rotate, delete |
+| Images to PDF | A4, Letter or fit-to-image, with margins |
+| PDF to images | PNG or JPEG at 96, 200 or 300 DPI |
+| Compress | Three levels, and it tells you when there was nothing to gain |
+| Add a password | AES-256 |
+| Remove a password | For a document whose password you know |
+
+Every one of them runs as background work behind a foreground service, so a long job survives
+the user switching apps.
+
 ## Project layout
 
 One module, like Deja and Abhyas. LayerLink split out `:core` because two apps shared a
@@ -109,9 +126,11 @@ restructure anything but is slow and memory-hungry to render with; the libraries
 well are AGPL and therefore unusable in a closed Play app. So the app owns the interface and
 the libraries are implementation details behind it.
 
-P0 ships exactly one implementation, on `android.graphics.pdf`. That is deliberate: it proves
-the seam with zero third-party surface, and gives every later engine a working reference to be
-checked against.
+The split is along the same line: `PdfEngine` reads and rasterises, `PdfSurgeon` restructures
+and writes. The viewer runs on the platform renderer because it is fast and allocates little;
+every operation runs on PDFBox. A third implementation, `PdfBoxEngine`, exists for the one
+thing the platform renderer cannot do at all — open an encrypted document given its password —
+and the viewer picks it up through the same interface without knowing anything changed.
 
 **Nothing outside the `pdf` package may import a PDF library type.** If a caller needs
 something the interface cannot express, widen the interface — never reach around it.
@@ -120,8 +139,8 @@ something the interface cannot express, widen the interface — never reach arou
 
 | Library | Licence | Role |
 |---|---|---|
-| `android.graphics.pdf` | AOSP | Rendering and measurement — the P0 engine |
-| `com.tom-roush:pdfbox-android` | Apache-2.0 | Structure: merge, split, encrypt, forms (P1) |
+| `android.graphics.pdf` | AOSP | The viewer's renderer — fastest, allocates least |
+| `com.tom-roush:pdfbox-android` | Apache-2.0 | Everything structural, behind `PdfSurgeon` |
 | `com.google.mlkit:text-recognition` | Proprietary, bundled model | OCR (P2) |
 
 **Never add iText, MuPDF or Ghostscript.** All three are AGPL. Ghostscript is the obvious
@@ -131,14 +150,15 @@ answer for compression and is the one most likely to be reached for by accident.
 
 | Phase | Ships as | What it is |
 |---|---|---|
-| **P0** | — | Foundation. Engine seam, file layer, job runner, viewer. |
-| **P1** | 0.1.0 | The core eight: merge, split, organise, images↔PDF, compress, password. |
+| **P0** | — | ✅ Foundation. Engine seam, file layer, job runner, viewer. |
+| **P1** | 0.1.0 | ✅ The nine tools above. |
 | **P2** | 0.2.0 | Scanner, OCR, in-document search, bookmarks. |
 | **P3** | 0.3.0 | Annotate, fill and sign, watermark, page numbers, redact. |
 | **P4** | 0.4.0+ | Pipelines and presets, N-up, compare, split by size. |
 
-Each phase has an exit gate. P0's is: open a 500-page document, scroll it end to end at 60 fps,
-close it, and return to a flat heap.
+Each phase has an exit gate. P0's was: open a 500-page document, scroll it end to end at 60 fps,
+close it, and return to a flat heap. P1's is: every tool produces a file that opens correctly in
+another reader, and a batch with one unreadable file still finishes the rest.
 
 ## Requirements
 

@@ -1,6 +1,7 @@
 package com.layerbit.sheaf.jobs
 
 import com.layerbit.sheaf.ops.OpOutcome
+import com.layerbit.sheaf.ops.ToolId
 
 /**
  * What the UI knows about a running or finished operation.
@@ -14,7 +15,7 @@ sealed interface JobState {
     data object Idle : JobState
 
     data class Running(
-        val opId: String,
+        val tool: ToolId,
         val opTitle: String,
         val unitsDone: Int,
         val unitsTotal: Int,
@@ -29,7 +30,7 @@ sealed interface JobState {
      * because a batch that half worked is the normal case and the user needs to see which half.
      */
     data class Finished(
-        val opId: String,
+        val tool: ToolId,
         val opTitle: String,
         val outcomes: List<OpOutcome>
     ) : JobState {
@@ -39,11 +40,11 @@ sealed interface JobState {
         val allSucceeded get() = failed.isEmpty() && skipped.isEmpty()
     }
 
-    data class Cancelled(val opId: String) : JobState
+    data class Cancelled(val tool: ToolId) : JobState
 
     /**
      * The job itself could not run - as opposed to individual files failing, which is
      * [Finished] with failures in it. Reaching here means something was wrong with the setup.
      */
-    data class Crashed(val opId: String, val reason: String) : JobState
+    data class Crashed(val tool: ToolId, val reason: String) : JobState
 }

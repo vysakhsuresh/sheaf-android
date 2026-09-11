@@ -15,7 +15,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.ui.about.AboutScreen
+import com.layerbit.sheaf.ui.tools.ToolRoute
 import com.layerbit.sheaf.ui.home.HomeScreen
 import com.layerbit.sheaf.ui.theme.SheafColors
 import com.layerbit.sheaf.ui.viewer.ViewerScreen
@@ -25,6 +29,10 @@ object Routes {
     const val HOME = "home"
     const val VIEWER = "viewer"
     const val ABOUT = "about"
+
+    /** The tool's enum name is the argument, so a route survives a reordering of ToolId. */
+    const val TOOL = "tool/{tool}"
+    fun tool(tool: ToolId) = "tool/${tool.name}"
 }
 
 /**
@@ -53,8 +61,15 @@ fun SheafApp(
     val recents by recentsFlow.collectAsState(initial = emptyList())
     val viewerState by viewerViewModel.state.collectAsState()
 
+    // The ONLY place the viewer is navigated to. Opening a recent used to navigate here and
+    // from its own callback as well, which pushed the viewer onto the back stack twice - the
+    // first back press popped one copy and appeared to do nothing. launchSingleTop keeps that
+    // from coming back if another caller ever navigates here too, and makes a document opened
+    // while the viewer is already showing replace it rather than stack on it.
     LaunchedEffect(openTicket) {
-        if (openTicket > 0) navController.navigate(Routes.VIEWER)
+        if (openTicket > 0) {
+            navController.navigate(Routes.VIEWER) { launchSingleTop = true }
+        }
     }
 
     Box(
@@ -68,11 +83,9 @@ fun SheafApp(
                 HomeScreen(
                     recents = recents,
                     onOpenDocument = onPickDocument,
-                    onOpenRecent = { recent ->
-                        onOpenRecentUri(recent.uri)
-                        navController.navigate(Routes.VIEWER)
-                    },
+                    onOpenRecent = { recent -> onOpenRecentUri(recent.uri) },
                     onForgetRecent = { onForgetRecent(it.uri) },
+                    onTool = { tool -> navController.navigate(Routes.tool(tool)) },
                     onAbout = { navController.navigate(Routes.ABOUT) }
                 )
             }
@@ -82,6 +95,20 @@ fun SheafApp(
                     state = viewerState,
                     renderPage = { index, width -> viewerViewModel.page(index, width) }
                 )
+            }
+
+            composable(
+                route = Routes.TOOL,
+                arguments = listOf(navArgument("tool") { type = NavType.StringType })
+            ) { entry ->
+                val name = entry.arguments?.getString("tool")
+                val tool = ToolId.entries.firstOrNull { it.name == name }
+                if (tool != null) {
+                    ToolRoute(tool = tool)
+                } else {
+                    // Only reachable from a stale deep link. Going back beats an error screen.
+                    LaunchedEffect(Unit) { navController.popBackStack() }
+                }
             }
 
             composable(Routes.ABOUT) {

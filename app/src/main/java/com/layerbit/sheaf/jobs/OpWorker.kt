@@ -6,7 +6,6 @@ import androidx.work.WorkerParameters
 import com.layerbit.sheaf.SheafApplication
 import com.layerbit.sheaf.ops.OpCancelled
 import com.layerbit.sheaf.ops.OpContext
-import com.layerbit.sheaf.ops.OpRegistry
 import com.layerbit.sheaf.ops.Progress
 
 /**
@@ -32,17 +31,15 @@ class OpWorker(
         val runner = app.jobRunner
 
         val request = runner.take(jobId) ?: return Result.failure()
-        val op = OpRegistry.byId(request.opId) ?: run {
-            runner.publish(JobState.Crashed(request.opId, "That tool is no longer available."))
-            return Result.failure()
-        }
+        val op = request.op
 
         setForeground(JobNotifications.foregroundInfo(applicationContext, op.title, 0, 0))
-        runner.publish(JobState.Running(op.id, op.title, 0, 0, ""))
+        runner.publish(JobState.Running(op.tool, op.title, 0, 0, ""))
 
         val opContext = OpContext(
             workspace = app.workspace,
             engine = app.pdfEngine,
+            surgeon = app.surgeon,
             passwords = request.passwords,
             cancelled = { isStopped }
         )
@@ -50,19 +47,19 @@ class OpWorker(
         return try {
             val outcomes = op.run(request.inputs, opContext) { progress: Progress ->
                 runner.publish(
-                    JobState.Running(op.id, op.title, progress.unitsDone, progress.unitsTotal, progress.label)
+                    JobState.Running(op.tool, op.title, progress.unitsDone, progress.unitsTotal, progress.label)
                 )
             }
-            runner.publish(JobState.Finished(op.id, op.title, outcomes))
+            runner.publish(JobState.Finished(op.tool, op.title, outcomes))
             Result.success()
         } catch (e: OpCancelled) {
-            runner.publish(JobState.Cancelled(op.id))
+            runner.publish(JobState.Cancelled(op.tool))
             Result.success()
         } catch (e: Exception) {
             // An operation is expected to report per-file problems as OpOutcome.Failed, so
             // reaching here means something broader went wrong. The message is shown to the
             // user, which is why Op throws types with sentences in them.
-            runner.publish(JobState.Crashed(op.id, e.message ?: "The operation stopped unexpectedly."))
+            runner.publish(JobState.Crashed(op.tool, e.message ?: "The operation stopped unexpectedly."))
             Result.failure()
         }
     }

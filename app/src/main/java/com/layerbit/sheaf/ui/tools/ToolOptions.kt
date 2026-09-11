@@ -1,0 +1,295 @@
+package com.layerbit.sheaf.ui.tools
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import com.layerbit.sheaf.ops.ToolId
+import com.layerbit.sheaf.pdf.CompressionLevel
+import com.layerbit.sheaf.pdf.ImageFormat
+import com.layerbit.sheaf.pdf.PageSpec
+import com.layerbit.sheaf.ui.components.SectionHeading
+import com.layerbit.sheaf.ui.theme.SheafColors
+
+/**
+ * The settings each tool takes.
+ *
+ * One composable per tool, all of them writing into the same [ToolConfig]. That is a little
+ * loose - a config field only one tool reads is still on the type - but it keeps the whole
+ * options layer in one file, and the alternative is nine parallel state classes for what is
+ * nine text fields and four choosers.
+ */
+@Composable
+fun ToolOptions(
+    tool: ToolId,
+    config: ToolConfig,
+    pageCount: Int?,
+    onChange: ((ToolConfig) -> ToolConfig) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        when (tool) {
+            ToolId.EXTRACT -> PageSpecField(
+                value = config.pageSpec,
+                pageCount = pageCount,
+                label = "Pages to keep",
+                onChange = { spec -> onChange { it.copy(pageSpec = spec) } }
+            )
+
+            ToolId.SPLIT -> {
+                SectionHeading("How to split")
+                ChoiceRow(
+                    options = listOf(
+                        ToolConfig.SplitMode.EVERY_N to "Every N pages",
+                        ToolConfig.SplitMode.EACH_PAGE to "Single pages",
+                        ToolConfig.SplitMode.RANGES to "By ranges"
+                    ),
+                    selected = config.splitMode,
+                    onSelect = { mode -> onChange { it.copy(splitMode = mode) } }
+                )
+                when (config.splitMode) {
+                    ToolConfig.SplitMode.EVERY_N -> NumberField(
+                        value = config.splitSize,
+                        label = "Pages per file",
+                        min = 1,
+                        max = pageCount ?: 9999,
+                        onChange = { size -> onChange { it.copy(splitSize = size) } }
+                    )
+                    ToolConfig.SplitMode.RANGES -> PageSpecField(
+                        value = config.pageSpec,
+                        pageCount = pageCount,
+                        label = "One file per range",
+                        hint = "Separate the files with commas: 1-3, 4-8, 9-",
+                        onChange = { spec -> onChange { it.copy(pageSpec = spec) } }
+                    )
+                    ToolConfig.SplitMode.EACH_PAGE -> Unit
+                }
+            }
+
+            ToolId.PDF_TO_IMAGES -> {
+                SectionHeading("Format")
+                ChoiceRow(
+                    options = listOf(
+                        ImageFormat.PNG to "PNG",
+                        ImageFormat.JPEG to "JPEG"
+                    ),
+                    selected = config.imageFormat,
+                    onSelect = { format -> onChange { it.copy(imageFormat = format) } }
+                )
+                SectionHeading("Resolution")
+                ChoiceRow(
+                    options = listOf(
+                        96 to "96 · screen",
+                        200 to "200 · good",
+                        300 to "300 · print"
+                    ),
+                    selected = config.dpi,
+                    onSelect = { dpi -> onChange { it.copy(dpi = dpi) } }
+                )
+                PageSpecField(
+                    value = config.pageSpec,
+                    pageCount = pageCount,
+                    label = "Pages",
+                    hint = "Leave empty for every page",
+                    onChange = { spec -> onChange { it.copy(pageSpec = spec) } }
+                )
+            }
+
+            ToolId.IMAGES_TO_PDF -> {
+                SectionHeading("Page size")
+                ChoiceRow(
+                    options = listOf(
+                        PageSpec.Size.A4 to "A4",
+                        PageSpec.Size.LETTER to "Letter",
+                        PageSpec.Size.FIT_IMAGE to "Fit the image"
+                    ),
+                    selected = config.pageSize,
+                    onSelect = { size -> onChange { it.copy(pageSize = size) } }
+                )
+                if (config.pageSize != PageSpec.Size.FIT_IMAGE) {
+                    SectionHeading("Margin")
+                    ChoiceRow(
+                        options = listOf(
+                            0f to "None",
+                            18f to "Narrow",
+                            36f to "Normal",
+                            72f to "Wide"
+                        ),
+                        selected = config.marginPoints,
+                        onSelect = { margin -> onChange { it.copy(marginPoints = margin) } }
+                    )
+                }
+            }
+
+            ToolId.COMPRESS -> {
+                SectionHeading("How hard to squeeze")
+                ChoiceRow(
+                    options = CompressionLevel.entries.map { it to it.label },
+                    selected = config.compression,
+                    onSelect = { level -> onChange { it.copy(compression = level) } }
+                )
+                Hint(
+                    "Sheaf shrinks the images inside a document and leaves text untouched, so " +
+                        "text stays sharp and selectable. A document with no scanned pages will " +
+                        "barely change."
+                )
+            }
+
+            ToolId.SET_PASSWORD -> {
+                PasswordField(
+                    value = config.newPassword,
+                    label = "Password",
+                    onChange = { value -> onChange { it.copy(newPassword = value) } }
+                )
+                PasswordField(
+                    value = config.confirmPassword,
+                    label = "Type it again",
+                    onChange = { value -> onChange { it.copy(confirmPassword = value) } }
+                )
+                Hint(
+                    "Sheaf encrypts with AES-256 and does not keep the password anywhere. If you " +
+                        "forget it, the document cannot be opened again - not by us either."
+                )
+            }
+
+            ToolId.MERGE -> Hint("Files are joined top to bottom. Use the arrows to reorder them.")
+
+            ToolId.REMOVE_PASSWORD -> Hint(
+                "You need the document's password. Sheaf opens it the way any reader would and " +
+                    "saves an unlocked copy - it cannot recover a password you do not have."
+            )
+
+            ToolId.ORGANISE -> Unit
+        }
+    }
+}
+
+@Composable
+private fun PageSpecField(
+    value: String,
+    pageCount: Int?,
+    label: String,
+    hint: String = "Type page numbers like 1-3, 7, 12-",
+    onChange: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Field(
+            value = value,
+            label = label,
+            keyboardType = KeyboardType.Text,
+            onChange = onChange
+        )
+        Hint(if (pageCount != null) "$hint. This document has $pageCount pages." else hint)
+    }
+}
+
+@Composable
+private fun NumberField(value: Int, label: String, min: Int, max: Int, onChange: (Int) -> Unit) {
+    Field(
+        value = value.toString(),
+        label = label,
+        keyboardType = KeyboardType.Number,
+        onChange = { text ->
+            // An empty field while typing must not snap back to a number, so blank maps to the
+            // minimum rather than being rejected outright.
+            val parsed = text.filter { it.isDigit() }.toIntOrNull() ?: min
+            onChange(parsed.coerceIn(min, maxOf(min, max)))
+        }
+    )
+}
+
+/** Also used by the per-document unlock prompt on the tool screen. */
+@Composable
+fun PasswordField(value: String, label: String = "Password", onChange: (String) -> Unit) {
+    Field(
+        value = value,
+        label = label,
+        keyboardType = KeyboardType.Password,
+        password = true,
+        onChange = onChange
+    )
+}
+
+@Composable
+private fun Field(
+    value: String,
+    label: String,
+    keyboardType: KeyboardType,
+    password: Boolean = false,
+    onChange: (String) -> Unit
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text(label, style = MaterialTheme.typography.bodySmall) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        visualTransformation = if (password) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
+        textStyle = MaterialTheme.typography.bodyLarge,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = SheafColors.Band,
+            unfocusedBorderColor = SheafColors.Border,
+            focusedTextColor = SheafColors.Text,
+            unfocusedTextColor = SheafColors.Text,
+            cursorColor = SheafColors.Band,
+            focusedLabelColor = SheafColors.Band,
+            unfocusedLabelColor = SheafColors.Dim
+        ),
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+/** A row of mutually exclusive choices. Wraps rather than scrolling, so nothing hides offscreen. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun <T> ChoiceRow(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        options.forEach { (value, label) ->
+            val active = value == selected
+            val shape = RoundedCornerShape(999.dp)
+            Row(
+                modifier = Modifier
+                    .background(if (active) SheafColors.BandDim else SheafColors.SurfaceDim, shape)
+                    .border(1.dp, if (active) SheafColors.Band else SheafColors.Border, shape)
+                    .clickable { onSelect(value) }
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (active) SheafColors.BandBright else SheafColors.Muted
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun Hint(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = SheafColors.Dim
+    )
+}

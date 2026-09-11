@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -20,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.data.db.RecentEntity
+import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.ui.components.Panel
 import com.layerbit.sheaf.ui.components.RowBetween
 import com.layerbit.sheaf.ui.components.SectionHeading
@@ -28,11 +31,12 @@ import com.layerbit.sheaf.ui.components.formatPageCount
 import com.layerbit.sheaf.ui.theme.SheafColors
 
 /**
- * The home screen.
+ * The home screen: open something to read, or pick a tool.
  *
- * P0's version is deliberately thin: open a document, see what you opened recently. The tool
- * grid belongs here and arrives in P1 with the eight operations that fill it - a grid of
- * buttons that do nothing yet would be worse than no grid.
+ * Reading comes first because it is what people do most often and because a viewer that works
+ * is what earns the trust to try the tools. The tools sit below it as one flat grid rather
+ * than behind categories - there are nine, and a person looking for "compress" should see the
+ * word without navigating first.
  */
 @Composable
 fun HomeScreen(
@@ -40,6 +44,7 @@ fun HomeScreen(
     onOpenDocument: () -> Unit,
     onOpenRecent: (RecentEntity) -> Unit,
     onForgetRecent: (RecentEntity) -> Unit,
+    onTool: (ToolId) -> Unit,
     onAbout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -74,6 +79,13 @@ fun HomeScreen(
             }
         }
 
+        item {
+            Spacer(Modifier.height(10.dp))
+            SectionHeading("Tools")
+            Spacer(Modifier.height(8.dp))
+            ToolGrid(onTool)
+        }
+
         if (recents.isNotEmpty()) {
             item {
                 Spacer(Modifier.height(8.dp))
@@ -92,6 +104,36 @@ fun HomeScreen(
             Spacer(Modifier.height(20.dp))
             TextButton(onClick = onAbout) {
                 Text("About Sheaf", color = SheafColors.Muted)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ToolGrid(onTool: (ToolId) -> Unit) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxWidth(),
+        maxItemsInEachRow = 2
+    ) {
+        ToolId.entries.forEach { tool ->
+            Panel(
+                modifier = Modifier.weight(1f),
+                onClick = { onTool(tool) }
+            ) {
+                Text(
+                    text = tool.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = SheafColors.Text
+                )
+                Text(
+                    text = tool.summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SheafColors.Dim,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
             }
         }
     }

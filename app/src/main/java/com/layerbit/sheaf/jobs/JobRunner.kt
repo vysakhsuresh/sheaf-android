@@ -7,6 +7,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.layerbit.sheaf.files.SheafFile
+import com.layerbit.sheaf.ops.Op
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap
 class JobRunner(private val context: Context) {
 
     data class Request(
-        val opId: String,
+        val op: Op,
         val inputs: List<SheafFile>,
         val passwords: Map<String, String>
     )
@@ -40,9 +41,9 @@ class JobRunner(private val context: Context) {
     val state: StateFlow<JobState> = _state.asStateFlow()
 
     /** Queues an operation. Returns the job id, which is also the WorkManager unique name. */
-    fun submit(opId: String, inputs: List<SheafFile>, passwords: Map<String, String> = emptyMap()): String {
+    fun submit(op: Op, inputs: List<SheafFile>, passwords: Map<String, String> = emptyMap()): String {
         val jobId = UUID.randomUUID().toString()
-        pending[jobId] = Request(opId, inputs, passwords)
+        pending[jobId] = Request(op, inputs, passwords)
 
         val request = OneTimeWorkRequestBuilder<OpWorker>()
             .setInputData(workDataOf(OpWorker.KEY_JOB_ID to jobId))
