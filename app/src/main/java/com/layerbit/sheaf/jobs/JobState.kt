@@ -6,7 +6,7 @@ import com.layerbit.sheaf.ops.ToolId
 /**
  * What the UI knows about a running or finished operation.
  *
- * A job outlives the screen that started it - that is the whole reason it is a Worker - so
+ * A job outlives the screen that started it, which is the whole reason it is a Worker. So
  * this state lives in [JobRunner] and is observed, rather than being held in a ViewModel that
  * dies with its screen.
  */

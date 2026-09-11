@@ -62,9 +62,9 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * Bitmaps for pages near the viewport.
      *
-     * Sized in kilobytes rather than in entries, because page bitmaps differ by an order of
-     * magnitude between a text page and a full-bleed scan and a count-based cache would either
-     * waste memory or thrash depending on which document was open.
+     * Sized in kilobytes rather than in entries. Page bitmaps differ by an order of magnitude
+     * between a text page and a full-bleed scan, so a count-based cache would either waste
+     * memory or thrash, depending on which document was open.
      *
      * KEYED BY PAGE INDEX, WHICH IS ONLY SAFE BECAUSE [closeCurrent] EMPTIES IT BEFORE ANY NEW
      * DOCUMENT IS OPENED. Without that, page 0 of the document being opened is served the
@@ -107,8 +107,8 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
 
                 sheaf.recents.record(uri, imported.displayName, opened.pageCount, imported.sizeBytes)
 
-                // The outline is small and reading it is quick, so it is fetched with the
-                // document rather than when the sheet opens - which would leave the reader
+                // The outline is small and quick to read, so it is fetched with the document
+                // rather than when the sheet opens. Doing it later would leave the reader
                 // looking at a spinner in a panel that is usually empty anyway.
                 val outline = withContext(Dispatchers.IO) {
                     runCatching { sheaf.surgeon.readOutline(PdfInput(imported.file)) }
@@ -156,11 +156,12 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * Finds [query] across the document.
      *
-     * Page-level rather than word-level: PDFBox can say which pages contain the words and give
-     * a snippet around the first match, which is enough to navigate. Highlighting the exact
-     * rectangle needs per-glyph positions and is a bigger piece of work than it looks - it is
-     * honest to ship "jump to the page" now rather than a highlight that lands in the wrong
-     * place on justified text.
+     * Page-level rather than word-level. PDFBox can say which pages contain the words and give
+     * a snippet around the first match, which is enough to navigate.
+     *
+     * Highlighting the exact rectangle needs per-glyph positions and is a bigger piece of work
+     * than it looks. Shipping "jump to the page" now is more honest than a highlight that
+     * lands in the wrong place on justified text.
      */
     fun search(query: String) {
         searchJob?.cancel()

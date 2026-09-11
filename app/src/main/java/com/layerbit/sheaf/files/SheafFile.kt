@@ -7,8 +7,8 @@ import java.io.File
  * A document Sheaf is allowed to read, and where it came from.
  *
  * The two states are kept apart on purpose, because the difference is the app's central
- * safety rule: an [Imported] file lives in Sheaf's own cache and may be read freely, while
- * the [Uri] it came from is never opened for writing. See [DocumentStore].
+ * safety rule. An [Imported] file lives in Sheaf's own cache and may be read freely; the
+ * [Uri] it came from is never opened for writing. See [DocumentStore].
  */
 data class SheafFile(
     /** Sheaf's own copy. Safe to read, safe to delete, never the user's original. */

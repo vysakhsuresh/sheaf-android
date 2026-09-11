@@ -93,8 +93,8 @@ interface PdfSurgeon {
     /**
      * Writes a copy with an invisible text layer laid over the existing pages.
      *
-     * This is what "make searchable" means: the scan still looks exactly as it did, and a
-     * reader can now select, copy and find the words, because there is real text sitting at
+     * This is what "make searchable" means. The scan still looks exactly as it did, and a
+     * reader can now select, copy and find the words - because there is real text sitting at
      * zero opacity in the same places as the ink.
      *
      * The text itself comes from an [OcrEngine], run by the caller. This method does the
@@ -124,10 +124,10 @@ interface PdfSurgeon {
 /**
  * A line of text to place on a page, positioned relative to the page box.
  *
- * NORMALISED, ORIGIN TOP-LEFT, 0 TO 1. Deliberately not pixels and not PDF points: the caller
- * works in the pixel space of whatever it rendered, PDF works in points from the bottom-left,
- * and having each caller convert would mean the vertical flip is written in several places.
- * It is written once, in the implementation of [PdfSurgeon.addTextLayer].
+ * NORMALISED, ORIGIN TOP-LEFT, 0 TO 1. Deliberately not pixels and not PDF points. The caller
+ * works in the pixel space of whatever it rendered; PDF works in points from the bottom-left.
+ * Having each caller convert would mean the vertical flip is written in several places, so it
+ * is written once, in the implementation of [PdfSurgeon.addTextLayer].
  */
 data class TextPlacement(
     val text: String,

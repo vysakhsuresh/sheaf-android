@@ -18,11 +18,12 @@ import kotlin.math.hypot
  * looking grey and shadowed.
  *
  * NO AUTOMATIC EDGE DETECTION. Finding the page outline reliably needs OpenCV or a hand-rolled
- * contour pass, and a corner detector that is right most of the time is worse than none: the
- * times it is wrong, it is wrong silently and crops away someone's signature. So Sheaf shows
- * four handles on a sensible default rectangle and lets the person confirm. That is honest,
- * it is quick, and it never quietly destroys a page. Automatic detection can land later, with
- * manual adjustment still there underneath it.
+ * contour pass, and a corner detector that is right most of the time is worse than none. The
+ * times it is wrong, it is wrong silently, and crops away someone's signature.
+ *
+ * So Sheaf shows four handles on a sensible default rectangle and lets the person confirm.
+ * That is honest, it is quick, and it never quietly destroys a page. Automatic detection can
+ * land later, with manual adjustment still there underneath it.
  */
 object PageProcessor {
 
@@ -77,9 +78,9 @@ object PageProcessor {
     /**
      * Maps the quadrilateral at [corners] onto a rectangle.
      *
-     * setPolyToPoly with four points is a full perspective transform, which is exactly what
-     * undoing a camera angle needs - an affine transform cannot do it, because the near edge
-     * of a tilted page is genuinely wider than the far edge.
+     * setPolyToPoly with four points is a full perspective transform, which is what undoing a
+     * camera angle needs. An affine transform cannot do it, because the near edge of a tilted
+     * page is genuinely wider than the far edge.
      *
      * @return a new bitmap. The source is left alone for the caller to recycle or reuse.
      */

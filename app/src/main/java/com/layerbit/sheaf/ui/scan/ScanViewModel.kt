@@ -31,9 +31,10 @@ import java.io.FileOutputStream
  * The scanner: capture, straighten, keep, repeat, then make a PDF.
  *
  * Pages accumulate as files on disk rather than as bitmaps in memory. Scanning a ten-page
- * document is the normal case, and ten full-size captures held in the heap is a crash - so
- * each page is written out as soon as it is accepted and only the page being adjusted is ever
- * decoded.
+ * document is the normal case, and ten full-size captures held in the heap is a crash.
+ *
+ * So each page is written out as soon as it is accepted, and only the page being adjusted is
+ * ever decoded.
  */
 class ScanViewModel(app: Application) : AndroidViewModel(app) {
 

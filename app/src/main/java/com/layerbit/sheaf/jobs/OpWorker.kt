@@ -15,9 +15,9 @@ import com.layerbit.sheaf.ops.Progress
  * merge finishes before the notification is drawn, but the same code path having two modes -
  * "quick ones inline, slow ones as work" - is how the slow path ends up untested. One path.
  *
- * The inputs are passed as a job id rather than as file paths in the input Data, because
- * WorkManager's Data is capped at about 10 KB and a batch of forty documents with long names
- * from a scanner app will exceed it. [JobRunner] holds the real arguments in memory and this
+ * The operation is passed as a job id rather than in the input Data. WorkManager's Data is
+ * capped at about 10 KB, and neither a configured Op nor a batch of forty documents with long
+ * scanner-app names fits in that. [JobRunner] holds the real arguments in memory, and this
  * worker collects them by id.
  */
 class OpWorker(
