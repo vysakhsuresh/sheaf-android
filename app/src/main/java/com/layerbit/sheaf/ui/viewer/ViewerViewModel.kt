@@ -47,12 +47,20 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
      */
     private val renderLock = Mutex()
 
+    /** Incremented per document, so cached state from the previous one cannot be reused. */
+    private var generation = 0
+
     /**
      * Bitmaps for pages near the viewport.
      *
      * Sized in kilobytes rather than in entries, because page bitmaps differ by an order of
      * magnitude between a text page and a full-bleed scan and a count-based cache would either
      * waste memory or thrash depending on which document was open.
+     *
+     * KEYED BY PAGE INDEX, WHICH IS ONLY SAFE BECAUSE [closeCurrent] EMPTIES IT BEFORE ANY NEW
+     * DOCUMENT IS OPENED. Without that, page 0 of the document being opened is served the
+     * previous document's page 0 - it looks like the new file has the old file's cover, and
+     * only for the pages the old document happened to reach.
      */
     private val pageCache = object : LruCache<Int, Bitmap>(PAGE_CACHE_KB) {
         override fun sizeOf(key: Int, value: Bitmap): Int = value.byteCount / 1024
@@ -60,6 +68,9 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
 
     fun open(uri: Uri) {
         viewModelScope.launch {
+            // Before anything else. The previous document's pages, file descriptor and cached
+            // copy all have to go, and every one of them is a bug if it survives into the next.
+            closeCurrent()
             _state.value = ViewerState.Loading
             try {
                 val imported = sheaf.documentStore.import(uri)
@@ -75,7 +86,9 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                     renderLock.withLock { List(opened.pageCount) { opened.pageSize(it) } }
                 }
 
+                generation += 1
                 _state.value = ViewerState.Ready(
+                    generation = generation,
                     displayName = imported.displayName,
                     pageCount = opened.pageCount,
                     pageSizes = sizes,
@@ -116,11 +129,25 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
+    /**
+     * Releases everything tied to the document currently open.
+     *
+     * Called before opening another and from [onCleared]. Each step matters on its own: the
+     * cache would otherwise serve the wrong pages, the descriptor would leak one per document
+     * opened, and the imported copy would sit in the cache directory until Android decided to
+     * clear it - which on a phone full of scanned documents is a lot of wasted storage.
+     */
+    private fun closeCurrent() {
         pageCache.evictAll()
         runCatching { document?.close() }
         document = null
+        source?.file?.delete()
+        source = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        closeCurrent()
     }
 
     companion object {
@@ -134,6 +161,11 @@ sealed interface ViewerState {
     data object NeedsPassword : ViewerState
     data class Failed(val reason: String) : ViewerState
     data class Ready(
+        /**
+         * Identifies which document these pages belong to. The UI keys its per-page state on
+         * it, so a page composable cannot carry a bitmap over from the document before.
+         */
+        val generation: Int,
         val displayName: String,
         val pageCount: Int,
         val pageSizes: List<PageSize>,

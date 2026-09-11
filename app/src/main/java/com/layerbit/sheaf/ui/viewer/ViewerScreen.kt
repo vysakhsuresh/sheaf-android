@@ -90,8 +90,9 @@ private fun PageList(
                 .background(SheafColors.Background),
             contentPadding = PaddingValues(vertical = PAGE_MARGIN)
         ) {
-            items(count = state.pageCount, key = { it }) { index ->
+            items(count = state.pageCount, key = { "${state.generation}:$it" }) { index ->
                 PageItem(
+                    generation = state.generation,
                     index = index,
                     size = state.pageSizes.getOrNull(index),
                     renderWidthPx = renderWidthPx,
@@ -104,15 +105,16 @@ private fun PageList(
 
 @Composable
 private fun PageItem(
+    generation: Int,
     index: Int,
     size: PageSize?,
     renderWidthPx: Int,
     renderPage: suspend (index: Int, widthPx: Int) -> Bitmap?
 ) {
-    var bitmap by remember(index) { mutableStateOf<Bitmap?>(null) }
-    var failed by remember(index) { mutableStateOf(false) }
+    var bitmap by remember(generation, index) { mutableStateOf<Bitmap?>(null) }
+    var failed by remember(generation, index) { mutableStateOf(false) }
 
-    LaunchedEffect(index, renderWidthPx) {
+    LaunchedEffect(generation, index, renderWidthPx) {
         val rendered = renderPage(index, renderWidthPx)
         if (rendered == null) failed = true else bitmap = rendered
     }
