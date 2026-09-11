@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
@@ -36,11 +37,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.scan.PageProcessor
 import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.theme.SheafColors
 import kotlin.math.hypot
+import kotlin.math.roundToInt
 
 /**
  * Adjusting a captured page: drag the corners onto the paper, pick a look, keep it.
@@ -142,7 +145,15 @@ fun PageEditor(
                     val screen = toScreen(point)
                     Box(
                         modifier = Modifier
-                            .offsetPx(screen.x - handleHalfPx, screen.y - handleHalfPx)
+                            // Positioned in the layout phase rather than by a padding
+                            // modifier: the handle's place is computed from the drag, and
+                            // this way moving it does not recompose the image behind it.
+                            .offset {
+                                IntOffset(
+                                    (screen.x - handleHalfPx).roundToInt(),
+                                    (screen.y - handleHalfPx).roundToInt()
+                                )
+                            }
                             .size(HANDLE_SIZE)
                             .clip(CircleShape)
                             .background(SheafColors.Band.copy(alpha = 0.55f))
@@ -247,17 +258,6 @@ fun ScannedPages(
 }
 
 private fun distance(a: Offset, b: Offset) = hypot((a.x - b.x).toDouble(), (a.y - b.y).toDouble()).toFloat()
-
-/** Absolute pixel offset, since handle positions are computed rather than laid out. */
-private fun Modifier.offsetPx(x: Float, y: Float): Modifier =
-    this.then(
-        androidx.compose.ui.layout.layout { measurable, constraints ->
-            val placeable = measurable.measure(constraints)
-            layout(placeable.width, placeable.height) {
-                placeable.place(x.toInt(), y.toInt())
-            }
-        }
-    )
 
 private val HANDLE_SIZE = 30.dp
 
