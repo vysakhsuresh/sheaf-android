@@ -88,7 +88,68 @@ interface PdfSurgeon {
     /** Writes an unencrypted copy. [input] must carry the correct password. */
     @Throws(PdfException::class)
     fun removePassword(input: PdfInput, output: File)
+
+    /**
+     * Writes a copy with an invisible text layer laid over the existing pages.
+     *
+     * This is what "make searchable" means: the scan still looks exactly as it did, and a
+     * reader can now select, copy and find the words, because there is real text sitting at
+     * zero opacity in the same places as the ink.
+     *
+     * The text itself comes from an [OcrEngine], run by the caller. This method does the
+     * coordinate conversion and the writing, and knows nothing about how the words were read.
+     */
+    @Throws(PdfException::class)
+    fun addTextLayer(
+        input: PdfInput,
+        layers: Map<Int, List<TextPlacement>>,
+        output: File,
+        onProgress: (Int, Int) -> Unit = { _, _ -> }
+    )
+
+    /** The words already in a document, page by page. Empty for a scan with no text layer. */
+    @Throws(PdfException::class)
+    fun extractText(input: PdfInput, pages: List<Int>): Map<Int, String>
+
+    /** Pages containing [query], with a snippet around the first match on each. */
+    @Throws(PdfException::class)
+    fun search(input: PdfInput, query: String): List<SearchHit>
+
+    /** The document's own table of contents, flattened. Empty when it has none. */
+    @Throws(PdfException::class)
+    fun readOutline(input: PdfInput): List<OutlineEntry>
 }
+
+/**
+ * A line of text to place on a page, positioned relative to the page box.
+ *
+ * NORMALISED, ORIGIN TOP-LEFT, 0 TO 1. Deliberately not pixels and not PDF points: the caller
+ * works in the pixel space of whatever it rendered, PDF works in points from the bottom-left,
+ * and having each caller convert would mean the vertical flip is written in several places.
+ * It is written once, in the implementation of [PdfSurgeon.addTextLayer].
+ */
+data class TextPlacement(
+    val text: String,
+    val left: Float,
+    val top: Float,
+    val width: Float,
+    val height: Float
+)
+
+/** A page that matched a search, and enough context to recognise it. */
+data class SearchHit(
+    val pageIndex: Int,
+    val snippet: String,
+    val matchCount: Int
+)
+
+/** One entry from the document's outline. */
+data class OutlineEntry(
+    val title: String,
+    val pageIndex: Int,
+    /** Nesting depth, zero for a top-level entry. */
+    val depth: Int
+)
 
 /** A document to operate on, and the password to open it with if it has one. */
 data class PdfInput(val file: File, val password: String? = null)

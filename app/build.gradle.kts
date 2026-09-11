@@ -121,6 +121,25 @@ dependencies {
     // Needs PDFBoxResourceLoader.init(context) before first use, which SheafApplication does.
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 
+    // Bundled (not the "-unbundled" / Play-Services-backed) build: the recognition model ships
+    // inside the APK, so OCR never needs a model download and works with no network at all.
+    // That is the whole privacy position, and roughly 5 MB of install size is what it costs.
+    // The same call Deja and Abhyas made.
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+
+    // CameraX drives the scanner. Photographing a page is a first-class way documents get into
+    // Sheaf, so it gets a purpose-built viewfinder with corner adjustment rather than an
+    // ACTION_IMAGE_CAPTURE hand-off to whatever camera app happens to be installed.
+    val cameraX = "1.3.4"
+    implementation("androidx.camera:camera-core:$cameraX")
+    implementation("androidx.camera:camera-camera2:$cameraX")
+    implementation("androidx.camera:camera-lifecycle:$cameraX")
+    implementation("androidx.camera:camera-view:$cameraX")
+
+    // The sensor writes orientation into EXIF rather than rotating the pixels, so a portrait
+    // capture decodes sideways without this.
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
+
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
 }
@@ -129,10 +148,6 @@ dependencies {
 //
 // The viewer still runs entirely on android.graphics.pdf, which ships with the platform and
 // allocates less than PDFBox does per page. PDFBox is the write side only, behind PdfSurgeon.
-//
-// Arriving in P2:
-//   com.google.mlkit:text-recognition (BUNDLED)  OCR - never the -unbundled build, which
-//                                                downloads its model and would need network
 //
 // Never add: iText (AGPL), MuPDF (AGPL), Ghostscript (AGPL). Ghostscript is the obvious
 // answer for compression and is the one most likely to be reached for by accident.

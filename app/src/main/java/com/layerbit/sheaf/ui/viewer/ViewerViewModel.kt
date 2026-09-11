@@ -10,7 +10,10 @@ import com.layerbit.sheaf.SheafApplication
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.pdf.PageSize
 import com.layerbit.sheaf.pdf.PdfDocument
+import com.layerbit.sheaf.pdf.OutlineEntry
 import com.layerbit.sheaf.pdf.PdfException
+import com.layerbit.sheaf.pdf.PdfInput
+import com.layerbit.sheaf.pdf.SearchHit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,6 +52,11 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Incremented per document, so cached state from the previous one cannot be reused. */
     private var generation = 0
+
+    private val _reading = MutableStateFlow(ReadingState())
+    val reading: StateFlow<ReadingState> = _reading.asStateFlow()
+
+    private var searchJob: kotlinx.coroutines.Job? = null
 
     /**
      * Bitmaps for pages near the viewport.
@@ -97,6 +105,15 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                 )
 
                 sheaf.recents.record(uri, imported.displayName, opened.pageCount, imported.sizeBytes)
+
+                // The outline is small and reading it is quick, so it is fetched with the
+                // document rather than when the sheet opens - which would leave the reader
+                // looking at a spinner in a panel that is usually empty anyway.
+                val outline = withContext(Dispatchers.IO) {
+                    runCatching { sheaf.surgeon.readOutline(PdfInput(imported.file)) }
+                        .getOrDefault(emptyList())
+                }
+                _reading.value = _reading.value.copy(outline = outline)
             } catch (_: PdfException.PasswordRequired) {
                 _state.value = ViewerState.NeedsPassword
             } catch (e: PdfException) {
@@ -130,6 +147,45 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Inverts the page rendering, for reading in the dark without a white rectangle. */
+    fun toggleNightMode() {
+        _reading.value = _reading.value.copy(nightMode = !_reading.value.nightMode)
+    }
+
+    /**
+     * Finds [query] across the document.
+     *
+     * Page-level rather than word-level: PDFBox can say which pages contain the words and give
+     * a snippet around the first match, which is enough to navigate. Highlighting the exact
+     * rectangle needs per-glyph positions and is a bigger piece of work than it looks - it is
+     * honest to ship "jump to the page" now rather than a highlight that lands in the wrong
+     * place on justified text.
+     */
+    fun search(query: String) {
+        searchJob?.cancel()
+        val source = source
+        _reading.value = _reading.value.copy(query = query)
+
+        if (query.isBlank() || source == null) {
+            _reading.value = _reading.value.copy(hits = emptyList(), searching = false)
+            return
+        }
+
+        searchJob = viewModelScope.launch {
+            _reading.value = _reading.value.copy(searching = true)
+            val hits = withContext(Dispatchers.IO) {
+                runCatching { sheaf.surgeon.search(PdfInput(source.file), query) }
+                    .getOrDefault(emptyList())
+            }
+            _reading.value = _reading.value.copy(hits = hits, searching = false)
+        }
+    }
+
+    fun clearSearch() {
+        searchJob?.cancel()
+        _reading.value = _reading.value.copy(query = "", hits = emptyList(), searching = false)
+    }
+
     /**
      * Releases everything tied to the document currently open.
      *
@@ -139,6 +195,8 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
      * clear it - which on a phone full of scanned documents is a lot of wasted storage.
      */
     private fun closeCurrent() {
+        searchJob?.cancel()
+        _reading.value = ReadingState()
         pageCache.evictAll()
         runCatching { document?.close() }
         document = null
@@ -156,6 +214,15 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
         private const val PAGE_CACHE_KB = 48 * 1024
     }
 }
+
+/** Everything about how the document is being read, as opposed to what it contains. */
+data class ReadingState(
+    val nightMode: Boolean = false,
+    val outline: List<OutlineEntry> = emptyList(),
+    val query: String = "",
+    val hits: List<SearchHit> = emptyList(),
+    val searching: Boolean = false
+)
 
 sealed interface ViewerState {
     data object Loading : ViewerState

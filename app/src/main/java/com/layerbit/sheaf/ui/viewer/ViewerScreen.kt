@@ -15,12 +15,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -29,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Alignment
@@ -42,6 +46,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.ops.ToolId
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import com.layerbit.sheaf.pdf.PageSize
 import com.layerbit.sheaf.ui.components.RowBetween
 import com.layerbit.sheaf.ui.components.SectionHeading
@@ -63,16 +69,47 @@ import com.layerbit.sheaf.ui.tools.iconFor
 @Composable
 fun ViewerScreen(
     state: ViewerState,
+    reading: ReadingState,
     renderPage: suspend (index: Int, widthPx: Int) -> Bitmap?,
     onUseTool: (ToolId, String) -> Unit,
     onBack: () -> Unit,
+    onToggleNight: () -> Unit,
+    onSearch: (String) -> Unit,
+    onClearSearch: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showTools by remember { mutableStateOf(false) }
+    var showOutline by remember { mutableStateOf(false) }
+    var searching by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
 
     Column(modifier = modifier.fillMaxSize().background(SheafColors.Background)) {
         if (state is ViewerState.Ready) {
-            ViewerHeader(state = state, onBack = onBack, onTools = { showTools = true })
+            ViewerHeader(
+                state = state,
+                reading = reading,
+                hasOutline = reading.outline.isNotEmpty(),
+                onBack = onBack,
+                onTools = { showTools = true },
+                onOutline = { showOutline = true },
+                onToggleNight = onToggleNight,
+                onSearchToggle = {
+                    searching = !searching
+                    if (!searching) onClearSearch()
+                }
+            )
+            if (searching) {
+                SearchBar(
+                    reading = reading,
+                    onSearch = onSearch,
+                    onJump = { page ->
+                        searching = false
+                        onClearSearch()
+                        scope.launch { listState.scrollToItem(page) }
+                    }
+                )
+            }
         }
 
         when (state) {
@@ -87,8 +124,20 @@ fun ViewerScreen(
 
             is ViewerState.Failed -> CentredMessage(state.reason, modifier = Modifier.weight(1f))
 
-            is ViewerState.Ready -> PageList(state, renderPage, Modifier.weight(1f))
+            is ViewerState.Ready ->
+                PageList(state, reading.nightMode, listState, renderPage, Modifier.weight(1f))
         }
+    }
+
+    if (showOutline && state is ViewerState.Ready) {
+        OutlineSheet(
+            entries = reading.outline,
+            onDismiss = { showOutline = false },
+            onJump = { page ->
+                showOutline = false
+                scope.launch { listState.scrollToItem(page) }
+            }
+        )
     }
 
     if (showTools && state is ViewerState.Ready) {
@@ -111,7 +160,16 @@ fun ViewerScreen(
  * same file again through the system picker.
  */
 @Composable
-private fun ViewerHeader(state: ViewerState.Ready, onBack: () -> Unit, onTools: () -> Unit) {
+private fun ViewerHeader(
+    state: ViewerState.Ready,
+    reading: ReadingState,
+    hasOutline: Boolean,
+    onBack: () -> Unit,
+    onTools: () -> Unit,
+    onOutline: () -> Unit,
+    onToggleNight: () -> Unit,
+    onSearchToggle: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -136,12 +194,135 @@ private fun ViewerHeader(state: ViewerState.Ready, onBack: () -> Unit, onTools: 
                     color = SheafColors.Dim
                 )
             }
-            TextButton(onClick = onTools) {
-                Text("Use a tool", color = SheafColors.Band, style = MaterialTheme.typography.titleMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onSearchToggle) {
+                    Text("Find", color = SheafColors.Muted)
+                }
+                if (hasOutline) {
+                    TextButton(onClick = onOutline) {
+                        Text("Contents", color = SheafColors.Muted)
+                    }
+                }
+                TextButton(onClick = onToggleNight) {
+                    Text(
+                        if (reading.nightMode) "Day" else "Night",
+                        color = if (reading.nightMode) SheafColors.BandBright else SheafColors.Muted
+                    )
+                }
+            }
+        }
+        TextButton(onClick = onTools, modifier = Modifier.padding(top = 2.dp)) {
+            Text("Use a tool on this", color = SheafColors.Band, style = MaterialTheme.typography.titleMedium)
+        }
+    }
+}
+
+/** Find across the document. Results are pages, and tapping one scrolls to it. */
+@Composable
+private fun SearchBar(reading: ReadingState, onSearch: (String) -> Unit, onJump: (Int) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SheafColors.SurfaceDim)
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+    ) {
+        OutlinedTextField(
+            value = reading.query,
+            onValueChange = onSearch,
+            placeholder = { Text("Find in this document", style = MaterialTheme.typography.bodyMedium) },
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = SheafColors.Band,
+                unfocusedBorderColor = SheafColors.Border,
+                focusedTextColor = SheafColors.Text,
+                unfocusedTextColor = SheafColors.Text,
+                cursorColor = SheafColors.Band
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        val status = when {
+            reading.searching -> "Searching…"
+            reading.query.isBlank() -> null
+            reading.hits.isEmpty() -> "No pages contain that."
+            reading.hits.size == 1 -> "1 page"
+            else -> "${reading.hits.size} pages"
+        }
+        status?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodySmall,
+                color = SheafColors.Dim,
+                modifier = Modifier.padding(top = 6.dp)
+            )
+        }
+
+        // Bounded, because a search for "the" in a book matches every page and an unbounded
+        // list inside a header would take the whole screen.
+        reading.hits.take(MAX_VISIBLE_HITS).forEach { hit ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onJump(hit.pageIndex) }
+                    .padding(vertical = 8.dp)
+            ) {
+                Text(
+                    "Page ${hit.pageIndex + 1}" + if (hit.matchCount > 1) " · ${hit.matchCount} matches" else "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SheafColors.BandBright
+                )
+                Text(
+                    hit.snippet,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SheafColors.Muted,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
 }
+
+/** The document's own table of contents. Only offered when it actually has one. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun OutlineSheet(
+    entries: List<com.layerbit.sheaf.pdf.OutlineEntry>,
+    onDismiss: () -> Unit,
+    onJump: (Int) -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = SheafColors.Surface) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+            SectionHeading("Contents")
+            Spacer(Modifier.height(6.dp))
+            entries.forEach { entry ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onJump(entry.pageIndex) }
+                        .padding(start = (entry.depth * 14).dp, top = 10.dp, bottom = 10.dp)
+                ) {
+                    Text(
+                        entry.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = SheafColors.Text,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        "${entry.pageIndex + 1}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SheafColors.Dim
+                    )
+                }
+            }
+        }
+    }
+}
+
+private const val MAX_VISIBLE_HITS = 12
 
 /**
  * The tools that can act on the document currently open.
@@ -205,10 +386,11 @@ private fun ToolSheet(documentName: String, onDismiss: () -> Unit, onPick: (Tool
 @Composable
 private fun PageList(
     state: ViewerState.Ready,
+    nightMode: Boolean,
+    listState: androidx.compose.foundation.lazy.LazyListState,
     renderPage: suspend (index: Int, widthPx: Int) -> Bitmap?,
     modifier: Modifier = Modifier
 ) {
-    val listState = rememberLazyListState()
     val density = LocalDensity.current
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
 
@@ -232,6 +414,7 @@ private fun PageList(
                     index = index,
                     size = state.pageSizes.getOrNull(index),
                     renderWidthPx = renderWidthPx,
+                    nightMode = nightMode,
                     renderPage = renderPage
                 )
             }
@@ -245,6 +428,7 @@ private fun PageItem(
     index: Int,
     size: PageSize?,
     renderWidthPx: Int,
+    nightMode: Boolean,
     renderPage: suspend (index: Int, widthPx: Int) -> Bitmap?
 ) {
     var bitmap by remember(generation, index) { mutableStateOf<Bitmap?>(null) }
@@ -267,7 +451,13 @@ private fun PageItem(
             .clip(RoundedCornerShape(3.dp))
             // The paper color sits under the render, so a page that has not arrived yet is a
             // blank sheet rather than a hole in the list.
-            .background(if (failed) SheafColors.SurfaceDim else SheafColors.Paper),
+            .background(
+                when {
+                    failed -> SheafColors.SurfaceDim
+                    nightMode -> NIGHT_PAPER
+                    else -> SheafColors.Paper
+                }
+            ),
         contentAlignment = Alignment.Center
     ) {
         val current = bitmap
@@ -276,6 +466,9 @@ private fun PageItem(
                 bitmap = current.asImageBitmap(),
                 contentDescription = "Page ${index + 1}",
                 contentScale = ContentScale.Fit,
+                // Inverted at draw time rather than re-rendered. Toggling night mode is then
+                // instant and costs no memory, and the cached page is shared by both modes.
+                colorFilter = if (nightMode) INVERT_FILTER else null,
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -315,3 +508,24 @@ private fun CentredMessage(text: String, showSpinner: Boolean = false, modifier:
 
 private val PAGE_MARGIN = 12.dp
 private val PAGE_GAP = 12.dp
+
+/** The placeholder behind a page that has not arrived, in night mode. */
+private val NIGHT_PAPER = androidx.compose.ui.graphics.Color(0xFF15171B)
+
+/**
+ * Straight photographic inversion: white paper becomes near-black, black ink becomes white.
+ *
+ * A colour matrix rather than a second render, so the toggle is instant and the same cached
+ * bitmap serves both modes. Colour in a document inverts too, which is the honest behaviour -
+ * anything cleverer would have to decide what counts as ink, and would get it wrong on charts.
+ */
+private val INVERT_FILTER = ColorFilter.colorMatrix(
+    ColorMatrix(
+        floatArrayOf(
+            -1f, 0f, 0f, 0f, 255f,
+            0f, -1f, 0f, 0f, 255f,
+            0f, 0f, -1f, 0f, 255f,
+            0f, 0f, 0f, 1f, 0f
+        )
+    )
+)

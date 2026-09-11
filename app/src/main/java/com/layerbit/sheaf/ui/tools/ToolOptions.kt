@@ -176,6 +176,24 @@ fun ToolOptions(
                     "saves an unlocked copy - it cannot recover a password you do not have."
             )
 
+            ToolId.EXTRACT_TEXT -> PageSpecField(
+                value = config.pageSpec,
+                pageCount = pageCount,
+                label = "Pages",
+                hint = "Leave empty for the whole document",
+                onChange = { spec -> onChange { it.copy(pageSpec = spec) } }
+            )
+
+            ToolId.OCR -> Hint(
+                "Sheaf reads the words in a scan and lays them invisibly over the page, so the " +
+                    "document looks exactly the same but you can search, select and copy it. " +
+                    "This is the slowest tool here - expect around a second a page - and it " +
+                    "keeps running if you switch to another app."
+            )
+
+            // The scanner never reaches this screen; it has its own.
+            ToolId.SCAN -> Unit
+
             ToolId.ORGANISE -> Unit
         }
     }

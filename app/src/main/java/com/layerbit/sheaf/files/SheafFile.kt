@@ -44,5 +44,6 @@ data class SheafFile(
         const val MIME_PDF = "application/pdf"
         const val MIME_PNG = "image/png"
         const val MIME_JPEG = "image/jpeg"
+        const val MIME_TEXT = "text/plain"
     }
 }

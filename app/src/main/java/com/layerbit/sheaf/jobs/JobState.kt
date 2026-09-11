@@ -48,3 +48,17 @@ sealed interface JobState {
      */
     data class Crashed(val tool: ToolId, val reason: String) : JobState
 }
+
+/**
+ * Whether this job was started by [tool].
+ *
+ * The runner is app-wide so a job survives the screen that started it, which means every
+ * screen also sees every other screen's job. Each one filters on this.
+ */
+fun JobState.belongsTo(tool: ToolId?): Boolean = when (this) {
+    is JobState.Running -> this.tool == tool
+    is JobState.Finished -> this.tool == tool
+    is JobState.Cancelled -> this.tool == tool
+    is JobState.Crashed -> this.tool == tool
+    JobState.Idle -> true
+}

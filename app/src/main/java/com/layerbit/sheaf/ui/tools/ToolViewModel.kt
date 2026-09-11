@@ -8,8 +8,11 @@ import androidx.lifecycle.viewModelScope
 import com.layerbit.sheaf.SheafApplication
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.jobs.JobState
+import com.layerbit.sheaf.jobs.belongsTo
 import com.layerbit.sheaf.ops.CompressOp
 import com.layerbit.sheaf.ops.ExtractPagesOp
+import com.layerbit.sheaf.ops.ExtractTextOp
+import com.layerbit.sheaf.ops.OcrOp
 import com.layerbit.sheaf.ops.ImagesToPdfOp
 import com.layerbit.sheaf.ops.MergeOp
 import com.layerbit.sheaf.ops.Op
@@ -27,7 +30,10 @@ import com.layerbit.sheaf.pdf.PdfInput
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -47,7 +53,16 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(ToolUiState())
     val state: StateFlow<ToolUiState> = _state.asStateFlow()
 
+    /**
+     * The running or finished job, but only when it belongs to THIS tool.
+     *
+     * The runner is app-wide on purpose - a job has to outlive the screen that started it -
+     * but that means every screen sees every job. Without this filter, finishing a Compress
+     * and then opening Merge showed Merge the compressed file as though it had produced it.
+     */
     val jobState: StateFlow<JobState> = sheaf.jobRunner.state
+        .map { job -> if (job.belongsTo(_state.value.tool)) job else JobState.Idle }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, JobState.Idle)
 
     fun start(tool: ToolId) {
         if (_state.value.tool == tool) return
@@ -260,6 +275,13 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
     private fun buildOp(tool: ToolId, state: ToolUiState): Op? {
         val config = state.config
         return when (tool) {
+            ToolId.OCR -> OcrOp()
+            ToolId.EXTRACT_TEXT -> ExtractTextOp(config.pageSpec.takeIf { it.isNotBlank() })
+            ToolId.SCAN -> {
+                // The scanner has its own screen; it never reaches the generic tool flow.
+                _state.update { it.copy(error = "Open the scanner from the home screen.") }
+                return null
+            }
             ToolId.MERGE -> MergeOp()
             ToolId.EXTRACT -> ExtractPagesOp(config.pageSpec)
             ToolId.SPLIT -> SplitOp(

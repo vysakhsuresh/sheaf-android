@@ -39,7 +39,9 @@ class OpWorker(
         val opContext = OpContext(
             workspace = app.workspace,
             engine = app.pdfEngine,
+            encryptedReader = app.encryptedReader,
             surgeon = app.surgeon,
+            ocr = app.ocr,
             passwords = request.passwords,
             cancelled = { isStopped }
         )

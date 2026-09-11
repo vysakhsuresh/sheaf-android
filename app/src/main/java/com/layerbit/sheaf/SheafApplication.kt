@@ -7,6 +7,8 @@ import com.layerbit.sheaf.files.DocumentStore
 import com.layerbit.sheaf.files.Exporter
 import com.layerbit.sheaf.files.Workspace
 import com.layerbit.sheaf.jobs.JobRunner
+import com.layerbit.sheaf.pdf.MlKitOcrEngine
+import com.layerbit.sheaf.pdf.OcrEngine
 import com.layerbit.sheaf.pdf.PdfBoxEngine
 import com.layerbit.sheaf.pdf.PdfBoxSurgeon
 import com.layerbit.sheaf.pdf.PdfEngine
@@ -37,6 +39,14 @@ class SheafApplication : Application() {
 
     /** Restructuring and writing. Everything in ops/ goes through this. */
     val surgeon: PdfSurgeon by lazy { PdfBoxSurgeon() }
+
+    /**
+     * Reading words out of a picture of a page, on the bundled ML Kit model.
+     *
+     * Lazy matters here: the recogniser loads several megabytes of model on first use, and
+     * someone who only ever merges two PDFs should never pay for it.
+     */
+    val ocr: OcrEngine by lazy { MlKitOcrEngine() }
     val documentStore: DocumentStore by lazy { DocumentStore(this) }
     val workspace: Workspace by lazy { Workspace(this) }
     val exporter: Exporter by lazy { Exporter(this) }

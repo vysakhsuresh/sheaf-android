@@ -84,6 +84,10 @@ the signature. Resist any pull towards a convenient `fun run(input: SheafFile): 
 
 | Tool | What it does |
 |---|---|
+| Read | Open a document, then hand it to any tool from the viewer |
+| Scan a document | Camera capture, corner adjustment, document filter |
+| Make searchable | OCR a scan into an invisible, selectable text layer |
+| Extract text | Pull the words out as plain text |
 | Merge | Join several PDFs, reorderable |
 | Split | Every N pages, single pages, or by ranges |
 | Extract pages | Keep only the pages you name |
@@ -93,6 +97,9 @@ the signature. Resist any pull towards a convenient `fun run(input: SheafFile): 
 | Compress | Three levels, and it tells you when there was nothing to gain |
 | Add a password | AES-256 |
 | Remove a password | For a document whose password you know |
+
+The viewer also does find-in-document, the PDF's own table of contents, and a night mode that
+inverts the page instead of re-rendering it.
 
 Every one of them runs as background work behind a foreground service, so a long job survives
 the user switching apps.
@@ -148,7 +155,8 @@ something the interface cannot express, widen the interface — never reach arou
 |---|---|---|
 | `android.graphics.pdf` | AOSP | The viewer's renderer — fastest, allocates least |
 | `com.tom-roush:pdfbox-android` | Apache-2.0 | Everything structural, behind `PdfSurgeon` |
-| `com.google.mlkit:text-recognition` | Proprietary, bundled model | OCR (P2) |
+| `com.google.mlkit:text-recognition` | Proprietary, bundled model | OCR - the BUNDLED build |
+| `androidx.camera:*` | Apache-2.0 | The scanner's viewfinder |
 
 **Never add iText, MuPDF or Ghostscript.** All three are AGPL. Ghostscript is the obvious
 answer for compression and is the one most likely to be reached for by accident.
@@ -159,7 +167,7 @@ answer for compression and is the one most likely to be reached for by accident.
 |---|---|---|
 | **P0** | — | ✅ Foundation. Engine seam, file layer, job runner, viewer. |
 | **P1** | 0.1.0 | ✅ The nine tools above. |
-| **P2** | 0.2.0 | Scanner, OCR, in-document search, bookmarks. |
+| **P2** | 0.2.0 | ✅ Scanner, OCR, in-document search, outline, night mode. |
 | **P3** | 0.3.0 | Annotate, fill and sign, watermark, page numbers, redact. |
 | **P4** | 0.4.0+ | Pipelines and presets, N-up, compare, split by size. |
 

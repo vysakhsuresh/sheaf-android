@@ -6,6 +6,10 @@ import com.tom_roush.pdfbox.multipdf.PDFMergerUtility
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPage
 import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
+import com.tom_roush.pdfbox.pdmodel.font.PDType1Font
+import com.tom_roush.pdfbox.pdmodel.graphics.state.RenderingMode
+import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineItem
+import com.tom_roush.pdfbox.text.PDFTextStripper
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
 import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
@@ -302,6 +306,132 @@ class PdfBoxSurgeon : PdfSurgeon {
         doc.save(output)
     }
 
+    override fun addTextLayer(
+        input: PdfInput,
+        layers: Map<Int, List<TextPlacement>>,
+        output: File,
+        onProgress: (Int, Int) -> Unit
+    ) = withDocument(input) { doc ->
+        val total = doc.numberOfPages
+        for (index in 0 until total) {
+            val placements = layers[index].orEmpty()
+            if (placements.isNotEmpty()) {
+                val page = doc.getPage(index)
+                val box = page.mediaBox ?: PDRectangle.A4
+
+                // APPEND with resetContext, so the layer goes on top of the page that is
+                // already there and cannot inherit a graphics state left set by it.
+                PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true)
+                    .use { stream ->
+                        // Rendering mode 3: the glyphs are laid out and measured exactly as
+                        // normal but never painted. That is what makes the text selectable and
+                        // searchable while the scan underneath stays the only thing visible.
+                        stream.setRenderingMode(RenderingMode.NEITHER)
+
+                        for (placement in placements) {
+                            val encodable = placement.text.toWinAnsiSafe()
+                            if (encodable.isBlank()) continue
+
+                            // Normalised, origin top-left, to PDF points, origin bottom-left.
+                            // This flip is the whole reason TextPlacement is normalised: it is
+                            // written here and nowhere else.
+                            val x = placement.left * box.width
+                            val heightPoints = (placement.height * box.height).coerceAtLeast(1f)
+                            val baseline = box.height - (placement.top * box.height) - heightPoints
+
+                            // Helvetica's cap height is 0.717 em, so a line box of h points is
+                            // roughly h/0.9 em of font. Close enough that a selection rectangle
+                            // lands on the ink rather than above or below it.
+                            val fontSize = (heightPoints / 0.9f).coerceIn(1f, 1000f)
+
+                            try {
+                                stream.beginText()
+                                stream.setFont(PDType1Font.HELVETICA, fontSize)
+                                stream.newLineAtOffset(x, baseline)
+                                stream.showText(encodable)
+                                stream.endText()
+                            } catch (_: Exception) {
+                                // One unplaceable line must not cost the whole document its
+                                // text layer. endText is attempted so the stream is not left
+                                // inside a text object, which would corrupt everything after.
+                                runCatching { stream.endText() }
+                            }
+                        }
+                    }
+            }
+            onProgress(index + 1, total)
+        }
+        doc.save(output)
+    }
+
+    override fun extractText(input: PdfInput, pages: List<Int>): Map<Int, String> =
+        withDocument(input) { doc ->
+            val stripper = PDFTextStripper()
+            buildMap {
+                for (index in pages) {
+                    if (index !in 0 until doc.numberOfPages) continue
+                    // One page at a time. Stripping a whole document in one call means holding
+                    // all of its text in memory, and a scanned book is a lot of text.
+                    stripper.startPage = index + 1
+                    stripper.endPage = index + 1
+                    val text = runCatching { stripper.getText(doc) }.getOrDefault("")
+                    put(index, text)
+                }
+            }
+        }
+
+    override fun search(input: PdfInput, query: String): List<SearchHit> = withDocument(input) { doc ->
+        val needle = query.trim()
+        if (needle.isEmpty()) return@withDocument emptyList()
+
+        val stripper = PDFTextStripper()
+        buildList {
+            for (index in 0 until doc.numberOfPages) {
+                stripper.startPage = index + 1
+                stripper.endPage = index + 1
+                val text = runCatching { stripper.getText(doc) }.getOrNull() ?: continue
+
+                val matches = Regex(Regex.escape(needle), RegexOption.IGNORE_CASE).findAll(text).toList()
+                if (matches.isEmpty()) continue
+
+                val first = matches.first().range.first
+                val from = (first - SNIPPET_LEAD).coerceAtLeast(0)
+                val to = (first + SNIPPET_TRAIL).coerceAtMost(text.length)
+                val snippet = text.substring(from, to)
+                    .replace(Regex("\\s+"), " ")
+                    .trim()
+
+                add(SearchHit(index, snippet, matches.size))
+            }
+        }
+    }
+
+    override fun readOutline(input: PdfInput): List<OutlineEntry> = withDocument(input) { doc ->
+        val outline = doc.documentCatalog?.documentOutline ?: return@withDocument emptyList()
+        val pageNumbers = doc.pages.withIndex().associate { (index, page) -> page to index }
+
+        buildList {
+            fun walk(item: PDOutlineItem?, depth: Int) {
+                var current = item
+                while (current != null) {
+                    // A destination can fail to resolve on a damaged document; an entry that
+                    // cannot say where it points is worse than no entry, so it is dropped.
+                    val page = runCatching { current?.findDestinationPage(doc) }.getOrNull()
+                    val index = page?.let { pageNumbers[it] }
+                    val title = current.title?.trim()
+                    if (index != null && !title.isNullOrEmpty()) {
+                        add(OutlineEntry(title, index, depth))
+                    }
+                    // Depth is capped rather than trusted: a malformed outline can point at
+                    // itself, and an uncapped walk would not return.
+                    if (depth < MAX_OUTLINE_DEPTH) walk(current.firstChild, depth + 1)
+                    current = current.nextSibling
+                }
+            }
+            walk(outline.firstChild, 0)
+        }
+    }
+
     // ---- internals ----
 
     /**
@@ -411,8 +541,27 @@ class PdfBoxSurgeon : PdfSurgeon {
 
         /** PNG ignores this; JPEG uses it. Separate from the compression tiers on purpose. */
         const val JPEG_EXPORT_QUALITY = 92
+
+        /** Characters of context either side of a search match. */
+        const val SNIPPET_LEAD = 40
+        const val SNIPPET_TRAIL = 120
+
+        /** A malformed outline can cycle; this is what stops the walk from not returning. */
+        const val MAX_OUTLINE_DEPTH = 8
     }
 }
+
+/**
+ * Drops characters Helvetica's WinAnsi encoding cannot represent.
+ *
+ * The invisible OCR layer is written in a standard-14 font, which covers Latin text and
+ * nothing else. showText throws on anything outside that, so the alternative to filtering is
+ * a line that fails to place at all. Filtering loses the odd symbol; not filtering loses the
+ * line. Embedding a Unicode font would fix it properly and costs megabytes per script, which
+ * is a trade worth making when someone actually needs it.
+ */
+private fun String.toWinAnsiSafe(): String =
+    filter { it == ' ' || (it.code in 32..126) || (it.code in 160..255) }.trim()
 
 /** PDF stores rotation as a multiple of 90 and tolerates negatives; every caller wants 0-270. */
 internal fun normaliseRotation(degrees: Int): Int = ((degrees % 360) + 360) % 360

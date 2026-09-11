@@ -53,6 +53,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
+    <!-- Photographing a page is how the scanner gets documents in. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+
     <!--
       No storage permission of any kind, and specifically never MANAGE_EXTERNAL_STORAGE.
       Every file comes in through the Storage Access Framework - the user picks it, the

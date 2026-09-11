@@ -2,6 +2,7 @@ package com.layerbit.sheaf.ops
 
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.files.Workspace
+import com.layerbit.sheaf.pdf.OcrEngine
 import com.layerbit.sheaf.pdf.PdfEngine
 import com.layerbit.sheaf.pdf.PdfSurgeon
 
@@ -72,8 +73,12 @@ class OpContext(
     val workspace: Workspace,
     /** Reading and rasterising. */
     val engine: PdfEngine,
+    /** Reading a document the platform renderer refuses - in practice, an encrypted one. */
+    val encryptedReader: PdfEngine,
     /** Restructuring and writing. */
     val surgeon: PdfSurgeon,
+    /** Reading the words out of a picture of a page. */
+    val ocr: OcrEngine,
     /**
      * Passwords the user supplied for encrypted inputs, keyed by input file path.
      *

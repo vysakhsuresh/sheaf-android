@@ -18,6 +18,9 @@ import com.layerbit.sheaf.ops.ToolId
  */
 @DrawableRes
 fun iconFor(tool: ToolId): Int = when (tool) {
+    ToolId.SCAN -> R.drawable.ic_tool_scan
+    ToolId.OCR -> R.drawable.ic_tool_ocr
+    ToolId.EXTRACT_TEXT -> R.drawable.ic_tool_extract_text
     ToolId.MERGE -> R.drawable.ic_tool_merge
     ToolId.SPLIT -> R.drawable.ic_tool_split
     ToolId.EXTRACT -> R.drawable.ic_tool_extract

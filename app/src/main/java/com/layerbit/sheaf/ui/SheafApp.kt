@@ -20,6 +20,7 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.ui.about.AboutScreen
+import com.layerbit.sheaf.ui.scan.ScanRoute
 import com.layerbit.sheaf.ui.tools.ToolRoute
 import com.layerbit.sheaf.ui.home.HomeScreen
 import com.layerbit.sheaf.ui.theme.SheafColors
@@ -71,6 +72,7 @@ fun SheafApp(
     val navController = rememberNavController()
     val recents by recentsFlow.collectAsState(initial = emptyList())
     val viewerState by viewerViewModel.state.collectAsState()
+    val reading by viewerViewModel.reading.collectAsState()
 
     // The ONLY place the viewer is navigated to. Opening a recent used to navigate here and
     // from its own callback as well, which pushed the viewer onto the back stack twice - the
@@ -104,9 +106,13 @@ fun SheafApp(
             composable(Routes.VIEWER) {
                 ViewerScreen(
                     state = viewerState,
+                    reading = reading,
                     renderPage = { index, width -> viewerViewModel.page(index, width) },
                     onUseTool = { tool, uri -> navController.navigate(Routes.tool(tool, uri)) },
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onToggleNight = viewerViewModel::toggleNightMode,
+                    onSearch = viewerViewModel::search,
+                    onClearSearch = viewerViewModel::clearSearch
                 )
             }
 
@@ -123,7 +129,9 @@ fun SheafApp(
             ) { entry ->
                 val name = entry.arguments?.getString("tool")
                 val tool = ToolId.entries.firstOrNull { it.name == name }
-                if (tool != null) {
+                if (tool == ToolId.SCAN) {
+                    ScanRoute(onFinished = { navController.popBackStack() })
+                } else if (tool != null) {
                     ToolRoute(tool = tool, preloadUri = entry.arguments?.getString("uri"))
                 } else {
                     // Only reachable from a stale deep link. Going back beats an error screen.

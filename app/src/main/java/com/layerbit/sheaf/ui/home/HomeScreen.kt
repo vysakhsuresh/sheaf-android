@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.data.db.RecentEntity
 import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.ui.components.Panel
@@ -38,15 +37,16 @@ import com.layerbit.sheaf.ui.theme.SheafColors
 import com.layerbit.sheaf.ui.tools.iconFor
 
 /**
- * The home screen: open something to read, or pick a tool.
+ * The home screen: a board of everything Sheaf does.
  *
- * Reading comes first because it is what people do most often with a PDF, and because opening
- * a document is also the way into every tool - the viewer hands the open document straight to
- * any of them, so "Open a PDF" and the recents list are the entry point to the whole app
- * rather than a dead end that only shows you pages.
+ * There is deliberately no big primary button above the tools. An earlier version had one -
+ * "Open a PDF" - and it created a false hierarchy: it read as *the* way to use the app, which
+ * turned the tools underneath it into a list of things you might read about rather than
+ * things you would tap. Reading is now simply the first card, in the first group, coloured
+ * like the others.
  *
- * The tools sit below as one flat grid rather than behind categories. There are nine, and
- * someone looking for "compress" should see the word without navigating first.
+ * The cards are grouped by what someone is trying to do rather than left as one flat wall of
+ * twelve. Groups are headings, not navigation: nothing is hidden behind a tap.
  */
 @Composable
 fun HomeScreen(
@@ -60,52 +60,45 @@ fun HomeScreen(
 ) {
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item {
-            Column {
+            Column(modifier = Modifier.padding(bottom = 6.dp)) {
                 Text(
                     text = "Sheaf",
                     style = MaterialTheme.typography.displayMedium,
                     color = SheafColors.Text
                 )
                 Text(
-                    text = "Everything happens on this phone.",
+                    text = "Everything happens on this phone. Nothing is uploaded, because " +
+                        "Sheaf cannot use the internet at all.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = SheafColors.Muted
-                )
-                Spacer(Modifier.height(18.dp))
-                Button(
-                    onClick = onOpenDocument,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = SheafColors.Band,
-                        contentColor = SheafColors.OnBand
-                    )
-                ) {
-                    Text("Open a PDF", style = MaterialTheme.typography.titleMedium)
-                }
-                Text(
-                    text = "Read it, then use any tool on it without picking the file again.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = SheafColors.Dim,
-                    modifier = Modifier.padding(top = 8.dp)
                 )
             }
         }
 
-        item {
-            Spacer(Modifier.height(8.dp))
-            SectionHeading("Tools")
-            Spacer(Modifier.height(10.dp))
-            ToolGrid(onTool)
+        ToolId.Group.entries.forEach { group ->
+            item(key = "heading-${group.name}") {
+                Spacer(Modifier.height(6.dp))
+                SectionHeading(group.title)
+                Spacer(Modifier.height(8.dp))
+            }
+            item(key = "grid-${group.name}") {
+                ToolGrid(
+                    group = group,
+                    onTool = onTool,
+                    onRead = onOpenDocument
+                )
+            }
         }
 
         if (recents.isNotEmpty()) {
             item {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(14.dp))
                 SectionHeading("Recent")
+                Spacer(Modifier.height(4.dp))
             }
             items(recents, key = { it.uri }) { recent ->
                 RecentRow(
@@ -117,7 +110,7 @@ fun HomeScreen(
         }
 
         item {
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(18.dp))
             TextButton(onClick = onAbout) {
                 Text("About Sheaf", color = SheafColors.Muted)
             }
@@ -126,59 +119,84 @@ fun HomeScreen(
 }
 
 /**
- * Two columns of equal-height cards.
+ * One group's cards, two to a row and all the same height.
  *
  * The height is fixed rather than left to the content. Summaries run to two or three lines
  * depending on the tool, and letting each card size itself leaves neighbouring cards with
- * mismatched bottoms and the grid looking as though it was assembled by accident.
- *
- * There are nine tools, so the last row holds one. It takes a half-width slot with an empty
- * one beside it rather than stretching across, which would read as a different kind of thing
- * rather than as the ninth of nine.
+ * mismatched bottoms. An odd group gets an empty half-width slot rather than one card
+ * stretched across, which would read as a different kind of thing.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ToolGrid(onTool: (ToolId) -> Unit) {
+private fun ToolGrid(group: ToolId.Group, onTool: (ToolId) -> Unit, onRead: () -> Unit) {
+    val tools = ToolId.entries.filter { it.group == group }
+    // Reading is a card like any other, and it belongs at the front of Read and capture.
+    val readFirst = group == ToolId.Group.READ
+    val count = tools.size + if (readFirst) 1 else 0
+
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         maxItemsInEachRow = 2,
         modifier = Modifier.fillMaxWidth()
     ) {
-        ToolId.entries.forEach { tool ->
-            ToolCard(
-                tool = tool,
+        if (readFirst) {
+            Card(
+                iconRes = R.drawable.ic_tool_read,
+                title = "Read a PDF",
+                summary = "Open a document, then use any tool on it from there",
+                accent = true,
+                onClick = onRead,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        tools.forEach { tool ->
+            Card(
+                iconRes = iconFor(tool),
+                title = tool.title,
+                summary = tool.summary,
+                accent = false,
                 onClick = { onTool(tool) },
                 modifier = Modifier.weight(1f)
             )
         }
-        if (ToolId.entries.size % 2 != 0) {
+        if (count % 2 != 0) {
             Spacer(Modifier.weight(1f))
         }
     }
 }
 
 @Composable
-private fun ToolCard(tool: ToolId, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Panel(
-        modifier = modifier.height(TOOL_CARD_HEIGHT),
-        onClick = onClick
-    ) {
+private fun Card(
+    iconRes: Int,
+    title: String,
+    summary: String,
+    accent: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Panel(modifier = modifier.height(TOOL_CARD_HEIGHT), onClick = onClick) {
         Box(
             modifier = Modifier
                 .size(36.dp)
-                .background(SheafColors.SurfaceDim, RoundedCornerShape(10.dp)),
+                .background(
+                    // The reading card carries the band colour at low opacity. It is the most
+                    // common thing people do, and this marks it without lifting it out of the
+                    // grid the way a separate button did.
+                    if (accent) SheafColors.Band.copy(alpha = 0.16f) else SheafColors.SurfaceDim,
+                    RoundedCornerShape(10.dp)
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                painter = painterResource(iconFor(tool)),
+                painter = painterResource(iconRes),
                 contentDescription = null,
-                tint = SheafColors.Muted,
+                tint = if (accent) SheafColors.BandBright else SheafColors.Muted,
                 modifier = Modifier.size(20.dp)
             )
         }
         Text(
-            text = tool.title,
+            text = title,
             style = MaterialTheme.typography.titleMedium,
             color = SheafColors.Text,
             maxLines = 1,
@@ -186,7 +204,7 @@ private fun ToolCard(tool: ToolId, onClick: () -> Unit, modifier: Modifier = Mod
             modifier = Modifier.padding(top = 10.dp)
         )
         Text(
-            text = tool.summary,
+            text = summary,
             style = MaterialTheme.typography.bodySmall,
             color = SheafColors.Dim,
             maxLines = 3,
