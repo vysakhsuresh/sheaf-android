@@ -39,6 +39,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.pdf.PageSize
@@ -57,7 +58,7 @@ import com.layerbit.sheaf.ui.tools.iconFor
  * item composes, and the bitmap is dropped when it leaves the cache.
  *
  * P0's exit gate is measured here: a five-hundred-page document, scrolled end to end, at
- * sixty frames per second, returning to a flat heap afterwards.
+ * sixty frames per second, returning to a flat heap afterward.
  */
 @Composable
 fun ViewerScreen(
@@ -118,6 +119,9 @@ private fun ViewerHeader(state: ViewerState.Ready, onBack: () -> Unit, onTools: 
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         RowBetween {
+            TextButton(onClick = onBack, modifier = Modifier.padding(end = 2.dp)) {
+                Text("‹", style = MaterialTheme.typography.titleLarge, color = SheafColors.Muted)
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = state.displayName,
@@ -261,7 +265,7 @@ private fun PageItem(
             .padding(horizontal = PAGE_MARGIN, vertical = PAGE_GAP / 2)
             .aspectRatio(aspect)
             .clip(RoundedCornerShape(3.dp))
-            // The paper colour sits under the render, so a page that has not arrived yet is a
+            // The paper color sits under the render, so a page that has not arrived yet is a
             // blank sheet rather than a hole in the list.
             .background(if (failed) SheafColors.SurfaceDim else SheafColors.Paper),
         contentAlignment = Alignment.Center

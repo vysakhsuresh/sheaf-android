@@ -103,10 +103,10 @@ private class PlatformPdfDocument(
                 val bitmap = try {
                     Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                 } catch (e: OutOfMemoryError) {
-                    // Caught deliberately. The budget makes this rare, not impossible - another
-                    // part of the app may have taken the heap between the clamp and here - and
-                    // an OOM while rendering one page of a batch should fail that page, not
-                    // take the process down.
+                    // Caught deliberately. The budget makes this rare but not impossible:
+                    // another part of the app may have taken the heap between the clamp and
+                    // here. An OOM while rendering one page of a batch should fail that page
+                    // rather than take the process down.
                     throw PdfException.OutOfMemory("page ${index + 1} at ${width}x$height", e)
                 }
 

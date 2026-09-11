@@ -20,9 +20,9 @@ import com.layerbit.sheaf.R
  * The family reads as a set: LayerLink is cool blue-black because it is a tool, Deja is warm
  * charcoal because it is a memory, Abhyas takes the accent warm because its audience is
  * students. Sheaf is a tool, so it keeps the cool blue-black base - and takes the one
- * saturated colour in the app from the band on its own icon.
+ * saturated color in the app from the band on its own icon.
  *
- * That band colour is spent in exactly one place at a time: the primary action on screen.
+ * That band color is spent in exactly one place at a time: the primary action on screen.
  * Everything else is ink, paper and the greys between them, which is what makes a page of a
  * document the brightest thing in the window rather than the chrome around it.
  */

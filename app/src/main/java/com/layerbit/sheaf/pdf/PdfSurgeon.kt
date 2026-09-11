@@ -20,7 +20,7 @@ import java.io.File
  */
 interface PdfSurgeon {
 
-    /** Page count, page sizes and metadata, without holding the document open afterwards. */
+    /** Page count, page sizes and metadata, without holding the document open afterward. */
     @Throws(PdfException::class)
     fun inspect(input: PdfInput): DocumentInfo
 
@@ -31,7 +31,7 @@ interface PdfSurgeon {
     /**
      * Writes a new document containing only [pages], in the order given.
      *
-     * The order is honoured, so this is also how reordering works - hand it every page in the
+     * The order is honored, so this is also how reordering works - hand it every page in the
      * order you want them. Deleting is the same call with the unwanted pages left out, which
      * is why there is no separate delete: fewer paths, fewer ways to corrupt a page tree.
      */

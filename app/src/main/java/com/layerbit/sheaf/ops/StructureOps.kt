@@ -13,7 +13,7 @@ import kotlinx.coroutines.withContext
  * They share a habit worth stating once. A file that cannot be read is reported as
  * [OpOutcome.Failed] with a sentence saying why, and the run continues. One unreadable scan in
  * a batch of forty must not discard the other thirty-nine, and "something went wrong" on the
- * whole batch is the behaviour that makes people stop trusting an app like this.
+ * whole batch is the behavior that makes people stop trusting an app like this.
  */
 
 /** Joins documents end to end, in the order given. */

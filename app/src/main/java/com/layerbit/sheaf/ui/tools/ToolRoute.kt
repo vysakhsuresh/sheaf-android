@@ -33,10 +33,10 @@ import com.layerbit.sheaf.ops.ToolId
 @Composable
 fun ToolRoute(
     tool: ToolId,
+    modifier: Modifier = Modifier,
     /** A document handed over from the viewer, so the user does not pick the same file twice. */
     preloadUri: String? = null,
-    viewModel: ToolViewModel = viewModel(),
-    modifier: Modifier = Modifier
+    viewModel: ToolViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val jobState by viewModel.jobState.collectAsState()
