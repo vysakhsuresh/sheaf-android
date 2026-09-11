@@ -106,13 +106,15 @@ hurt, not before.
 
 ```
 app/src/main/java/com/layerbit/sheaf/
-  pdf/      PdfEngine — the seam every PDF library sits behind
-            PlatformPdfEngine — android.graphics.pdf, the P0 implementation
+  pdf/      PdfEngine — reading and rasterising; PdfSurgeon — restructuring and writing
+            PlatformPdfEngine — android.graphics.pdf, the viewer's renderer
+            PdfBoxSurgeon / PdfBoxEngine — PDFBox, for writing and for encrypted documents
+            PageSelection — "1-3, 7, 12-" to page indices, one-based in, zero-based out
             BitmapBudget — the render clamp that keeps large documents from OOMing
   files/    DocumentStore — the only way a document enters the app
             Workspace — scratch space for operation output, with eviction
             Exporter — the only component that may write to a Uri
-  ops/      Op — the one operation shape; OpRegistry — every tool, in one list
+  ops/      Op — the one operation shape; ToolId — every tool, in one list
   jobs/     JobRunner + OpWorker — every operation runs as WorkManager work
   data/     Room: a recents list, and nothing read out of a document
   ui/       Compose screens; theme/ holds the palette and Space Grotesk
