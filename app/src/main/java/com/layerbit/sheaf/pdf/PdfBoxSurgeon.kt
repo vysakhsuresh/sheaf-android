@@ -1,7 +1,6 @@
 package com.layerbit.sheaf.pdf
 
 import android.graphics.Bitmap
-import com.tom_roush.pdfbox.cos.COSName
 import com.tom_roush.pdfbox.io.MemoryUsageSetting
 import com.tom_roush.pdfbox.multipdf.PDFMergerUtility
 import com.tom_roush.pdfbox.pdmodel.PDDocument
@@ -12,7 +11,6 @@ import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
-import com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
 import com.tom_roush.pdfbox.rendering.PDFRenderer
 import java.io.File
@@ -20,7 +18,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 
 /**
- * [PdfSurgeon] on PDFBox (Apache-2.0, via Tom Roush's Android port).
+ * [PdfSurgeon] on PDFBox (Apache-2.0, via the Android port by Tom Roush).
  *
  * Two habits run through every method here and both are load-bearing:
  *
@@ -238,7 +236,7 @@ class PdfBoxSurgeon : PdfSurgeon {
             for (name in resources.xObjectNames.toList()) {
                 val existing = try {
                     resources.getXObject(name)
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     skipped++
                     continue
                 }
@@ -261,7 +259,7 @@ class PdfBoxSurgeon : PdfSurgeon {
                     val replacement = JPEGFactory.createFromImage(doc, shrunk, level.jpegQuality / 100f)
                     resources.put(name, replacement)
                     recompressed++
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     skipped++
                 } finally {
                     shrunk.recycle()
@@ -289,8 +287,10 @@ class PdfBoxSurgeon : PdfSurgeon {
             val permissions = AccessPermission()
             val policy = StandardProtectionPolicy(userPassword, userPassword, permissions).apply {
                 // AES-256. The 128-bit default is RC4-era and long past being worth shipping.
+                // setPreferAES is called rather than assigned: ProtectionPolicy keeps the
+                // field private and only exposes the setter.
                 encryptionKeyLength = 256
-                preferAES = true
+                setPreferAES(true)
             }
             doc.protect(policy)
             doc.save(output)
@@ -351,9 +351,9 @@ class PdfBoxSurgeon : PdfSurgeon {
 
         val decoded = try {
             image.image
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return null
-        } catch (e: OutOfMemoryError) {
+        } catch (_: OutOfMemoryError) {
             return null
         } ?: return null
 
@@ -371,7 +371,7 @@ class PdfBoxSurgeon : PdfSurgeon {
             Bitmap.createScaledBitmap(decoded, width, height, true).also {
                 if (it !== decoded) decoded.recycle()
             }
-        } catch (e: OutOfMemoryError) {
+        } catch (_: OutOfMemoryError) {
             decoded.recycle()
             null
         }

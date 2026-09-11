@@ -182,7 +182,7 @@ class RemovePasswordOp : Op {
                         SheafFile.Origin.Derived("unlocked")
                     )
                 )
-            } catch (e: PdfException.PasswordRequired) {
+            } catch (_: PdfException.PasswordRequired) {
                 output.delete()
                 OpOutcome.Failed(input.displayName, "That password did not open this document.")
             } catch (e: PdfException) {

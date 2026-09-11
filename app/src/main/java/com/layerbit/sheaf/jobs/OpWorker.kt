@@ -52,7 +52,7 @@ class OpWorker(
             }
             runner.publish(JobState.Finished(op.tool, op.title, outcomes))
             Result.success()
-        } catch (e: OpCancelled) {
+        } catch (_: OpCancelled) {
             runner.publish(JobState.Cancelled(op.tool))
             Result.success()
         } catch (e: Exception) {

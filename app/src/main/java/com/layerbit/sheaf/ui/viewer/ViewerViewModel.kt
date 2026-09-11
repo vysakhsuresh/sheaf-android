@@ -96,7 +96,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                 )
 
                 sheaf.recents.record(uri, imported.displayName, opened.pageCount, imported.sizeBytes)
-            } catch (e: PdfException.PasswordRequired) {
+            } catch (_: PdfException.PasswordRequired) {
                 _state.value = ViewerState.NeedsPassword
             } catch (e: PdfException) {
                 _state.value = ViewerState.Failed(e.message ?: "This document could not be opened.")
@@ -124,7 +124,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                     pageCache.get(index) ?: doc.renderPage(index, widthPx).also { pageCache.put(index, it) }
                 }
             }
-        } catch (e: PdfException) {
+        } catch (_: PdfException) {
             null
         }
     }

@@ -97,7 +97,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         try {
             val info = sheaf.surgeon.inspect(PdfInput(file.file))
             SelectedDoc(file = file, pageCount = info.pageCount, encrypted = info.isEncrypted)
-        } catch (e: PdfException.PasswordRequired) {
+        } catch (_: PdfException.PasswordRequired) {
             SelectedDoc(file = file, encrypted = true, needsPassword = true)
         } catch (e: Exception) {
             SelectedDoc(file = file, unreadableReason = e.message ?: "This file could not be read.")
