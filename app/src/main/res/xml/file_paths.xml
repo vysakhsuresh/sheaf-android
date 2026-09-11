@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  What FileProvider is allowed to hand out. Only Sheaf's own scratch directories: an imported
+  copy or an operation result, never a path that could reach the user's storage.
+-->
+<paths>
+    <cache-path name="work" path="work/" />
+    <cache-path name="imported" path="imported/" />
+</paths>

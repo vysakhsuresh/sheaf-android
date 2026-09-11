@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="512" height="512" role="img" aria-label="Sheaf app icon">
+  <rect width="108" height="108" fill="#101A2B"/>
+  <g transform="translate(54,54) scale(0.87) translate(-54,-55.75)">
+    <g stroke="#101A2B" stroke-width="2.6" stroke-linejoin="round">
+      <rect x="47" y="26" width="14" height="54" rx="5" fill="#93A4C2" transform="rotate(-26 54 80)"/>
+      <rect x="47" y="26" width="14" height="54" rx="5" fill="#93A4C2" transform="rotate(26 54 80)"/>
+      <rect x="47" y="26" width="14" height="54" rx="5" fill="#C6D1E5" transform="rotate(-13 54 80)"/>
+      <rect x="47" y="26" width="14" height="54" rx="5" fill="#C6D1E5" transform="rotate(13 54 80)"/>
+      <rect x="47" y="26" width="14" height="54" rx="5" fill="#F7F5EF"/>
+    </g>
+    <rect x="35" y="61.5" width="38" height="12.5" rx="6.25" fill="#E0257A"/>
+  </g>
+</svg>

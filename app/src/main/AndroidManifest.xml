@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      Sheaf holds the same line Deja and Abhyas do: no INTERNET permission, so the process
+      cannot open a socket and a document cannot leave the phone even if a dependency tried
+      to send it. Anyone can verify it on the Play Store listing without trusting a policy
+      document.
+
+      On a PDF toolkit this is the entire product. Every competitor in this category -
+      iLovePDF, Smallpdf, Adobe - uploads the file to a server to do the work. The documents
+      people run through these apps are contracts, bank statements, medical reports, ID
+      scans. Sheaf does the same work on the device, and the reason to believe that is this
+      file rather than a promise.
+
+      Libraries declare permissions of their own and the manifest merger unions them in, so
+      the two entries below strip network access back out no matter what any current or
+      future dependency asks for. Never "fix" a merger conflict by dropping these lines -
+      check the result in app/build/outputs/logs/manifest-merger-*-report.txt after a build.
+
+      Consequences that shape the code, and that are worth the trade:
+        - No crash reporting. The Settings screen exports a crash log the user sends
+          themselves; the app never sends anything.
+        - No ML Kit Document Scanner in P2. It pulls its module through Play services. The
+          scanner is built here instead.
+        - OCR will use ML Kit's *bundled* recogniser, same as Deja and Abhyas.
+
+      WAKE_LOCK is kept: WorkManager needs it to finish a long operation, and it grants no
+      access to anything off the device.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
+
+    <!--
+      Android 13+ notification permission. Declaring it turns nothing on. It is requested at
+      the moment the first long-running operation starts, because that is when a progress
+      notification becomes useful and the user can see why it is being asked for.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+      A long operation runs as a foreground service so Android does not kill a four-hundred-page
+      job the moment the user switches app. From Android 14 every foreground service must
+      declare a type and hold the matching permission, and WorkManager's setForeground() path
+      is no exception - without these the first long job dies with
+      MissingForegroundServiceTypeException. "dataSync" is the correct type: the work is
+      processing the user's own files on the device.
+
+      WorkManager declares WAKE_LOCK itself and it is deliberately not stripped: it is what
+      lets a running job finish, and it grants no access to anything off the device.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!--
+      No storage permission of any kind, and specifically never MANAGE_EXTERNAL_STORAGE.
+      Every file comes in through the Storage Access Framework - the user picks it, the
+      system grants access to that document alone, and exports go back out through
+      ACTION_CREATE_DOCUMENT. That is both the correct privacy posture and the single
+      biggest Play review trap in this category avoided.
+    -->
+
+    <application
+        android:name=".SheafApplication"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Sheaf">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.Sheaf">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!--
+              Being in the share sheet and the "open with" list is the distribution plan.
+              With no marketing budget, appearing when someone long-presses a PDF is how
+              people find this app, so these filters are a feature and not boilerplate.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
+        </activity>
+
+        <!-- Adds the type to the service WorkManager's own manifest contributes. -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+    </application>
+
+</manifest>

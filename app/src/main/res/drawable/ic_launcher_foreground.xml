@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Sheaf mark: five paper leaves fanned from a common base and cinched by one band.
+  A bundle of documents, and a sheaf in the older sense of the word.
+
+  Laid out on the 108dp adaptive-icon grid. The outer group scales the whole mark to
+  0.87 about the centre and lifts it 1.5225dp, which is what puts the furthest leaf
+  corner 31.9dp from centre - inside the 33dp safe radius, so nothing clips under a
+  circular, squircle or teardrop mask. Changing the rotations or the leaf height
+  without redoing that arithmetic will push corners outside the safe zone.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group
+        android:translateY="-1.5225"
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.87"
+        android:scaleY="0.87">
+
+        <group android:rotation="-26" android:pivotX="54" android:pivotY="80">
+            <path android:pathData="M52,26 H56 A5,5 0 0 1 61,31 V75 A5,5 0 0 1 56,80 H52 A5,5 0 0 1 47,75 V31 A5,5 0 0 1 52,26 Z"
+                android:fillColor="#FF93A4C2"
+                android:strokeColor="#FF101A2B"
+                android:strokeWidth="2.6"
+                android:strokeLineJoin="round" />
+        </group>
+
+        <group android:rotation="26" android:pivotX="54" android:pivotY="80">
+            <path android:pathData="M52,26 H56 A5,5 0 0 1 61,31 V75 A5,5 0 0 1 56,80 H52 A5,5 0 0 1 47,75 V31 A5,5 0 0 1 52,26 Z"
+                android:fillColor="#FF93A4C2"
+                android:strokeColor="#FF101A2B"
+                android:strokeWidth="2.6"
+                android:strokeLineJoin="round" />
+        </group>
+
+        <group android:rotation="-13" android:pivotX="54" android:pivotY="80">
+            <path android:pathData="M52,26 H56 A5,5 0 0 1 61,31 V75 A5,5 0 0 1 56,80 H52 A5,5 0 0 1 47,75 V31 A5,5 0 0 1 52,26 Z"
+                android:fillColor="#FFC6D1E5"
+                android:strokeColor="#FF101A2B"
+                android:strokeWidth="2.6"
+                android:strokeLineJoin="round" />
+        </group>
+
+        <group android:rotation="13" android:pivotX="54" android:pivotY="80">
+            <path android:pathData="M52,26 H56 A5,5 0 0 1 61,31 V75 A5,5 0 0 1 56,80 H52 A5,5 0 0 1 47,75 V31 A5,5 0 0 1 52,26 Z"
+                android:fillColor="#FFC6D1E5"
+                android:strokeColor="#FF101A2B"
+                android:strokeWidth="2.6"
+                android:strokeLineJoin="round" />
+        </group>
+
+            <path android:pathData="M52,26 H56 A5,5 0 0 1 61,31 V75 A5,5 0 0 1 56,80 H52 A5,5 0 0 1 47,75 V31 A5,5 0 0 1 52,26 Z"
+                android:fillColor="#FFF7F5EF"
+                android:strokeColor="#FF101A2B"
+                android:strokeWidth="2.6"
+                android:strokeLineJoin="round" />
+
+        <path android:pathData="M41.25,61.5 H66.75 A6.25,6.25 0 0 1 73,67.75 A6.25,6.25 0 0 1 66.75,74.0 H41.25 A6.25,6.25 0 0 1 35,67.75 A6.25,6.25 0 0 1 41.25,61.5 Z"
+            android:fillColor="#FFE0257A" />
+
+    </group>
+</vector>

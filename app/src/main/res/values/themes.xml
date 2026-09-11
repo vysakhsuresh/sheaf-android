@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The platform theme exists only to paint the window before Compose takes over. Keeping
+      its background identical to SheafColors.Background is what stops the pale flash on a
+      cold start; the real theme lives in ui/theme/Theme.kt.
+    -->
+    <style name="Theme.Sheaf" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:navigationBarColor">@color/window_background</item>
+        <item name="android:statusBarColor">@color/window_background</item>
+    </style>
+</resources>
