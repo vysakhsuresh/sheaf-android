@@ -93,6 +93,11 @@ fun ToolRoute(
             onRotateSelected = viewModel::rotateSelected,
             onDeleteSelected = viewModel::deleteSelectedPages,
             onMovePage = viewModel::movePage,
+            onSigned = viewModel::setSignature,
+            makeSignatureFile = viewModel::newSignatureFile,
+            onRedactPage = viewModel::setRedactPage,
+            onAddRedaction = viewModel::addRedaction,
+            onClearRedactions = viewModel::clearRedactions,
             onRun = viewModel::run,
             onCancel = viewModel::cancel,
             onSave = { file ->

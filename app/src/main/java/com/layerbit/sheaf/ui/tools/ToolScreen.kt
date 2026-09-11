@@ -76,6 +76,11 @@ fun ToolScreen(
     onRotateSelected: (Int) -> Unit,
     onDeleteSelected: () -> Unit,
     onMovePage: (Int, Int) -> Unit,
+    onSigned: (java.io.File) -> Unit,
+    makeSignatureFile: () -> java.io.File,
+    onRedactPage: (Int) -> Unit,
+    onAddRedaction: (Int, com.layerbit.sheaf.pdf.PageArea) -> Unit,
+    onClearRedactions: (Int) -> Unit,
     onRun: () -> Unit,
     onCancel: () -> Unit,
     onSave: (SheafFile) -> Unit,
@@ -83,9 +88,11 @@ fun ToolScreen(
     onDone: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // The organise grid needs page thumbnails, and only once a document is actually present.
+    // Organise and Remove areas both draw on rendered pages, and only once a document is
+    // actually present.
     LaunchedEffect(tool, state.documents.firstOrNull()?.file?.file?.path) {
-        if (tool == ToolId.ORGANISE && state.documents.isNotEmpty()) onLoadPages()
+        val needsPages = tool == ToolId.ORGANISE || tool == ToolId.REDACT
+        if (needsPages && state.documents.isNotEmpty()) onLoadPages()
     }
 
     val finished = jobState as? JobState.Finished
@@ -169,6 +176,38 @@ fun ToolScreen(
                             onRotate = onRotateSelected,
                             onDelete = onDeleteSelected,
                             onMovePage = onMovePage
+                        )
+                    }
+                } else if (tool == ToolId.SIGN && state.documents.isNotEmpty()) {
+                    item {
+                        SignaturePad(onSigned = onSigned, makeFile = makeSignatureFile)
+                    }
+                    item {
+                        ToolOptions(
+                            tool = tool,
+                            config = state.config,
+                            pageCount = state.documents.firstOrNull()?.pageCount,
+                            onChange = onConfigChange
+                        )
+                    }
+                } else if (tool == ToolId.REDACT && state.pageOrder.isNotEmpty()) {
+                    item {
+                        RedactCanvas(
+                            pageIndex = state.redactPage,
+                            pageCount = state.pageOrder.size,
+                            page = state.thumbnails[state.redactPage],
+                            areas = state.redactions[state.redactPage].orEmpty(),
+                            onPage = onRedactPage,
+                            onAdd = { area -> onAddRedaction(state.redactPage, area) },
+                            onClear = { onClearRedactions(state.redactPage) }
+                        )
+                    }
+                    item {
+                        ToolOptions(
+                            tool = tool,
+                            config = state.config,
+                            pageCount = state.documents.firstOrNull()?.pageCount,
+                            onChange = onConfigChange
                         )
                     }
                 } else if (state.documents.isNotEmpty()) {

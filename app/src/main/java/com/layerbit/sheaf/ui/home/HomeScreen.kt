@@ -26,6 +26,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.R
+import com.layerbit.sheaf.brand.BrandLinks
 import com.layerbit.sheaf.data.db.RecentEntity
 import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.ui.components.Panel
@@ -65,19 +66,13 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item {
-            Column(modifier = Modifier.padding(bottom = 6.dp)) {
-                Text(
-                    text = "Sheaf",
-                    style = MaterialTheme.typography.displayMedium,
-                    color = SheafColors.Text
-                )
-                Text(
-                    text = "Everything happens on this phone. Nothing is uploaded, because " +
-                        "Sheaf cannot use the internet at all.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SheafColors.Muted
-                )
-            }
+            Text(
+                text = "Everything happens on this phone. Nothing is uploaded, because Sheaf " +
+                    "cannot use the internet at all.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = SheafColors.Muted,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
         }
 
         ToolId.Group.entries.forEach { group ->
@@ -111,9 +106,13 @@ fun HomeScreen(
         }
 
         item {
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(22.dp))
             TextButton(onClick = onAbout) {
-                Text("About Sheaf", color = SheafColors.Muted)
+                Text(
+                    "Free, offline, and from ${BrandLinks.BRAND_LABEL}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SheafColors.Dim
+                )
             }
         }
     }

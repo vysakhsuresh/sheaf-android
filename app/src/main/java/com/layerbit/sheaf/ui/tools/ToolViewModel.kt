@@ -10,7 +10,16 @@ import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.jobs.JobState
 import com.layerbit.sheaf.jobs.belongsTo
 import com.layerbit.sheaf.ops.CompressOp
+import com.layerbit.sheaf.ops.CropOp
+import com.layerbit.sheaf.ops.ExtractImagesOp
 import com.layerbit.sheaf.ops.ExtractPagesOp
+import com.layerbit.sheaf.ops.MetadataOp
+import com.layerbit.sheaf.ops.NUpOp
+import com.layerbit.sheaf.ops.PageNumberOp
+import com.layerbit.sheaf.ops.RedactOp
+import com.layerbit.sheaf.ops.SignOp
+import com.layerbit.sheaf.ops.SplitBySizeOp
+import com.layerbit.sheaf.ops.WatermarkOp
 import com.layerbit.sheaf.ops.ExtractTextOp
 import com.layerbit.sheaf.ops.OcrOp
 import com.layerbit.sheaf.ops.ImagesToPdfOp
@@ -23,6 +32,12 @@ import com.layerbit.sheaf.ops.SetPasswordOp
 import com.layerbit.sheaf.ops.SplitOp
 import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.pdf.CompressionLevel
+import com.layerbit.sheaf.pdf.CropSpec
+import com.layerbit.sheaf.pdf.DocumentMetadata
+import com.layerbit.sheaf.pdf.ImageStamp
+import com.layerbit.sheaf.pdf.PageArea
+import com.layerbit.sheaf.pdf.PageNumberSpec
+import com.layerbit.sheaf.pdf.WatermarkSpec
 import com.layerbit.sheaf.pdf.ImageFormat
 import com.layerbit.sheaf.pdf.PageSpec
 import com.layerbit.sheaf.pdf.PdfException
@@ -192,12 +207,16 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
 
         viewModelScope.launch {
             _state.update { it.copy(busy = true) }
+            // Remove areas needs pages big enough to read, because a box has to be drawn
+            // over particular words. Organise only needs to recognise a page, so it gets the
+            // small ones - rendering a 200-page document at full width would not survive.
+            val width = if (_state.value.tool == ToolId.REDACT) REDACT_PAGE_WIDTH_PX else THUMBNAIL_WIDTH_PX
             val thumbs = withContext(Dispatchers.IO) {
                 runCatching {
                     val engine = if (doc.encrypted) sheaf.encryptedReader else sheaf.pdfEngine
                     engine.open(doc.file.file, doc.password).use { opened ->
                         (0 until opened.pageCount).map { index ->
-                            index to runCatching { opened.renderPage(index, THUMBNAIL_WIDTH_PX) }.getOrNull()
+                            index to runCatching { opened.renderPage(index, width) }.getOrNull()
                         }
                     }
                 }.getOrNull().orEmpty()
@@ -282,6 +301,59 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 _state.update { it.copy(error = "Open the scanner from the home screen.") }
                 return null
             }
+            ToolId.WATERMARK -> WatermarkOp(
+                WatermarkSpec(
+                    text = config.watermarkText,
+                    opacity = config.watermarkOpacity,
+                    degrees = if (config.watermarkDiagonal) 45f else 0f,
+                    tiled = config.watermarkTiled
+                )
+            )
+            ToolId.PAGE_NUMBERS -> PageNumberOp(
+                PageNumberSpec(
+                    position = config.numberPosition,
+                    format = config.numberFormat,
+                    startAt = config.numberStartAt,
+                    skipFirst = config.numberSkipFirst,
+                    padTo = if (config.bates) BATES_WIDTH else 0
+                )
+            )
+            ToolId.CROP -> CropOp(
+                CropSpec(
+                    left = config.trim, top = config.trim, right = config.trim, bottom = config.trim,
+                    resizeTo = config.resizeTo
+                )
+            )
+            ToolId.SIGN -> {
+                val signature = state.signatureFile
+                if (signature == null) {
+                    _state.update { it.copy(error = "Draw your signature first.") }
+                    return null
+                }
+                SignOp(
+                    ImageStamp(
+                        image = signature,
+                        pageIndex = (config.signPage - 1).coerceAtLeast(0),
+                        anchor = config.signAnchor,
+                        widthFraction = config.signWidth
+                    )
+                )
+            }
+            ToolId.REDACT -> RedactOp(state.redactions)
+            ToolId.N_UP -> NUpOp(config.perSheet)
+            ToolId.SPLIT_BY_SIZE -> SplitBySizeOp(config.maxPartBytes)
+            ToolId.EXTRACT_IMAGES -> ExtractImagesOp()
+            ToolId.METADATA -> MetadataOp(
+                if (config.stripMetadata) {
+                    DocumentMetadata(stripAll = true)
+                } else {
+                    DocumentMetadata(
+                        title = config.metaTitle,
+                        author = config.metaAuthor,
+                        subject = config.metaSubject
+                    )
+                }
+            )
             ToolId.MERGE -> MergeOp()
             ToolId.EXTRACT -> ExtractPagesOp(config.pageSpec)
             ToolId.SPLIT -> SplitOp(
@@ -342,9 +414,41 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         _state.value.thumbnails.values.forEach { it.recycle() }
     }
 
+    // ---- sign and redact ----
+
+    /** Where a freshly drawn signature is written. */
+    fun newSignatureFile(): java.io.File = sheaf.workspace.newOutput("signature", "ink", "png")
+
+    /** Stores the drawn signature. Replaces any previous one rather than accumulating files. */
+    fun setSignature(file: java.io.File) {
+        _state.update { current ->
+            current.signatureFile?.takeIf { it != file }?.delete()
+            current.copy(signatureFile = file, error = null)
+        }
+    }
+
+    fun setRedactPage(index: Int) = _state.update { it.copy(redactPage = index) }
+
+    fun addRedaction(page: Int, area: PageArea) {
+        _state.update { current ->
+            val existing = current.redactions[page].orEmpty()
+            current.copy(redactions = current.redactions + (page to existing + area), error = null)
+        }
+    }
+
+    fun clearRedactions(page: Int) {
+        _state.update { it.copy(redactions = it.redactions - page) }
+    }
+
     private companion object {
         /** About a sixth of a phone screen. Enough to recognise a page, not to read it. */
         const val THUMBNAIL_WIDTH_PX = 220
+
+        /** Bates numbers are conventionally six digits wide. */
+        const val BATES_WIDTH = 6
+
+        /** Readable enough to aim a redaction box at, small enough to hold a few of. */
+        const val REDACT_PAGE_WIDTH_PX = 900
     }
 }
 
@@ -370,7 +474,13 @@ data class ToolUiState(
     val pageOrder: List<Int> = emptyList(),
     val selectedPages: Set<Int> = emptySet(),
     val rotations: Map<Int, Int> = emptyMap(),
-    val thumbnails: Map<Int, Bitmap> = emptyMap()
+    val thumbnails: Map<Int, Bitmap> = emptyMap(),
+    /** Sign only: the drawn signature, written out as a transparent PNG. */
+    val signatureFile: java.io.File? = null,
+    /** Redact only: the boxes drawn on each page, normalised to the page. */
+    val redactions: Map<Int, List<PageArea>> = emptyMap(),
+    /** Redact only: which page the canvas is showing. */
+    val redactPage: Int = 0
 ) {
     val canRun: Boolean
         get() = tool != null && documents.isNotEmpty() && documents.all { it.isReady } && !busy &&
@@ -388,7 +498,33 @@ data class ToolConfig(
     val marginPoints: Float = 36f,
     val compression: CompressionLevel = CompressionLevel.BALANCED,
     val newPassword: String = "",
-    val confirmPassword: String = ""
+    val confirmPassword: String = "",
+
+    val watermarkText: String = "",
+    val watermarkOpacity: Float = 0.18f,
+    val watermarkDiagonal: Boolean = true,
+    val watermarkTiled: Boolean = true,
+
+    val numberPosition: PageNumberSpec.Position = PageNumberSpec.Position.BOTTOM_CENTRE,
+    val numberFormat: String = "{n}",
+    val numberStartAt: Int = 1,
+    val numberSkipFirst: Int = 0,
+    val bates: Boolean = false,
+
+    val trim: Float = 0f,
+    val resizeTo: PageSpec.Size? = null,
+
+    val signPage: Int = 1,
+    val signAnchor: ImageStamp.Anchor = ImageStamp.Anchor.BOTTOM_RIGHT,
+    val signWidth: Float = 0.3f,
+
+    val perSheet: Int = 2,
+    val maxPartBytes: Long = 10L * 1024 * 1024,
+
+    val stripMetadata: Boolean = false,
+    val metaTitle: String = "",
+    val metaAuthor: String = "",
+    val metaSubject: String = ""
 ) {
     enum class SplitMode { EVERY_N, EACH_PAGE, RANGES }
 

@@ -119,7 +119,127 @@ interface PdfSurgeon {
     /** The document's own table of contents, flattened. Empty when it has none. */
     @Throws(PdfException::class)
     fun readOutline(input: PdfInput): List<OutlineEntry>
+
+    // ---- P3: marking up ----
+
+    /** Stamps repeating text across every page. */
+    @Throws(PdfException::class)
+    fun watermark(input: PdfInput, spec: WatermarkSpec, output: File, onProgress: (Int, Int) -> Unit = { _, _ -> })
+
+    /** Numbers the pages. */
+    @Throws(PdfException::class)
+    fun addPageNumbers(input: PdfInput, spec: PageNumberSpec, output: File, onProgress: (Int, Int) -> Unit = { _, _ -> })
+
+    /**
+     * Trims the visible area of each page, and optionally puts the result on a standard size.
+     *
+     * Cropping changes the CropBox rather than deleting content: what falls outside stops
+     * being displayed or printed but is still in the file. That is how every PDF tool crops,
+     * and it is why cropping is NOT a way to hide anything. Use [redact] for that.
+     */
+    @Throws(PdfException::class)
+    fun cropPages(input: PdfInput, spec: CropSpec, output: File, onProgress: (Int, Int) -> Unit = { _, _ -> })
+
+    /**
+     * Permanently removes what is inside the marked areas.
+     *
+     * Genuinely removes it. A black rectangle drawn over text leaves the text in the file,
+     * selectable and copyable by anyone who opens it in a different reader - which is how
+     * redaction failures reach the news. See the implementation for what this costs.
+     */
+    @Throws(PdfException::class)
+    fun redact(input: PdfInput, areas: Map<Int, List<PageArea>>, dpi: Int, output: File, onProgress: (Int, Int) -> Unit = { _, _ -> })
+
+    /** Draws an image onto one page and flattens it into the content. */
+    @Throws(PdfException::class)
+    fun stampImage(input: PdfInput, stamp: ImageStamp, output: File)
+
+    // ---- P4: power tools ----
+
+    /** Places several source pages onto each output sheet. */
+    @Throws(PdfException::class)
+    fun nUp(input: PdfInput, perSheet: Int, output: File, onProgress: (Int, Int) -> Unit = { _, _ -> })
+
+    /**
+     * Splits so each part stays under [maxBytes].
+     *
+     * @return the page groups. Writing them is the caller's job, through [extractPages].
+     */
+    @Throws(PdfException::class)
+    fun planSizeSplit(input: PdfInput, maxBytes: Long, onProgress: (Int, Int) -> Unit = { _, _ -> }): List<List<Int>>
+
+    /** Pulls out the embedded images at their original resolution. */
+    @Throws(PdfException::class)
+    fun extractImages(input: PdfInput, outputDir: File, baseName: String, onProgress: (Int, Int) -> Unit = { _, _ -> }): List<File>
+
+    /** Rewrites the document information dictionary. */
+    @Throws(PdfException::class)
+    fun writeMetadata(input: PdfInput, metadata: DocumentMetadata, output: File)
 }
+
+/** Repeating text laid across a page. */
+data class WatermarkSpec(
+    val text: String,
+    /** 0 to 1. Below about 0.5 stays readable underneath. */
+    val opacity: Float = 0.18f,
+    val degrees: Float = 45f,
+    val fontSize: Float = 48f,
+    /** Tiled across the whole page, or one mark in the middle. */
+    val tiled: Boolean = true
+)
+
+data class PageNumberSpec(
+    val position: Position = Position.BOTTOM_CENTRE,
+    /** "{n}" becomes the number, "{total}" the page count. */
+    val format: String = "{n}",
+    /** What the first numbered page is called. */
+    val startAt: Int = 1,
+    /** Pages before this are left unnumbered - a cover, a title page. */
+    val skipFirst: Int = 0,
+    val fontSize: Float = 10f,
+    /** Zero-pads to this width, for Bates numbering. Zero means no padding. */
+    val padTo: Int = 0
+) {
+    enum class Position { TOP_LEFT, TOP_CENTRE, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_CENTRE, BOTTOM_RIGHT }
+}
+
+data class CropSpec(
+    /** Fraction of the page trimmed from each edge, 0 to 0.45. */
+    val left: Float = 0f,
+    val top: Float = 0f,
+    val right: Float = 0f,
+    val bottom: Float = 0f,
+    /** Put every page on this size afterwards, scaling to fit. Null leaves sizes alone. */
+    val resizeTo: PageSpec.Size? = null
+)
+
+/** A rectangle on a page, normalised to the page box, origin top-left, 0 to 1. */
+data class PageArea(val left: Float, val top: Float, val width: Float, val height: Float)
+
+/** An image to place on one page. */
+data class ImageStamp(
+    val image: File,
+    val pageIndex: Int,
+    val anchor: Anchor,
+    /** Width as a fraction of the page width. Height follows the image's own proportions. */
+    val widthFraction: Float = 0.3f,
+    val marginFraction: Float = 0.06f
+) {
+    enum class Anchor {
+        TOP_LEFT, TOP_CENTRE, TOP_RIGHT,
+        MIDDLE_LEFT, MIDDLE_CENTRE, MIDDLE_RIGHT,
+        BOTTOM_LEFT, BOTTOM_CENTRE, BOTTOM_RIGHT
+    }
+}
+
+data class DocumentMetadata(
+    val title: String? = null,
+    val author: String? = null,
+    val subject: String? = null,
+    val keywords: String? = null,
+    /** Clears everything, including the producer and the creation dates. */
+    val stripAll: Boolean = false
+)
 
 /**
  * A line of text to place on a page, positioned relative to the page box.

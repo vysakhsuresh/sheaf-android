@@ -79,6 +79,63 @@ enum class ToolId(
         Group.CONVERT
     ),
 
+    WATERMARK(
+        "Watermark",
+        "Lay DRAFT or a name across every page",
+        InputKind.SEVERAL_PDFS,
+        Group.MARK
+    ),
+    PAGE_NUMBERS(
+        "Page numbers",
+        "Number the pages, Bates style if you need it",
+        InputKind.SEVERAL_PDFS,
+        Group.MARK
+    ),
+    SIGN(
+        "Sign",
+        "Draw your signature and place it on a page",
+        InputKind.ONE_PDF,
+        Group.MARK
+    ),
+    CROP(
+        "Crop pages",
+        "Trim the margins or change the page size",
+        InputKind.SEVERAL_PDFS,
+        Group.MARK
+    ),
+
+    N_UP(
+        "Pages per sheet",
+        "Put two or four pages on each sheet for printing",
+        InputKind.SEVERAL_PDFS,
+        Group.CONVERT
+    ),
+    SPLIT_BY_SIZE(
+        "Split by size",
+        "Cut a file into parts small enough to email",
+        InputKind.ONE_PDF,
+        Group.PAGES
+    ),
+    EXTRACT_IMAGES(
+        "Extract images",
+        "Pull out the pictures already inside a document",
+        InputKind.ONE_PDF,
+        Group.CONVERT
+    ),
+
+    REDACT(
+        "Remove areas",
+        "Take something out of a page permanently",
+        InputKind.ONE_PDF,
+        Group.PROTECT
+    ),
+    METADATA(
+        "Document details",
+        "Edit or strip the title, author and hidden details",
+        InputKind.SEVERAL_PDFS,
+        Group.PROTECT
+    ),
+
     SET_PASSWORD(
         "Add a password",
         "Encrypt a PDF so it needs a password to open",
@@ -105,7 +162,8 @@ enum class ToolId(
     enum class Group(val title: String) {
         READ("Read and capture"),
         PAGES("Pages"),
-        CONVERT("Convert"),
+        MARK("Mark up"),
+        CONVERT("Convert and print"),
         PROTECT("Protect")
     }
 

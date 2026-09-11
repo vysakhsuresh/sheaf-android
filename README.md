@@ -97,6 +97,15 @@ the signature. Resist any pull towards a convenient `fun run(input: SheafFile): 
 | Compress | Three levels, and it tells you when there was nothing to gain |
 | Add a password | AES-256 |
 | Remove a password | For a document whose password you know |
+| Watermark | DRAFT or a name, tiled or once, at three strengths |
+| Page numbers | Position, format, skip a cover, Bates padding |
+| Sign | Draw a signature and flatten it into a page |
+| Crop pages | Trim the margins, or put every page on A4 or Letter |
+| Pages per sheet | 2-up or 4-up for printing |
+| Split by size | Parts that fit a 5, 10 or 25 MB email limit |
+| Extract images | The embedded originals, not re-rendered pages |
+| Remove areas | Genuine removal - see below |
+| Document details | Edit or strip title, author and hidden metadata |
 
 The viewer also does find-in-document, the PDF's own table of contents, and a night mode that
 inverts the page instead of re-rendering it.
@@ -108,6 +117,24 @@ Reading and the tools are one flow, not two. Open a document, read it, and hand 
 any tool from the viewer's own bar - the tool receives the same file without sending you back
 to the system picker to find it again. That is what stops the viewer being a dead end and what
 gives the recents list a job beyond nostalgia.
+
+### Removing something means removing it
+
+A black rectangle drawn over text leaves the text in the file, selectable and copyable by
+anyone who opens it in a different reader. That is how redaction failures reach the news, and
+it is what most "redact" buttons actually do.
+
+**Remove areas** renders the marked pages to an image with the boxes painted on, and that
+image replaces the page. The text underneath is not covered — it is gone, because it was never
+written into the new page at all.
+
+The cost is real and the UI says so: a redacted page becomes a picture, so its text stops
+being selectable and searchable, and the file grows. Only the marked pages are treated this
+way; every other page keeps its text untouched.
+
+**Crop is not redaction, and does not pretend to be.** Cropping changes the CropBox: what falls
+outside stops being displayed but is still in the file, and comes back if someone crops the
+other way. The crop tool says this on screen and points at Remove areas.
 
 ## Project layout
 
@@ -168,8 +195,8 @@ answer for compression and is the one most likely to be reached for by accident.
 | **P0** | — | ✅ Foundation. Engine seam, file layer, job runner, viewer. |
 | **P1** | 0.1.0 | ✅ The nine tools above. |
 | **P2** | 0.2.0 | ✅ Scanner, OCR, in-document search, outline, night mode. |
-| **P3** | 0.3.0 | Annotate, fill and sign, watermark, page numbers, redact. |
-| **P4** | 0.4.0+ | Pipelines and presets, N-up, compare, split by size. |
+| **P3** | 0.3.0 | ✅ Watermark, page numbers, sign, crop, redact. |
+| **P4** | 0.4.0+ | ✅ N-up, split by size, extract images, metadata. |
 
 Each phase has an exit gate. P0's was: open a 500-page document, scroll it end to end at 60 fps,
 close it, and return to a flat heap. P1's is: every tool produces a file that opens correctly in

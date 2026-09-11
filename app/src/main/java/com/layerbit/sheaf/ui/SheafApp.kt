@@ -19,7 +19,11 @@ import android.net.Uri
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.layerbit.sheaf.ops.ToolId
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import com.layerbit.sheaf.ui.about.AboutScreen
+import com.layerbit.sheaf.ui.components.SheafTopBar
 import com.layerbit.sheaf.ui.scan.ScanRoute
 import com.layerbit.sheaf.ui.tools.ToolRoute
 import com.layerbit.sheaf.ui.home.HomeScreen
@@ -95,14 +99,24 @@ fun SheafApp(
     ) {
         NavHost(navController = navController, startDestination = Routes.HOME) {
             composable(Routes.HOME) {
-                HomeScreen(
-                    recents = recents,
-                    onOpenDocument = onPickDocument,
-                    onOpenRecent = { recent -> onOpenRecentUri(recent.uri) },
-                    onForgetRecent = { onForgetRecent(it.uri) },
-                    onTool = { tool -> navController.navigate(Routes.tool(tool)) },
-                    onAbout = { navController.navigate(Routes.ABOUT) }
-                )
+                Column {
+                    SheafTopBar(
+                        title = "Sheaf",
+                        actions = {
+                            TextButton(onClick = { navController.navigate(Routes.ABOUT) }) {
+                                Text("About", color = SheafColors.Muted)
+                            }
+                        }
+                    )
+                    HomeScreen(
+                        recents = recents,
+                        onOpenDocument = onPickDocument,
+                        onOpenRecent = { recent -> onOpenRecentUri(recent.uri) },
+                        onForgetRecent = { onForgetRecent(it.uri) },
+                        onTool = { tool -> navController.navigate(Routes.tool(tool)) },
+                        onAbout = { navController.navigate(Routes.ABOUT) }
+                    )
+                }
             }
 
             composable(Routes.VIEWER) {
@@ -132,9 +146,23 @@ fun SheafApp(
                 val name = entry.arguments?.getString("tool")
                 val tool = ToolId.entries.firstOrNull { it.name == name }
                 if (tool == ToolId.SCAN) {
-                    ScanRoute(onFinished = { navController.popBackStack() })
+                    Column {
+                        SheafTopBar(
+                            title = ToolId.SCAN.title,
+                            subtitle = ToolId.SCAN.summary,
+                            onBack = { navController.popBackStack() }
+                        )
+                        ScanRoute(onFinished = { navController.popBackStack() })
+                    }
                 } else if (tool != null) {
-                    ToolRoute(tool = tool, preloadUri = entry.arguments?.getString("uri"))
+                    Column {
+                        SheafTopBar(
+                            title = tool.title,
+                            subtitle = tool.summary,
+                            onBack = { navController.popBackStack() }
+                        )
+                        ToolRoute(tool = tool, preloadUri = entry.arguments?.getString("uri"))
+                    }
                 } else {
                     // Only reachable from a stale deep link. Going back beats an error screen.
                     LaunchedEffect(Unit) { navController.popBackStack() }
@@ -142,7 +170,10 @@ fun SheafApp(
             }
 
             composable(Routes.ABOUT) {
-                AboutScreen()
+                Column {
+                    SheafTopBar(title = "About Sheaf", onBack = { navController.popBackStack() })
+                    AboutScreen()
+                }
             }
         }
     }

@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.pdf.CompressionLevel
 import com.layerbit.sheaf.pdf.ImageFormat
+import com.layerbit.sheaf.pdf.ImageStamp
+import com.layerbit.sheaf.pdf.PageNumberSpec
 import com.layerbit.sheaf.pdf.PageSpec
 import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.theme.SheafColors
@@ -192,7 +194,199 @@ fun ToolOptions(
                     "keeps running if you switch to another app."
             )
 
-            // The scanner never reaches this screen; it has its own.
+            ToolId.WATERMARK -> {
+                Field(
+                    value = config.watermarkText,
+                    label = "Watermark text",
+                    keyboardType = KeyboardType.Text,
+                    onChange = { text -> onChange { it.copy(watermarkText = text) } }
+                )
+                SectionHeading("Strength")
+                ChoiceRow(
+                    options = listOf(0.10f to "Faint", 0.18f to "Normal", 0.30f to "Strong"),
+                    selected = config.watermarkOpacity,
+                    onSelect = { value -> onChange { it.copy(watermarkOpacity = value) } }
+                )
+                SectionHeading("Layout")
+                ChoiceRow(
+                    options = listOf(true to "Repeated", false to "Once, in the middle"),
+                    selected = config.watermarkTiled,
+                    onSelect = { value -> onChange { it.copy(watermarkTiled = value) } }
+                )
+                ChoiceRow(
+                    options = listOf(true to "Diagonal", false to "Straight"),
+                    selected = config.watermarkDiagonal,
+                    onSelect = { value -> onChange { it.copy(watermarkDiagonal = value) } }
+                )
+            }
+
+            ToolId.PAGE_NUMBERS -> {
+                SectionHeading("Where")
+                ChoiceRow(
+                    options = listOf(
+                        PageNumberSpec.Position.BOTTOM_CENTRE to "Bottom",
+                        PageNumberSpec.Position.BOTTOM_RIGHT to "Bottom right",
+                        PageNumberSpec.Position.TOP_RIGHT to "Top right"
+                    ),
+                    selected = config.numberPosition,
+                    onSelect = { value -> onChange { it.copy(numberPosition = value) } }
+                )
+                SectionHeading("Format")
+                ChoiceRow(
+                    options = listOf(
+                        "{n}" to "1",
+                        "Page {n}" to "Page 1",
+                        "{n} of {total}" to "1 of 9"
+                    ),
+                    selected = config.numberFormat,
+                    onSelect = { value -> onChange { it.copy(numberFormat = value) } }
+                )
+                NumberField(
+                    value = config.numberSkipFirst,
+                    label = "Leave this many pages unnumbered",
+                    min = 0,
+                    max = (pageCount ?: 9999) - 1,
+                    onChange = { value -> onChange { it.copy(numberSkipFirst = value) } }
+                )
+                ChoiceRow(
+                    options = listOf(false to "Plain numbers", true to "Bates (000001)"),
+                    selected = config.bates,
+                    onSelect = { value -> onChange { it.copy(bates = value) } }
+                )
+            }
+
+            ToolId.CROP -> {
+                SectionHeading("Trim from every edge")
+                ChoiceRow(
+                    options = listOf(
+                        0f to "None",
+                        0.03f to "A little",
+                        0.06f to "More",
+                        0.10f to "A lot"
+                    ),
+                    selected = config.trim,
+                    onSelect = { value -> onChange { it.copy(trim = value) } }
+                )
+                SectionHeading("Page size")
+                ChoiceRow(
+                    options = listOf(
+                        null to "Leave as it is",
+                        PageSpec.Size.A4 to "A4",
+                        PageSpec.Size.LETTER to "Letter"
+                    ),
+                    selected = config.resizeTo,
+                    onSelect = { value -> onChange { it.copy(resizeTo = value) } }
+                )
+                Hint(
+                    "Cropping hides the margins rather than deleting them, which is how every " +
+                        "PDF reader works. To take something out of a page for good, use " +
+                        "Remove areas."
+                )
+            }
+
+            ToolId.SIGN -> {
+                SectionHeading("Where on the page")
+                ChoiceRow(
+                    options = listOf(
+                        ImageStamp.Anchor.BOTTOM_RIGHT to "Bottom right",
+                        ImageStamp.Anchor.BOTTOM_LEFT to "Bottom left",
+                        ImageStamp.Anchor.BOTTOM_CENTRE to "Bottom centre"
+                    ),
+                    selected = config.signAnchor,
+                    onSelect = { value -> onChange { it.copy(signAnchor = value) } }
+                )
+                SectionHeading("Size")
+                ChoiceRow(
+                    options = listOf(0.2f to "Small", 0.3f to "Medium", 0.45f to "Large"),
+                    selected = config.signWidth,
+                    onSelect = { value -> onChange { it.copy(signWidth = value) } }
+                )
+                NumberField(
+                    value = config.signPage,
+                    label = "Page",
+                    min = 1,
+                    max = pageCount ?: 9999,
+                    onChange = { value -> onChange { it.copy(signPage = value) } }
+                )
+                Hint(
+                    "This draws your signature into the page, the same as printing, signing " +
+                        "and scanning it back. It is not a cryptographic digital signature."
+                )
+            }
+
+            ToolId.N_UP -> {
+                SectionHeading("Pages per sheet")
+                ChoiceRow(
+                    options = listOf(2 to "2", 4 to "4"),
+                    selected = config.perSheet,
+                    onSelect = { value -> onChange { it.copy(perSheet = value) } }
+                )
+                Hint("Useful for printing a long document on less paper, or making a booklet.")
+            }
+
+            ToolId.SPLIT_BY_SIZE -> {
+                SectionHeading("Each part under")
+                ChoiceRow(
+                    options = listOf(
+                        5L * 1024 * 1024 to "5 MB",
+                        10L * 1024 * 1024 to "10 MB",
+                        25L * 1024 * 1024 to "25 MB"
+                    ),
+                    selected = config.maxPartBytes,
+                    onSelect = { value -> onChange { it.copy(maxPartBytes = value) } }
+                )
+                Hint(
+                    "Sizes are worked out from the average page, so a part can come out a " +
+                        "little over. The result screen shows what each one actually is."
+                )
+            }
+
+            ToolId.METADATA -> {
+                ChoiceRow(
+                    options = listOf(false to "Edit the details", true to "Strip everything"),
+                    selected = config.stripMetadata,
+                    onSelect = { value -> onChange { it.copy(stripMetadata = value) } }
+                )
+                if (config.stripMetadata) {
+                    Hint(
+                        "Clears the title, author, subject, keywords, the app that made it and " +
+                            "the dates. A scanner writes its make and model into a PDF; a word " +
+                            "processor writes the name it is licensed to."
+                    )
+                } else {
+                    Field(
+                        value = config.metaTitle,
+                        label = "Title",
+                        keyboardType = KeyboardType.Text,
+                        onChange = { value -> onChange { it.copy(metaTitle = value) } }
+                    )
+                    Field(
+                        value = config.metaAuthor,
+                        label = "Author",
+                        keyboardType = KeyboardType.Text,
+                        onChange = { value -> onChange { it.copy(metaAuthor = value) } }
+                    )
+                    Field(
+                        value = config.metaSubject,
+                        label = "Subject",
+                        keyboardType = KeyboardType.Text,
+                        onChange = { value -> onChange { it.copy(metaSubject = value) } }
+                    )
+                }
+            }
+
+            ToolId.EXTRACT_IMAGES -> Hint(
+                "This pulls out the pictures already inside the document at their original " +
+                    "size. For pictures of the pages themselves, use PDF to images."
+            )
+
+            ToolId.REDACT -> Hint(
+                "Draw a box over anything that should go. The marked pages are rebuilt as " +
+                    "images, so what was underneath is genuinely gone rather than covered - " +
+                    "and those pages stop being selectable text. Other pages are untouched."
+            )
+
+            // These have their own canvases on the tool screen rather than plain settings.
             ToolId.SCAN -> Unit
 
             ToolId.ORGANISE -> Unit
@@ -247,7 +441,7 @@ fun PasswordField(value: String, label: String = "Password", onChange: (String) 
 }
 
 @Composable
-private fun Field(
+internal fun Field(
     value: String,
     label: String,
     keyboardType: KeyboardType,

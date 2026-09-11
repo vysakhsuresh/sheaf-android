@@ -29,6 +29,15 @@ fun iconFor(tool: ToolId): Int = when (tool) {
     ToolId.IMAGES_TO_PDF -> R.drawable.ic_tool_images_to_pdf
     ToolId.PDF_TO_IMAGES -> R.drawable.ic_tool_pdf_to_images
     ToolId.COMPRESS -> R.drawable.ic_tool_compress
+    ToolId.WATERMARK -> R.drawable.ic_tool_watermark
+    ToolId.PAGE_NUMBERS -> R.drawable.ic_tool_page_numbers
+    ToolId.SIGN -> R.drawable.ic_tool_sign
+    ToolId.CROP -> R.drawable.ic_tool_crop
+    ToolId.N_UP -> R.drawable.ic_tool_n_up
+    ToolId.SPLIT_BY_SIZE -> R.drawable.ic_tool_split_size
+    ToolId.EXTRACT_IMAGES -> R.drawable.ic_tool_extract_images
+    ToolId.REDACT -> R.drawable.ic_tool_redact
+    ToolId.METADATA -> R.drawable.ic_tool_metadata
     ToolId.SET_PASSWORD -> R.drawable.ic_tool_lock
     ToolId.REMOVE_PASSWORD -> R.drawable.ic_tool_unlock
 }
