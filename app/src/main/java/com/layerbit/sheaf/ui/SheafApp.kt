@@ -15,6 +15,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import android.net.Uri
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.layerbit.sheaf.ops.ToolId
@@ -30,9 +31,19 @@ object Routes {
     const val VIEWER = "viewer"
     const val ABOUT = "about"
 
-    /** The tool's enum name is the argument, so a route survives a reordering of ToolId. */
-    const val TOOL = "tool/{tool}"
-    fun tool(tool: ToolId) = "tool/${tool.name}"
+    /**
+     * The tool's enum name is the argument, so a route survives a reordering of ToolId. The
+     * optional uri is how the viewer hands the document it has open straight to a tool,
+     * which is what stops "open a PDF" being a dead end that only shows you pages.
+     */
+    const val TOOL = "tool/{tool}?uri={uri}"
+
+    fun tool(tool: ToolId, uri: String? = null): String {
+        val base = "tool/${tool.name}"
+        // Encoded because a content:// Uri is full of characters the route parser treats as
+        // structure - a raw one silently truncates at the first ? or #.
+        return if (uri == null) base else "$base?uri=" + Uri.encode(uri)
+    }
 }
 
 /**
@@ -93,18 +104,27 @@ fun SheafApp(
             composable(Routes.VIEWER) {
                 ViewerScreen(
                     state = viewerState,
-                    renderPage = { index, width -> viewerViewModel.page(index, width) }
+                    renderPage = { index, width -> viewerViewModel.page(index, width) },
+                    onUseTool = { tool, uri -> navController.navigate(Routes.tool(tool, uri)) },
+                    onBack = { navController.popBackStack() }
                 )
             }
 
             composable(
                 route = Routes.TOOL,
-                arguments = listOf(navArgument("tool") { type = NavType.StringType })
+                arguments = listOf(
+                    navArgument("tool") { type = NavType.StringType },
+                    navArgument("uri") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
             ) { entry ->
                 val name = entry.arguments?.getString("tool")
                 val tool = ToolId.entries.firstOrNull { it.name == name }
                 if (tool != null) {
-                    ToolRoute(tool = tool)
+                    ToolRoute(tool = tool, preloadUri = entry.arguments?.getString("uri"))
                 } else {
                     // Only reachable from a stale deep link. Going back beats an error screen.
                     LaunchedEffect(Unit) { navController.popBackStack() }

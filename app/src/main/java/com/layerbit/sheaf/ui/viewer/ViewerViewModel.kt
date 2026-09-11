@@ -89,6 +89,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                 generation += 1
                 _state.value = ViewerState.Ready(
                     generation = generation,
+                    sourceUri = uri.toString(),
                     displayName = imported.displayName,
                     pageCount = opened.pageCount,
                     pageSizes = sizes,
@@ -166,6 +167,13 @@ sealed interface ViewerState {
          * it, so a page composable cannot carry a bitmap over from the document before.
          */
         val generation: Int,
+        /**
+         * Where this document came from, so the viewer can hand it to a tool. The tool
+         * imports its own copy from the same Uri rather than sharing this one - the viewer
+         * deletes its cached copy the moment another document is opened, and a tool holding
+         * a reference to a deleted file is a bug waiting to happen.
+         */
+        val sourceUri: String,
         val displayName: String,
         val pageCount: Int,
         val pageSizes: List<PageSize>,

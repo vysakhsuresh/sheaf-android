@@ -33,6 +33,8 @@ import com.layerbit.sheaf.ops.ToolId
 @Composable
 fun ToolRoute(
     tool: ToolId,
+    /** A document handed over from the viewer, so the user does not pick the same file twice. */
+    preloadUri: String? = null,
     viewModel: ToolViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
@@ -46,7 +48,10 @@ fun ToolRoute(
     /** Which result the save picker is currently collecting a destination for. */
     var pendingSave by remember { mutableStateOf<SheafFile?>(null) }
 
-    LaunchedEffect(tool) { viewModel.start(tool) }
+    LaunchedEffect(tool, preloadUri) {
+        viewModel.start(tool)
+        if (preloadUri != null) viewModel.addDocuments(listOf(Uri.parse(preloadUri)))
+    }
 
     val pickFiles = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
