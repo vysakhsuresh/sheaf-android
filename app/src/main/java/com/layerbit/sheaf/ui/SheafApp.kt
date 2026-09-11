@@ -50,10 +50,12 @@ object Routes {
 /**
  * Navigation and the one shared viewer view model.
  *
- * The viewer's model is scoped to the activity rather than to its route, because a document
- * opened from a share-sheet intent is loaded before any navigation happens - the intent
- * arrives at MainActivity, the model takes it, and the viewer route then finds it already
- * open rather than reloading from a Uri it would have to carry through the back stack.
+ * The viewer's model is scoped to the activity rather than to its route.
+ *
+ * A document opened from a share-sheet intent is loaded before any navigation happens: the
+ * intent arrives at MainActivity and the model takes it. The viewer route then finds it
+ * already open, rather than reloading from a Uri it would have to carry through the back
+ * stack.
  */
 @Composable
 fun SheafApp(

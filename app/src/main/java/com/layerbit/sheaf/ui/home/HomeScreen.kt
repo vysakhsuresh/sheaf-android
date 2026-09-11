@@ -39,11 +39,12 @@ import com.layerbit.sheaf.ui.tools.iconFor
 /**
  * The home screen: a board of everything Sheaf does.
  *
- * There is deliberately no big primary button above the tools. An earlier version had one -
- * "Open a PDF" - and it created a false hierarchy: it read as *the* way to use the app, which
- * turned the tools underneath it into a list of things you might read about rather than
- * things you would tap. Reading is now simply the first card, in the first group, coloured
- * like the others.
+ * There is deliberately no big primary button above the tools.
+ *
+ * An earlier version had one, "Open a PDF", and it created a false hierarchy. It read as *the*
+ * way to use the app, which turned the tools underneath into a list of things you might read
+ * about rather than things you would tap. Reading is now simply the first card, in the first
+ * group, colored like the others.
  *
  * The cards are grouped by what someone is trying to do rather than left as one flat wall of
  * twelve. Groups are headings, not navigation: nothing is hidden behind a tap.
@@ -122,7 +123,7 @@ fun HomeScreen(
  * One group's cards, two to a row and all the same height.
  *
  * The height is fixed rather than left to the content. Summaries run to two or three lines
- * depending on the tool, and letting each card size itself leaves neighbouring cards with
+ * depending on the tool, and letting each card size itself leaves neighboring cards with
  * mismatched bottoms. An odd group gets an empty half-width slot rather than one card
  * stretched across, which would read as a different kind of thing.
  */
@@ -180,7 +181,7 @@ private fun Card(
             modifier = Modifier
                 .size(36.dp)
                 .background(
-                    // The reading card carries the band colour at low opacity. It is the most
+                    // The reading card carries the band color at low opacity. It is the most
                     // common thing people do, and this marks it without lifting it out of the
                     // grid the way a separate button did.
                     if (accent) SheafColors.Band.copy(alpha = 0.16f) else SheafColors.SurfaceDim,

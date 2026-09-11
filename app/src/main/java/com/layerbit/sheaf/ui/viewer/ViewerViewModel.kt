@@ -28,10 +28,11 @@ import kotlinx.coroutines.withContext
  *
  * The whole design here is about not holding pages. A five-hundred-page document rendered
  * eagerly is gigabytes of bitmap; rendered lazily with a bounded cache it is a few megabytes
- * no matter how long the document is. Page count and page sizes are read once and kept,
- * because those are a few bytes each and the list needs them to lay out before anything is
- * rendered - that is what lets the scrollbar be honest on a document the user has only seen
- * the first screen of.
+ * no matter how long the document is.
+ *
+ * Page count and page sizes are read once and kept. Those are a few bytes each, and the list
+ * needs them to lay out before anything is rendered - which is what lets the scrollbar be
+ * honest on a document the reader has only seen the first screen of.
  */
 class ViewerViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -189,10 +190,11 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * Releases everything tied to the document currently open.
      *
-     * Called before opening another and from [onCleared]. Each step matters on its own: the
-     * cache would otherwise serve the wrong pages, the descriptor would leak one per document
-     * opened, and the imported copy would sit in the cache directory until Android decided to
-     * clear it - which on a phone full of scanned documents is a lot of wasted storage.
+     * Called before opening another and from [onCleared]. Each step matters on its own.
+     *
+     * The cache would otherwise serve the wrong pages. The descriptor would leak one per
+     * document opened. The imported copy would sit in the cache directory until Android
+     * decided to clear it, which on a phone full of scans is a lot of wasted storage.
      */
     private fun closeCurrent() {
         searchJob?.cancel()
@@ -235,10 +237,11 @@ sealed interface ViewerState {
          */
         val generation: Int,
         /**
-         * Where this document came from, so the viewer can hand it to a tool. The tool
-         * imports its own copy from the same Uri rather than sharing this one - the viewer
-         * deletes its cached copy the moment another document is opened, and a tool holding
-         * a reference to a deleted file is a bug waiting to happen.
+         * Where this document came from, so the viewer can hand it to a tool.
+         *
+         * The tool imports its own copy from the same Uri rather than sharing this one. The
+         * viewer deletes its cached copy the moment another document is opened, and a tool
+         * holding a reference to a deleted file is a bug waiting to happen.
          */
         val sourceUri: String,
         val displayName: String,

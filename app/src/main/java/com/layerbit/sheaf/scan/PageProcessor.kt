@@ -112,7 +112,7 @@ object PageProcessor {
         /** Leave the photograph as it is. Right for anything with pictures on it. */
         ORIGINAL("Photo"),
 
-        /** Drains the colour. Kinder on file size, still shows shading. */
+        /** Drains the color. Kinder on file size, still shows shading. */
         GREYSCALE("Grey"),
 
         /** Hard contrast. This is the one that makes a phone photo look like a scan. */

@@ -8,10 +8,11 @@ import kotlin.math.sqrt
  * The hard ceiling on how big a rendered page may be.
  *
  * Out-of-memory on a large or scanned document is the number one way an app in this category
- * dies, and it is not a hypothetical: an A0 poster at 300 DPI is roughly 9900 x 14000 pixels,
- * which is 554 MB as ARGB_8888 - far past any heap Android will give a process. Rendering is
- * therefore always clamped, and the clamp lives here rather than being re-derived at each
- * call site with slightly different arithmetic.
+ * dies, and it is not hypothetical. An A0 poster at 300 DPI is roughly 9900 x 14000 pixels,
+ * which is 554 MB as ARGB_8888 - far past any heap Android will give a process.
+ *
+ * Rendering is therefore always clamped, and the clamp lives here rather than being re-derived
+ * at each call site with slightly different arithmetic.
  *
  * Pure arithmetic on purpose: no Android types, so it is covered by ordinary JVM unit tests
  * rather than an instrumented run.
@@ -30,7 +31,7 @@ object BitmapBudget {
     /**
      * Share of the process heap a single page render may occupy.
      *
-     * A quarter, not a half: the viewer holds neighbouring pages, Compose holds the frame,
+     * A quarter, not a half: the viewer holds neighboring pages, Compose holds the frame,
      * and the operation itself may hold a second page. Being able to allocate one bitmap is
      * not the same as the app surviving having allocated it.
      */

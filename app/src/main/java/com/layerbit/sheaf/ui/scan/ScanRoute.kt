@@ -53,9 +53,9 @@ import java.util.concurrent.Executors
  * The scanner, end to end: viewfinder, corner adjustment, page strip, make a PDF.
  *
  * CameraX rather than an ACTION_IMAGE_CAPTURE hand-off, for the same reason Abhyas made that
- * call: photographing a page is the entry point to the whole feature, so it gets a viewfinder
- * built for it rather than whatever camera app happens to be installed and whatever it decides
- * to hand back.
+ * call. Photographing a page is the entry point to the whole feature, so it gets a viewfinder
+ * built for it - not whatever camera app happens to be installed, returning whatever it
+ * decides to return.
  */
 @Composable
 fun ScanRoute(

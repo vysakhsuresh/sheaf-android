@@ -31,10 +31,11 @@ interface OcrEngine {
 /**
  * What was found on one page.
  *
- * Lines rather than blocks or words. A block is too coarse for a searchable layer - selecting
- * a phrase would select a whole paragraph - and a word is too fine, because word-level
- * placement accumulates rounding error across a line and the invisible text drifts away from
- * the visible ink underneath it.
+ * Lines rather than blocks or words.
+ *
+ * A block is too coarse for a searchable layer: selecting a phrase would select a whole
+ * paragraph. A word is too fine, because word-level placement accumulates rounding error
+ * across a line, and the invisible text drifts away from the ink underneath it.
  */
 data class OcrResult(
     val lines: List<OcrLine>

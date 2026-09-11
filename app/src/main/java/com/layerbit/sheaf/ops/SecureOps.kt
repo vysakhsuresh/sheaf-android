@@ -90,9 +90,10 @@ class CompressOp(private val level: CompressionLevel) : Op {
  * Encrypts a copy with AES-256.
  *
  * The password is held in memory for the length of the job and nowhere else. It is never
- * written to the database, never logged, and not recoverable - which is worth saying out loud
- * in the UI, because a person who encrypts their only copy of something and forgets the
- * password has lost it permanently, and no amount of support can undo that.
+ * written to the database, never logged, and not recoverable.
+ *
+ * That is worth saying out loud in the UI. Someone who encrypts their only copy of something
+ * and forgets the password has lost it permanently, and no amount of support can undo it.
  */
 class SetPasswordOp(private val password: String) : Op {
 

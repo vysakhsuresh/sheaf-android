@@ -31,10 +31,11 @@ import com.layerbit.sheaf.ui.theme.SheafColors
 /**
  * The settings each tool takes.
  *
- * One composable per tool, all of them writing into the same [ToolConfig]. That is a little
- * loose - a config field only one tool reads is still on the type - but it keeps the whole
- * options layer in one file, and the alternative is nine parallel state classes for what is
- * nine text fields and four choosers.
+ * One composable per tool, all of them writing into the same [ToolConfig].
+ *
+ * That is a little loose, since a config field only one tool reads is still on the type. It
+ * keeps the whole options layer in one file, though, and the alternative is a dozen parallel
+ * state classes for what amounts to nine text fields and five choosers.
  */
 @Composable
 fun ToolOptions(

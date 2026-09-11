@@ -6,11 +6,12 @@ import java.io.File
 /**
  * The write side of the PDF layer.
  *
- * [PdfEngine] reads and rasterises; this one restructures and writes. They are separate
- * interfaces rather than one wide one because they have genuinely different implementations
- * and different costs: the viewer wants the platform renderer, which is fast and allocates
- * little but cannot write anything, while every operation here needs PDFBox, which can write
- * anything but is far heavier to hold a document open in.
+ * [PdfEngine] reads and rasterises; this one restructures and writes.
+ *
+ * They are separate interfaces rather than one wide one, because they have genuinely different
+ * implementations and different costs. The viewer wants the platform renderer, which is fast
+ * and allocates little but cannot write anything. Every operation here needs PDFBox, which can
+ * write anything but is far heavier to hold a document open in.
  *
  * Same rule as [PdfEngine]: no type from a PDF library crosses out of the `pdf` package. Every
  * method takes and returns files and plain data.

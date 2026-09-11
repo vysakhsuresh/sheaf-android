@@ -11,10 +11,11 @@ import com.layerbit.sheaf.ops.ToolId
  * Android resource ids and can be unit-tested without a resource table.
  *
  * The drawings are stroked outlines on a shared 24dp grid, tinted at draw time, which is what
- * makes nine icons by different metaphors still read as one set. The pairs are deliberately
- * mirror images of each other - merge against split, images-to-PDF against PDF-to-images,
- * locked against unlocked - because those are the pairs someone will confuse in a hurry, and
- * the difference between them should be the shape rather than the caption.
+ * makes a dozen icons built on different metaphors still read as one set.
+ *
+ * Some pairs are deliberately mirror images: merge against split, images-to-PDF against
+ * PDF-to-images, locked against unlocked. Those are the ones someone confuses in a hurry, and
+ * the difference should be the shape rather than the caption.
  */
 @DrawableRes
 fun iconFor(tool: ToolId): Int = when (tool) {

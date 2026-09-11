@@ -60,7 +60,7 @@ class MergeOp(private val outputName: String? = null) : Op {
  * Keeps only the pages named by [spec], in the order the spec gives them.
  *
  * Deleting pages is the same operation with the unwanted ones left out, which is why there is
- * no separate delete: one path through the page tree instead of two, and half as many ways to
+ * no separate delete. One path through the page tree instead of two, and half as many ways to
  * produce a document that opens everywhere except in Acrobat.
  */
 class ExtractPagesOp(private val spec: String) : Op {

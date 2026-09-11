@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,10 +60,12 @@ import com.layerbit.sheaf.ui.tools.iconFor
 /**
  * Continuous vertical scroll through a document.
  *
- * Each page is its own list item sized from the page dimensions read at open time, so the list
- * has correct extents before a single page is rendered - which is what makes the scrollbar
- * honest and stops the content jumping as pages arrive. Rendering happens per item, when the
- * item composes, and the bitmap is dropped when it leaves the cache.
+ * Each page is its own list item, sized from the page dimensions read at open time. The list
+ * therefore has correct extents before a single page is rendered, which is what makes the
+ * scrollbar honest and stops the content jumping as pages arrive.
+ *
+ * Rendering happens per item, when the item composes. The bitmap is dropped when it leaves
+ * the cache.
  *
  * P0's exit gate is measured here: a five-hundred-page document, scrolled end to end, at
  * sixty frames per second, returning to a flat heap afterward.
@@ -114,7 +118,7 @@ fun ViewerScreen(
 
         when (state) {
             is ViewerState.Loading ->
-                CentredMessage("Opening…", showSpinner = true, modifier = Modifier.weight(1f))
+                CentredMessage("Opening…", modifier = Modifier.weight(1f), showSpinner = true)
 
             is ViewerState.NeedsPassword -> CentredMessage(
                 "This document is password-protected.\n" +
@@ -483,7 +487,11 @@ private fun PageItem(
 }
 
 @Composable
-private fun CentredMessage(text: String, showSpinner: Boolean = false, modifier: Modifier = Modifier) {
+private fun CentredMessage(
+    text: String,
+    modifier: Modifier = Modifier,
+    showSpinner: Boolean = false
+) {
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -515,8 +523,8 @@ private val NIGHT_PAPER = androidx.compose.ui.graphics.Color(0xFF15171B)
 /**
  * Straight photographic inversion: white paper becomes near-black, black ink becomes white.
  *
- * A colour matrix rather than a second render, so the toggle is instant and the same cached
- * bitmap serves both modes. Colour in a document inverts too, which is the honest behaviour -
+ * A color matrix rather than a second render, so the toggle is instant and the same cached
+ * bitmap serves both modes. Color in a document inverts too, which is the honest behavior -
  * anything cleverer would have to decide what counts as ink, and would get it wrong on charts.
  */
 private val INVERT_FILTER = ColorFilter.colorMatrix(
