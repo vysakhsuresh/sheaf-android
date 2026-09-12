@@ -21,8 +21,12 @@ class NUpOp(private val perSheet: Int) : Op {
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         eachFile(inputs, context, onProgress, "n-up", "Laying out") { input, pdfInput, output ->
-            context.surgeon.nUp(pdfInput, perSheet, output) { _, _ -> context.checkCancelled() }
-            "${input.baseName} $perSheet-up.pdf"
+            var pages = 0
+            context.surgeon.nUp(pdfInput, perSheet, output) { _, total ->
+                context.checkCancelled(); pages = total
+            }
+            val sheets = (pages + perSheet - 1) / perSheet
+            "${input.baseName} $perSheet-up.pdf" to "$pages pages onto $sheets sheets"
         }
     }
 }
@@ -87,7 +91,10 @@ class SplitBySizeOp(private val maxBytes: Long) : Op {
             val output = context.workspace.newOutput(partName, "size-split")
             outcomes += try {
                 context.surgeon.extractPages(pdfInput, pages, emptyMap(), output)
-                OpOutcome.Produced(SheafFile(output, "$partName.pdf", SheafFile.Origin.Derived("size-split")))
+                OpOutcome.Produced(
+                    SheafFile(output, "$partName.pdf", SheafFile.Origin.Derived("size-split")),
+                    "Pages ${pages.first() + 1}-${pages.last() + 1}"
+                )
             } catch (e: PdfException) {
                 output.delete()
                 OpOutcome.Failed(partName, e.message ?: "This part could not be written.")
@@ -184,7 +191,8 @@ class MetadataOp(private val metadata: DocumentMetadata) : Op {
         val step = if (metadata.stripAll) "stripped" else "details"
         eachFile(inputs, context, onProgress, step, "Writing") { input, pdfInput, output ->
             context.surgeon.writeMetadata(pdfInput, metadata, output)
-            "${input.baseName} $step.pdf"
+            "${input.baseName} $step.pdf" to
+                if (metadata.stripAll) "Title, author, dates and producer cleared" else "Details updated"
         }
     }
 }

@@ -215,8 +215,16 @@ private fun ViewerHeader(
                 }
             }
         }
-        TextButton(onClick = onTools, modifier = Modifier.padding(top = 2.dp)) {
-            Text("Use a tool on this", color = SheafColors.Band, style = MaterialTheme.typography.titleMedium)
+        // A document opened from a tool's result list has no source Uri to hand on, so the
+        // tool sheet is offered only for documents that came in from outside.
+        if (state.sourceUri.isNotEmpty()) {
+            TextButton(onClick = onTools, modifier = Modifier.padding(top = 2.dp)) {
+                Text(
+                    "Use a tool on this",
+                    color = SheafColors.Band,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
         }
     }
 }

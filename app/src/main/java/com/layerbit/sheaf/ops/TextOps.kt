@@ -128,7 +128,9 @@ class OcrOp(private val dpi: Int = DEFAULT_DPI) : Op {
                         output,
                         "${input.baseName} searchable.pdf",
                         SheafFile.Origin.Derived("searchable")
-                    )
+                    ),
+                    "Text found on $recognised of ${info.pageCount} pages - " +
+                        "${layers.values.sumOf { it.size }} lines are now selectable"
                 )
             } catch (e: PdfException) {
                 output.delete()
@@ -221,14 +223,16 @@ class ExtractTextOp(private val pageSpec: String? = null) : Op {
         output.writeText(body)
         onProgress(Progress(1, 1, "Done"))
 
+        val words = body.split(Regex("\\s+")).count { it.isNotBlank() }
         listOf(
             OpOutcome.Produced(
                 SheafFile(
                     file = output,
                     displayName = "${input.baseName}.txt",
                     origin = SheafFile.Origin.Derived("text"),
-                    mimeType = "text/plain"
-                )
+                    mimeType = SheafFile.MIME_TEXT
+                ),
+                "$words words from ${pages.size} ${if (pages.size == 1) "page" else "pages"}"
             )
         )
     }

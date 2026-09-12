@@ -103,7 +103,13 @@ class OpContext(
  * user directly: "page 4 could not be read" is actionable, a stack trace is not.
  */
 sealed interface OpOutcome {
-    data class Produced(val file: SheafFile) : OpOutcome
+    /**
+     * @param detail what actually happened, in the user's terms - "8 of 8 pages had text",
+     *   "4.2 MB to 1.1 MB". Several tools produce a file that looks identical to the input,
+     *   and without this the screen says only that something was written, which reads as
+     *   nothing having been done.
+     */
+    data class Produced(val file: SheafFile, val detail: String? = null) : OpOutcome
     data class Failed(val inputName: String, val reason: String) : OpOutcome
     data class Skipped(val inputName: String, val reason: String) : OpOutcome
 }

@@ -107,7 +107,11 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
 
             _state.update { current ->
                 val combined = if (current.tool?.acceptsMultiple == false) {
-                    added.takeLast(1)
+                    // One-file tools keep only the last pick. Everything it replaces is
+                    // deleted here; leaving them behind quietly filled the cache with copies
+                    // of every file the user changed their mind about.
+                    (current.documents + added).dropLast(1).forEach { it.file.file.delete() }
+                    added.takeLast(1).ifEmpty { current.documents }
                 } else {
                     current.documents + added
                 }
@@ -123,7 +127,28 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
      * failing the job and making the user start over.
      */
     private suspend fun inspect(file: SheafFile): SelectedDoc = withContext(Dispatchers.IO) {
-        if (!file.isPdf) return@withContext SelectedDoc(file = file)
+        val tool = _state.value.tool
+
+        // An image picked for Images to PDF is not a document and must not be opened as one.
+        // This used to run for everything, which is how a .webp came back as "Header doesn't
+        // contain versioninfo".
+        if (file.isImage) {
+            val wanted = tool?.input == ToolId.InputKind.IMAGES
+            return@withContext SelectedDoc(
+                file = file,
+                unreadableReason = if (wanted) null else "This is an image, and this tool needs a PDF."
+            )
+        }
+        if (!file.isPdf) {
+            return@withContext SelectedDoc(
+                file = file,
+                unreadableReason = if (tool?.input == ToolId.InputKind.IMAGES) {
+                    "This is not an image."
+                } else {
+                    "This is not a PDF."
+                }
+            )
+        }
         try {
             val info = sheaf.surgeon.inspect(PdfInput(file.file))
             SelectedDoc(file = file, pageCount = info.pageCount, encrypted = info.isEncrypted)
@@ -397,6 +422,51 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- results ----
 
+    /**
+     * Loads something the reader can actually look at for a finished result.
+     *
+     * Several tools produce a file that looks exactly like its input - Make searchable is the
+     * clearest case - and a row saying only "written, 2.1 MB" reads as nothing having
+     * happened. A few lines of the text, or a thumbnail, is the difference between trusting
+     * the tool and not.
+     */
+    fun loadPreview(file: SheafFile) {
+        if (_state.value.previews.containsKey(file.file.path)) return
+        viewModelScope.launch {
+            val preview = withContext(Dispatchers.IO) {
+                runCatching {
+                    when {
+                        file.isText -> ResultPreview.Text(
+                            file.file.bufferedReader().use { it.readText() }.take(PREVIEW_CHARS)
+                        )
+                        file.isImage -> android.graphics.BitmapFactory.Options().let { options ->
+                            // Decode bounds first, then subsample. A 300 DPI page export is a
+                            // large bitmap and a preview needs a few hundred pixels of it.
+                            options.inJustDecodeBounds = true
+                            android.graphics.BitmapFactory.decodeFile(file.file.path, options)
+                            options.inSampleSize =
+                                (maxOf(options.outWidth, options.outHeight) / PREVIEW_PX)
+                                    .coerceAtLeast(1)
+                            options.inJustDecodeBounds = false
+                            android.graphics.BitmapFactory.decodeFile(file.file.path, options)
+                                ?.let { ResultPreview.Picture(it) }
+                        }
+                        else -> null
+                    }
+                }.getOrNull()
+            } ?: return@launch
+
+            _state.update { it.copy(previews = it.previews + (file.file.path to preview)) }
+        }
+    }
+
+    fun copyToClipboard(text: String) {
+        val clipboard = getApplication<Application>()
+            .getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                as? android.content.ClipboardManager
+        clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Sheaf", text))
+    }
+
     fun exportIntent(file: SheafFile) =
         sheaf.exporter.createDocumentIntent(file.displayName, file.mimeType)
 
@@ -412,6 +482,8 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
     override fun onCleared() {
         super.onCleared()
         _state.value.thumbnails.values.forEach { it.recycle() }
+        _state.value.previews.values.filterIsInstance<ResultPreview.Picture>()
+            .forEach { it.bitmap.recycle() }
     }
 
     // ---- sign and redact ----
@@ -449,7 +521,17 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
 
         /** Readable enough to aim a redaction box at, small enough to hold a few of. */
         const val REDACT_PAGE_WIDTH_PX = 900
+
+        /** Enough to see what came out without holding a whole book in memory. */
+        const val PREVIEW_CHARS = 4000
+        const val PREVIEW_PX = 420
     }
+}
+
+/** Something the reader can look at for a finished result. */
+sealed interface ResultPreview {
+    data class Text(val content: String) : ResultPreview
+    data class Picture(val bitmap: Bitmap) : ResultPreview
 }
 
 /** A document the user picked, and what we know about it. */
@@ -480,11 +562,46 @@ data class ToolUiState(
     /** Redact only: the boxes drawn on each page, normalised to the page. */
     val redactions: Map<Int, List<PageArea>> = emptyMap(),
     /** Redact only: which page the canvas is showing. */
-    val redactPage: Int = 0
+    val redactPage: Int = 0,
+    /** Something to look at for each finished result, keyed by its path. */
+    val previews: Map<String, ResultPreview> = emptyMap()
 ) {
-    val canRun: Boolean
-        get() = tool != null && documents.isNotEmpty() && documents.all { it.isReady } && !busy &&
-            (tool != ToolId.MERGE || documents.size >= 2)
+    /**
+     * Why the button is disabled, or null when it is not.
+     *
+     * A greyed-out button with no explanation is the thing people report as "it does nothing".
+     * Every reason a tool cannot run yet is named here and shown under the button.
+     */
+    val blockedReason: String?
+        get() = when {
+            tool == null -> "No tool selected."
+            busy -> null
+            documents.isEmpty() -> if (tool.input == ToolId.InputKind.IMAGES) {
+                "Choose at least one image."
+            } else {
+                "Choose a file."
+            }
+            documents.any { !it.isReady } ->
+                documents.firstNotNullOfOrNull { it.unreadableReason }
+                    ?: "One file still needs its password."
+            tool == ToolId.MERGE && documents.size < 2 -> "Merging needs at least two files."
+            tool == ToolId.SIGN && signatureFile == null -> "Draw your signature above."
+            tool == ToolId.REDACT && redactions.values.all { it.isEmpty() } ->
+                "Drag a box over what should be removed."
+            tool == ToolId.WATERMARK && config.watermarkText.isBlank() ->
+                "Type the watermark text."
+            tool == ToolId.SET_PASSWORD && config.newPassword.isBlank() ->
+                "Choose a password."
+            tool == ToolId.SET_PASSWORD && config.newPassword != config.confirmPassword ->
+                "The two passwords do not match."
+            tool == ToolId.EXTRACT && config.pageSpec.isBlank() ->
+                "Type which pages to keep."
+            tool == ToolId.CROP && config.trim == 0f && config.resizeTo == null ->
+                "Choose how much to trim, or a page size."
+            else -> null
+        }
+
+    val canRun: Boolean get() = blockedReason == null && !busy
 }
 
 /** Every option any tool takes. One type, because one screen renders all of them. */

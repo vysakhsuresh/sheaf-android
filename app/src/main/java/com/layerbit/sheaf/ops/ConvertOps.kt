@@ -48,7 +48,8 @@ class ImagesToPdfOp(
 
         listOf(
             OpOutcome.Produced(
-                SheafFile(output, "$name.pdf", SheafFile.Origin.Derived("from-images"))
+                SheafFile(output, "$name.pdf", SheafFile.Origin.Derived("from-images")),
+                "${inputs.size} ${if (inputs.size == 1) "image" else "images"}, one per page"
             )
         )
     }
@@ -123,14 +124,15 @@ class PdfToImagesOp(
             return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Export failed."))
         }
 
-        files.map { file ->
+        files.mapIndexed { position, file ->
             OpOutcome.Produced(
                 SheafFile(
                     file = file,
                     displayName = file.name,
                     origin = SheafFile.Origin.Derived("images"),
                     mimeType = format.mimeType
-                )
+                ),
+                "Page ${pages.getOrNull(position)?.plus(1) ?: position + 1} at $dpi DPI"
             )
         }
     }

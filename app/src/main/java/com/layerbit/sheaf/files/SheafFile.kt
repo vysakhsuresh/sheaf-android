@@ -31,6 +31,8 @@ data class SheafFile(
         get() = displayName.substringBeforeLast('.', displayName)
 
     val isPdf: Boolean get() = mimeType == MIME_PDF
+    val isImage: Boolean get() = mimeType.startsWith("image/")
+    val isText: Boolean get() = mimeType.startsWith("text/")
 
     sealed interface Origin {
         /** Picked by the user through the Storage Access Framework, or received via a share. */

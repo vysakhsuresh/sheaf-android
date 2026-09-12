@@ -2,6 +2,8 @@ package com.layerbit.sheaf.ui.tools
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -85,6 +87,9 @@ fun ToolScreen(
     onCancel: () -> Unit,
     onSave: (SheafFile) -> Unit,
     onShare: (List<SheafFile>) -> Unit,
+    onOpenResult: (SheafFile) -> Unit,
+    onLoadPreview: (SheafFile) -> Unit,
+    onCopy: (String) -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -103,13 +108,6 @@ fun ToolScreen(
         contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        item {
-            Column {
-                Text(tool.title, style = MaterialTheme.typography.titleLarge, color = SheafColors.Text)
-                Text(tool.summary, style = MaterialTheme.typography.bodyMedium, color = SheafColors.Muted)
-            }
-        }
-
         when {
             running != null -> item { RunningPanel(running, onCancel) }
 
@@ -117,7 +115,14 @@ fun ToolScreen(
                 item { SectionHeading("Result") }
                 item { ResultSummary(finished) }
                 items(finished.produced, key = { it.file.file.path }) { produced ->
-                    ResultRow(produced.file, onSave = { onSave(produced.file) })
+                    ResultRow(
+                        outcome = produced,
+                        preview = state.previews[produced.file.file.path],
+                        onSave = { onSave(produced.file) },
+                        onOpen = { onOpenResult(produced.file) },
+                        onCopy = onCopy,
+                        onNeedPreview = { onLoadPreview(produced.file) }
+                    )
                 }
                 items(finished.failed) { failure -> ProblemRow(failure.inputName, failure.reason, isError = true) }
                 items(finished.skipped) { skip -> ProblemRow(skip.inputName, skip.reason, isError = false) }
@@ -240,6 +245,16 @@ fun ToolScreen(
                     ) {
                         Text(tool.title, style = MaterialTheme.typography.titleMedium)
                     }
+                    // Saying why beats a grey button that looks broken.
+                    state.blockedReason?.takeIf { state.documents.isNotEmpty() || !state.busy }
+                        ?.let { reason ->
+                            Text(
+                                reason,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SheafColors.Dim,
+                                modifier = Modifier.padding(top = 6.dp)
+                            )
+                        }
                 }
 
                 if (state.busy) {
@@ -305,8 +320,27 @@ private fun ResultSummary(finished: JobState.Finished) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = SheafColors.Muted)
 }
 
+/**
+ * One finished file, and enough of it to see that something happened.
+ *
+ * The detail line and the preview are the point. Several tools produce a file that looks
+ * exactly like its input - Make searchable most of all - and a row saying only "2.1 MB" reads
+ * as the tool having done nothing at all.
+ */
 @Composable
-private fun ResultRow(file: SheafFile, onSave: () -> Unit) {
+private fun ResultRow(
+    outcome: OpOutcome.Produced,
+    preview: ResultPreview?,
+    onSave: () -> Unit,
+    onOpen: () -> Unit,
+    onCopy: (String) -> Unit,
+    onNeedPreview: () -> Unit
+) {
+    val file = outcome.file
+    LaunchedEffect(file.file.path) {
+        if (file.isText || file.isImage) onNeedPreview()
+    }
+
     Panel(modifier = Modifier.fillMaxWidth()) {
         Text(
             file.displayName,
@@ -315,9 +349,62 @@ private fun ResultRow(file: SheafFile, onSave: () -> Unit) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        RowBetween(modifier = Modifier.padding(top = 4.dp)) {
+
+        outcome.detail?.let { detail ->
+            Text(
+                detail,
+                style = MaterialTheme.typography.bodyMedium,
+                color = SheafColors.Done,
+                modifier = Modifier.padding(top = 3.dp)
+            )
+        }
+
+        when (preview) {
+            is ResultPreview.Text -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp)
+                        .heightIn(max = 220.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(SheafColors.SurfaceDim)
+                        .verticalScroll(rememberScrollState())
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        preview.content.ifBlank { "(nothing was found)" },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SheafColors.Muted
+                    )
+                }
+                TextButton(onClick = { onCopy(preview.content) }) {
+                    Text("Copy text", color = SheafColors.Band)
+                }
+            }
+
+            is ResultPreview.Picture -> Image(
+                bitmap = preview.bitmap.asImageBitmap(),
+                contentDescription = file.displayName,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 220.dp)
+                    .padding(top = 10.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(SheafColors.Paper)
+            )
+
+            null -> Unit
+        }
+
+        RowBetween(modifier = Modifier.padding(top = 6.dp)) {
             Text(formatBytes(file.sizeBytes), style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
-            TextButton(onClick = onSave) { Text("Save", color = SheafColors.Band) }
+            Row {
+                if (file.isPdf) {
+                    TextButton(onClick = onOpen) { Text("Open", color = SheafColors.Muted) }
+                }
+                TextButton(onClick = onSave) { Text("Save", color = SheafColors.Band) }
+            }
         }
     }
 }

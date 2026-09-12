@@ -72,7 +72,9 @@ class CompressOp(private val level: CompressionLevel) : Op {
                             output,
                             "${input.baseName} compressed.pdf",
                             SheafFile.Origin.Derived("compressed")
-                        )
+                        ),
+                        "${(result.savedFraction * 100).toInt()}% smaller - " +
+                            "${result.imagesRecompressed} images re-encoded"
                     )
                 }
             } catch (e: PdfException) {
@@ -127,7 +129,8 @@ class SetPasswordOp(private val password: String) : Op {
                         output,
                         "${input.baseName} protected.pdf",
                         SheafFile.Origin.Derived("protected")
-                    )
+                    ),
+                    "Encrypted with AES-256"
                 )
             } catch (e: PdfException) {
                 output.delete()
@@ -181,7 +184,8 @@ class RemovePasswordOp : Op {
                         output,
                         "${input.baseName} unlocked.pdf",
                         SheafFile.Origin.Derived("unlocked")
-                    )
+                    ),
+                    "Opens without a password"
                 )
             } catch (_: PdfException.PasswordRequired) {
                 output.delete()

@@ -148,6 +148,47 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Opens a file Sheaf already owns - a finished result - without importing it again.
+     *
+     * The point is being able to check what a tool produced before deciding to save it. The
+     * file is not copied and, crucially, not deleted when the viewer moves on: it belongs to
+     * the result list, not to the viewer.
+     */
+    fun openLocal(file: SheafFile) {
+        viewModelScope.launch {
+            closeCurrent()
+            _state.value = ViewerState.Loading
+            try {
+                source = file
+                val opened = withContext(Dispatchers.IO) { sheaf.pdfEngine.open(file.file) }
+                document = opened
+
+                val sizes = withContext(Dispatchers.IO) {
+                    renderLock.withLock { List(opened.pageCount) { opened.pageSize(it) } }
+                }
+
+                generation += 1
+                _state.value = ViewerState.Ready(
+                    generation = generation,
+                    sourceUri = "",
+                    displayName = file.displayName,
+                    pageCount = opened.pageCount,
+                    pageSizes = sizes,
+                    sizeBytes = file.sizeBytes
+                )
+
+                val outline = withContext(Dispatchers.IO) {
+                    runCatching { sheaf.surgeon.readOutline(PdfInput(file.file)) }
+                        .getOrDefault(emptyList())
+                }
+                _reading.value = _reading.value.copy(outline = outline)
+            } catch (e: Exception) {
+                _state.value = ViewerState.Failed(e.message ?: "This document could not be opened.")
+            }
+        }
+    }
+
     /** Inverts the page rendering, for reading in the dark without a white rectangle. */
     fun toggleNightMode() {
         _reading.value = _reading.value.copy(nightMode = !_reading.value.nightMode)
@@ -203,7 +244,9 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
         pageCache.evictAll()
         runCatching { document?.close() }
         document = null
-        source?.file?.delete()
+        // Only a copy the viewer made itself. A result handed over by a tool is still in that
+        // tool's list and deleting it here would take it out from under the reader.
+        if (source?.origin is SheafFile.Origin.Imported) source?.file?.delete()
         source = null
     }
 

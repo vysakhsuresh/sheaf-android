@@ -57,7 +57,8 @@ class DocumentStore(private val context: Context) {
         SheafFile(
             file = target,
             displayName = name,
-            origin = SheafFile.Origin.Imported(uri)
+            origin = SheafFile.Origin.Imported(uri),
+            mimeType = mimeTypeOf(uri, name)
         )
     }
 
@@ -69,17 +70,44 @@ class DocumentStore(private val context: Context) {
      *
      * DocumentFile handles the provider query; the fallback matters because a `file://` Uri
      * from an older app that shares one will not answer [OpenableColumns.DISPLAY_NAME] at all.
+     *
+     * The name is returned as it is. An earlier version appended ".pdf" to anything that did
+     * not already end in it, which turned every picked image into "photo.webp.pdf" and then
+     * made the rest of the app try to parse it as a document.
      */
-    private fun displayName(uri: Uri): String {
-        val fromProvider = runCatching {
-            DocumentFile.fromSingleUri(context, uri)?.name
-        }.getOrNull()
-
-        val name = fromProvider
+    private fun displayName(uri: Uri): String =
+        runCatching { DocumentFile.fromSingleUri(context, uri)?.name }.getOrNull()
             ?: uri.lastPathSegment?.substringAfterLast('/')
-            ?: "document.pdf"
+            ?: "document"
 
-        return if (name.endsWith(".pdf", ignoreCase = true)) name else "$name.pdf"
+    /**
+     * What the picked file actually is.
+     *
+     * Asking the content provider first, because it knows. The extension is only a fallback,
+     * for the providers that answer "application/octet-stream" to everything.
+     *
+     * Getting this wrong is not cosmetic. Every tool decides what to do with a file from its
+     * type, so a photo that claims to be a PDF gets handed to the PDF parser and comes back
+     * as "Header doesn't contain versioninfo" - which is exactly what used to happen to every
+     * image picked for Images to PDF.
+     */
+    private fun mimeTypeOf(uri: Uri, name: String): String {
+        val reported = runCatching { context.contentResolver.getType(uri) }.getOrNull()
+        if (!reported.isNullOrBlank() && reported != GENERIC_BINARY) return reported
+
+        return when (name.substringAfterLast('.', "").lowercase()) {
+            "pdf" -> SheafFile.MIME_PDF
+            "png" -> SheafFile.MIME_PNG
+            "jpg", "jpeg" -> SheafFile.MIME_JPEG
+            "webp" -> "image/webp"
+            "heic", "heif" -> "image/heif"
+            "gif" -> "image/gif"
+            "bmp" -> "image/bmp"
+            "txt" -> SheafFile.MIME_TEXT
+            // Unknown rather than assumed. A tool that needs a PDF will say so plainly; a tool
+            // that guessed would fail somewhere deeper and less usefully.
+            else -> GENERIC_BINARY
+        }
     }
 
     /** Deletes every imported copy. Called when the app has no open work. */
@@ -87,6 +115,8 @@ class DocumentStore(private val context: Context) {
         importDir.listFiles()?.forEach { it.delete() }
     }
 }
+
+private const val GENERIC_BINARY = "application/octet-stream"
 
 /**
  * Strips anything that cannot appear in a filename on the device's filesystem.

@@ -50,7 +50,8 @@ class MergeOp(private val outputName: String? = null) : Op {
 
         listOf(
             OpOutcome.Produced(
-                SheafFile(output, "$name.pdf", SheafFile.Origin.Derived("merged"))
+                SheafFile(output, "$name.pdf", SheafFile.Origin.Derived("merged")),
+                "${inputs.size} files joined"
             )
         )
     }
@@ -111,7 +112,8 @@ class ExtractPagesOp(private val spec: String) : Op {
                     output,
                     "${input.baseName} p${PageSelection.describe(pages)}.pdf",
                     SheafFile.Origin.Derived("pages")
-                )
+                ),
+                "Kept pages ${PageSelection.describe(pages)} of ${info.pageCount}"
             )
         )
     }
@@ -186,7 +188,8 @@ class SplitOp(private val mode: Mode) : Op {
             outcomes += try {
                 context.surgeon.extractPages(pdfInput, pages, emptyMap(), output)
                 OpOutcome.Produced(
-                    SheafFile(output, "$partName.pdf", SheafFile.Origin.Derived("split"))
+                    SheafFile(output, "$partName.pdf", SheafFile.Origin.Derived("split")),
+                    "Pages ${PageSelection.describe(pages)}"
                 )
             } catch (e: PdfException) {
                 output.delete()
@@ -242,7 +245,9 @@ class OrganiseOp(
         onProgress(Progress(1, 1, "Done"))
         listOf(
             OpOutcome.Produced(
-                SheafFile(output, "${input.baseName} organised.pdf", SheafFile.Origin.Derived("organised"))
+                SheafFile(output, "${input.baseName} organised.pdf", SheafFile.Origin.Derived("organised")),
+                "${order.size} pages" +
+                    if (rotations.isNotEmpty()) ", ${rotations.size} rotated" else ""
             )
         )
     }

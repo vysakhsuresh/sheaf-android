@@ -34,6 +34,8 @@ import com.layerbit.sheaf.ops.ToolId
 fun ToolRoute(
     tool: ToolId,
     modifier: Modifier = Modifier,
+    /** Opens a finished PDF in the viewer, so a result can be checked before it is saved. */
+    onOpenResult: (SheafFile) -> Unit = {},
     /** A document handed over from the viewer, so the user does not pick the same file twice. */
     preloadUri: String? = null,
     viewModel: ToolViewModel = viewModel()
@@ -105,6 +107,12 @@ fun ToolRoute(
                 saveFile.launch(viewModel.exportIntent(file))
             },
             onShare = { files -> context.startActivity(viewModel.shareIntent(files)) },
+            onOpenResult = onOpenResult,
+            onLoadPreview = viewModel::loadPreview,
+            onCopy = { text ->
+                viewModel.copyToClipboard(text)
+                message = "Copied"
+            },
             onDone = viewModel::acknowledgeResult
         )
 

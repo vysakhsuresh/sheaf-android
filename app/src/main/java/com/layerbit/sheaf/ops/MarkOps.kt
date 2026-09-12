@@ -28,8 +28,11 @@ class WatermarkOp(private val spec: WatermarkSpec) : Op {
             return@withContext listOf(OpOutcome.Failed("", "Type the watermark text first."))
         }
         eachFile(inputs, context, onProgress, "watermarked", "Watermark") { input, pdfInput, output ->
-            context.surgeon.watermark(pdfInput, spec, output) { _, _ -> context.checkCancelled() }
-            "${input.baseName} watermarked.pdf"
+            var pages = 0
+            context.surgeon.watermark(pdfInput, spec, output) { _, total ->
+                context.checkCancelled(); pages = total
+            }
+            "${input.baseName} watermarked.pdf" to "\"${spec.text}\" on $pages pages"
         }
     }
 }
@@ -47,8 +50,13 @@ class PageNumberOp(private val spec: PageNumberSpec) : Op {
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         eachFile(inputs, context, onProgress, "numbered", "Numbering") { input, pdfInput, output ->
-            context.surgeon.addPageNumbers(pdfInput, spec, output) { _, _ -> context.checkCancelled() }
-            "${input.baseName} numbered.pdf"
+            var pages = 0
+            context.surgeon.addPageNumbers(pdfInput, spec, output) { _, total ->
+                context.checkCancelled(); pages = total
+            }
+            val from = spec.startAt
+            "${input.baseName} numbered.pdf" to
+                "Numbered from $from, ${pages - spec.skipFirst} pages"
         }
     }
 }
@@ -77,8 +85,20 @@ class CropOp(private val spec: CropSpec) : Op {
             return@withContext listOf(OpOutcome.Failed("", "Choose how much to trim first."))
         }
         eachFile(inputs, context, onProgress, "cropped", "Cropping") { input, pdfInput, output ->
-            context.surgeon.cropPages(pdfInput, spec, output) { _, _ -> context.checkCancelled() }
-            "${input.baseName} cropped.pdf"
+            var pages = 0
+            context.surgeon.cropPages(pdfInput, spec, output) { _, total ->
+                context.checkCancelled(); pages = total
+            }
+            val trimmed = (spec.left * 100).toInt()
+            val size = spec.resizeTo?.name?.lowercase()?.replaceFirstChar { it.uppercase() }
+            "${input.baseName} cropped.pdf" to buildString {
+                if (trimmed > 0) append("Trimmed $trimmed% from each edge")
+                if (size != null) {
+                    if (isNotEmpty()) append(", ")
+                    append("resized to $size")
+                }
+                if (isEmpty()) append("$pages pages")
+            }
         }
     }
 }
@@ -129,9 +149,13 @@ class RedactOp(
             return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Failed."))
         }
 
+        val boxes = areas.values.sumOf { it.size }
+        val pages = areas.count { it.value.isNotEmpty() }
         listOf(
             OpOutcome.Produced(
-                SheafFile(output, "${input.baseName} redacted.pdf", SheafFile.Origin.Derived("redacted"))
+                SheafFile(output, "${input.baseName} redacted.pdf", SheafFile.Origin.Derived("redacted")),
+                "$boxes ${if (boxes == 1) "area" else "areas"} removed from " +
+                    "$pages ${if (pages == 1) "page" else "pages"}, which are now images"
             )
         )
     }
@@ -183,7 +207,8 @@ class SignOp(private val stamp: ImageStamp) : Op {
         onProgress(Progress(1, 1, "Done"))
         listOf(
             OpOutcome.Produced(
-                SheafFile(output, "${input.baseName} signed.pdf", SheafFile.Origin.Derived("signed"))
+                SheafFile(output, "${input.baseName} signed.pdf", SheafFile.Origin.Derived("signed")),
+                "Signed on page ${stamp.pageIndex + 1}"
             )
         )
     }
@@ -201,7 +226,7 @@ internal suspend inline fun eachFile(
     noinline onProgress: (Progress) -> Unit,
     step: String,
     verb: String,
-    crossinline work: (SheafFile, PdfInput, File) -> String
+    crossinline work: (SheafFile, PdfInput, File) -> Pair<String, String?>
 ): List<OpOutcome> {
     val outcomes = mutableListOf<OpOutcome>()
 
@@ -211,8 +236,8 @@ internal suspend inline fun eachFile(
 
         val output = context.workspace.newOutput(input.baseName, step)
         outcomes += try {
-            val name = work(input, PdfInput(input.file, context.passwords[input.file.path]), output)
-            OpOutcome.Produced(SheafFile(output, name, SheafFile.Origin.Derived(step)))
+            val (name, detail) = work(input, PdfInput(input.file, context.passwords[input.file.path]), output)
+            OpOutcome.Produced(SheafFile(output, name, SheafFile.Origin.Derived(step)), detail)
         } catch (e: PdfException) {
             output.delete()
             OpOutcome.Failed(input.displayName, e.message ?: "$verb failed.")

@@ -161,7 +161,16 @@ fun SheafApp(
                             subtitle = tool.summary,
                             onBack = { navController.popBackStack() }
                         )
-                        ToolRoute(tool = tool, preloadUri = entry.arguments?.getString("uri"))
+                        ToolRoute(
+                            tool = tool,
+                            preloadUri = entry.arguments?.getString("uri"),
+                            onOpenResult = { file ->
+                                // Opened straight from the result list so a finished document
+                                // can be checked before anyone decides to save it.
+                                viewerViewModel.openLocal(file)
+                                navController.navigate(Routes.VIEWER) { launchSingleTop = true }
+                            }
+                        )
                     }
                 } else {
                     // Only reachable from a stale deep link. Going back beats an error screen.
