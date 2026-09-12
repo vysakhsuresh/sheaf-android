@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import com.tom_roush.pdfbox.io.MemoryUsageSetting
+import com.tom_roush.pdfbox.multipdf.LayerUtility
 import com.tom_roush.pdfbox.multipdf.PDFMergerUtility
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPage
@@ -580,6 +581,10 @@ class PdfBoxSurgeon : PdfSurgeon {
         // A page has to be redrawn at the new size, so each one is imported as a form and
         // placed, scaled to fit, on a fresh sheet - the same technique N-up uses.
         PDDocument().use { target ->
+            // One utility per target document. It holds the import cache, so building a new
+            // one per page would copy shared resources again for every page.
+            val layers = LayerUtility(target)
+
             for (index in 0 until doc.numberOfPages) {
                 val sourceBox = doc.getPage(index).cropBox ?: doc.getPage(index).mediaBox ?: PDRectangle.A4
                 val portrait = PDRectangle(spec.resizeTo.widthPoints, spec.resizeTo.heightPoints)
@@ -595,7 +600,7 @@ class PdfBoxSurgeon : PdfSurgeon {
                 val sheet = PDPage(sheetBox)
                 target.addPage(sheet)
 
-                val form = target.importPageAsForm(doc, index)
+                val form = layers.importPageAsForm(doc, index)
                 val bounds = form.bBox ?: sourceBox
                 val scale = minOf(sheetBox.width / bounds.width, sheetBox.height / bounds.height)
                 val drawWidth = bounds.width * scale
@@ -758,6 +763,7 @@ class PdfBoxSurgeon : PdfSurgeon {
             val slots = columns * rows
 
             PDDocument().use { target ->
+                val layers = LayerUtility(target)
                 val total = source.numberOfPages
                 var index = 0
 
@@ -779,7 +785,7 @@ class PdfBoxSurgeon : PdfSurgeon {
                                 val pageIndex = index + slot
                                 if (pageIndex >= total) break
 
-                                val form = target.importPageAsForm(source, pageIndex)
+                                val form = layers.importPageAsForm(source, pageIndex)
                                 val cellWidth = sheetBox.width / columns
                                 val cellHeight = sheetBox.height / rows
                                 val column = slot % columns
