@@ -169,11 +169,15 @@ class SplitOp(private val mode: Mode) : Op {
                 OpOutcome.Failed(input.displayName, "That split produced no pages.")
             )
         }
-        if (groups.size == 1) {
+        // One group is only a problem when it is the WHOLE document. Splitting a 3-page file
+        // by the range "1-2" is one file of two pages, which is a perfectly good answer - and
+        // refusing it was the bug: the old check looked at the number of groups alone.
+        if (groups.size == 1 && groups.first().size == info.pageCount) {
             return@withContext listOf(
                 OpOutcome.Failed(
                     input.displayName,
-                    "That would produce a single file identical to the original."
+                    "That covers the whole document, so the result would be identical to it. " +
+                        "Use Extract pages if you want a copy."
                 )
             )
         }

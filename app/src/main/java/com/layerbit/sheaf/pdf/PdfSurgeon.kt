@@ -280,7 +280,11 @@ data class DocumentInfo(
     val pageSizes: List<PageSize>,
     val isEncrypted: Boolean,
     val title: String?,
-    val author: String?
+    val author: String?,
+    val subject: String? = null,
+    val keywords: String? = null,
+    /** The app that wrote the file. Often a scanner's make and model. */
+    val producer: String? = null
 )
 
 /** Page geometry for a document being built from images. */

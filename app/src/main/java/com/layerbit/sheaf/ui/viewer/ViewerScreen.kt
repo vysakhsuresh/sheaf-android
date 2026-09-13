@@ -44,6 +44,11 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -283,8 +288,10 @@ private fun SearchBar(reading: ReadingState, onSearch: (String) -> Unit, onJump:
                     style = MaterialTheme.typography.bodySmall,
                     color = SheafColors.BandBright
                 )
+                // The match is highlighted inside the snippet. A result that only says
+                // "page 4" makes you find the word again once you get there.
                 Text(
-                    hit.snippet,
+                    text = highlight(hit.snippet, reading.query),
                     style = MaterialTheme.typography.bodySmall,
                     color = SheafColors.Muted,
                     maxLines = 2,
@@ -330,6 +337,38 @@ private fun OutlineSheet(
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * Marks every occurrence of [query] inside [text].
+ *
+ * Case-insensitive, because that is how the search itself matches - highlighting only exact
+ * case would leave a hit that plainly matched looking as though it had not.
+ */
+private fun highlight(text: String, query: String): AnnotatedString {
+    if (query.isBlank()) return AnnotatedString(text)
+
+    return buildAnnotatedString {
+        var index = 0
+        while (index < text.length) {
+            val found = text.indexOf(query, index, ignoreCase = true)
+            if (found < 0) {
+                append(text.substring(index))
+                break
+            }
+            append(text.substring(index, found))
+            withStyle(
+                SpanStyle(
+                    color = SheafColors.OnBand,
+                    background = SheafColors.Band,
+                    fontWeight = FontWeight.SemiBold
+                )
+            ) {
+                append(text.substring(found, found + query.length))
+            }
+            index = found + query.length
         }
     }
 }

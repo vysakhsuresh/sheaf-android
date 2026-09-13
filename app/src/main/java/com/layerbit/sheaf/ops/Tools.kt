@@ -167,6 +167,38 @@ enum class ToolId(
         PROTECT("Protect")
     }
 
+    /**
+     * What the button says.
+     *
+     * A button repeating the screen's own title tells nobody what pressing it does - "Document
+     * details" on the Document details screen was the clearest case. Every one of these is a
+     * verb.
+     */
+    val action: String
+        get() = when (this) {
+            SCAN -> "Scan"
+            OCR -> "Make it searchable"
+            EXTRACT_TEXT -> "Extract the text"
+            MERGE -> "Merge into one file"
+            SPLIT -> "Split it up"
+            EXTRACT -> "Keep these pages"
+            ORGANISE -> "Save the new order"
+            IMAGES_TO_PDF -> "Make a PDF"
+            PDF_TO_IMAGES -> "Save as images"
+            COMPRESS -> "Compress it"
+            WATERMARK -> "Add the watermark"
+            PAGE_NUMBERS -> "Add the numbers"
+            SIGN -> "Place the signature"
+            CROP -> "Crop it"
+            N_UP -> "Lay it out"
+            SPLIT_BY_SIZE -> "Split by size"
+            EXTRACT_IMAGES -> "Pull the images out"
+            REDACT -> "Remove them for good"
+            METADATA -> "Save the details"
+            SET_PASSWORD -> "Protect it"
+            REMOVE_PASSWORD -> "Unlock it"
+        }
+
     val acceptsMultiple: Boolean
         get() = input == InputKind.SEVERAL_PDFS || input == InputKind.IMAGES
 

@@ -27,8 +27,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -38,6 +38,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -63,10 +65,20 @@ fun SignaturePad(
     makeFile: () -> File,
     modifier: Modifier = Modifier
 ) {
-    // A list of strokes, each a list of normalised points. Kept in a snapshot list so drawing
-    // a stroke redraws without rebuilding the whole screen.
-    val strokes = remember { mutableStateListOf<MutableList<Offset>>() }
-    var current by remember { mutableStateOf<MutableList<Offset>?>(null) }
+    // WHY THIS IS NOT A SNAPSHOT LIST.
+    //
+    // The first version kept strokes in a mutableStateListOf and rebuilt a Path from every
+    // point on every frame. Touching it recomposed the buttons and the heading as well as the
+    // canvas, so the ink arrived late and in jagged chunks - a stroke would appear only after
+    // the finger had already moved on.
+    //
+    // Now the geometry lives in a plain list that Compose does not observe, strokes are built
+    // into Path objects once and appended to as points arrive, and a single counter is read
+    // inside the draw lambda to invalidate it. Only the canvas redraws, and only the new
+    // segment is added rather than the whole signature rebuilt.
+    val strokes = remember { mutableListOf<SignatureStroke>() }
+    var version by remember { mutableIntStateOf(0) }
+    var hasInk by remember { mutableStateOf(false) }
     var saved by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -75,7 +87,7 @@ fun SignaturePad(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(180.dp)
+                .height(200.dp)
                 .padding(top = 8.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(SheafColors.Paper)
@@ -85,33 +97,51 @@ fun SignaturePad(
                 modifier = Modifier
                     .fillMaxSize()
                     .pointerInput(Unit) {
-                        detectDragGestures(
-                            onDragStart = { start ->
+                        awaitPointerEventScope {
+                            while (true) {
+                                val down = awaitPointerEvent().changes.firstOrNull { it.pressed }
+                                    ?: continue
+
+                                val stroke = SignatureStroke(size.width, size.height)
+                                stroke.start(down.position)
+                                strokes += stroke
+                                hasInk = true
                                 saved = false
-                                current = mutableListOf(normalise(start, size.width, size.height))
-                                strokes.add(current!!)
-                            },
-                            onDragEnd = { current = null },
-                            onDragCancel = { current = null },
-                            onDrag = { change, _ ->
-                                change.consume()
-                                current?.add(normalise(change.position, size.width, size.height))
-                                // Reassigning the last entry is what tells Compose the list
-                                // changed; mutating a list in place is invisible to it.
-                                if (strokes.isNotEmpty()) strokes[strokes.lastIndex] = strokes.last()
+                                version++
+                                down.consume()
+
+                                // Drained here rather than through detectDragGestures so every
+                                // historical point the system batched is used. A fast stroke
+                                // reports several positions per frame, and dropping them is
+                                // what makes handwriting look like a series of corners.
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val change = event.changes.firstOrNull() ?: break
+                                    if (!change.pressed) {
+                                        change.consume()
+                                        break
+                                    }
+                                    for (historical in change.historical) {
+                                        stroke.lineTo(historical.position)
+                                    }
+                                    stroke.lineTo(change.position)
+                                    change.consume()
+                                    version++
+                                }
                             }
-                        )
-                    }
-            ) {
-                for (stroke in strokes) {
-                    if (stroke.size < 2) continue
-                    val path = Path().apply {
-                        moveTo(stroke[0].x * size.width, stroke[0].y * size.height)
-                        for (point in stroke.drop(1)) {
-                            lineTo(point.x * size.width, point.y * size.height)
                         }
                     }
-                    drawPath(path, color = Color(0xFF101A2B), style = Stroke(width = INK_WIDTH_PX))
+            ) {
+                // Read so the draw is invalidated as points arrive. The strokes themselves are
+                // invisible to Compose on purpose.
+                @Suppress("UNUSED_EXPRESSION") version
+
+                for (stroke in strokes) {
+                    drawPath(
+                        path = stroke.path,
+                        color = Color(0xFF101A2B),
+                        style = Stroke(width = INK_WIDTH_PX, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                    )
                 }
             }
         }
@@ -124,19 +154,54 @@ fun SignaturePad(
                     saved = true
                     onSigned(file)
                 },
-                enabled = strokes.any { it.size > 1 },
+                enabled = hasInk,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = SheafColors.Band,
                     contentColor = SheafColors.OnBand,
                     disabledContainerColor = SheafColors.SurfaceDim,
                     disabledContentColor = SheafColors.Dim
                 )
-            ) { Text(if (saved) "Saved" else "Use this signature") }
+            ) { Text(if (saved) "Signature saved" else "Use this signature") }
 
-            OutlinedButton(onClick = { strokes.clear(); saved = false }) {
-                Text("Clear", color = SheafColors.Muted)
-            }
+            OutlinedButton(
+                onClick = {
+                    strokes.clear()
+                    hasInk = false
+                    saved = false
+                    version++
+                }
+            ) { Text("Clear", color = SheafColors.Muted) }
         }
+    }
+}
+
+/**
+ * One stroke, as a Path that is appended to rather than rebuilt.
+ *
+ * The points are also kept, normalised to the pad, because the exported PNG is drawn at a much
+ * higher resolution than the pad - rendering the screen-sized Path would give a signature that
+ * looks soft on an A4 page.
+ */
+class SignatureStroke(private val width: Int, private val height: Int) {
+    val path = Path()
+    val points = mutableListOf<Offset>()
+
+    fun start(offset: Offset) {
+        path.moveTo(offset.x, offset.y)
+        points += normalise(offset, width, height)
+    }
+
+    fun lineTo(offset: Offset) {
+        // Points closer together than this add nothing a finger can see and cost a path
+        // segment each, which is what a fast scribble produces hundreds of.
+        val last = points.lastOrNull()
+        if (last != null) {
+            val dx = last.x * width - offset.x
+            val dy = last.y * height - offset.y
+            if (dx * dx + dy * dy < MIN_SEGMENT_PX * MIN_SEGMENT_PX) return
+        }
+        path.lineTo(offset.x, offset.y)
+        points += normalise(offset, width, height)
     }
 }
 
@@ -151,7 +216,7 @@ private fun normalise(offset: Offset, width: Int, height: Int) = Offset(
  * Transparent, not white: a signature on a white rectangle would cover whatever it was placed
  * over, which on a form is the line it is meant to sit on.
  */
-private fun writeSignature(strokes: List<List<Offset>>, file: File) {
+private fun writeSignature(strokes: List<SignatureStroke>, file: File) {
     val bitmap = Bitmap.createBitmap(SIGNATURE_WIDTH_PX, SIGNATURE_HEIGHT_PX, Bitmap.Config.ARGB_8888)
     val canvas = AndroidCanvas(bitmap)
     val paint = AndroidPaint().apply {
@@ -164,12 +229,26 @@ private fun writeSignature(strokes: List<List<Offset>>, file: File) {
     }
 
     for (stroke in strokes) {
-        if (stroke.size < 2) continue
+        val points = stroke.points
+        if (points.size < 2) continue
         val path = AndroidPath().apply {
-            moveTo(stroke[0].x * SIGNATURE_WIDTH_PX, stroke[0].y * SIGNATURE_HEIGHT_PX)
-            for (point in stroke.drop(1)) {
-                lineTo(point.x * SIGNATURE_WIDTH_PX, point.y * SIGNATURE_HEIGHT_PX)
+            moveTo(points[0].x * SIGNATURE_WIDTH_PX, points[0].y * SIGNATURE_HEIGHT_PX)
+            // Quadratic through the midpoints rather than straight segments. Joining sampled
+            // touch points with lines is what gives a signature its cornered, shaky look.
+            for (i in 1 until points.size) {
+                val previous = points[i - 1]
+                val current = points[i]
+                val midX = (previous.x + current.x) / 2f * SIGNATURE_WIDTH_PX
+                val midY = (previous.y + current.y) / 2f * SIGNATURE_HEIGHT_PX
+                quadTo(
+                    previous.x * SIGNATURE_WIDTH_PX,
+                    previous.y * SIGNATURE_HEIGHT_PX,
+                    midX,
+                    midY
+                )
             }
+            val last = points.last()
+            lineTo(last.x * SIGNATURE_WIDTH_PX, last.y * SIGNATURE_HEIGHT_PX)
         }
         canvas.drawPath(path, paint)
     }
@@ -306,6 +385,9 @@ fun RedactCanvas(
 }
 
 private const val INK_WIDTH_PX = 5f
+
+/** Sub-pixel jitter costs a path segment and adds nothing anyone can see. */
+private const val MIN_SEGMENT_PX = 2.2f
 private const val SIGNATURE_WIDTH_PX = 1200
 private const val SIGNATURE_HEIGHT_PX = 480
 

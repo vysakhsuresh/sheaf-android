@@ -109,6 +109,8 @@ fun ToolRoute(
             onShare = { files -> context.startActivity(viewModel.shareIntent(files)) },
             onOpenResult = onOpenResult,
             onLoadPreview = viewModel::loadPreview,
+            onLoadPreviewPage = viewModel::loadPreviewPage,
+            onCheckSize = viewModel::checkCompressedSize,
             onCopy = { text ->
                 viewModel.copyToClipboard(text)
                 message = "Copied"

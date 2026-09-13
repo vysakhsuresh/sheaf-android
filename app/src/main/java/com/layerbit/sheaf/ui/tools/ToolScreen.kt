@@ -2,6 +2,7 @@ package com.layerbit.sheaf.ui.tools
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.border
@@ -89,15 +90,23 @@ fun ToolScreen(
     onShare: (List<SheafFile>) -> Unit,
     onOpenResult: (SheafFile) -> Unit,
     onLoadPreview: (SheafFile) -> Unit,
+    onLoadPreviewPage: () -> Unit,
+    onCheckSize: () -> Unit,
     onCopy: (String) -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Organise and Remove areas both draw on rendered pages, and only once a document is
     // actually present.
-    LaunchedEffect(tool, state.documents.firstOrNull()?.file?.file?.path) {
-        val needsPages = tool == ToolId.ORGANISE || tool == ToolId.REDACT
-        if (needsPages && state.documents.isNotEmpty()) onLoadPages()
+    LaunchedEffect(tool, state.documents.firstOrNull()?.file?.file?.path, state.config.signPage) {
+        if (state.documents.isEmpty()) return@LaunchedEffect
+        when (tool) {
+            // These edit pages, so they need every page rendered.
+            ToolId.ORGANISE, ToolId.REDACT -> onLoadPages()
+            // These change how a page looks, so one page is enough to show it.
+            ToolId.CROP, ToolId.WATERMARK, ToolId.PAGE_NUMBERS, ToolId.SIGN -> onLoadPreviewPage()
+            else -> Unit
+        }
     }
 
     val finished = jobState as? JobState.Finished
@@ -192,7 +201,17 @@ fun ToolScreen(
                             tool = tool,
                             config = state.config,
                             pageCount = state.documents.firstOrNull()?.pageCount,
+                            sizeCheck = state.sizeCheck,
+                            onCheckSize = onCheckSize,
                             onChange = onConfigChange
+                        )
+                    }
+                    item {
+                        EffectPreview(
+                            tool = tool,
+                            config = state.config,
+                            page = state.previewPage,
+                            signature = state.signatureBitmap
                         )
                     }
                 } else if (tool == ToolId.REDACT && state.pageOrder.isNotEmpty()) {
@@ -212,6 +231,8 @@ fun ToolScreen(
                             tool = tool,
                             config = state.config,
                             pageCount = state.documents.firstOrNull()?.pageCount,
+                            sizeCheck = state.sizeCheck,
+                            onCheckSize = onCheckSize,
                             onChange = onConfigChange
                         )
                     }
@@ -221,8 +242,20 @@ fun ToolScreen(
                             tool = tool,
                             config = state.config,
                             pageCount = state.documents.firstOrNull()?.pageCount,
+                            sizeCheck = state.sizeCheck,
+                            onCheckSize = onCheckSize,
                             onChange = onConfigChange
                         )
+                    }
+                    if (tool == ToolId.CROP || tool == ToolId.WATERMARK || tool == ToolId.PAGE_NUMBERS) {
+                        item {
+                            EffectPreview(
+                                tool = tool,
+                                config = state.config,
+                                page = state.previewPage,
+                                signature = null
+                            )
+                        }
                     }
                 }
 
@@ -243,7 +276,7 @@ fun ToolScreen(
                             disabledContentColor = SheafColors.Dim
                         )
                     ) {
-                        Text(tool.title, style = MaterialTheme.typography.titleMedium)
+                        Text(tool.action, style = MaterialTheme.typography.titleMedium)
                     }
                     // Saying why beats a grey button that looks broken.
                     state.blockedReason?.takeIf { state.documents.isNotEmpty() || !state.busy }
@@ -371,11 +404,15 @@ private fun ResultRow(
                         .verticalScroll(rememberScrollState())
                         .padding(12.dp)
                 ) {
-                    Text(
-                        preview.content.ifBlank { "(nothing was found)" },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = SheafColors.Muted
-                    )
+                    // Selectable, so a phone number or an address can be lifted out without
+                    // copying the whole document and hunting through it afterwards.
+                    SelectionContainer {
+                        Text(
+                            preview.content.ifBlank { "(nothing was found)" },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SheafColors.Muted
+                        )
+                    }
                 }
                 TextButton(onClick = { onCopy(preview.content) }) {
                     Text("Copy text", color = SheafColors.Band)

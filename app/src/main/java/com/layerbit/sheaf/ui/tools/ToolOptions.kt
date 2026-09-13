@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -28,6 +29,7 @@ import com.layerbit.sheaf.pdf.ImageStamp
 import com.layerbit.sheaf.pdf.PageNumberSpec
 import com.layerbit.sheaf.pdf.PageSpec
 import com.layerbit.sheaf.ui.components.SectionHeading
+import com.layerbit.sheaf.ui.components.formatBytes
 import com.layerbit.sheaf.ui.theme.SheafColors
 
 /**
@@ -45,7 +47,9 @@ fun ToolOptions(
     config: ToolConfig,
     pageCount: Int?,
     onChange: ((ToolConfig) -> ToolConfig) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    sizeCheck: SizeCheck = SizeCheck.Idle,
+    onCheckSize: () -> Unit = {}
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         when (tool) {
@@ -153,6 +157,41 @@ fun ToolOptions(
                         "text stays sharp and selectable. A document with no scanned pages will " +
                         "barely change."
                 )
+
+                // The real operation on the real file, thrown away afterwards. An estimate
+                // from image sizes would be wrong in exactly the cases that matter, and the
+                // question being asked is whether this will fit under an attachment limit.
+                when (sizeCheck) {
+                    SizeCheck.Idle -> TextButton(onClick = onCheckSize) {
+                        Text("Check the size first", color = SheafColors.Band)
+                    }
+                    SizeCheck.Working -> Text(
+                        "Trying it…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SheafColors.Muted
+                    )
+                    SizeCheck.Failed -> Text(
+                        "That could not be measured. Running it will still tell you.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SheafColors.Skipped
+                    )
+                    is SizeCheck.Done -> Text(
+                        text = if (sizeCheck.compressedBytes >= sizeCheck.originalBytes) {
+                            "${formatBytes(sizeCheck.originalBytes)} - already as small as it goes " +
+                                "at this level, so the original would be kept."
+                        } else {
+                            "${formatBytes(sizeCheck.originalBytes)} to " +
+                                "${formatBytes(sizeCheck.compressedBytes)} - " +
+                                "${(sizeCheck.savedFraction * 100).toInt()}% smaller."
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (sizeCheck.compressedBytes >= sizeCheck.originalBytes) {
+                            SheafColors.Skipped
+                        } else {
+                            SheafColors.Done
+                        }
+                    )
+                }
             }
 
             ToolId.SET_PASSWORD -> {
@@ -354,6 +393,7 @@ fun ToolOptions(
                             "processor writes the name it is licensed to."
                     )
                 } else {
+                    Hint("These are the document's current details. Edit whichever you want to change.")
                     Field(
                         value = config.metaTitle,
                         label = "Title",

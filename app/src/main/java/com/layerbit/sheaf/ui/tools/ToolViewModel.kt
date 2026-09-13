@@ -151,7 +151,27 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         }
         try {
             val info = sheaf.surgeon.inspect(PdfInput(file.file))
-            SelectedDoc(file = file, pageCount = info.pageCount, encrypted = info.isEncrypted)
+
+            // Document details cannot be edited without showing what they already are. Filling
+            // the fields here is the difference between an editor and three empty boxes.
+            if (tool == ToolId.METADATA) {
+                _state.update { current ->
+                    current.copy(
+                        config = current.config.copy(
+                            metaTitle = info.title.orEmpty(),
+                            metaAuthor = info.author.orEmpty(),
+                            metaSubject = info.subject.orEmpty()
+                        )
+                    )
+                }
+            }
+
+            SelectedDoc(
+                file = file,
+                pageCount = info.pageCount,
+                encrypted = info.isEncrypted,
+                producer = info.producer
+            )
         } catch (_: PdfException.PasswordRequired) {
             SelectedDoc(file = file, encrypted = true, needsPassword = true)
         } catch (e: Exception) {
@@ -214,7 +234,19 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
     // ---- options ----
 
     fun updateConfig(transform: (ToolConfig) -> ToolConfig) {
-        _state.update { it.copy(config = transform(it.config)) }
+        _state.update { current ->
+            val updated = transform(current.config)
+            // A changed compression level makes the last size check meaningless, and a changed
+            // signature page makes the rendered preview the wrong page.
+            val clearCheck = updated.compression != current.config.compression
+            val clearPage = updated.signPage != current.config.signPage
+            if (clearPage) current.previewPage?.recycle()
+            current.copy(
+                config = updated,
+                sizeCheck = if (clearCheck) SizeCheck.Idle else current.sizeCheck,
+                previewPage = if (clearPage) null else current.previewPage
+            )
+        }
     }
 
     // ---- organise: page thumbnails ----
@@ -484,6 +516,73 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         _state.value.thumbnails.values.forEach { it.recycle() }
         _state.value.previews.values.filterIsInstance<ResultPreview.Picture>()
             .forEach { it.bitmap.recycle() }
+        _state.value.previewPage?.recycle()
+        _state.value.signatureBitmap?.recycle()
+    }
+
+    // ---- previews ----
+
+    /**
+     * Renders page one for the effect preview.
+     *
+     * Only the first page, and only for the tools that visibly change how a page looks.
+     * Organise and Remove areas load every page because they need them; these four need one,
+     * and rendering a whole document to show a margin would be wasteful.
+     */
+    fun loadPreviewPage() {
+        val doc = _state.value.documents.firstOrNull() ?: return
+        if (_state.value.previewPage != null) return
+
+        viewModelScope.launch {
+            val bitmap = withContext(Dispatchers.IO) {
+                runCatching {
+                    val engine = if (doc.encrypted) sheaf.encryptedReader else sheaf.pdfEngine
+                    engine.open(doc.file.file, doc.password).use { opened ->
+                        val index = (_state.value.config.signPage - 1)
+                            .coerceIn(0, (opened.pageCount - 1).coerceAtLeast(0))
+                        opened.renderPage(index, PREVIEW_PAGE_WIDTH_PX)
+                    }
+                }.getOrNull()
+            }
+            _state.update { it.copy(previewPage = bitmap) }
+        }
+    }
+
+    /**
+     * Runs the real compression into a temp file to report what it would produce.
+     *
+     * Not an estimate from image sizes - the actual operation, on the actual document, thrown
+     * away afterwards. An approximation would be wrong in exactly the cases that matter, and
+     * the question people are asking is whether this file will get under an attachment limit.
+     */
+    fun checkCompressedSize() {
+        val doc = _state.value.documents.firstOrNull() ?: return
+        if (_state.value.sizeCheck is SizeCheck.Working) return
+
+        viewModelScope.launch {
+            _state.update { it.copy(sizeCheck = SizeCheck.Working) }
+            val probe = sheaf.workspace.newOutput(doc.file.baseName, "size-check")
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    sheaf.surgeon.compress(
+                        input = PdfInput(doc.file.file, doc.password),
+                        level = _state.value.config.compression,
+                        output = probe
+                    )
+                }.getOrNull()
+            }
+            probe.delete()
+
+            _state.update {
+                it.copy(
+                    sizeCheck = if (result == null) {
+                        SizeCheck.Failed
+                    } else {
+                        SizeCheck.Done(result.originalBytes, result.compressedBytes)
+                    }
+                )
+            }
+        }
     }
 
     // ---- sign and redact ----
@@ -495,7 +594,16 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
     fun setSignature(file: java.io.File) {
         _state.update { current ->
             current.signatureFile?.takeIf { it != file }?.delete()
-            current.copy(signatureFile = file, error = null)
+            current.signatureBitmap?.recycle()
+            current.copy(
+                signatureFile = file,
+                // Decoded once so the placement preview can show the real ink rather than a
+                // rectangle standing in for it.
+                signatureBitmap = runCatching {
+                    android.graphics.BitmapFactory.decodeFile(file.path)
+                }.getOrNull(),
+                error = null
+            )
         }
     }
 
@@ -522,6 +630,9 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         /** Readable enough to aim a redaction box at, small enough to hold a few of. */
         const val REDACT_PAGE_WIDTH_PX = 900
 
+        /** Big enough to judge a margin or a watermark on a phone screen. */
+        const val PREVIEW_PAGE_WIDTH_PX = 700
+
         /** Enough to see what came out without holding a whole book in memory. */
         const val PREVIEW_CHARS = 4000
         const val PREVIEW_PX = 420
@@ -529,6 +640,18 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 /** Something the reader can look at for a finished result. */
+/** What a real trial compression reported, so the choice is made on a number rather than a hope. */
+sealed interface SizeCheck {
+    data object Idle : SizeCheck
+    data object Working : SizeCheck
+    data object Failed : SizeCheck
+    data class Done(val originalBytes: Long, val compressedBytes: Long) : SizeCheck {
+        val savedFraction: Float
+            get() = if (originalBytes <= 0) 0f
+            else ((originalBytes - compressedBytes).toFloat() / originalBytes).coerceAtLeast(0f)
+    }
+}
+
 sealed interface ResultPreview {
     data class Text(val content: String) : ResultPreview
     data class Picture(val bitmap: Bitmap) : ResultPreview
@@ -541,7 +664,9 @@ data class SelectedDoc(
     val encrypted: Boolean = false,
     val needsPassword: Boolean = false,
     val password: String? = null,
-    val unreadableReason: String? = null
+    val unreadableReason: String? = null,
+    /** The app that wrote the file. Shown by Document details, since stripping it is the point. */
+    val producer: String? = null
 ) {
     val isReady: Boolean get() = unreadableReason == null && !needsPassword
 }
@@ -564,7 +689,13 @@ data class ToolUiState(
     /** Redact only: which page the canvas is showing. */
     val redactPage: Int = 0,
     /** Something to look at for each finished result, keyed by its path. */
-    val previews: Map<String, ResultPreview> = emptyMap()
+    val previews: Map<String, ResultPreview> = emptyMap(),
+    /** Page one, for the tools whose effect can be shown before running. */
+    val previewPage: Bitmap? = null,
+    /** The drawn signature, for the placement preview. */
+    val signatureBitmap: Bitmap? = null,
+    /** What compressing this document would actually produce. */
+    val sizeCheck: SizeCheck = SizeCheck.Idle
 ) {
     /**
      * Why the button is disabled, or null when it is not.

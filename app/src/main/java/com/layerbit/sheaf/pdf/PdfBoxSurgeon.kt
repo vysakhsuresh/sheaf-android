@@ -53,7 +53,10 @@ class PdfBoxSurgeon : PdfSurgeon {
             pageSizes = (0 until doc.numberOfPages).map { doc.getPage(it).toPageSize() },
             isEncrypted = doc.isEncrypted,
             title = doc.documentInformation?.title,
-            author = doc.documentInformation?.author
+            author = doc.documentInformation?.author,
+            subject = doc.documentInformation?.subject,
+            keywords = doc.documentInformation?.keywords,
+            producer = doc.documentInformation?.producer
         )
     }
 
@@ -848,16 +851,27 @@ class PdfBoxSurgeon : PdfSurgeon {
         val total = doc.numberOfPages
         var found = 0
 
+        // One entry per distinct image, not per placement. A letterhead logo is referenced
+        // from every page but is a single object in the file, and someone extracting images
+        // wants it once rather than nine identical copies.
+        val seen = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Any, Boolean>())
+
         for (index in 0 until total) {
             val resources = doc.getPage(index).resources
             if (resources != null) {
                 for (name in resources.xObjectNames.toList()) {
                     val xObject = runCatching { resources.getXObject(name) }.getOrNull()
                     if (xObject !is PDImageXObject) continue
+                    if (!seen.add(xObject.cosObject)) continue
 
                     // The embedded original, at whatever resolution it was stored, not a
                     // re-render of the page. That is the difference between this and
                     // PDF to images, and it is the whole reason both exist.
+                    //
+                    // NEVER RECYCLE THIS BITMAP. PDImageXObject caches it and hands the same
+                    // instance back on the next access, so recycling it here meant the second
+                    // page that used the same logo failed with "Can't compress a recycled
+                    // bitmap". PDFBox frees it when the document closes.
                     val bitmap = runCatching { xObject.image }.getOrNull() ?: continue
                     found++
                     val file = File(outputDir, "$baseName-${found.toString().padStart(3, '0')}.png")
@@ -868,8 +882,9 @@ class PdfBoxSurgeon : PdfSurgeon {
                         written += file
                     } catch (e: IOException) {
                         file.delete()
-                    } finally {
-                        bitmap.recycle()
+                    } catch (e: IllegalStateException) {
+                        // A bitmap another part of the library already released.
+                        file.delete()
                     }
                 }
             }
@@ -979,22 +994,23 @@ class PdfBoxSurgeon : PdfSurgeon {
             return null
         } ?: return null
 
-        if (longest <= level.maxDimension) {
-            // Already small enough. Re-encoding would only degrade it.
-            decoded.recycle()
-            return null
-        }
+        // Already small enough. Re-encoding would only degrade it.
+        if (longest <= level.maxDimension) return null
 
         val scale = level.maxDimension.toFloat() / longest
         val width = (decoded.width * scale).toInt().coerceAtLeast(1)
         val height = (decoded.height * scale).toInt().coerceAtLeast(1)
 
+        // The decoded bitmap belongs to PDImageXObject, which caches it and returns the same
+        // instance next time. Recycling it here broke every later page that referenced the
+        // same image. Only the scaled copy made below is ours to release, and the caller
+        // does that.
         return try {
-            Bitmap.createScaledBitmap(decoded, width, height, true).also {
-                if (it !== decoded) decoded.recycle()
-            }
+            val scaled = Bitmap.createScaledBitmap(decoded, width, height, true)
+            if (scaled === decoded) null else scaled
         } catch (_: OutOfMemoryError) {
-            decoded.recycle()
+            null
+        } catch (_: IllegalStateException) {
             null
         }
     }
