@@ -32,6 +32,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -59,6 +60,11 @@ import java.io.FileOutputStream
  * about 300 px tall and the result is written at 1200, which is what keeps it sharp when it
  * lands on an A4 page.
  */
+// PointerInputChange.historical is still marked experimental, and this opts in deliberately.
+// Those are the touch positions the system batched between frames; a fast stroke reports
+// several per frame, and ignoring them is precisely what made the ink look cornered. The
+// alternative is not "safer code", it is the jagged signature this rewrite exists to fix.
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun SignaturePad(
     onSigned: (File) -> Unit,
