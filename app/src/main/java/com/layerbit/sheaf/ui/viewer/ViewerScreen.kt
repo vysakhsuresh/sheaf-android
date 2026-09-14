@@ -1,6 +1,7 @@
 package com.layerbit.sheaf.ui.viewer
 
 import android.graphics.Bitmap
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -40,6 +41,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -55,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.ops.ToolId
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
+import com.layerbit.sheaf.pdf.PageArea
 import com.layerbit.sheaf.pdf.PageSize
 import com.layerbit.sheaf.ui.components.RowBetween
 import com.layerbit.sheaf.ui.components.SectionHeading
@@ -90,6 +94,10 @@ fun ViewerScreen(
     var showTools by remember { mutableStateOf(false) }
     var showOutline by remember { mutableStateOf(false) }
     var searching by remember { mutableStateOf(false) }
+    // The result list folds away once a result is chosen, while the search itself stays on.
+    // Clearing the query there would take the highlights off the page the reader just asked
+    // to be shown - the one thing the jump was for.
+    var showResults by remember { mutableStateOf(true) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
@@ -105,16 +113,21 @@ fun ViewerScreen(
                 onToggleNight = onToggleNight,
                 onSearchToggle = {
                     searching = !searching
+                    showResults = true
                     if (!searching) onClearSearch()
                 }
             )
             if (searching) {
                 SearchBar(
                     reading = reading,
-                    onSearch = onSearch,
+                    showResults = showResults,
+                    onSearch = { query ->
+                        showResults = true
+                        onSearch(query)
+                    },
+                    onShowResults = { showResults = true },
                     onJump = { page ->
-                        searching = false
-                        onClearSearch()
+                        showResults = false
                         scope.launch { listState.scrollToItem(page) }
                     }
                 )
@@ -133,8 +146,14 @@ fun ViewerScreen(
 
             is ViewerState.Failed -> CentredMessage(state.reason, modifier = Modifier.weight(1f))
 
-            is ViewerState.Ready ->
-                PageList(state, reading.nightMode, listState, renderPage, Modifier.weight(1f))
+            is ViewerState.Ready -> PageList(
+                state = state,
+                nightMode = reading.nightMode,
+                highlights = if (searching) reading.highlights else emptyMap(),
+                listState = listState,
+                renderPage = renderPage,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 
@@ -234,9 +253,20 @@ private fun ViewerHeader(
     }
 }
 
-/** Find across the document. Results are pages, and tapping one scrolls to it. */
+/**
+ * Find across the document. Results are pages, and tapping one scrolls to it.
+ *
+ * Choosing a result folds the list away rather than closing the search, so what is left on
+ * screen is the page with its matches marked and a field still holding the query.
+ */
 @Composable
-private fun SearchBar(reading: ReadingState, onSearch: (String) -> Unit, onJump: (Int) -> Unit) {
+private fun SearchBar(
+    reading: ReadingState,
+    showResults: Boolean,
+    onSearch: (String) -> Unit,
+    onShowResults: () -> Unit,
+    onJump: (Int) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -274,29 +304,44 @@ private fun SearchBar(reading: ReadingState, onSearch: (String) -> Unit, onJump:
             )
         }
 
-        // Bounded, because a search for "the" in a book matches every page and an unbounded
-        // list inside a header would take the whole screen.
-        reading.hits.take(MAX_VISIBLE_HITS).forEach { hit ->
-            Column(
+        if (!showResults && reading.hits.isNotEmpty()) {
+            Text(
+                "Matches are marked on the page. Tap to see the list again.",
+                style = MaterialTheme.typography.bodySmall,
+                color = SheafColors.BandBright,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onJump(hit.pageIndex) }
-                    .padding(vertical = 8.dp)
-            ) {
-                Text(
-                    "Page ${hit.pageIndex + 1}" + if (hit.matchCount > 1) " · ${hit.matchCount} matches" else "",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = SheafColors.BandBright
-                )
-                // The match is highlighted inside the snippet. A result that only says
-                // "page 4" makes you find the word again once you get there.
-                Text(
-                    text = highlight(hit.snippet, reading.query),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = SheafColors.Muted,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                    .clickable { onShowResults() }
+                    .padding(top = 8.dp, bottom = 2.dp)
+            )
+        }
+
+        // Bounded, because a search for "the" in a book matches every page and an unbounded
+        // list inside a header would take the whole screen.
+        if (showResults) {
+            reading.hits.take(MAX_VISIBLE_HITS).forEach { hit ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onJump(hit.pageIndex) }
+                        .padding(vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "Page ${hit.pageIndex + 1}" +
+                            if (hit.matchCount > 1) " · ${hit.matchCount} matches" else "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SheafColors.BandBright
+                    )
+                    // The match is highlighted inside the snippet. A result that only says
+                    // "page 4" makes you find the word again once you get there.
+                    Text(
+                        text = highlight(hit.snippet, reading.query),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SheafColors.Muted,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }
@@ -438,6 +483,7 @@ private fun ToolSheet(documentName: String, onDismiss: () -> Unit, onPick: (Tool
 private fun PageList(
     state: ViewerState.Ready,
     nightMode: Boolean,
+    highlights: Map<Int, List<PageArea>>,
     listState: androidx.compose.foundation.lazy.LazyListState,
     renderPage: suspend (index: Int, widthPx: Int) -> Bitmap?,
     modifier: Modifier = Modifier
@@ -466,6 +512,7 @@ private fun PageList(
                     size = state.pageSizes.getOrNull(index),
                     renderWidthPx = renderWidthPx,
                     nightMode = nightMode,
+                    highlights = highlights[index].orEmpty(),
                     renderPage = renderPage
                 )
             }
@@ -480,6 +527,7 @@ private fun PageItem(
     size: PageSize?,
     renderWidthPx: Int,
     nightMode: Boolean,
+    highlights: List<PageArea>,
     renderPage: suspend (index: Int, widthPx: Int) -> Bitmap?
 ) {
     var bitmap by remember(generation, index) { mutableStateOf<Bitmap?>(null) }
@@ -530,6 +578,49 @@ private fun PageItem(
                 textAlign = TextAlign.Center
             )
         }
+
+        // Drawn over the page rather than into the bitmap, so the same cached render serves a
+        // page whether it is a search result or not, and the marks come and go for free.
+        if (current != null && highlights.isNotEmpty()) {
+            MatchMarks(bitmap = current, areas = highlights)
+        }
+    }
+}
+
+/**
+ * Boxes the search matches on a rendered page.
+ *
+ * The areas arrive normalised to the page, so they are laid over wherever the bitmap actually
+ * landed inside the item - which is not quite the whole of it when the page's proportions and
+ * the reserved space disagree by a pixel or two.
+ */
+@Composable
+private fun MatchMarks(bitmap: Bitmap, areas: List<PageArea>) {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val pageWidth = bitmap.width.toFloat()
+        val pageHeight = bitmap.height.toFloat()
+        if (pageWidth <= 0f || pageHeight <= 0f) return@Canvas
+
+        val scale = minOf(size.width / pageWidth, size.height / pageHeight)
+        val drawWidth = pageWidth * scale
+        val drawHeight = pageHeight * scale
+        val originX = (size.width - drawWidth) / 2f
+        val originY = (size.height - drawHeight) / 2f
+
+        areas.forEach { area ->
+            // A zero-height area would draw nothing at all, and a glyph box that rounds to
+            // nothing is still a match the reader is looking for.
+            val markHeight = (area.height * drawHeight).coerceAtLeast(2f)
+            val markWidth = (area.width * drawWidth).coerceAtLeast(2f)
+            drawRect(
+                color = MATCH_MARK,
+                topLeft = Offset(
+                    x = originX + area.left * drawWidth,
+                    y = originY + area.top * drawHeight
+                ),
+                size = Size(markWidth, markHeight)
+            )
+        }
     }
 }
 
@@ -563,6 +654,14 @@ private fun CentredMessage(
 
 private val PAGE_MARGIN = 12.dp
 private val PAGE_GAP = 12.dp
+
+/**
+ * The wash over a search match.
+ *
+ * Translucent rather than solid, because the point is to find the words again, and a solid
+ * band would hide the very text it is pointing at.
+ */
+private val MATCH_MARK = androidx.compose.ui.graphics.Color(0x66E0257A)
 
 /** The placeholder behind a page that has not arrived, in night mode. */
 private val NIGHT_PAPER = androidx.compose.ui.graphics.Color(0xFF15171B)

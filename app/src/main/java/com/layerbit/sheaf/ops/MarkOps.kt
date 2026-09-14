@@ -7,6 +7,7 @@ import com.layerbit.sheaf.pdf.PageArea
 import com.layerbit.sheaf.pdf.PageNumberSpec
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
+import com.layerbit.sheaf.pdf.TextNote
 import com.layerbit.sheaf.pdf.WatermarkSpec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -209,6 +210,56 @@ class SignOp(private val stamp: ImageStamp) : Op {
             OpOutcome.Produced(
                 SheafFile(output, "${input.baseName} signed.pdf", SheafFile.Origin.Derived("signed")),
                 "Signed on page ${stamp.pageIndex + 1}"
+            )
+        )
+    }
+}
+
+/**
+ * Writes a line of text onto a page, and optionally covers what was there first.
+ *
+ * The nearest thing to editing a PDF that a PDF honestly allows. A document holds glyphs at
+ * coordinates rather than paragraphs, so there is no sentence to retype - but a wrong date can
+ * be patched over and written again, and an empty field can be filled in.
+ *
+ * Flattened into the page like [SignOp], not added as an annotation, so it is part of the
+ * document rather than a note the next reader can drag off it.
+ */
+class AddTextOp(private val note: TextNote) : Op {
+
+    override val tool = ToolId.ADD_TEXT
+    override val title = "Add text"
+    override val arity = Op.Arity.ExactlyOne
+
+    override suspend fun run(
+        inputs: List<SheafFile>,
+        context: OpContext,
+        onProgress: (Progress) -> Unit
+    ): List<OpOutcome> = withContext(Dispatchers.IO) {
+        val input = inputs.firstOrNull()
+            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+        if (note.text.isBlank()) {
+            return@withContext listOf(OpOutcome.Failed(input.displayName, "Type the text first."))
+        }
+
+        onProgress(Progress(0, 1, "Writing on page ${note.pageIndex + 1}"))
+        val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
+        val output = context.workspace.newOutput(input.baseName, "edited")
+
+        try {
+            context.surgeon.addText(pdfInput, listOf(note), output)
+        } catch (e: PdfException) {
+            output.delete()
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Failed."))
+        }
+
+        onProgress(Progress(1, 1, "Done"))
+        val lines = note.text.lines().count { it.isNotBlank() }
+        listOf(
+            OpOutcome.Produced(
+                SheafFile(output, "${input.baseName} edited.pdf", SheafFile.Origin.Derived("edited")),
+                "${if (lines == 1) "One line" else "$lines lines"} added to page ${note.pageIndex + 1}" +
+                    if (note.cover) ", covering what was underneath" else ""
             )
         )
     }

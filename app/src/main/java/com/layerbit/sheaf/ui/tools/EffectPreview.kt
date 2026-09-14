@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -54,10 +57,15 @@ fun EffectPreview(
     config: ToolConfig,
     page: Bitmap?,
     signature: Bitmap?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /**
+     * Where the user tapped, as a fraction of the page. Only tools that place something at a
+     * point pass this; for the rest the preview is something to look at rather than to touch.
+     */
+    onPlace: ((Float, Float) -> Unit)? = null
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        SectionHeading("Preview · first page")
+        SectionHeading(if (onPlace != null) "Tap to place · page shown" else "Preview · first page")
 
         Box(
             modifier = Modifier
@@ -66,7 +74,23 @@ fun EffectPreview(
                 .aspectRatio(if (page != null && page.height > 0) page.width.toFloat() / page.height else 0.707f)
                 .clip(RoundedCornerShape(6.dp))
                 .background(SheafColors.Paper)
-                .border(1.dp, SheafColors.Border, RoundedCornerShape(6.dp)),
+                .border(1.dp, SheafColors.Border, RoundedCornerShape(6.dp))
+                .then(
+                    if (onPlace == null) {
+                        Modifier
+                    } else {
+                        Modifier.pointerInput(onPlace) {
+                            detectTapGestures { offset ->
+                                if (size.width > 0 && size.height > 0) {
+                                    onPlace?.invoke(
+                                        (offset.x / size.width).coerceIn(0f, 1f),
+                                        (offset.y / size.height).coerceIn(0f, 1f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                ),
             contentAlignment = Alignment.Center
         ) {
             if (page == null) {
@@ -84,6 +108,7 @@ fun EffectPreview(
                     ToolId.WATERMARK -> WatermarkOverlay(config)
                     ToolId.PAGE_NUMBERS -> PageNumberOverlay(config)
                     ToolId.SIGN -> SignatureOverlay(config, signature)
+                    ToolId.ADD_TEXT -> NoteOverlay(config)
                     else -> Unit
                 }
             }
@@ -95,6 +120,7 @@ fun EffectPreview(
                 ToolId.WATERMARK -> "Close to how it will look. The document uses Helvetica."
                 ToolId.PAGE_NUMBERS -> "Shown on the first page that gets a number."
                 ToolId.SIGN -> "Where your signature will sit on the page you chose."
+                ToolId.ADD_TEXT -> "Tap the page to move the text. Helvetica, as the document uses."
                 else -> ""
             },
             style = MaterialTheme.typography.bodySmall,
@@ -226,3 +252,35 @@ private fun SignatureOverlay(config: ToolConfig, signature: Bitmap?) {
         )
     }
 }
+
+/**
+ * The note where it will land, drawn at roughly the size it will be.
+ *
+ * Roughly, because the size is in PDF points and the preview is in pixels, and the ratio
+ * between them depends on the page's own dimensions. A4 is assumed, which is a few percent out
+ * on Letter - close enough to judge placement by, which is what the preview is for.
+ */
+@Composable
+private fun NoteOverlay(config: ToolConfig) {
+    if (config.noteText.isBlank()) return
+    val ink = Color(config.noteColour)
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        // The preview is as many dp tall as the page is points, so this is the one ratio
+        // that turns a type size in the document into a type size on screen.
+        val dpPerPoint = maxHeight.value / A4_HEIGHT_POINTS
+        Text(
+            text = config.noteText,
+            color = ink,
+            fontSize = (config.noteSize * dpPerPoint).sp,
+            maxLines = 1,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset(x = maxWidth * config.noteLeft, y = maxHeight * config.noteTop)
+                .then(if (config.noteCover) Modifier.background(Color.White) else Modifier)
+        )
+    }
+}
+
+/** The page the preview's type size is reckoned against when the real one is not known. */
+private const val A4_HEIGHT_POINTS = 841.89f

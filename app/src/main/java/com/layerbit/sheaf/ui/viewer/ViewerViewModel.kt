@@ -12,6 +12,7 @@ import com.layerbit.sheaf.pdf.PageSize
 import com.layerbit.sheaf.pdf.PdfDocument
 import com.layerbit.sheaf.pdf.OutlineEntry
 import com.layerbit.sheaf.pdf.PdfException
+import com.layerbit.sheaf.pdf.PageArea
 import com.layerbit.sheaf.pdf.PdfInput
 import com.layerbit.sheaf.pdf.SearchHit
 import kotlinx.coroutines.Dispatchers
@@ -197,12 +198,12 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * Finds [query] across the document.
      *
-     * Page-level rather than word-level. PDFBox can say which pages contain the words and give
-     * a snippet around the first match, which is enough to navigate.
+     * Each hit carries the pages it is on, a snippet, and where on the page every match sits.
+     * The rectangles are what let the page itself show the match: a result list that only says
+     * "page 4" leaves the reader to find the phrase again by eye once they get there.
      *
-     * Highlighting the exact rectangle needs per-glyph positions and is a bigger piece of work
-     * than it looks. Shipping "jump to the page" now is more honest than a highlight that
-     * lands in the wrong place on justified text.
+     * They are collected into a map here rather than in the UI so that the page composable,
+     * which runs for every page on screen, does not walk the whole hit list to find its own.
      */
     fun search(query: String) {
         searchJob?.cancel()
@@ -210,7 +211,11 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
         _reading.value = _reading.value.copy(query = query)
 
         if (query.isBlank() || source == null) {
-            _reading.value = _reading.value.copy(hits = emptyList(), searching = false)
+            _reading.value = _reading.value.copy(
+                hits = emptyList(),
+                highlights = emptyMap(),
+                searching = false
+            )
             return
         }
 
@@ -220,13 +225,23 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                 runCatching { sheaf.surgeon.search(PdfInput(source.file), query) }
                     .getOrDefault(emptyList())
             }
-            _reading.value = _reading.value.copy(hits = hits, searching = false)
+            _reading.value = _reading.value.copy(
+                hits = hits,
+                highlights = hits.filter { it.areas.isNotEmpty() }
+                    .associate { it.pageIndex to it.areas },
+                searching = false
+            )
         }
     }
 
     fun clearSearch() {
         searchJob?.cancel()
-        _reading.value = _reading.value.copy(query = "", hits = emptyList(), searching = false)
+        _reading.value = _reading.value.copy(
+            query = "",
+            hits = emptyList(),
+            highlights = emptyMap(),
+            searching = false
+        )
     }
 
     /**
@@ -267,6 +282,8 @@ data class ReadingState(
     val outline: List<OutlineEntry> = emptyList(),
     val query: String = "",
     val hits: List<SearchHit> = emptyList(),
+    /** Match rectangles by page index, so a page can draw its own without scanning [hits]. */
+    val highlights: Map<Int, List<PageArea>> = emptyMap(),
     val searching: Boolean = false
 )
 

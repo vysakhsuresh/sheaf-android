@@ -18,10 +18,12 @@ import com.tom_roush.pdfbox.util.Matrix
 import com.tom_roush.pdfbox.pdmodel.graphics.state.RenderingMode
 import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineItem
 import com.tom_roush.pdfbox.text.PDFTextStripper
+import com.tom_roush.pdfbox.text.TextPosition
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
 import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
+import com.tom_roush.pdfbox.pdmodel.graphics.form.PDFormXObject
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
 import com.tom_roush.pdfbox.rendering.PDFRenderer
@@ -395,12 +397,27 @@ class PdfBoxSurgeon : PdfSurgeon {
         val needle = query.trim()
         if (needle.isEmpty()) return@withDocument emptyList()
 
-        val stripper = PDFTextStripper()
         buildList {
             for (index in 0 until doc.numberOfPages) {
-                stripper.startPage = index + 1
-                stripper.endPage = index + 1
-                val text = runCatching { stripper.getText(doc) }.getOrNull() ?: continue
+                val page = doc.getPage(index)
+                val box = page.cropBox ?: page.mediaBox ?: PDRectangle.A4
+
+                // A stripper that keeps the glyph positions, not just the words. Page numbers
+                // alone told the reader which page to go to and then left them to find the
+                // phrase again by eye; these are what let the viewer draw a box round it.
+                //
+                // A quarter-turned page is stripped in reading order, so the rectangles come
+                // back against a page whose width and height have swapped. The viewer renders
+                // it turned too, so they have to be normalised against the same swap.
+                val quarterTurned = normaliseRotation(page.rotation) % 180 == 90
+                val finder = if (quarterTurned) {
+                    MatchFinder(needle, box.height, box.width)
+                } else {
+                    MatchFinder(needle, box.width, box.height)
+                }
+                finder.startPage = index + 1
+                finder.endPage = index + 1
+                val text = runCatching { finder.getText(doc) }.getOrNull() ?: continue
 
                 val matches = Regex(Regex.escape(needle), RegexOption.IGNORE_CASE).findAll(text).toList()
                 if (matches.isEmpty()) continue
@@ -412,7 +429,7 @@ class PdfBoxSurgeon : PdfSurgeon {
                     .replace(Regex("\\s+"), " ")
                     .trim()
 
-                add(SearchHit(index, snippet, matches.size))
+                add(SearchHit(index, snippet, matches.size, finder.areas.toList()))
             }
         }
     }
@@ -604,18 +621,24 @@ class PdfBoxSurgeon : PdfSurgeon {
                 target.addPage(sheet)
 
                 val form = layers.importPageAsForm(doc, index)
-                val bounds = form.bBox ?: sourceBox
-                val scale = minOf(sheetBox.width / bounds.width, sheetBox.height / bounds.height)
+                val bounds = placedBounds(form, sourceBox)
+                val scale = minOf(
+                    sheetBox.width / bounds.width.coerceAtLeast(1f),
+                    sheetBox.height / bounds.height.coerceAtLeast(1f)
+                )
                 val drawWidth = bounds.width * scale
                 val drawHeight = bounds.height * scale
 
                 PDPageContentStream(target, sheet, PDPageContentStream.AppendMode.APPEND, true, true)
                     .use { stream ->
                         stream.saveGraphicsState()
+                        // The origin comes off the translation because the content does not
+                        // start at zero after a crop. Centring without it slides the page by
+                        // however much was trimmed, which took the first letter off every line.
                         stream.transform(
                             Matrix.getTranslateInstance(
-                                (sheetBox.width - drawWidth) / 2f,
-                                (sheetBox.height - drawHeight) / 2f
+                                (sheetBox.width - drawWidth) / 2f - bounds.lowerLeftX * scale,
+                                (sheetBox.height - drawHeight) / 2f - bounds.lowerLeftY * scale
                             )
                         )
                         stream.transform(Matrix.getScaleInstance(scale, scale))
@@ -757,6 +780,95 @@ class PdfBoxSurgeon : PdfSurgeon {
             doc.save(output)
         }
 
+    override fun addText(input: PdfInput, notes: List<TextNote>, output: File) =
+        withDocument(input) { doc ->
+            for (note in notes) {
+                if (note.pageIndex !in 0 until doc.numberOfPages) {
+                    throw PdfException.Io("Page ${note.pageIndex + 1} does not exist in this document.")
+                }
+
+                val lines = note.text.lines().map { it.toWinAnsiSafe() }
+                    .dropLastWhile { it.isBlank() }
+                if (lines.isEmpty() || lines.all { it.isBlank() }) continue
+
+                val page = doc.getPage(note.pageIndex)
+                val box = page.cropBox ?: page.mediaBox ?: PDRectangle.A4
+                val rotation = normaliseRotation(page.rotation)
+                val quarterTurned = rotation % 180 == 90
+
+                // The page as the reader saw it when they tapped, which on a scan filed
+                // sideways is not the page as the file stores it.
+                val shownWidth = if (quarterTurned) box.height else box.width
+                val shownHeight = if (quarterTurned) box.width else box.height
+
+                val size = note.sizePoints.coerceIn(MIN_NOTE_POINTS, MAX_NOTE_POINTS)
+                val lineHeight = size * LINE_SPACING
+                val across = note.left.coerceIn(0f, 1f) * shownWidth
+                // The tap marks the top of the line; the baseline sits one line below it.
+                val down = note.top.coerceIn(0f, 1f) * shownHeight + size
+
+                val originX = when (rotation) {
+                    90 -> box.lowerLeftX + down
+                    180 -> box.upperRightX - across
+                    270 -> box.upperRightX - down
+                    else -> box.lowerLeftX + across
+                }
+                val originY = when (rotation) {
+                    90 -> box.lowerLeftY + across
+                    180 -> box.lowerLeftY + down
+                    270 -> box.upperRightY - across
+                    else -> box.upperRightY - down
+                }
+
+                PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true)
+                    .use { stream ->
+                        stream.saveGraphicsState()
+                        // One transform carries the position and the page's own quarter turn
+                        // together, so everything after it is written as though the first line
+                        // began at the origin and ran left to right.
+                        stream.transform(
+                            Matrix.getRotateInstance(
+                                Math.toRadians(rotation.toDouble()),
+                                originX,
+                                originY
+                            )
+                        )
+
+                        if (note.cover) {
+                            val widest = lines.maxOf { widthOfHelvetica(it, size) }
+                            val drop = (lines.size - 1) * lineHeight
+                            stream.setNonStrokingColor(1f, 1f, 1f)
+                            stream.addRect(
+                                -COVER_PADDING,
+                                -drop - size * NOTE_DESCENT,
+                                widest + COVER_PADDING * 2f,
+                                drop + size * (NOTE_DESCENT + NOTE_ASCENT)
+                            )
+                            stream.fill()
+                        }
+
+                        stream.setNonStrokingColor(
+                            ((note.colour shr 16) and 0xFF) / 255f,
+                            ((note.colour shr 8) and 0xFF) / 255f,
+                            (note.colour and 0xFF) / 255f
+                        )
+                        stream.beginText()
+                        stream.setFont(PDType1Font.HELVETICA, size)
+                        stream.newLineAtOffset(0f, 0f)
+                        lines.forEachIndexed { index, line ->
+                            // Td is measured from the start of the line before it, so this
+                            // both drops a line and returns to the left edge.
+                            if (index > 0) stream.newLineAtOffset(0f, -lineHeight)
+                            stream.showText(line)
+                        }
+                        stream.endText()
+                        stream.restoreGraphicsState()
+                    }
+            }
+
+            doc.save(output)
+        }
+
     // ---- P4: power tools ----
 
     override fun nUp(input: PdfInput, perSheet: Int, output: File, onProgress: (Int, Int) -> Unit) =
@@ -794,17 +906,22 @@ class PdfBoxSurgeon : PdfSurgeon {
                                 val column = slot % columns
                                 val row = slot / columns
 
-                                val bounds = form.bBox ?: first
+                                val bounds = placedBounds(form, first)
                                 val scale = minOf(
-                                    (cellWidth - CELL_GAP * 2) / bounds.width,
-                                    (cellHeight - CELL_GAP * 2) / bounds.height
+                                    (cellWidth - CELL_GAP * 2) / bounds.width.coerceAtLeast(1f),
+                                    (cellHeight - CELL_GAP * 2) / bounds.height.coerceAtLeast(1f)
                                 )
                                 val drawWidth = bounds.width * scale
                                 val drawHeight = bounds.height * scale
-                                val x = column * cellWidth + (cellWidth - drawWidth) / 2f
+                                // Both offsets carry the box origin, for the same reason the
+                                // resize path does: a page whose content does not begin at zero
+                                // is otherwise drawn that far outside its cell.
+                                val x = column * cellWidth +
+                                    (cellWidth - drawWidth) / 2f - bounds.lowerLeftX * scale
                                 // Rows run down the sheet, but PDF's origin is at the bottom,
                                 // so row zero is the top and the index is inverted here.
-                                val y = (rows - 1 - row) * cellHeight + (cellHeight - drawHeight) / 2f
+                                val y = (rows - 1 - row) * cellHeight +
+                                    (cellHeight - drawHeight) / 2f - bounds.lowerLeftY * scale
 
                                 stream.saveGraphicsState()
                                 stream.transform(Matrix.getTranslateInstance(x, y))
@@ -1068,8 +1185,119 @@ class PdfBoxSurgeon : PdfSurgeon {
 
         /** Breathing room around each page on an N-up sheet. */
         const val CELL_GAP = 8f
+
+        /** Smaller than this is unreadable; larger is a poster, not a note. */
+        const val MIN_NOTE_POINTS = 4f
+        const val MAX_NOTE_POINTS = 200f
+
+        /** Leading, as a multiple of the type size. The usual typesetting ratio. */
+        const val LINE_SPACING = 1.25f
+
+        /** Helvetica's ascent and descent, which is how far a covering patch has to reach. */
+        const val NOTE_ASCENT = 0.9f
+        const val NOTE_DESCENT = 0.25f
+
+        /** A hair either side of a covering patch, so it does not clip the type. */
+        const val COVER_PADDING = 2f
     }
 }
+
+/**
+ * Where a form's content actually lands once the form's own matrix is applied.
+ *
+ * A form is drawn at Matrix(BBox) rather than at BBox. The importer sets that matrix to carry
+ * a page whose box does not begin at the origin, so the rectangle to scale and centre is the
+ * transformed one. Placing from the raw box instead slides the content by the box's own
+ * origin, which is what took the left edge off a cropped page resized to a fixed sheet.
+ *
+ * The four corners are transformed rather than the two, because a rotated page's matrix turns
+ * the box as well as moving it.
+ */
+private fun placedBounds(form: PDFormXObject, fallback: PDRectangle): PDRectangle {
+    val box = form.bBox ?: return fallback
+    val matrix = form.matrix ?: return box
+
+    val a = matrix.getValue(0, 0)
+    val b = matrix.getValue(0, 1)
+    val c = matrix.getValue(1, 0)
+    val d = matrix.getValue(1, 1)
+    val e = matrix.getValue(2, 0)
+    val f = matrix.getValue(2, 1)
+
+    val corners = listOf(
+        box.lowerLeftX to box.lowerLeftY,
+        box.upperRightX to box.lowerLeftY,
+        box.upperRightX to box.upperRightY,
+        box.lowerLeftX to box.upperRightY
+    )
+    val xs = corners.map { (x, y) -> a * x + c * y + e }
+    val ys = corners.map { (x, y) -> b * x + d * y + f }
+
+    val left = xs.min()
+    val bottom = ys.min()
+    return PDRectangle(left, bottom, xs.max() - left, ys.max() - bottom)
+}
+
+/**
+ * A text stripper that records where each match sits on the page.
+ *
+ * PDFBox hands writeString the run of text and the glyph position behind every character of
+ * it, so a match found in the string can be mapped straight back to the rectangle those
+ * glyphs occupy. That rectangle, normalised to the page, is what the viewer highlights.
+ *
+ * The positions are approximate at the edges - a ligature is one glyph for two characters, so
+ * a match spanning one can be a character out. It is the difference between a box that is
+ * exactly right and one that is a few points wide either way, which nobody reading notices.
+ */
+private class MatchFinder(
+    private val needle: String,
+    private val pageWidth: Float,
+    private val pageHeight: Float
+) : PDFTextStripper() {
+
+    val areas = mutableListOf<PageArea>()
+
+    override fun writeString(text: String, textPositions: List<TextPosition>) {
+        var index = text.indexOf(needle, 0, ignoreCase = true)
+        while (index >= 0) {
+            val end = (index + needle.length).coerceAtMost(textPositions.size)
+            if (index < textPositions.size && end > index) {
+                areaFor(textPositions.subList(index, end))?.let { areas += it }
+            }
+            index = text.indexOf(needle, index + 1, ignoreCase = true)
+        }
+        super.writeString(text, textPositions)
+    }
+
+    private fun areaFor(glyphs: List<TextPosition>): PageArea? {
+        if (glyphs.isEmpty() || pageWidth <= 0f || pageHeight <= 0f) return null
+
+        val left = glyphs.minOf { it.xDirAdj }
+        val right = glyphs.maxOf { it.xDirAdj + it.widthDirAdj }
+        // yDirAdj is measured from the top of the page down to the baseline, which is the one
+        // place in this file where the vertical axis already points the way the screen does.
+        val baseline = glyphs.maxOf { it.yDirAdj }
+        val height = glyphs.maxOf { it.heightDir }.coerceAtLeast(1f)
+
+        return PageArea(
+            left = (left / pageWidth).coerceIn(0f, 1f),
+            top = ((baseline - height) / pageHeight).coerceIn(0f, 1f),
+            width = ((right - left) / pageWidth).coerceIn(0f, 1f),
+            height = (height / pageHeight).coerceIn(0f, 1f)
+        )
+    }
+}
+
+/**
+ * How wide a line of Helvetica is, in points.
+ *
+ * Only a covering patch needs this, and a patch that is a little wide is better than one that
+ * is short, so a font that will not measure falls back to half the type size per character -
+ * Helvetica's average is a shade under that.
+ */
+private fun widthOfHelvetica(line: String, size: Float): Float =
+    runCatching { PDType1Font.HELVETICA.getStringWidth(line) / 1000f * size }
+        .getOrDefault(line.length * size * 0.5f)
 
 /**
  * Drops characters Helvetica's WinAnsi encoding cannot represent.

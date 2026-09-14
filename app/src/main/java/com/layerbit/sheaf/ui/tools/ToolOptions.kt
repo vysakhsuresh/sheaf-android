@@ -341,15 +341,61 @@ fun ToolOptions(
                     onSelect = { value -> onChange { it.copy(signWidth = value) } }
                 )
                 NumberField(
-                    value = config.signPage,
+                    value = config.markPage,
                     label = "Page",
                     min = 1,
                     max = pageCount ?: 9999,
-                    onChange = { value -> onChange { it.copy(signPage = value) } }
+                    onChange = { value -> onChange { it.copy(markPage = value) } }
                 )
                 Hint(
                     "This draws your signature into the page, the same as printing, signing " +
                         "and scanning it back. It is not a cryptographic digital signature."
+                )
+            }
+
+            ToolId.ADD_TEXT -> {
+                Field(
+                    value = config.noteText,
+                    label = "What to write",
+                    keyboardType = KeyboardType.Text,
+                    onChange = { value -> onChange { it.copy(noteText = value) } }
+                )
+                SectionHeading("Size")
+                ChoiceRow(
+                    options = listOf(9f to "Small", 12f to "Normal", 16f to "Large", 24f to "Big"),
+                    selected = config.noteSize,
+                    onSelect = { value -> onChange { it.copy(noteSize = value) } }
+                )
+                SectionHeading("Ink")
+                ChoiceRow(
+                    options = listOf(
+                        NOTE_BLACK to "Black",
+                        NOTE_BLUE to "Blue",
+                        NOTE_RED to "Red"
+                    ),
+                    selected = config.noteColour,
+                    onSelect = { value -> onChange { it.copy(noteColour = value) } }
+                )
+                SectionHeading("What is already there")
+                ChoiceRow(
+                    options = listOf(
+                        false to "Write over it",
+                        true to "Cover it first"
+                    ),
+                    selected = config.noteCover,
+                    onSelect = { value -> onChange { it.copy(noteCover = value) } }
+                )
+                NumberField(
+                    value = config.markPage,
+                    label = "Page",
+                    min = 1,
+                    max = pageCount ?: 9999,
+                    onChange = { value -> onChange { it.copy(markPage = value) } }
+                )
+                Hint(
+                    "Tap the page below to choose where the text goes. Covering paints white " +
+                        "over the old text rather than deleting it, so it is a correction, not " +
+                        "a redaction - use Remove areas when something has to be gone for good."
                 )
             }
 

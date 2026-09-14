@@ -154,6 +154,21 @@ interface PdfSurgeon {
     @Throws(PdfException::class)
     fun stampImage(input: PdfInput, stamp: ImageStamp, output: File)
 
+    /**
+     * Writes visible lines of text onto pages.
+     *
+     * This is as close to editing a PDF as a PDF gets. A document is not a word processor file:
+     * there are no paragraphs to retype, only glyphs at coordinates. What can honestly be
+     * offered is putting new text at a chosen spot, and - with [TextNote.cover] - laying a patch
+     * of paper over what was there first, which together is how a wrong date or a blank field
+     * gets fixed.
+     *
+     * Flattened into the page content rather than added as a form field or an annotation, for
+     * the same reason [stampImage] is: an annotation is something the next reader can drag away.
+     */
+    @Throws(PdfException::class)
+    fun addText(input: PdfInput, notes: List<TextNote>, output: File)
+
     // ---- P4: power tools ----
 
     /** Places several source pages onto each output sheet. */
@@ -257,11 +272,34 @@ data class TextPlacement(
     val height: Float
 )
 
+/**
+ * A line - or a few lines - of visible text to lay on one page.
+ *
+ * NORMALISED, ORIGIN TOP-LEFT, like every other position in this file. [left] and [top] mark
+ * the top-left corner of the first line, which is where the tap that placed it landed.
+ *
+ * [sizePoints] is in PDF points rather than anything screen-shaped, because that is what the
+ * document is measured in: 12 points here is 12 points beside the text already on the page.
+ */
+data class TextNote(
+    val pageIndex: Int,
+    val text: String,
+    val left: Float,
+    val top: Float,
+    val sizePoints: Float = 12f,
+    /** Packed ARGB, so the UI can hand over a colour without a PDF type of its own. */
+    val colour: Int = 0xFF000000.toInt(),
+    /** Paints paper under the line first, so the note can replace what is already there. */
+    val cover: Boolean = false
+)
+
 /** A page that matched a search, and enough context to recognise it. */
 data class SearchHit(
     val pageIndex: Int,
     val snippet: String,
-    val matchCount: Int
+    val matchCount: Int,
+    /** Where each match sits on the page, so the viewer can draw a box round it. */
+    val areas: List<PageArea> = emptyList()
 )
 
 /** One entry from the document's outline. */

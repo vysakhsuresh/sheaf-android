@@ -100,6 +100,7 @@ the signature. Resist any pull towards a convenient `fun run(input: SheafFile): 
 | Watermark | DRAFT or a name, tiled or once, at three strengths |
 | Page numbers | Position, format, skip a cover, Bates padding |
 | Sign | Draw a signature and flatten it into a page |
+| Add text | Tap a page and write on it, covering what is there if you need to |
 | Crop pages | Trim the margins, or put every page on A4 or Letter |
 | Pages per sheet | 2-up or 4-up for printing |
 | Split by size | Parts that fit a 5, 10 or 25 MB email limit |
@@ -131,6 +132,10 @@ written into the new page at all.
 The cost is real and the UI says so: a redacted page becomes a picture, so its text stops
 being selectable and searchable, and the file grows. Only the marked pages are treated this
 way; every other page keeps its text untouched.
+
+**Add text is a correction, not a redaction either.** Covering the old words paints paper over
+them; they are still in the file underneath. It is the right tool for a wrong date and the
+wrong one for a bank account number.
 
 **Crop is not redaction, and does not pretend to be.** Cropping changes the CropBox: what falls
 outside stops being displayed but is still in the file, and comes back if someone crops the

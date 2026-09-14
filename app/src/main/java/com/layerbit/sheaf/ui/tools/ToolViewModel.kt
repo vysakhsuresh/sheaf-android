@@ -9,6 +9,7 @@ import com.layerbit.sheaf.SheafApplication
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.jobs.JobState
 import com.layerbit.sheaf.jobs.belongsTo
+import com.layerbit.sheaf.ops.AddTextOp
 import com.layerbit.sheaf.ops.CompressOp
 import com.layerbit.sheaf.ops.CropOp
 import com.layerbit.sheaf.ops.ExtractImagesOp
@@ -42,6 +43,7 @@ import com.layerbit.sheaf.pdf.ImageFormat
 import com.layerbit.sheaf.pdf.PageSpec
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
+import com.layerbit.sheaf.pdf.TextNote
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -237,9 +239,9 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { current ->
             val updated = transform(current.config)
             // A changed compression level makes the last size check meaningless, and a changed
-            // signature page makes the rendered preview the wrong page.
+            // page makes the rendered preview show the wrong one.
             val clearCheck = updated.compression != current.config.compression
-            val clearPage = updated.signPage != current.config.signPage
+            val clearPage = updated.markPage != current.config.markPage
             if (clearPage) current.previewPage?.recycle()
             current.copy(
                 config = updated,
@@ -390,12 +392,23 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 SignOp(
                     ImageStamp(
                         image = signature,
-                        pageIndex = (config.signPage - 1).coerceAtLeast(0),
+                        pageIndex = (config.markPage - 1).coerceAtLeast(0),
                         anchor = config.signAnchor,
                         widthFraction = config.signWidth
                     )
                 )
             }
+            ToolId.ADD_TEXT -> AddTextOp(
+                TextNote(
+                    pageIndex = (config.markPage - 1).coerceAtLeast(0),
+                    text = config.noteText,
+                    left = config.noteLeft,
+                    top = config.noteTop,
+                    sizePoints = config.noteSize,
+                    colour = config.noteColour,
+                    cover = config.noteCover
+                )
+            )
             ToolId.REDACT -> RedactOp(state.redactions)
             ToolId.N_UP -> NUpOp(config.perSheet)
             ToolId.SPLIT_BY_SIZE -> SplitBySizeOp(config.maxPartBytes)
@@ -538,7 +551,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 runCatching {
                     val engine = if (doc.encrypted) sheaf.encryptedReader else sheaf.pdfEngine
                     engine.open(doc.file.file, doc.password).use { opened ->
-                        val index = (_state.value.config.signPage - 1)
+                        val index = (_state.value.config.markPage - 1)
                             .coerceIn(0, (opened.pageCount - 1).coerceAtLeast(0))
                         opened.renderPage(index, PREVIEW_PAGE_WIDTH_PX)
                     }
@@ -719,6 +732,7 @@ data class ToolUiState(
             tool == ToolId.SIGN && signatureFile == null -> "Draw your signature above."
             tool == ToolId.REDACT && redactions.values.all { it.isEmpty() } ->
                 "Drag a box over what should be removed."
+            tool == ToolId.ADD_TEXT && config.noteText.isBlank() -> "Type the text to add."
             tool == ToolId.WATERMARK && config.watermarkText.isBlank() ->
                 "Type the watermark text."
             tool == ToolId.SET_PASSWORD && config.newPassword.isBlank() ->
@@ -762,9 +776,18 @@ data class ToolConfig(
     val trim: Float = 0f,
     val resizeTo: PageSpec.Size? = null,
 
-    val signPage: Int = 1,
+    /** The page a signature or a note lands on, and the page the preview shows. */
+    val markPage: Int = 1,
     val signAnchor: ImageStamp.Anchor = ImageStamp.Anchor.BOTTOM_RIGHT,
     val signWidth: Float = 0.3f,
+
+    val noteText: String = "",
+    /** Where the note sits, as a fraction of the page. Set by tapping the preview. */
+    val noteLeft: Float = 0.1f,
+    val noteTop: Float = 0.1f,
+    val noteSize: Float = 12f,
+    val noteColour: Int = NOTE_BLACK,
+    val noteCover: Boolean = false,
 
     val perSheet: Int = 2,
     val maxPartBytes: Long = 10L * 1024 * 1024,
@@ -786,3 +809,16 @@ data class ToolConfig(
         }
     }
 }
+
+/**
+ * The three inks a note can be written in.
+ *
+ * Packed ARGB rather than a Compose colour, because the value is carried all the way down to
+ * the PDF engine, which knows nothing about Compose.
+ *
+ * Black is a shade off 0x000000 on purpose: it is what the rest of the app treats as ink, and
+ * true black beside scanned type looks harder than the page it is written on.
+ */
+val NOTE_BLACK: Int = 0xFF111111.toInt()
+val NOTE_RED: Int = 0xFFC62828.toInt()
+val NOTE_BLUE: Int = 0xFF1A4FA0.toInt()

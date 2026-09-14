@@ -32,6 +32,7 @@ fun iconFor(tool: ToolId): Int = when (tool) {
     ToolId.WATERMARK -> R.drawable.ic_tool_watermark
     ToolId.PAGE_NUMBERS -> R.drawable.ic_tool_page_numbers
     ToolId.SIGN -> R.drawable.ic_tool_sign
+    ToolId.ADD_TEXT -> R.drawable.ic_tool_add_text
     ToolId.CROP -> R.drawable.ic_tool_crop
     ToolId.N_UP -> R.drawable.ic_tool_n_up
     ToolId.SPLIT_BY_SIZE -> R.drawable.ic_tool_split_size

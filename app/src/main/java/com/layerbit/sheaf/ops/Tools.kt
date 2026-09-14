@@ -97,6 +97,12 @@ enum class ToolId(
         InputKind.ONE_PDF,
         Group.MARK
     ),
+    ADD_TEXT(
+        "Add text",
+        "Type onto a page, and cover what is there if you need to",
+        InputKind.ONE_PDF,
+        Group.MARK
+    ),
     CROP(
         "Crop pages",
         "Trim the margins or change the page size",
@@ -189,6 +195,7 @@ enum class ToolId(
             WATERMARK -> "Add the watermark"
             PAGE_NUMBERS -> "Add the numbers"
             SIGN -> "Place the signature"
+            ADD_TEXT -> "Write it on"
             CROP -> "Crop it"
             N_UP -> "Lay it out"
             SPLIT_BY_SIZE -> "Split by size"

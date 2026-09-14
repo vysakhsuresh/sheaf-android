@@ -98,13 +98,14 @@ fun ToolScreen(
 ) {
     // Organise and Remove areas both draw on rendered pages, and only once a document is
     // actually present.
-    LaunchedEffect(tool, state.documents.firstOrNull()?.file?.file?.path, state.config.signPage) {
+    LaunchedEffect(tool, state.documents.firstOrNull()?.file?.file?.path, state.config.markPage) {
         if (state.documents.isEmpty()) return@LaunchedEffect
         when (tool) {
             // These edit pages, so they need every page rendered.
             ToolId.ORGANISE, ToolId.REDACT -> onLoadPages()
             // These change how a page looks, so one page is enough to show it.
-            ToolId.CROP, ToolId.WATERMARK, ToolId.PAGE_NUMBERS, ToolId.SIGN -> onLoadPreviewPage()
+            ToolId.CROP, ToolId.WATERMARK, ToolId.PAGE_NUMBERS, ToolId.SIGN,
+            ToolId.ADD_TEXT -> onLoadPreviewPage()
             else -> Unit
         }
     }
@@ -247,13 +248,22 @@ fun ToolScreen(
                             onChange = onConfigChange
                         )
                     }
-                    if (tool == ToolId.CROP || tool == ToolId.WATERMARK || tool == ToolId.PAGE_NUMBERS) {
+                    if (tool == ToolId.CROP || tool == ToolId.WATERMARK ||
+                        tool == ToolId.PAGE_NUMBERS || tool == ToolId.ADD_TEXT
+                    ) {
                         item {
                             EffectPreview(
                                 tool = tool,
                                 config = state.config,
                                 page = state.previewPage,
-                                signature = null
+                                signature = null,
+                                // Only Add text is placed by hand; the others sit where their
+                                // own settings put them, and a stray tap should not move them.
+                                onPlace = if (tool == ToolId.ADD_TEXT) {
+                                    { x, y -> onConfigChange { it.copy(noteLeft = x, noteTop = y) } }
+                                } else {
+                                    null
+                                }
                             )
                         }
                     }
