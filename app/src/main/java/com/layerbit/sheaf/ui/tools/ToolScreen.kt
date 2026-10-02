@@ -80,6 +80,8 @@ fun ToolScreen(
     onConfigChange: (((ToolConfig) -> ToolConfig)) -> Unit,
     onLoadPages: () -> Unit,
     onTogglePage: (Int) -> Unit,
+    onSelectAllPages: () -> Unit,
+    onClearPageSelection: () -> Unit,
     onRotateSelected: (Int) -> Unit,
     onDeleteSelected: () -> Unit,
     onMovePage: (Int, Int) -> Unit,
@@ -116,7 +118,8 @@ fun ToolScreen(
         if (state.documents.isEmpty()) return@LaunchedEffect
         when (tool) {
             // These edit pages, so they need every page rendered.
-            ToolId.ORGANISE, ToolId.REDACT -> onLoadPages()
+            // Extract shows them to be tapped rather than typed.
+            ToolId.ORGANISE, ToolId.REDACT, ToolId.EXTRACT -> onLoadPages()
             // These change how a page looks, so one page is enough to show it.
             ToolId.CROP, ToolId.WATERMARK, ToolId.PAGE_NUMBERS,
             ToolId.ADD_TEXT -> onLoadPreviewPage()
@@ -268,6 +271,25 @@ fun ToolScreen(
                             config = state.config,
                             page = state.previewPage,
                             signature = state.signatureBitmap
+                        )
+                    }
+                } else if (tool == ToolId.EXTRACT && state.pageOrder.isNotEmpty()) {
+                    item {
+                        PageChooser(
+                            state = state,
+                            onTogglePage = onTogglePage,
+                            onAll = onSelectAllPages,
+                            onNone = onClearPageSelection
+                        )
+                    }
+                    item {
+                        ToolOptions(
+                            tool = tool,
+                            config = state.config,
+                            pageCount = state.documents.firstOrNull()?.pageCount,
+                            sizeCheck = state.sizeCheck,
+                            onCheckSize = onCheckSize,
+                            onChange = onConfigChange
                         )
                     }
                 } else if (tool == ToolId.FORMS && state.documents.isNotEmpty()) {
@@ -687,6 +709,14 @@ private fun OrganisePanel(
             }
         }
 
+        if (state.thumbnailsCapped) {
+            Hint(
+                "Only the first pages are shown as pictures - a few hundred thumbnails is " +
+                    "more memory than this app is allowed. The rest are still here and keep " +
+                    "their place in the order."
+            )
+        }
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(
                 onClick = { onRotate(90) },
@@ -763,6 +793,71 @@ private fun SavedSignatures(
     }
 }
 
+/**
+ * The pages, to be tapped rather than typed.
+ *
+ * "1-3, 7, 12-" is faster than tapping on a four-hundred-page document and is unreadable on a
+ * twelve-page one, where the question is really "which of these do I want" and the answer is
+ * in front of you. Both work and both write the same value, so the typed field below is not a
+ * fallback - it is the other half of the same control.
+ */
+@Composable
+private fun PageChooser(
+    state: ToolUiState,
+    onTogglePage: (Int) -> Unit,
+    onAll: () -> Unit,
+    onNone: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        RowBetween {
+            SectionHeading(
+                if (state.selectedPages.isEmpty()) {
+                    "Tap the pages to keep"
+                } else {
+                    "${state.selectedPages.size} of ${state.pageOrder.size} pages"
+                }
+            )
+            Row {
+                TextButton(onClick = onAll) {
+                    Text("All", style = MaterialTheme.typography.bodySmall, color = SheafColors.Muted)
+                }
+                TextButton(onClick = onNone) {
+                    Text("None", style = MaterialTheme.typography.bodySmall, color = SheafColors.Muted)
+                }
+            }
+        }
+
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(96.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            // A nested scrollable needs a bounded height or it cannot measure inside a
+            // LazyColumn. Tall enough for three rows, and it scrolls within itself.
+            modifier = Modifier.heightIn(max = 420.dp)
+        ) {
+            itemsIndexed(state.pageOrder, key = { _, page -> page }) { position, page ->
+                PageThumb(
+                    position = position,
+                    pageIndex = page,
+                    state = state,
+                    onTap = { onTogglePage(page) },
+                    onLeft = {},
+                    onRight = {},
+                    reorderable = false
+                )
+            }
+        }
+
+        if (state.thumbnailsCapped) {
+            Hint(
+                "Only the first pages are shown as pictures - a few hundred thumbnails is " +
+                    "more memory than this app is allowed. The rest are still here, numbered " +
+                    "and tappable, and typing a range covers them too."
+            )
+        }
+    }
+}
+
 @Composable
 private fun PageThumb(
     position: Int,
@@ -770,7 +865,9 @@ private fun PageThumb(
     state: ToolUiState,
     onTap: () -> Unit,
     onLeft: () -> Unit,
-    onRight: () -> Unit
+    onRight: () -> Unit,
+    /** Off where the order is not the user's to change - picking pages out, for instance. */
+    reorderable: Boolean = true
 ) {
     val selected = pageIndex in state.selectedPages
     val rotation = state.rotations[pageIndex] ?: 0
@@ -801,19 +898,29 @@ private fun PageThumb(
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onLeft, enabled = position > 0, modifier = Modifier.size(34.dp)) {
-                Text("‹", color = SheafColors.Muted)
+            if (reorderable) {
+                TextButton(
+                    onClick = onLeft,
+                    enabled = position > 0,
+                    modifier = Modifier.size(34.dp)
+                ) { Text("‹", color = SheafColors.Muted) }
             }
             Text(
                 "${position + 1}",
                 style = MaterialTheme.typography.bodySmall,
-                color = if (rotation != 0) SheafColors.BandBright else SheafColors.Dim
+                color = when {
+                    selected -> SheafColors.BandBright
+                    rotation != 0 -> SheafColors.BandBright
+                    else -> SheafColors.Dim
+                }
             )
-            TextButton(
-                onClick = onRight,
-                enabled = position < state.pageOrder.lastIndex,
-                modifier = Modifier.size(34.dp)
-            ) { Text("›", color = SheafColors.Muted) }
+            if (reorderable) {
+                TextButton(
+                    onClick = onRight,
+                    enabled = position < state.pageOrder.lastIndex,
+                    modifier = Modifier.size(34.dp)
+                ) { Text("›", color = SheafColors.Muted) }
+            }
         }
     }
 }

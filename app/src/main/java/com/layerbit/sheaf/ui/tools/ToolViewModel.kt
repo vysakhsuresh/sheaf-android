@@ -44,6 +44,7 @@ import com.layerbit.sheaf.pdf.FormField
 import com.layerbit.sheaf.pdf.StampSpec
 import com.layerbit.sheaf.pdf.ImageStamp
 import com.layerbit.sheaf.pdf.PageArea
+import com.layerbit.sheaf.pdf.PageSelection
 import com.layerbit.sheaf.pdf.PageNumberSpec
 import com.layerbit.sheaf.pdf.WatermarkSpec
 import com.layerbit.sheaf.pdf.ImageFormat
@@ -337,28 +338,97 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         val doc = _state.value.documents.firstOrNull() ?: return
         if (_state.value.pageOrder.isNotEmpty()) return
 
+        // Remove areas shows ONE page at a time, big enough to aim a box at. Rendering the
+        // whole document at that size is hundreds of megabytes of bitmap and was the one
+        // path in this app that could not survive a long scan, so it renders on demand.
+        if (_state.value.tool == ToolId.REDACT) {
+            loadPageCountOnly(doc)
+            return
+        }
+
         viewModelScope.launch {
             _state.update { it.copy(busy = true) }
-            // Remove areas needs pages big enough to read, because a box has to be drawn
-            // over particular words. Organise only needs to recognise a page, so it gets the
-            // small ones - rendering a 200-page document at full width would not survive.
-            val width = if (_state.value.tool == ToolId.REDACT) REDACT_PAGE_WIDTH_PX else THUMBNAIL_WIDTH_PX
             val thumbs = withContext(Dispatchers.IO) {
                 runCatching {
                     val engine = if (doc.encrypted) sheaf.encryptedReader else sheaf.pdfEngine
                     engine.open(doc.file.file, doc.password).use { opened ->
                         (0 until opened.pageCount).map { index ->
-                            index to runCatching { opened.renderPage(index, width) }.getOrNull()
+                            // Past the cap the page is listed but not drawn. Four hundred
+                            // thumbnails is a hundred megabytes of bitmap, and the heap this
+                            // app is allowed is the reason it can be trusted with a
+                            // four-hundred-page document at all.
+                            val bitmap = if (index < MAX_THUMBNAILS) {
+                                runCatching {
+                                    opened.renderPage(index, THUMBNAIL_WIDTH_PX)
+                                }.getOrNull()
+                            } else {
+                                null
+                            }
+                            index to bitmap
                         }
                     }
                 }.getOrNull().orEmpty()
             }
-            _state.update {
-                it.copy(
+            _state.update { current ->
+                val order = thumbs.map { (index, _) -> index }
+                current.copy(
                     busy = false,
-                    pageOrder = thumbs.map { (index, _) -> index },
-                    thumbnails = thumbs.mapNotNull { (index, bitmap) -> bitmap?.let { b -> index to b } }.toMap()
+                    pageOrder = order,
+                    thumbnails = thumbs
+                        .mapNotNull { (index, bitmap) -> bitmap?.let { b -> index to b } }
+                        .toMap(),
+                    thumbnailsCapped = order.size > MAX_THUMBNAILS,
+                    // Extract pages can be driven by tapping or by typing, and they are the
+                    // same selection: whatever is in the field when the pages arrive is shown
+                    // as ticked, so the two never disagree.
+                    selectedPages = if (current.tool == ToolId.EXTRACT) {
+                        PageSelection.parse(current.config.pageSpec, order.size).toSet()
+                    } else {
+                        current.selectedPages
+                    }
                 )
+            }
+        }
+    }
+
+    /** Lists the pages without drawing them, then draws the first one. */
+    private fun loadPageCountOnly(doc: SelectedDoc) {
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true) }
+            val count = withContext(Dispatchers.IO) {
+                runCatching {
+                    val engine = if (doc.encrypted) sheaf.encryptedReader else sheaf.pdfEngine
+                    engine.open(doc.file.file, doc.password).use { it.pageCount }
+                }.getOrDefault(0)
+            }
+            _state.update { it.copy(busy = false, pageOrder = (0 until count).toList()) }
+            if (count > 0) renderRedactPage(0)
+        }
+    }
+
+    /**
+     * Draws one page for the redaction canvas, keeping only it.
+     *
+     * The ones it replaces are dropped from the map but NOT recycled: Compose may still be
+     * drawing the page that is leaving the screen this frame, and recycling a bitmap out from
+     * under a draw is an immediate crash. Letting them be collected costs a moment of memory
+     * and nothing else.
+     */
+    private fun renderRedactPage(index: Int) {
+        val doc = _state.value.documents.firstOrNull() ?: return
+        if (_state.value.thumbnails.containsKey(index)) return
+
+        viewModelScope.launch {
+            val bitmap = withContext(Dispatchers.IO) {
+                runCatching {
+                    val engine = if (doc.encrypted) sheaf.encryptedReader else sheaf.pdfEngine
+                    engine.open(doc.file.file, doc.password).use { opened ->
+                        opened.renderPage(index, REDACT_PAGE_WIDTH_PX)
+                    }
+                }.getOrNull()
+            }
+            _state.update { current ->
+                if (bitmap == null) current else current.copy(thumbnails = mapOf(index to bitmap))
             }
         }
     }
@@ -367,9 +437,36 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { current ->
             val selected = current.selectedPages.toMutableSet()
             if (!selected.add(index)) selected.remove(index)
-            current.copy(selectedPages = selected)
+            current.copy(selectedPages = selected, config = current.specFrom(selected))
         }
     }
+
+    fun selectAllPages() {
+        _state.update { current ->
+            val all = current.pageOrder.toSet()
+            current.copy(selectedPages = all, config = current.specFrom(all))
+        }
+    }
+
+    fun clearPageSelection() {
+        _state.update { current ->
+            current.copy(selectedPages = emptySet(), config = current.specFrom(emptySet()))
+        }
+    }
+
+    /**
+     * Keeps Extract pages' typed field in step with what has been tapped.
+     *
+     * The field is not replaced by the grid, because "1-3, 40-" on a four-hundred-page
+     * document is faster to type than it is to tap. They are two ways into one value, so the
+     * value is written from whichever was used last.
+     */
+    private fun ToolUiState.specFrom(selected: Set<Int>): ToolConfig =
+        if (tool == ToolId.EXTRACT) {
+            config.copy(pageSpec = PageSelection.describe(selected.toList()))
+        } else {
+            config
+        }
 
     fun rotateSelected(degrees: Int) {
         _state.update { current ->
@@ -877,7 +974,10 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(formValues = it.formValues + (name to value), error = null) }
     }
 
-    fun setRedactPage(index: Int) = _state.update { it.copy(redactPage = index) }
+    fun setRedactPage(index: Int) {
+        _state.update { it.copy(redactPage = index) }
+        renderRedactPage(index)
+    }
 
     fun addRedaction(page: Int, area: PageArea) {
         _state.update { current ->
@@ -893,6 +993,15 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
     private companion object {
         /** About a sixth of a phone screen. Enough to recognise a page, not to read it. */
         const val THUMBNAIL_WIDTH_PX = 220
+
+        /**
+         * How many pages are drawn as pictures.
+         *
+         * A thumbnail is a third of a megabyte and a long scan has hundreds of pages, which
+         * is a heap this app does not have. Past this they are listed, numbered and still
+         * selectable - they just have no picture, and the screen says why.
+         */
+        const val MAX_THUMBNAILS = 120
 
         /** Bates numbers are conventionally six digits wide. */
         const val BATES_WIDTH = 6
@@ -972,6 +1081,8 @@ data class ToolUiState(
     val signatureBitmap: Bitmap? = null,
     /** What compressing this document would actually produce. */
     val sizeCheck: SizeCheck = SizeCheck.Idle,
+    /** True when the document has more pages than were drawn, so the UI can say so. */
+    val thumbnailsCapped: Boolean = false,
     /** Organise only: the plans before each edit, newest last, for undo. */
     val pageEdits: List<PageEdit> = emptyList(),
     /** Sign only: signatures the user kept, newest first. */
@@ -1028,7 +1139,7 @@ data class ToolUiState(
             tool == ToolId.SET_PASSWORD && config.newPassword != config.confirmPassword ->
                 "The two passwords do not match."
             tool == ToolId.EXTRACT && config.pageSpec.isBlank() ->
-                "Type which pages to keep."
+                "Tap the pages to keep, or type them."
             tool == ToolId.CROP && config.trim == 0f && config.resizeTo == null ->
                 "Choose how much to trim, or a page size."
             else -> null

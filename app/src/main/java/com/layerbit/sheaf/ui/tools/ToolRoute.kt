@@ -155,6 +155,8 @@ fun ToolRoute(
             onConfigChange = viewModel::updateConfig,
             onLoadPages = viewModel::loadPages,
             onTogglePage = viewModel::togglePageSelected,
+            onSelectAllPages = viewModel::selectAllPages,
+            onClearPageSelection = viewModel::clearPageSelection,
             onRotateSelected = viewModel::rotateSelected,
             onDeleteSelected = viewModel::deleteSelectedPages,
             onMovePage = viewModel::movePage,

@@ -126,6 +126,16 @@ Everything in it can be handed straight to any tool without going back through t
 Every one of them runs as background work behind a foreground service, so a long job survives
 the user switching apps.
 
+### Tools chain
+
+A finished result has a **Then…** button that hands it straight to the next tool. Merge, then
+compress, then add a password: three taps, with nothing saved to Files and picked back up in
+between. That falls out of the `List<SheafFile> -> Op -> List<SheafFile>` signature rather than
+being new machinery, which is the whole reason the signature is plural.
+
+Sharing several PDFs into Sheaf from another app lands them all in Merge, because a viewer can
+only show one of them and merging is the obvious thing to want with five.
+
 Reading and the tools are one flow, not two. Open a document, read it, and hand it straight to
 any tool from the viewer's own bar - the tool receives the same file without sending you back
 to the system picker to find it again. That is what stops the viewer being a dead end and what
