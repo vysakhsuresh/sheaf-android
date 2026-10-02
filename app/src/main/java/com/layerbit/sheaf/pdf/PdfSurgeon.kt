@@ -175,6 +175,26 @@ interface PdfSurgeon {
     fun addText(input: PdfInput, notes: List<TextNote>, output: File)
 
     /**
+     * Draws the reader's own marks into the pages.
+     *
+     * A highlight is a translucent block of colour laid over the text, and a pen stroke is a
+     * line. Both are drawn into the page content rather than added as PDF annotation objects,
+     * which is the same decision [stampImage] makes for a signature and for the same reason:
+     * an annotation is something the next reader's app can move, hide or delete, and a mark
+     * somebody made on a document should still be there when it is opened somewhere else.
+     *
+     * The cost is that marks cannot be peeled off again afterwards. The UI says so, and the
+     * original file is untouched regardless - every operation here writes a new document.
+     */
+    @Throws(PdfException::class)
+    fun annotate(
+        input: PdfInput,
+        marks: Map<Int, List<PageMark>>,
+        output: File,
+        onProgress: (Int, Int) -> Unit = { _, _ -> }
+    )
+
+    /**
      * Lays a line of text along the top or the bottom of every page.
      *
      * The same machinery as page numbers, with the numbering taken out and placeholders put
@@ -411,6 +431,33 @@ data class FormField(
 ) {
     enum class Kind { TEXT, TICK, CHOICE }
 }
+
+/**
+ * A mark the reader drew on a page.
+ *
+ * Normalised to the page, origin top-left, like every other position in this file - the
+ * canvas works in the pixels of whatever it rendered and the page is in points, and the
+ * conversion is written once, inside the implementation.
+ */
+sealed interface PageMark {
+
+    /** Packed ARGB. The alpha in it is ignored; a highlight has its own. */
+    val colour: Int
+
+    /** A block of colour over the words, the way a highlighter pen works. */
+    data class Highlight(val area: PageArea, override val colour: Int) : PageMark
+
+    /** A line drawn with a finger. Two points or more, or there is nothing to draw. */
+    data class Ink(
+        val points: List<PagePoint>,
+        override val colour: Int,
+        /** Line width in PDF points, so it is the same thickness on A4 as on a photo. */
+        val widthPoints: Float = 2f
+    ) : PageMark
+}
+
+/** A point on a page, normalised, origin top-left. */
+data class PagePoint(val x: Float, val y: Float)
 
 /** A page that matched a search, and enough context to recognise it. */
 data class SearchHit(

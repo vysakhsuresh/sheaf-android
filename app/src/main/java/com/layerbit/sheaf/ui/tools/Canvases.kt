@@ -47,6 +47,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.pdf.PageArea
+import com.layerbit.sheaf.pdf.PageMark
+import com.layerbit.sheaf.pdf.PagePoint
 import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.theme.SheafColors
 import java.io.File
@@ -389,6 +391,240 @@ fun RedactCanvas(
         }
     }
 }
+
+/**
+ * Highlighting and drawing on a page.
+ *
+ * One page at a time with the page rendered underneath, like the redaction canvas - and for
+ * the same reason, since a mark that lands a centimetre from where the finger was is worse
+ * than no mark at all. Marks are stored normalised to the page, so the operation can draw
+ * them into a document whose points bear no relation to the pixels on this screen.
+ *
+ * The pen path drains historical touch points, the way the signature pad does. A fast stroke
+ * reports several positions per frame and dropping them is exactly what turns handwriting
+ * into a row of corners.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun MarkupCanvas(
+    pageIndex: Int,
+    pageCount: Int,
+    page: Bitmap?,
+    marks: List<PageMark>,
+    pen: Boolean,
+    colour: Int,
+    onPage: (Int) -> Unit,
+    onHighlight: (PageArea) -> Unit,
+    onInk: (List<PagePoint>) -> Unit,
+    onUndo: () -> Unit,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedButton(onClick = { onPage(pageIndex - 1) }, enabled = pageIndex > 0) {
+                Text("Previous", color = SheafColors.Muted)
+            }
+            Text(
+                "Page ${pageIndex + 1} of $pageCount",
+                style = MaterialTheme.typography.bodyMedium,
+                color = SheafColors.Text
+            )
+            OutlinedButton(
+                onClick = { onPage(pageIndex + 1) },
+                enabled = pageIndex < pageCount - 1
+            ) { Text("Next", color = SheafColors.Muted) }
+        }
+
+        // The in-progress gestures. Neither is snapshot state that Compose walks: the stroke
+        // is a Path appended to as points arrive, and one counter read inside the draw lambda
+        // is what invalidates it.
+        val stroke = remember(pageIndex, pen) { mutableStateOf<SignatureStroke?>(null) }
+        var version by remember(pageIndex, pen) { mutableIntStateOf(0) }
+        var boxFrom by remember(pageIndex, pen) { mutableStateOf<Offset?>(null) }
+        var boxTo by remember(pageIndex, pen) { mutableStateOf<Offset?>(null) }
+
+        val gestures = if (pen) {
+            Modifier.pointerInput(pageIndex, pen) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val down = awaitPointerEvent().changes.firstOrNull { it.pressed }
+                            ?: continue
+                        val drawing = SignatureStroke(size.width, size.height)
+                        drawing.start(down.position)
+                        stroke.value = drawing
+                        version++
+                        down.consume()
+
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull() ?: break
+                            if (!change.pressed) {
+                                change.consume()
+                                break
+                            }
+                            for (historical in change.historical) {
+                                drawing.lineTo(historical.position)
+                            }
+                            drawing.lineTo(change.position)
+                            change.consume()
+                            version++
+                        }
+
+                        // A tap is not a stroke. Handing one over would put an invisible mark
+                        // in the list and count towards the total.
+                        if (drawing.points.size >= 2) {
+                            onInk(drawing.points.map { PagePoint(it.x, it.y) })
+                        }
+                        stroke.value = null
+                        version++
+                    }
+                }
+            }
+        } else {
+            Modifier.pointerInput(pageIndex, pen) {
+                detectDragGestures(
+                    onDragStart = { start -> boxFrom = start; boxTo = start },
+                    onDragEnd = {
+                        val from = boxFrom
+                        val to = boxTo
+                        if (from != null && to != null) {
+                            val left = minOf(from.x, to.x) / size.width
+                            val top = minOf(from.y, to.y) / size.height
+                            val width = kotlin.math.abs(to.x - from.x) / size.width
+                            val height = kotlin.math.abs(to.y - from.y) / size.height
+                            // A highlight is usually wide and short - one line of text - so
+                            // only the long side has to clear the tap threshold.
+                            if (width > MIN_BOX && height > MIN_BOX / 2f) {
+                                onHighlight(PageArea(left, top, width, height))
+                            }
+                        }
+                        boxFrom = null
+                        boxTo = null
+                    },
+                    onDragCancel = { boxFrom = null; boxTo = null },
+                    onDrag = { change, _ ->
+                        change.consume()
+                        boxTo = change.position
+                    }
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp)
+                .aspectRatio(
+                    if (page != null && page.height > 0) page.width.toFloat() / page.height else 0.707f
+                )
+                .clip(RoundedCornerShape(6.dp))
+                .background(SheafColors.Paper)
+                .border(1.dp, SheafColors.Border, RoundedCornerShape(6.dp))
+        ) {
+            if (page != null) {
+                Image(
+                    bitmap = page.asImageBitmap(),
+                    contentDescription = "Page ${pageIndex + 1}",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            Canvas(modifier = Modifier.fillMaxSize().then(gestures)) {
+                // Read so the draw is invalidated as points arrive. The stroke itself is
+                // invisible to Compose on purpose.
+                @Suppress("UNUSED_EXPRESSION") version
+
+                for (mark in marks) {
+                    when (mark) {
+                        is PageMark.Highlight -> drawRect(
+                            color = Color(mark.colour).copy(alpha = HIGHLIGHT_PREVIEW_ALPHA),
+                            topLeft = Offset(
+                                mark.area.left * size.width,
+                                mark.area.top * size.height
+                            ),
+                            size = Size(
+                                mark.area.width * size.width,
+                                mark.area.height * size.height
+                            )
+                        )
+
+                        is PageMark.Ink -> {
+                            val path = Path()
+                            mark.points.forEachIndexed { index, point ->
+                                val x = point.x * size.width
+                                val y = point.y * size.height
+                                if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                            }
+                            drawPath(
+                                path = path,
+                                color = Color(mark.colour),
+                                style = Stroke(
+                                    width = INK_WIDTH_PX,
+                                    cap = StrokeCap.Round,
+                                    join = StrokeJoin.Round
+                                )
+                            )
+                        }
+                    }
+                }
+
+                stroke.value?.let { drawing ->
+                    drawPath(
+                        path = drawing.path,
+                        color = Color(colour),
+                        style = Stroke(
+                            width = INK_WIDTH_PX,
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round
+                        )
+                    )
+                }
+
+                val from = boxFrom
+                val to = boxTo
+                if (from != null && to != null) {
+                    drawRect(
+                        color = Color(colour).copy(alpha = HIGHLIGHT_PREVIEW_ALPHA),
+                        topLeft = Offset(minOf(from.x, to.x), minOf(from.y, to.y)),
+                        size = Size(
+                            kotlin.math.abs(to.x - from.x),
+                            kotlin.math.abs(to.y - from.y)
+                        )
+                    )
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.padding(top = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                when {
+                    marks.isEmpty() && pen -> "Draw on the page with your finger"
+                    marks.isEmpty() -> "Drag across a line to highlight it"
+                    else -> "${marks.size} on this page"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = SheafColors.Dim,
+                modifier = Modifier.weight(1f)
+            )
+            if (marks.isNotEmpty()) {
+                OutlinedButton(onClick = onUndo) { Text("Undo", color = SheafColors.Muted) }
+                OutlinedButton(onClick = onClear) { Text("Clear page", color = SheafColors.Muted) }
+            }
+        }
+    }
+}
+
+/** On screen a highlight can be a little stronger than on paper, and still read as ink. */
+private const val HIGHLIGHT_PREVIEW_ALPHA = 0.4f
 
 private const val INK_WIDTH_PX = 5f
 

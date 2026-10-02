@@ -868,6 +868,100 @@ class PdfBoxSurgeon : PdfSurgeon {
             doc.save(output)
         }
 
+    override fun annotate(
+        input: PdfInput,
+        marks: Map<Int, List<PageMark>>,
+        output: File,
+        onProgress: (Int, Int) -> Unit
+    ) = withDocument(input) { doc ->
+        val marked = marks.filterValues { it.isNotEmpty() }
+        if (marked.isEmpty()) throw PdfException.Io("Nothing was marked on any page.")
+
+        val total = marked.size
+        var done = 0
+
+        for ((index, list) in marked) {
+            if (index !in 0 until doc.numberOfPages) continue
+            val page = doc.getPage(index)
+            val shown = ShownPage(page)
+
+            PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true)
+                .use { stream ->
+                    for (mark in list) {
+                        val red = ((mark.colour shr 16) and 0xFF) / 255f
+                        val green = ((mark.colour shr 8) and 0xFF) / 255f
+                        val blue = (mark.colour and 0xFF) / 255f
+
+                        when (mark) {
+                            is PageMark.Highlight -> {
+                                stream.saveGraphicsState()
+                                // Transparency lives in a graphics state, not on the fill, so
+                                // a highlight needs one of these - an opaque block of yellow
+                                // would hide the words it is pointing at.
+                                stream.setGraphicsStateParameters(
+                                    PDExtendedGraphicsState().apply {
+                                        nonStrokingAlphaConstant = HIGHLIGHT_ALPHA
+                                    }
+                                )
+                                stream.setNonStrokingColor(red, green, blue)
+
+                                // Both corners are turned into page space and the rectangle
+                                // rebuilt from them, which is what makes a highlight land
+                                // correctly on a page that is stored sideways.
+                                val (x1, y1) = shown.pointAt(
+                                    mark.area.left * shown.width,
+                                    mark.area.top * shown.height
+                                )
+                                val (x2, y2) = shown.pointAt(
+                                    (mark.area.left + mark.area.width) * shown.width,
+                                    (mark.area.top + mark.area.height) * shown.height
+                                )
+                                stream.addRect(
+                                    minOf(x1, x2),
+                                    minOf(y1, y2),
+                                    kotlin.math.abs(x2 - x1),
+                                    kotlin.math.abs(y2 - y1)
+                                )
+                                stream.fill()
+                                stream.restoreGraphicsState()
+                            }
+
+                            is PageMark.Ink -> {
+                                if (mark.points.size < 2) continue
+                                stream.saveGraphicsState()
+                                stream.setStrokingColor(red, green, blue)
+                                stream.setLineWidth(mark.widthPoints.coerceIn(0.3f, 24f))
+                                // Round caps and joins: a finger-drawn line with square ends
+                                // reads as a series of tiles rather than one stroke.
+                                stream.setLineCapStyle(1)
+                                stream.setLineJoinStyle(1)
+
+                                val first = shown.pointAt(
+                                    mark.points.first().x * shown.width,
+                                    mark.points.first().y * shown.height
+                                )
+                                stream.moveTo(first.first, first.second)
+                                for (point in mark.points.drop(1)) {
+                                    val (x, y) = shown.pointAt(
+                                        point.x * shown.width,
+                                        point.y * shown.height
+                                    )
+                                    stream.lineTo(x, y)
+                                }
+                                stream.stroke()
+                                stream.restoreGraphicsState()
+                            }
+                        }
+                    }
+                }
+
+            done += 1
+            onProgress(done, total)
+        }
+
+        doc.save(output)
+    }
+
     override fun stampHeaderFooter(
         input: PdfInput,
         spec: StampSpec,
@@ -1426,6 +1520,9 @@ class PdfBoxSurgeon : PdfSurgeon {
 
         /** A hair either side of a covering patch, so it does not clip the type. */
         const val COVER_PADDING = 2f
+
+        /** A highlighter is see-through or it is a redaction. */
+        const val HIGHLIGHT_ALPHA = 0.32f
 
         /** Enough blank sheets for any real use; past it, somebody has mistyped. */
         const val MAX_BLANK_PAGES = 100

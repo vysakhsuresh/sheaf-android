@@ -101,6 +101,7 @@ the signature. Resist any pull towards a convenient `fun run(input: SheafFile): 
 | Watermark | DRAFT or a name, tiled or once, at three strengths |
 | Page numbers | Position, format, skip a cover, Bates padding |
 | Sign | Draw a signature and flatten it into a page |
+| Mark up | Highlight a line or draw on a page with your finger |
 | Add text | Tap a page and write on it, covering what is there if you need to |
 | Fill in a form | Type into a real PDF form, and seal the answers so they cannot be retyped |
 | Header and footer | A line along the top or bottom of every page, with {page}, {total}, {date}, {name} |
@@ -154,6 +155,11 @@ written into the new page at all.
 The cost is real and the UI says so: a redacted page becomes a picture, so its text stops
 being selectable and searchable, and the file grows. Only the marked pages are treated this
 way; every other page keeps its text untouched.
+
+**Marks are drawn into the page, not attached to it.** A PDF annotation is an object the next
+reader's app can move, hide or delete; a highlight somebody made should still be there when the
+document is opened somewhere else. The cost is that marks cannot be peeled off again, and the
+UI says so - the file you chose is never changed either way.
 
 **Add text is a correction, not a redaction either.** Covering the old words paints paper over
 them; they are still in the file underneath. It is the right tool for a wrong date and the

@@ -11,6 +11,7 @@ import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.jobs.JobState
 import com.layerbit.sheaf.jobs.belongsTo
 import com.layerbit.sheaf.ops.AddTextOp
+import com.layerbit.sheaf.ops.AnnotateOp
 import com.layerbit.sheaf.ops.FillFormOp
 import com.layerbit.sheaf.ops.HeaderFooterOp
 import com.layerbit.sheaf.ops.InsertPagesOp
@@ -44,6 +45,8 @@ import com.layerbit.sheaf.pdf.FormField
 import com.layerbit.sheaf.pdf.StampSpec
 import com.layerbit.sheaf.pdf.ImageStamp
 import com.layerbit.sheaf.pdf.PageArea
+import com.layerbit.sheaf.pdf.PageMark
+import com.layerbit.sheaf.pdf.PagePoint
 import com.layerbit.sheaf.pdf.PageSelection
 import com.layerbit.sheaf.pdf.PageNumberSpec
 import com.layerbit.sheaf.pdf.WatermarkSpec
@@ -338,10 +341,11 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         val doc = _state.value.documents.firstOrNull() ?: return
         if (_state.value.pageOrder.isNotEmpty()) return
 
-        // Remove areas shows ONE page at a time, big enough to aim a box at. Rendering the
-        // whole document at that size is hundreds of megabytes of bitmap and was the one
-        // path in this app that could not survive a long scan, so it renders on demand.
-        if (_state.value.tool == ToolId.REDACT) {
+        // Remove areas and Mark up both show ONE page at a time, big enough to aim at.
+        // Rendering the whole document at that size is hundreds of megabytes of bitmap and
+        // was the one path in this app that could not survive a long scan, so these two
+        // render on demand.
+        if (_state.value.tool == ToolId.REDACT || _state.value.tool == ToolId.ANNOTATE) {
             loadPageCountOnly(doc)
             return
         }
@@ -402,19 +406,19 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 }.getOrDefault(0)
             }
             _state.update { it.copy(busy = false, pageOrder = (0 until count).toList()) }
-            if (count > 0) renderRedactPage(0)
+            if (count > 0) renderBigPage(0)
         }
     }
 
     /**
-     * Draws one page for the redaction canvas, keeping only it.
+     * Draws one page at reading size for the canvases that work on a page at a time.
      *
      * The ones it replaces are dropped from the map but NOT recycled: Compose may still be
      * drawing the page that is leaving the screen this frame, and recycling a bitmap out from
      * under a draw is an immediate crash. Letting them be collected costs a moment of memory
      * and nothing else.
      */
-    private fun renderRedactPage(index: Int) {
+    private fun renderBigPage(index: Int) {
         val doc = _state.value.documents.firstOrNull() ?: return
         if (_state.value.thumbnails.containsKey(index)) return
 
@@ -624,6 +628,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 values = state.formValues,
                 flatten = config.flattenForm
             )
+            ToolId.ANNOTATE -> AnnotateOp(state.marks)
             ToolId.REDACT -> RedactOp(state.redactions)
             ToolId.N_UP -> NUpOp(config.perSheet)
             ToolId.SPLIT_BY_SIZE -> SplitBySizeOp(config.maxPartBytes)
@@ -975,8 +980,8 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setRedactPage(index: Int) {
-        _state.update { it.copy(redactPage = index) }
-        renderRedactPage(index)
+        _state.update { it.copy(canvasPage = index) }
+        renderBigPage(index)
     }
 
     fun addRedaction(page: Int, area: PageArea) {
@@ -988,6 +993,43 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearRedactions(page: Int) {
         _state.update { it.copy(redactions = it.redactions - page) }
+    }
+
+    // ---- marking up ----
+
+    fun setMarkupPage(index: Int) {
+        _state.update { it.copy(canvasPage = index) }
+        renderBigPage(index)
+    }
+
+    fun addHighlight(page: Int, area: PageArea) {
+        val colour = _state.value.config.markupColour
+        addMark(page, PageMark.Highlight(area, colour))
+    }
+
+    fun addInk(page: Int, points: List<PagePoint>) {
+        val config = _state.value.config
+        addMark(page, PageMark.Ink(points, config.markupColour, config.penWidth))
+    }
+
+    private fun addMark(page: Int, mark: PageMark) {
+        _state.update { current ->
+            val existing = current.marks[page].orEmpty()
+            current.copy(marks = current.marks + (page to existing + mark), error = null)
+        }
+    }
+
+    /** Takes the last mark off this page. A finger slips, and redrawing the lot is not it. */
+    fun undoMark(page: Int) {
+        _state.update { current ->
+            val existing = current.marks[page].orEmpty()
+            if (existing.isEmpty()) return@update current
+            current.copy(marks = current.marks + (page to existing.dropLast(1)))
+        }
+    }
+
+    fun clearMarks(page: Int) {
+        _state.update { it.copy(marks = it.marks - page) }
     }
 
     private companion object {
@@ -1071,8 +1113,8 @@ data class ToolUiState(
     val signatureFile: java.io.File? = null,
     /** Redact only: the boxes drawn on each page, normalised to the page. */
     val redactions: Map<Int, List<PageArea>> = emptyMap(),
-    /** Redact only: which page the canvas is showing. */
-    val redactPage: Int = 0,
+    /** Which page the one-page-at-a-time canvases are showing - redaction and mark-up. */
+    val canvasPage: Int = 0,
     /** Something to look at for each finished result, keyed by its path. */
     val previews: Map<String, ResultPreview> = emptyMap(),
     /** Page one, for the tools whose effect can be shown before running. */
@@ -1081,6 +1123,8 @@ data class ToolUiState(
     val signatureBitmap: Bitmap? = null,
     /** What compressing this document would actually produce. */
     val sizeCheck: SizeCheck = SizeCheck.Idle,
+    /** Mark up only: the highlights and strokes drawn on each page. */
+    val marks: Map<Int, List<PageMark>> = emptyMap(),
     /** True when the document has more pages than were drawn, so the UI can say so. */
     val thumbnailsCapped: Boolean = false,
     /** Organise only: the plans before each edit, newest last, for undo. */
@@ -1119,6 +1163,8 @@ data class ToolUiState(
                     ?: "One file still needs its password."
             tool == ToolId.MERGE && documents.size < 2 -> "Merging needs at least two files."
             tool == ToolId.SIGN && signatureFile == null -> "Draw your signature above."
+            tool == ToolId.ANNOTATE && marks.values.all { it.isEmpty() } ->
+                "Highlight a line or draw on the page."
             tool == ToolId.REDACT && redactions.values.all { it.isEmpty() } ->
                 "Drag a box over what should be removed."
             tool == ToolId.ADD_TEXT && config.noteText.isBlank() -> "Type the text to add."
@@ -1201,6 +1247,11 @@ data class ToolConfig(
     /** Fill in a form only: draw the values into the page and take the fields away. */
     val flattenForm: Boolean = false,
 
+    /** Mark up only: which kind of mark the finger makes, in what colour and how thick. */
+    val markupPen: Boolean = false,
+    val markupColour: Int = HIGHLIGHT_YELLOW,
+    val penWidth: Float = 2.5f,
+
     /** Add a password only: what the document asks readers to allow. */
     val allowPrinting: Boolean = true,
     val allowCopying: Boolean = true,
@@ -1239,3 +1290,15 @@ data class ToolConfig(
 val NOTE_BLACK: Int = 0xFF111111.toInt()
 val NOTE_RED: Int = 0xFFC62828.toInt()
 val NOTE_BLUE: Int = 0xFF1A4FA0.toInt()
+
+/**
+ * Highlighter colours, and pen colours.
+ *
+ * Separate sets because they are doing opposite things: a highlight sits under the words and
+ * has to let them through, so it is pale; a pen sits on top of them and has to be seen, so it
+ * is not. The same palette for both gives a yellow pen nobody can read.
+ */
+val HIGHLIGHT_YELLOW: Int = 0xFFFFE14D.toInt()
+val HIGHLIGHT_GREEN: Int = 0xFF9BE37A.toInt()
+val HIGHLIGHT_PINK: Int = 0xFFFF9EC4.toInt()
+val HIGHLIGHT_BLUE: Int = 0xFF8FD2FF.toInt()

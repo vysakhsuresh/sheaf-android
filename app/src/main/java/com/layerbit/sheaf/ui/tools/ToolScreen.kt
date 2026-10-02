@@ -93,6 +93,11 @@ fun ToolScreen(
     onForgetSignature: (java.io.File) -> Unit,
     onUndoPageEdit: () -> Unit,
     onRedactPage: (Int) -> Unit,
+    onMarkupPage: (Int) -> Unit,
+    onHighlight: (Int, com.layerbit.sheaf.pdf.PageArea) -> Unit,
+    onInk: (Int, List<com.layerbit.sheaf.pdf.PagePoint>) -> Unit,
+    onUndoMark: (Int) -> Unit,
+    onClearMarks: (Int) -> Unit,
     onAddRedaction: (Int, com.layerbit.sheaf.pdf.PageArea) -> Unit,
     onClearRedactions: (Int) -> Unit,
     onRun: () -> Unit,
@@ -117,9 +122,9 @@ fun ToolScreen(
     LaunchedEffect(tool, state.documents.firstOrNull()?.file?.file?.path, state.config.markPage) {
         if (state.documents.isEmpty()) return@LaunchedEffect
         when (tool) {
-            // These edit pages, so they need every page rendered.
+            // These edit pages, so they need the pages themselves.
             // Extract shows them to be tapped rather than typed.
-            ToolId.ORGANISE, ToolId.REDACT, ToolId.EXTRACT -> onLoadPages()
+            ToolId.ORGANISE, ToolId.REDACT, ToolId.EXTRACT, ToolId.ANNOTATE -> onLoadPages()
             // These change how a page looks, so one page is enough to show it.
             ToolId.CROP, ToolId.WATERMARK, ToolId.PAGE_NUMBERS,
             ToolId.ADD_TEXT -> onLoadPreviewPage()
@@ -316,16 +321,42 @@ fun ToolScreen(
                             )
                         }
                     }
+                } else if (tool == ToolId.ANNOTATE && state.pageOrder.isNotEmpty()) {
+                    item {
+                        MarkupCanvas(
+                            pageIndex = state.canvasPage,
+                            pageCount = state.pageOrder.size,
+                            page = state.thumbnails[state.canvasPage],
+                            marks = state.marks[state.canvasPage].orEmpty(),
+                            pen = state.config.markupPen,
+                            colour = state.config.markupColour,
+                            onPage = onMarkupPage,
+                            onHighlight = { area -> onHighlight(state.canvasPage, area) },
+                            onInk = { points -> onInk(state.canvasPage, points) },
+                            onUndo = { onUndoMark(state.canvasPage) },
+                            onClear = { onClearMarks(state.canvasPage) }
+                        )
+                    }
+                    item {
+                        ToolOptions(
+                            tool = tool,
+                            config = state.config,
+                            pageCount = state.documents.firstOrNull()?.pageCount,
+                            sizeCheck = state.sizeCheck,
+                            onCheckSize = onCheckSize,
+                            onChange = onConfigChange
+                        )
+                    }
                 } else if (tool == ToolId.REDACT && state.pageOrder.isNotEmpty()) {
                     item {
                         RedactCanvas(
-                            pageIndex = state.redactPage,
+                            pageIndex = state.canvasPage,
                             pageCount = state.pageOrder.size,
-                            page = state.thumbnails[state.redactPage],
-                            areas = state.redactions[state.redactPage].orEmpty(),
+                            page = state.thumbnails[state.canvasPage],
+                            areas = state.redactions[state.canvasPage].orEmpty(),
                             onPage = onRedactPage,
-                            onAdd = { area -> onAddRedaction(state.redactPage, area) },
-                            onClear = { onClearRedactions(state.redactPage) }
+                            onAdd = { area -> onAddRedaction(state.canvasPage, area) },
+                            onClear = { onClearRedactions(state.canvasPage) }
                         )
                     }
                     item {

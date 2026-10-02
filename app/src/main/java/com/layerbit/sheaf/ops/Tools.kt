@@ -103,6 +103,12 @@ enum class ToolId(
         InputKind.ONE_PDF,
         Group.MARK
     ),
+    ANNOTATE(
+        "Mark up",
+        "Highlight a line, or draw on a page with your finger",
+        InputKind.ONE_PDF,
+        Group.MARK
+    ),
     FORMS(
         "Fill in a form",
         "Type into a PDF that has real form fields, and seal it",
@@ -214,6 +220,7 @@ enum class ToolId(
             PAGE_NUMBERS -> "Add the numbers"
             SIGN -> "Place the signature"
             ADD_TEXT -> "Write it on"
+            ANNOTATE -> "Save the marks"
             FORMS -> "Fill it in"
             HEADER_FOOTER -> "Add them"
             INSERT -> "Insert them"

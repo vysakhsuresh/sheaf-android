@@ -4,6 +4,7 @@ import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.pdf.CropSpec
 import com.layerbit.sheaf.pdf.ImageStamp
 import com.layerbit.sheaf.pdf.PageArea
+import com.layerbit.sheaf.pdf.PageMark
 import com.layerbit.sheaf.pdf.PageNumberSpec
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
@@ -211,6 +212,60 @@ class SignOp(private val stamp: ImageStamp) : Op {
             OpOutcome.Produced(
                 SheafFile(output, "${input.baseName} signed.pdf", SheafFile.Origin.Derived("signed")),
                 "Signed on page ${stamp.pageIndex + 1}"
+            )
+        )
+    }
+}
+
+/**
+ * Draws the reader's highlights and pen strokes into the pages.
+ *
+ * Into the content, not as annotation objects. An annotation is something the next reader's
+ * app can move, hide or delete, and a mark somebody made on a document should still be there
+ * when it is opened somewhere else - which is the same call [SignOp] makes about a signature.
+ *
+ * The cost is that the marks cannot be peeled off again, and the UI says so. The document the
+ * user chose is untouched either way: this writes a new one.
+ */
+class AnnotateOp(private val marks: Map<Int, List<PageMark>>) : Op {
+
+    override val tool = ToolId.ANNOTATE
+    override val title = "Mark up"
+    override val arity = Op.Arity.ExactlyOne
+
+    override suspend fun run(
+        inputs: List<SheafFile>,
+        context: OpContext,
+        onProgress: (Progress) -> Unit
+    ): List<OpOutcome> = withContext(Dispatchers.IO) {
+        val input = inputs.firstOrNull()
+            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+        if (marks.values.all { it.isEmpty() }) {
+            return@withContext listOf(
+                OpOutcome.Failed(input.displayName, "Highlight or draw something first.")
+            )
+        }
+
+        val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
+        val output = context.workspace.newOutput(input.baseName, "marked")
+
+        try {
+            context.surgeon.annotate(pdfInput, marks, output) { done, total ->
+                context.checkCancelled()
+                onProgress(Progress(done, total, "Drawing on page $done of $total"))
+            }
+        } catch (e: PdfException) {
+            output.delete()
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Failed."))
+        }
+
+        val drawn = marks.values.sumOf { it.size }
+        val pages = marks.count { it.value.isNotEmpty() }
+        listOf(
+            OpOutcome.Produced(
+                SheafFile(output, "${input.baseName} marked.pdf", SheafFile.Origin.Derived("marked")),
+                "${if (drawn == 1) "1 mark" else "$drawn marks"} on " +
+                    "${if (pages == 1) "1 page" else "$pages pages"}"
             )
         )
     }

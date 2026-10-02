@@ -486,6 +486,59 @@ fun ToolOptions(
                 )
             }
 
+            ToolId.ANNOTATE -> {
+                SectionHeading("What your finger does")
+                ChoiceRow(
+                    options = listOf(false to "Highlight", true to "Draw"),
+                    selected = config.markupPen,
+                    onSelect = { usePen ->
+                        onChange {
+                            // The two sets of colours are not interchangeable - a yellow pen
+                            // is invisible and a black highlight is a redaction - so
+                            // switching tool picks that tool's first colour.
+                            it.copy(
+                                markupPen = usePen,
+                                markupColour = if (usePen) NOTE_BLACK else HIGHLIGHT_YELLOW
+                            )
+                        }
+                    }
+                )
+                SectionHeading("Colour")
+                if (config.markupPen) {
+                    ChoiceRow(
+                        options = listOf(
+                            NOTE_BLACK to "Black",
+                            NOTE_BLUE to "Blue",
+                            NOTE_RED to "Red"
+                        ),
+                        selected = config.markupColour,
+                        onSelect = { value -> onChange { it.copy(markupColour = value) } }
+                    )
+                    SectionHeading("Thickness")
+                    ChoiceRow(
+                        options = listOf(1.2f to "Thin", 2.5f to "Medium", 5f to "Thick"),
+                        selected = config.penWidth,
+                        onSelect = { value -> onChange { it.copy(penWidth = value) } }
+                    )
+                } else {
+                    ChoiceRow(
+                        options = listOf(
+                            HIGHLIGHT_YELLOW to "Yellow",
+                            HIGHLIGHT_GREEN to "Green",
+                            HIGHLIGHT_PINK to "Pink",
+                            HIGHLIGHT_BLUE to "Blue"
+                        ),
+                        selected = config.markupColour,
+                        onSelect = { value -> onChange { it.copy(markupColour = value) } }
+                    )
+                }
+                Hint(
+                    "Marks are drawn into the page rather than added as notes, so they are " +
+                        "still there in any other reader - and cannot be peeled off again. " +
+                        "The document you chose is never changed either way."
+                )
+            }
+
             ToolId.FORMS -> {
                 ChoiceRow(
                     options = listOf(
