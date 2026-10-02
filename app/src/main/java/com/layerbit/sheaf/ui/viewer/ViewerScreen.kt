@@ -4,23 +4,34 @@ import android.graphics.Bitmap
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import kotlinx.coroutines.launch
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,39 +43,49 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import com.layerbit.sheaf.data.db.BookmarkEntity
 import com.layerbit.sheaf.ops.ToolId
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
+import com.layerbit.sheaf.pdf.OutlineEntry
 import com.layerbit.sheaf.pdf.PageArea
 import com.layerbit.sheaf.pdf.PageSize
 import com.layerbit.sheaf.ui.components.RowBetween
 import com.layerbit.sheaf.ui.components.SectionHeading
-import com.layerbit.sheaf.ui.components.formatPageCount
 import com.layerbit.sheaf.ui.theme.SheafColors
 import com.layerbit.sheaf.ui.tools.iconFor
+import kotlinx.coroutines.launch
 
 /**
  * Continuous vertical scroll through a document.
@@ -89,10 +110,20 @@ fun ViewerScreen(
     onToggleNight: () -> Unit,
     onSearch: (String) -> Unit,
     onClearSearch: () -> Unit,
-    modifier: Modifier = Modifier
+    onStepHit: (Boolean) -> Unit,
+    onJump: (Int) -> Unit,
+    onToggleBookmark: (Int) -> Unit,
+    onRemoveBookmark: (Int) -> Unit,
+    onPageChanged: (Int) -> Unit,
+    onPrint: () -> Unit,
+    onShare: () -> Unit,
+    modifier: Modifier = Modifier,
+    keepScreenOn: Boolean = true,
+    showPageBadge: Boolean = true
 ) {
     var showTools by remember { mutableStateOf(false) }
-    var showOutline by remember { mutableStateOf(false) }
+    var showContents by remember { mutableStateOf(false) }
+    var showGoToPage by remember { mutableStateOf(false) }
     var searching by remember { mutableStateOf(false) }
     // The result list folds away once a result is chosen, while the search itself stays on.
     // Clearing the query there would take the highlights off the page the reader just asked
@@ -101,16 +132,59 @@ fun ViewerScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
+    // Reading is the one thing people do without touching the screen, so the display timeout
+    // works against it. Set on the view rather than through a window flag, so it is undone
+    // automatically when the viewer leaves the composition.
+    val view = LocalView.current
+    val onPage = state is ViewerState.Ready
+    DisposableEffect(keepScreenOn, onPage) {
+        view.keepScreenOn = keepScreenOn && onPage
+        onDispose { view.keepScreenOn = false }
+    }
+
+    val pageCount = (state as? ViewerState.Ready)?.pageCount ?: 0
+    val currentPage by remember(pageCount) {
+        derivedStateOf { listState.firstVisibleItemIndex.coerceAtMost((pageCount - 1).coerceAtLeast(0)) }
+    }
+    // Reporting the position is held back until the document has been put where the reader
+    // left it. Without that, the first frame reports page one and overwrites the very
+    // position it is about to scroll to.
+    val generation = (state as? ViewerState.Ready)?.generation
+    val initialPage = (state as? ViewerState.Ready)?.initialPage ?: 0
+    var resumed by remember(generation) { mutableStateOf(initialPage == 0) }
+
+    LaunchedEffect(generation) {
+        if (generation != null && initialPage > 0) {
+            listState.scrollToItem(initialPage)
+            resumed = true
+        }
+    }
+
+    LaunchedEffect(currentPage, resumed) { if (resumed) onPageChanged(currentPage) }
+
+    // Everything that can move the reader arrives as a jump, so there is one scroll here
+    // rather than one per caller.
+    LaunchedEffect(reading.jump?.token) {
+        reading.jump?.let { listState.scrollToItem(it.pageIndex.coerceAtLeast(0)) }
+    }
+
+    val marked = reading.bookmarks.any { it.pageIndex == currentPage }
+
     Column(modifier = modifier.fillMaxSize().background(SheafColors.Background)) {
         if (state is ViewerState.Ready) {
             ViewerHeader(
                 state = state,
                 reading = reading,
-                hasOutline = reading.outline.isNotEmpty(),
+                currentPage = currentPage,
+                marked = marked,
                 onBack = onBack,
                 onTools = { showTools = true },
-                onOutline = { showOutline = true },
+                onContents = { showContents = true },
+                onGoToPage = { showGoToPage = true },
                 onToggleNight = onToggleNight,
+                onToggleBookmark = { onToggleBookmark(currentPage) },
+                onPrint = onPrint,
+                onShare = onShare,
                 onSearchToggle = {
                     searching = !searching
                     showResults = true
@@ -126,43 +200,75 @@ fun ViewerScreen(
                         onSearch(query)
                     },
                     onShowResults = { showResults = true },
+                    onStep = { forward ->
+                        showResults = false
+                        onStepHit(forward)
+                    },
                     onJump = { page ->
                         showResults = false
-                        scope.launch { listState.scrollToItem(page) }
+                        onJump(page)
                     }
                 )
             }
         }
 
-        when (state) {
-            is ViewerState.Loading ->
-                CentredMessage("Opening…", modifier = Modifier.weight(1f), showSpinner = true)
+        Box(modifier = Modifier.weight(1f)) {
+            when (state) {
+                is ViewerState.Loading ->
+                    CentredMessage("Opening…", modifier = Modifier.fillMaxSize(), showSpinner = true)
 
-            is ViewerState.NeedsPassword -> CentredMessage(
-                "This document is password-protected.\n" +
-                    "Use Remove a password from the home screen to unlock a copy first.",
-                modifier = Modifier.weight(1f)
-            )
+                is ViewerState.NeedsPassword -> CentredMessage(
+                    "This document is password-protected.\n" +
+                        "Use Remove a password from the home screen to unlock a copy first.",
+                    modifier = Modifier.fillMaxSize()
+                )
 
-            is ViewerState.Failed -> CentredMessage(state.reason, modifier = Modifier.weight(1f))
+                is ViewerState.Failed -> CentredMessage(state.reason, modifier = Modifier.fillMaxSize())
 
-            is ViewerState.Ready -> PageList(
-                state = state,
-                nightMode = reading.nightMode,
-                highlights = if (searching) reading.highlights else emptyMap(),
-                listState = listState,
-                renderPage = renderPage,
-                modifier = Modifier.weight(1f)
-            )
+                is ViewerState.Ready -> {
+                    PageList(
+                        state = state,
+                        nightMode = reading.nightMode,
+                        highlights = if (searching) reading.highlights else emptyMap(),
+                        emphasisedPage = reading.hits.getOrNull(reading.hitIndex)?.pageIndex,
+                        listState = listState,
+                        renderPage = renderPage,
+                        modifier = Modifier.fillMaxSize()
+                    )
+
+                    if (showPageBadge && state.pageCount > 1) {
+                        PageBadge(
+                            label = "${currentPage + 1} / ${state.pageCount}",
+                            onClick = { showGoToPage = true },
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 16.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 
-    if (showOutline && state is ViewerState.Ready) {
-        OutlineSheet(
-            entries = reading.outline,
-            onDismiss = { showOutline = false },
+    if (showContents && state is ViewerState.Ready) {
+        ContentsSheet(
+            outline = reading.outline,
+            bookmarks = reading.bookmarks,
+            onDismiss = { showContents = false },
             onJump = { page ->
-                showOutline = false
+                showContents = false
+                onJump(page)
+            },
+            onRemoveBookmark = onRemoveBookmark
+        )
+    }
+
+    if (showGoToPage && state is ViewerState.Ready) {
+        GoToPageSheet(
+            pageCount = state.pageCount,
+            onDismiss = { showGoToPage = false },
+            onGo = { page ->
+                showGoToPage = false
                 scope.launch { listState.scrollToItem(page) }
             }
         )
@@ -186,18 +292,30 @@ fun ViewerScreen(
  * This bar is what makes reading a document the start of something rather than the end of it.
  * Without it, opening a PDF shows you pages and stops, and the tools each make you find the
  * same file again through the system picker.
+ *
+ * Everything that is not Find or the tool button lives behind the one menu. A phone-width bar
+ * fits three labels; printing, sharing, marking a page, night mode and the contents are nine,
+ * and a bar that wraps to two rows takes space away from the page.
  */
 @Composable
 private fun ViewerHeader(
     state: ViewerState.Ready,
     reading: ReadingState,
-    hasOutline: Boolean,
+    currentPage: Int,
+    marked: Boolean,
     onBack: () -> Unit,
     onTools: () -> Unit,
-    onOutline: () -> Unit,
+    onContents: () -> Unit,
+    onGoToPage: () -> Unit,
     onToggleNight: () -> Unit,
+    onToggleBookmark: () -> Unit,
+    onPrint: () -> Unit,
+    onShare: () -> Unit,
     onSearchToggle: () -> Unit
 ) {
+    var menuOpen by remember { mutableStateOf(false) }
+    val canMark = state.sourceUri.isNotEmpty()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -217,25 +335,61 @@ private fun ViewerHeader(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = formatPageCount(state.pageCount),
+                    text = "Page ${currentPage + 1} of ${state.pageCount}",
                     style = MaterialTheme.typography.bodySmall,
                     color = SheafColors.Dim
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (canMark) {
+                    TextButton(onClick = onToggleBookmark) {
+                        Text(
+                            if (marked) "★" else "☆",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = if (marked) SheafColors.BandBright else SheafColors.Muted
+                        )
+                    }
+                }
                 TextButton(onClick = onSearchToggle) {
                     Text("Find", color = SheafColors.Muted)
                 }
-                if (hasOutline) {
-                    TextButton(onClick = onOutline) {
-                        Text("Contents", color = SheafColors.Muted)
+                Box {
+                    TextButton(onClick = { menuOpen = true }) {
+                        Text("⋯", style = MaterialTheme.typography.titleLarge, color = SheafColors.Muted)
                     }
-                }
-                TextButton(onClick = onToggleNight) {
-                    Text(
-                        if (reading.nightMode) "Day" else "Night",
-                        color = if (reading.nightMode) SheafColors.BandBright else SheafColors.Muted
-                    )
+                    DropdownMenu(
+                        expanded = menuOpen,
+                        onDismissRequest = { menuOpen = false }
+                    ) {
+                        if (reading.outline.isNotEmpty() || reading.bookmarks.isNotEmpty()) {
+                            MenuRow("Contents and marks") {
+                                menuOpen = false
+                                onContents()
+                            }
+                        }
+                        MenuRow("Go to page…") {
+                            menuOpen = false
+                            onGoToPage()
+                        }
+                        if (canMark) {
+                            MenuRow(if (marked) "Remove this mark" else "Mark this page") {
+                                menuOpen = false
+                                onToggleBookmark()
+                            }
+                        }
+                        MenuRow(if (reading.nightMode) "Day colours" else "Night colours") {
+                            menuOpen = false
+                            onToggleNight()
+                        }
+                        MenuRow("Print or save as PDF…") {
+                            menuOpen = false
+                            onPrint()
+                        }
+                        MenuRow("Share this document…") {
+                            menuOpen = false
+                            onShare()
+                        }
+                    }
                 }
             }
         }
@@ -253,11 +407,37 @@ private fun ViewerHeader(
     }
 }
 
+@Composable
+private fun MenuRow(label: String, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = {
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = SheafColors.Text)
+        },
+        onClick = onClick
+    )
+}
+
+/** Where the reader is, over the page rather than beside it. Tapping it offers the jump. */
+@Composable
+private fun PageBadge(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(SheafColors.Surface.copy(alpha = 0.92f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 7.dp)
+    ) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = SheafColors.Muted)
+    }
+}
+
 /**
  * Find across the document. Results are pages, and tapping one scrolls to it.
  *
  * Choosing a result folds the list away rather than closing the search, so what is left on
- * screen is the page with its matches marked and a field still holding the query.
+ * screen is the page with its matches marked and a field still holding the query. The arrows
+ * step match by match for the document where the word is on every page and the list of pages
+ * is therefore no help at all.
  */
 @Composable
 private fun SearchBar(
@@ -265,6 +445,7 @@ private fun SearchBar(
     showResults: Boolean,
     onSearch: (String) -> Unit,
     onShowResults: () -> Unit,
+    onStep: (Boolean) -> Unit,
     onJump: (Int) -> Unit
 ) {
     Column(
@@ -273,25 +454,38 @@ private fun SearchBar(
             .background(SheafColors.SurfaceDim)
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
-        OutlinedTextField(
-            value = reading.query,
-            onValueChange = onSearch,
-            placeholder = { Text("Find in this document", style = MaterialTheme.typography.bodyMedium) },
-            singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = SheafColors.Band,
-                unfocusedBorderColor = SheafColors.Border,
-                focusedTextColor = SheafColors.Text,
-                unfocusedTextColor = SheafColors.Text,
-                cursorColor = SheafColors.Band
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = reading.query,
+                onValueChange = onSearch,
+                placeholder = { Text("Find in this document", style = MaterialTheme.typography.bodyMedium) },
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = SheafColors.Band,
+                    unfocusedBorderColor = SheafColors.Border,
+                    focusedTextColor = SheafColors.Text,
+                    unfocusedTextColor = SheafColors.Text,
+                    cursorColor = SheafColors.Band
+                ),
+                modifier = Modifier.weight(1f)
+            )
+            if (reading.hits.isNotEmpty()) {
+                TextButton(onClick = { onStep(false) }) {
+                    Text("‹", style = MaterialTheme.typography.titleLarge, color = SheafColors.Muted)
+                }
+                TextButton(onClick = { onStep(true) }) {
+                    Text("›", style = MaterialTheme.typography.titleLarge, color = SheafColors.Muted)
+                }
+            }
+        }
 
         val status = when {
             reading.searching -> "Searching…"
             reading.query.isBlank() -> null
             reading.hits.isEmpty() -> "No pages contain that."
+            reading.hitIndex >= 0 ->
+                "Page ${reading.hits[reading.hitIndex].pageIndex + 1} · " +
+                    "${reading.hitIndex + 1} of ${reading.hits.size} pages with a match"
             reading.hits.size == 1 -> "1 page"
             else -> "${reading.hits.size} pages"
         }
@@ -347,40 +541,138 @@ private fun SearchBar(
     }
 }
 
-/** The document's own table of contents. Only offered when it actually has one. */
+/**
+ * The document's own table of contents, and the reader's marks above it.
+ *
+ * Two kinds of place in one sheet rather than two sheets, because they answer the same
+ * question. The author's structure is read out of the file; the marks are the reader's and
+ * are kept beside it, which is why one can be removed here and the other cannot.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun OutlineSheet(
-    entries: List<com.layerbit.sheaf.pdf.OutlineEntry>,
+private fun ContentsSheet(
+    outline: List<OutlineEntry>,
+    bookmarks: List<BookmarkEntity>,
     onDismiss: () -> Unit,
-    onJump: (Int) -> Unit
+    onJump: (Int) -> Unit,
+    onRemoveBookmark: (Int) -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = SheafColors.Surface) {
         Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
-            SectionHeading("Contents")
-            Spacer(Modifier.height(6.dp))
-            entries.forEach { entry ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onJump(entry.pageIndex) }
-                        .padding(start = (entry.depth * 14).dp, top = 10.dp, bottom = 10.dp)
-                ) {
-                    Text(
-                        entry.title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = SheafColors.Text,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Text(
-                        "${entry.pageIndex + 1}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = SheafColors.Dim
-                    )
+            if (bookmarks.isNotEmpty()) {
+                SectionHeading("Your marks")
+                Spacer(Modifier.height(6.dp))
+                bookmarks.forEach { mark ->
+                    RowBetween {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { onJump(mark.pageIndex) }
+                                .padding(vertical = 10.dp)
+                        ) {
+                            Text(
+                                mark.label,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = SheafColors.Text,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                "Page ${mark.pageIndex + 1}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SheafColors.Dim
+                            )
+                        }
+                        TextButton(onClick = { onRemoveBookmark(mark.pageIndex) }) {
+                            Text(
+                                "Remove",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SheafColors.Dim
+                            )
+                        }
+                    }
                 }
+                Spacer(Modifier.height(14.dp))
+            }
+
+            if (outline.isNotEmpty()) {
+                SectionHeading("Contents")
+                Spacer(Modifier.height(6.dp))
+                outline.forEach { entry ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onJump(entry.pageIndex) }
+                            .padding(start = (entry.depth * 14).dp, top = 10.dp, bottom = 10.dp)
+                    ) {
+                        Text(
+                            entry.title,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = SheafColors.Text,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            "${entry.pageIndex + 1}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SheafColors.Dim
+                        )
+                    }
+                }
+            } else if (bookmarks.isEmpty()) {
+                Text(
+                    "This document has no table of contents, and you have not marked a page " +
+                        "in it yet. The star in the bar marks the page you are on.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SheafColors.Muted
+                )
+            }
+        }
+    }
+}
+
+/** A page number, typed, for the document whose contents are no help. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GoToPageSheet(pageCount: Int, onDismiss: () -> Unit, onGo: (Int) -> Unit) {
+    var typed by remember { mutableStateOf("") }
+    val target = typed.filter { it.isDigit() }.toIntOrNull()
+
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = SheafColors.Surface) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+            SectionHeading("Go to page")
+            Spacer(Modifier.height(10.dp))
+            OutlinedTextField(
+                value = typed,
+                onValueChange = { typed = it.filter { character -> character.isDigit() }.take(6) },
+                label = { Text("1 to $pageCount", style = MaterialTheme.typography.bodySmall) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = SheafColors.Band,
+                    unfocusedBorderColor = SheafColors.Border,
+                    focusedTextColor = SheafColors.Text,
+                    unfocusedTextColor = SheafColors.Text,
+                    cursorColor = SheafColors.Band
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(8.dp))
+            TextButton(
+                enabled = target != null && target in 1..pageCount,
+                onClick = { target?.let { onGo(it - 1) } }
+            ) {
+                Text(
+                    "Go",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (target != null && target in 1..pageCount) {
+                        SheafColors.Band
+                    } else {
+                        SheafColors.Dim
+                    }
+                )
             }
         }
     }
@@ -446,7 +738,7 @@ private fun ToolSheet(documentName: String, onDismiss: () -> Unit, onPick: (Tool
                 modifier = Modifier.padding(top = 4.dp, bottom = 10.dp)
             )
             ToolId.entries
-                .filter { it != ToolId.IMAGES_TO_PDF }
+                .filter { it != ToolId.IMAGES_TO_PDF && it != ToolId.SCAN }
                 .forEach { tool ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -479,30 +771,81 @@ private fun ToolSheet(documentName: String, onDismiss: () -> Unit, onPick: (Tool
     }
 }
 
+/**
+ * The pages, at whatever magnification the reader has pinched to.
+ *
+ * Zoom is not a transform over the rendered bitmaps. Scaling up what was drawn for a phone
+ * width gives a blurry page, which is the one thing a document reader cannot be - so a zoom
+ * past a whole step re-renders the pages at the larger width and the engine draws the type at
+ * that size. The steps are whole numbers so that a slow pinch re-renders the document twice,
+ * not forty times, and the page cache keys on width so both versions can sit in it.
+ *
+ * Above 1x the content is wider than the window, so it goes inside a horizontal scroll. Below
+ * it, that scroll has nothing to move and costs nothing.
+ */
 @Composable
 private fun PageList(
     state: ViewerState.Ready,
     nightMode: Boolean,
     highlights: Map<Int, List<PageArea>>,
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    emphasisedPage: Int?,
+    listState: LazyListState,
     renderPage: suspend (index: Int, widthPx: Int) -> Bitmap?,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
-    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
 
-    // The width every page is rendered at. Fixed for the document rather than recomputed per
-    // page, so the LRU cache never holds two sizes of the same page.
-    val renderWidthPx = remember(screenWidthDp) {
-        with(density) { (screenWidthDp.dp - PAGE_MARGIN * 2).toPx().toInt().coerceAtLeast(1) }
+    var zoom by remember(state.generation) { mutableFloatStateOf(1f) }
+    val horizontal = rememberScrollState()
+
+    // The width a page is drawn at. Fixed per zoom step rather than per gesture frame, so the
+    // LRU cache never fills with forty slightly different renders of the same page.
+    val renderWidthPx = remember(screenWidthDp, density, zoom) {
+        with(density) {
+            ((screenWidthDp - PAGE_MARGIN * 2) * renderStepFor(zoom)).toPx().toInt().coerceAtLeast(1)
+        }
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    val onDoubleTap = rememberUpdatedState {
+        zoom = if (zoom > 1.05f) 1f else DOUBLE_TAP_ZOOM
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(SheafColors.Background)
+            // Two gesture handlers, deliberately separate. The pinch one takes over only once
+            // a second finger is down, so a one-finger drag stays the list's to scroll.
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    var pinching = false
+                    do {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.changes.count { it.pressed } > 1) {
+                            val change = event.calculateZoom()
+                            if (change != 1f) {
+                                pinching = true
+                                zoom = (zoom * change).coerceIn(1f, MAX_ZOOM)
+                            }
+                            // Consumed only while actually pinching, so a two-finger scroll
+                            // that never changes the distance still reaches the list.
+                            if (pinching) event.changes.forEach { it.consume() }
+                        }
+                    } while (event.changes.any { it.pressed })
+                }
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(onDoubleTap = { onDoubleTap.value() })
+            }
+    ) {
         LazyColumn(
             state = listState,
             modifier = Modifier
-                .fillMaxSize()
-                .background(SheafColors.Background),
+                .fillMaxHeight()
+                .horizontalScroll(horizontal)
+                .width(screenWidthDp * zoom),
             contentPadding = PaddingValues(vertical = PAGE_MARGIN)
         ) {
             items(count = state.pageCount, key = { "${state.generation}:$it" }) { index ->
@@ -513,9 +856,20 @@ private fun PageList(
                     renderWidthPx = renderWidthPx,
                     nightMode = nightMode,
                     highlights = highlights[index].orEmpty(),
+                    emphasised = emphasisedPage == index,
                     renderPage = renderPage
                 )
             }
+        }
+
+        if (zoom > 1.05f) {
+            // A way back that does not need a second accurate pinch. Readers zoom in to look
+            // at one figure and then want the page again.
+            PageBadge(
+                label = "${(zoom * 100).toInt()}% · reset",
+                onClick = { zoom = 1f },
+                modifier = Modifier.align(Alignment.TopEnd).padding(top = 10.dp, end = 10.dp)
+            )
         }
     }
 }
@@ -528,6 +882,7 @@ private fun PageItem(
     renderWidthPx: Int,
     nightMode: Boolean,
     highlights: List<PageArea>,
+    emphasised: Boolean,
     renderPage: suspend (index: Int, widthPx: Int) -> Bitmap?
 ) {
     var bitmap by remember(generation, index) { mutableStateOf<Bitmap?>(null) }
@@ -582,7 +937,7 @@ private fun PageItem(
         // Drawn over the page rather than into the bitmap, so the same cached render serves a
         // page whether it is a search result or not, and the marks come and go for free.
         if (current != null && highlights.isNotEmpty()) {
-            MatchMarks(bitmap = current, areas = highlights)
+            MatchMarks(bitmap = current, areas = highlights, emphasised = emphasised)
         }
     }
 }
@@ -595,7 +950,7 @@ private fun PageItem(
  * the reserved space disagree by a pixel or two.
  */
 @Composable
-private fun MatchMarks(bitmap: Bitmap, areas: List<PageArea>) {
+private fun MatchMarks(bitmap: Bitmap, areas: List<PageArea>, emphasised: Boolean) {
     Canvas(modifier = Modifier.fillMaxSize()) {
         val pageWidth = bitmap.width.toFloat()
         val pageHeight = bitmap.height.toFloat()
@@ -613,7 +968,7 @@ private fun MatchMarks(bitmap: Bitmap, areas: List<PageArea>) {
             val markHeight = (area.height * drawHeight).coerceAtLeast(2f)
             val markWidth = (area.width * drawWidth).coerceAtLeast(2f)
             drawRect(
-                color = MATCH_MARK,
+                color = if (emphasised) MATCH_MARK_STEPPED else MATCH_MARK,
                 topLeft = Offset(
                     x = originX + area.left * drawWidth,
                     y = originY + area.top * drawHeight
@@ -652,16 +1007,29 @@ private fun CentredMessage(
     }
 }
 
+/** Whole render steps. A page drawn at 2x and shown at 1.6x is sharp; the reverse is not. */
+private fun renderStepFor(zoom: Float): Float = when {
+    zoom <= 1.25f -> 1f
+    zoom <= 2.25f -> 2f
+    else -> 3f
+}
+
 private val PAGE_MARGIN = 12.dp
 private val PAGE_GAP = 12.dp
+
+/** Far enough in to read small print, near enough out that one page is still one page. */
+private const val MAX_ZOOM = 4f
+private const val DOUBLE_TAP_ZOOM = 2.5f
 
 /**
  * The wash over a search match.
  *
  * Translucent rather than solid, because the point is to find the words again, and a solid
- * band would hide the very text it is pointing at.
+ * band would hide the very text it is pointing at. The stepped-to page gets the stronger wash,
+ * which is what tells the reader which of the matches the arrows have brought them to.
  */
-private val MATCH_MARK = androidx.compose.ui.graphics.Color(0x66E0257A)
+private val MATCH_MARK = androidx.compose.ui.graphics.Color(0x55E0257A)
+private val MATCH_MARK_STEPPED = androidx.compose.ui.graphics.Color(0x99FFC400)
 
 /** The placeholder behind a page that has not arrived, in night mode. */
 private val NIGHT_PAPER = androidx.compose.ui.graphics.Color(0xFF15171B)

@@ -111,6 +111,21 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/pdf" />
             </intent-filter>
+
+            <!--
+              Launcher shortcuts arrive here. A static shortcut cannot carry an extra
+              reliably, so the tool is named in the Uri path and MainActivity reads it. The
+              scheme is the app's own and nothing outside the launcher sends it.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="sheaf" android:host="tool" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
 
         <!-- Adds the type to the service WorkManager's own manifest contributes. -->

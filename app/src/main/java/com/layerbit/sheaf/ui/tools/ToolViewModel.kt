@@ -1,6 +1,7 @@
 package com.layerbit.sheaf.ui.tools
 
 import android.app.Application
+import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
@@ -521,6 +522,49 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val result = runCatching { sheaf.exporter.writeTo(destination, file) }
             onDone(result.exceptionOrNull()?.message)
+        }
+    }
+
+    // ---- saving without a picker ----
+
+    /** Whether saving should ask for a destination, or use the folder already chosen. */
+    val askWhereToSave: Boolean get() = sheaf.settings.current.askWhereToSave
+
+    /** The folder the user granted for results, or null if they have not chosen one. */
+    fun savedFolder(): Uri? = sheaf.settings.current.saveFolder?.let(Uri::parse)
+
+    fun folderIntent(): Intent = sheaf.exporter.openFolderIntent()
+
+    fun rememberFolder(folder: Uri) {
+        sheaf.settings.update { it.copy(saveFolder = folder.toString()) }
+    }
+
+    /**
+     * Writes several results into one folder.
+     *
+     * The whole point of the folder grant: PDF to images on a forty-page document produces
+     * forty files, and forty trips through the system picker is not something anyone does
+     * twice. Failures are counted rather than thrown, because thirty-nine saved files and one
+     * failure is a useful outcome that should be reported as such.
+     */
+    fun writeInto(folder: Uri, files: List<SheafFile>, onDone: (String) -> Unit) {
+        if (files.isEmpty()) return
+        viewModelScope.launch {
+            var saved = 0
+            var firstProblem: String? = null
+            for (file in files) {
+                val problem = runCatching { sheaf.exporter.writeInto(folder, file) }
+                    .getOrElse { it.message ?: "${file.displayName} could not be written." }
+                if (problem == null) saved += 1 else if (firstProblem == null) firstProblem = problem
+            }
+            onDone(
+                when {
+                    firstProblem != null && saved == 0 -> firstProblem
+                    firstProblem != null -> "Saved $saved of ${files.size}. $firstProblem"
+                    saved == 1 -> "Saved ${files.first().displayName}"
+                    else -> "Saved $saved files"
+                }
+            )
         }
     }
 

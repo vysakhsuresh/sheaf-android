@@ -1,6 +1,7 @@
 package com.layerbit.sheaf.ui.tools
 
 import android.app.Activity
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.sheaf.files.SheafFile
+import com.layerbit.sheaf.jobs.JobState
 import com.layerbit.sheaf.ops.ToolId
 
 /**
@@ -38,6 +40,8 @@ fun ToolRoute(
     onOpenResult: (SheafFile) -> Unit = {},
     /** A document handed over from the viewer, so the user does not pick the same file twice. */
     preloadUri: String? = null,
+    /** Settings: show the finished document without waiting to be asked. */
+    openResultWhenDone: Boolean = false,
     viewModel: ToolViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -50,9 +54,26 @@ fun ToolRoute(
     /** Which result the save picker is currently collecting a destination for. */
     var pendingSave by remember { mutableStateOf<SheafFile?>(null) }
 
+    /** Results waiting for a folder, when one has not been granted yet. */
+    var pendingBatch by remember { mutableStateOf<List<SheafFile>>(emptyList()) }
+
     LaunchedEffect(tool, preloadUri) {
         viewModel.start(tool)
         if (preloadUri != null) viewModel.addDocuments(listOf(Uri.parse(preloadUri)))
+    }
+
+    /** Guards against reopening the same finished job every time this screen recomposes. */
+    var openedResultOf by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(jobState, openResultWhenDone) {
+        val finished = jobState as? JobState.Finished ?: return@LaunchedEffect
+        if (!openResultWhenDone) return@LaunchedEffect
+        // One result only. A batch that produced forty files has no single document to show,
+        // and opening the first of forty would be a guess at which one was meant.
+        val single = finished.produced.singleOrNull()?.file?.takeIf { it.isPdf } ?: return@LaunchedEffect
+        if (openedResultOf == single.file.path) return@LaunchedEffect
+        openedResultOf = single.file.path
+        onOpenResult(single)
     }
 
     val pickFiles = rememberLauncherForActivityResult(
@@ -62,6 +83,43 @@ fun ToolRoute(
         // contract instead of two, and someone who multi-selects out of habit on a
         // single-file tool gets a sensible result rather than nothing at all.
         viewModel.addDocuments(uris)
+    }
+
+    val pickFolder = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val folder = result.data?.data
+        val waiting = pendingBatch
+        pendingBatch = emptyList()
+        if (result.resultCode == Activity.RESULT_OK && folder != null) {
+            // Held across restarts, which is the only reason "do not ask again" can work.
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    folder,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            }
+            viewModel.rememberFolder(folder)
+            if (waiting.isNotEmpty()) {
+                viewModel.writeInto(folder, waiting) { outcome -> message = outcome }
+            }
+        }
+    }
+
+    /**
+     * Saves straight into the chosen folder, or asks for one first.
+     *
+     * The ask happens once per folder rather than once per file, which is the difference
+     * between saving a forty-page export and giving up on it.
+     */
+    fun saveInto(files: List<SheafFile>) {
+        val folder = viewModel.savedFolder()
+        if (folder == null) {
+            pendingBatch = files
+            pickFolder.launch(viewModel.folderIntent())
+        } else {
+            viewModel.writeInto(folder, files) { outcome -> message = outcome }
+        }
     }
 
     val saveFile = rememberLauncherForActivityResult(
@@ -103,9 +161,14 @@ fun ToolRoute(
             onRun = viewModel::run,
             onCancel = viewModel::cancel,
             onSave = { file ->
-                pendingSave = file
-                saveFile.launch(viewModel.exportIntent(file))
+                if (viewModel.askWhereToSave) {
+                    pendingSave = file
+                    saveFile.launch(viewModel.exportIntent(file))
+                } else {
+                    saveInto(listOf(file))
+                }
             },
+            onSaveAll = { files -> saveInto(files) },
             onShare = { files -> context.startActivity(viewModel.shareIntent(files)) },
             onOpenResult = onOpenResult,
             onLoadPreview = viewModel::loadPreview,

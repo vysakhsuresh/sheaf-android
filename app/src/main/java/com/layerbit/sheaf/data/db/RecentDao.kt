@@ -21,6 +21,20 @@ interface RecentDao {
     @Query("DELETE FROM recents")
     suspend fun clear()
 
+    /** Where the reader got to, or zero for a document this list has never seen. */
+    @Query("SELECT lastPage FROM recents WHERE uri = :uri")
+    suspend fun positionFor(uri: String): Int?
+
+    /**
+     * Writes the reading position without touching the rest of the row.
+     *
+     * An UPDATE rather than an upsert on purpose: scrolling must not promote a document up
+     * the recents list, or the order would change under the reader's thumb every time they
+     * turned a page.
+     */
+    @Query("UPDATE recents SET lastPage = :pageIndex WHERE uri = :uri")
+    suspend fun rememberPosition(uri: String, pageIndex: Int)
+
     /**
      * Keeps the table from growing without bound. Called after each insert rather than on a
      * schedule, because a list nobody is looking at does not need a background job.

@@ -5,4 +5,13 @@
     <string name="job_channel_name">Working on a document</string>
     <string name="job_channel_description">Shows progress while Sheaf is processing a file. Silent.</string>
     <string name="job_progress">%1$d of %2$d</string>
+
+    <!-- Long-press the launcher icon. Short labels are what fits under an icon; long labels
+         are what the launcher shows when there is room, and both are required. -->
+    <string name="shortcut_scan_short">Scan</string>
+    <string name="shortcut_scan_long">Scan a document</string>
+    <string name="shortcut_merge_short">Merge</string>
+    <string name="shortcut_merge_long">Merge PDFs</string>
+    <string name="shortcut_compress_short">Compress</string>
+    <string name="shortcut_compress_long">Compress a PDF</string>
 </resources>

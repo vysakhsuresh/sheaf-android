@@ -1,16 +1,9 @@
 package com.layerbit.sheaf.ui.tools
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -28,6 +21,7 @@ import com.layerbit.sheaf.pdf.ImageFormat
 import com.layerbit.sheaf.pdf.ImageStamp
 import com.layerbit.sheaf.pdf.PageNumberSpec
 import com.layerbit.sheaf.pdf.PageSpec
+import com.layerbit.sheaf.ui.components.ChipRow
 import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.components.formatBytes
 import com.layerbit.sheaf.ui.theme.SheafColors
@@ -555,34 +549,15 @@ internal fun Field(
     )
 }
 
-/** A row of mutually exclusive choices. Wraps rather than scrolling, so nothing hides offscreen. */
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * A row of mutually exclusive choices. Wraps rather than scrolling, so nothing hides offscreen.
+ *
+ * The drawing lives in components, because the settings screen asks the same kind of question
+ * and two copies of a control drift apart the first time one is adjusted.
+ */
 @Composable
-private fun <T> ChoiceRow(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        options.forEach { (value, label) ->
-            val active = value == selected
-            val shape = RoundedCornerShape(999.dp)
-            Row(
-                modifier = Modifier
-                    .background(if (active) SheafColors.BandDim else SheafColors.SurfaceDim, shape)
-                    .border(1.dp, if (active) SheafColors.Band else SheafColors.Border, shape)
-                    .clickable { onSelect(value) }
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (active) SheafColors.BandBright else SheafColors.Muted
-                )
-            }
-        }
-    }
-}
+private fun <T> ChoiceRow(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) =
+    ChipRow(options = options, selected = selected, onSelect = onSelect)
 
 @Composable
 private fun Hint(text: String) {

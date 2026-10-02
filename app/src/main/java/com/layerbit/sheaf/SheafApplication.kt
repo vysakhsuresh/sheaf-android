@@ -1,12 +1,14 @@
 package com.layerbit.sheaf
 
 import android.app.Application
+import com.layerbit.sheaf.data.BookmarksRepository
 import com.layerbit.sheaf.data.RecentsRepository
 import com.layerbit.sheaf.data.db.SheafDatabase
 import com.layerbit.sheaf.files.DocumentStore
 import com.layerbit.sheaf.files.Exporter
 import com.layerbit.sheaf.files.Workspace
 import com.layerbit.sheaf.jobs.JobRunner
+import com.layerbit.sheaf.prefs.SheafSettings
 import com.layerbit.sheaf.pdf.MlKitOcrEngine
 import com.layerbit.sheaf.pdf.OcrEngine
 import com.layerbit.sheaf.pdf.PdfBoxEngine
@@ -54,6 +56,17 @@ class SheafApplication : Application() {
     val recents: RecentsRepository by lazy {
         RecentsRepository(SheafDatabase.get(this).recentDao())
     }
+
+    /** The reader's own marked pages, per document. */
+    val bookmarks: BookmarksRepository by lazy {
+        BookmarksRepository(SheafDatabase.get(this).bookmarkDao())
+    }
+
+    /**
+     * Preferences, in memory. The theme is read before the first frame composes and on every
+     * recomposition after it, which is why these live in SharedPreferences and not in Room.
+     */
+    val settings: SheafSettings by lazy { SheafSettings(this) }
 
     override fun onCreate() {
         super.onCreate()

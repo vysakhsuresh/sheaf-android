@@ -8,11 +8,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.layerbit.sheaf.files.Exporter
+import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.ui.SheafApp
 import com.layerbit.sheaf.ui.theme.SheafTheme
 import kotlinx.coroutines.launch
@@ -23,6 +26,9 @@ class MainActivity : ComponentActivity() {
 
     /** Bumped on every open, which is what tells the UI to show the viewer. */
     private var openTicket by mutableIntStateOf(0)
+
+    /** A tool a launcher shortcut asked for, held until the UI has navigated to it. */
+    private var shortcutTool by mutableStateOf<ToolId?>(null)
 
     private val pickDocument = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -43,10 +49,17 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            SheafTheme {
+            val settings by sheaf.settings.state.collectAsState()
+
+            SheafTheme(theme = settings.theme) {
                 SheafApp(
                     recentsFlow = sheaf.recents.observe(),
+                    bookmarkCountFlow = sheaf.bookmarks.observeCount(),
+                    settings = settings,
+                    onSettingsChange = { transform -> sheaf.settings.update(transform) },
                     openTicket = openTicket,
+                    shortcutTool = shortcutTool,
+                    onShortcutHandled = { shortcutTool = null },
                     onPickDocument = { pickDocument.launch(arrayOf(Exporter.PDF_MIME)) },
                     onOpenRecentUri = { open(Uri.parse(it)) },
                     onForgetRecent = { uri -> lifecycleScope.launch { sheaf.recents.forget(uri) } }
@@ -64,13 +77,22 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Documents arriving from outside the app.
+     * Documents and shortcuts arriving from outside the app.
      *
      * Being in the share sheet and the "open with" list is how people find Sheaf, so these
      * paths matter as much as the picker does. SEND_MULTIPLE currently opens the first
      * document; the rest become the input list for a tool once P1 gives it somewhere to go.
+     *
+     * A launcher shortcut arrives as a VIEW on a sheaf:// Uri rather than as an extra,
+     * because a static shortcut cannot reliably carry extras and a scheme it can.
      */
     private fun handleIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_VIEW && intent.data?.scheme == SHORTCUT_SCHEME) {
+            val name = intent.data?.lastPathSegment
+            shortcutTool = ToolId.entries.firstOrNull { it.name == name }
+            return
+        }
+
         val uri: Uri? = when (intent?.action) {
             Intent.ACTION_VIEW -> intent.data
             Intent.ACTION_SEND -> intent.parcelableExtra(Intent.EXTRA_STREAM)
@@ -93,6 +115,10 @@ class MainActivity : ComponentActivity() {
     private fun viewerViewModelOpen(uri: Uri) {
         val provider = androidx.lifecycle.ViewModelProvider(this)
         provider[com.layerbit.sheaf.ui.viewer.ViewerViewModel::class.java].open(uri)
+    }
+
+    private companion object {
+        const val SHORTCUT_SCHEME = "sheaf"
     }
 }
 

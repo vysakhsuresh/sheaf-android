@@ -87,6 +87,7 @@ fun ToolScreen(
     onRun: () -> Unit,
     onCancel: () -> Unit,
     onSave: (SheafFile) -> Unit,
+    onSaveAll: (List<SheafFile>) -> Unit,
     onShare: (List<SheafFile>) -> Unit,
     onOpenResult: (SheafFile) -> Unit,
     onLoadPreview: (SheafFile) -> Unit,
@@ -146,6 +147,15 @@ fun ToolScreen(
                                     contentColor = SheafColors.OnBand
                                 )
                             ) { Text(if (finished.produced.size > 1) "Share all" else "Share") }
+                        }
+                        // One folder for the whole batch. Forty files through the system
+                        // picker one at a time is the thing that makes an export tool useless.
+                        if (finished.produced.size > 1) {
+                            OutlinedButton(
+                                onClick = { onSaveAll(finished.produced.map { it.file }) }
+                            ) {
+                                Text("Save all", color = SheafColors.Muted)
+                            }
                         }
                         OutlinedButton(onClick = onDone) { Text("Done", color = SheafColors.Muted) }
                     }

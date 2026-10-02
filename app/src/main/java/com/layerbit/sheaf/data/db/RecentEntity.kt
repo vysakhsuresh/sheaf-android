@@ -6,9 +6,10 @@ import androidx.room.PrimaryKey
 /**
  * A document the user opened, so it can be reopened from the home screen.
  *
- * What is stored is the SAF Uri and a name - never the document's contents and never anything
- * read out of it. A recents list that cached page text would be a copy of the user's papers
- * sitting in a database, which is exactly what this app exists not to do.
+ * What is stored is the SAF Uri, a name, and where the reader got to - never the document's
+ * contents and never anything read out of it. A recents list that cached page text would be a
+ * copy of the user's papers sitting in a database, which is exactly what this app exists not
+ * to do.
  *
  * The Uri may stop working: a persistable permission can be revoked, and the file behind it
  * can be moved or deleted by the app that owns it. That is expected, and the home screen
@@ -21,5 +22,13 @@ data class RecentEntity(
     val displayName: String,
     val pageCount: Int,
     val sizeBytes: Long,
-    val lastOpenedAt: Long
+    val lastOpenedAt: Long,
+    /**
+     * The page the reader was last looking at, zero-based.
+     *
+     * A page number is the one thing about a document that is worth remembering and costs
+     * nothing to store. Reopening a 300-page statement at page one is the difference between
+     * a reader and a file preview.
+     */
+    val lastPage: Int = 0
 )

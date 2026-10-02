@@ -7,15 +7,17 @@ import android.util.LruCache
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.layerbit.sheaf.SheafApplication
+import com.layerbit.sheaf.data.db.BookmarkEntity
 import com.layerbit.sheaf.files.SheafFile
+import com.layerbit.sheaf.pdf.PageArea
 import com.layerbit.sheaf.pdf.PageSize
 import com.layerbit.sheaf.pdf.PdfDocument
 import com.layerbit.sheaf.pdf.OutlineEntry
 import com.layerbit.sheaf.pdf.PdfException
-import com.layerbit.sheaf.pdf.PageArea
 import com.layerbit.sheaf.pdf.PdfInput
 import com.layerbit.sheaf.pdf.SearchHit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,6 +48,14 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
     private var source: SheafFile? = null
 
     /**
+     * The document's Uri, which is its identity for everything stored about it.
+     *
+     * Null for a result handed over by a tool: it has no Uri of its own yet, so there is
+     * nothing to key a reading position or a bookmark against until the user saves it.
+     */
+    private var sourceKey: String? = null
+
+    /**
      * PdfRenderer permits one open page at a time per document and is not thread-safe, so
      * every render is serialised through this. Contention is not a problem in practice - the
      * viewer renders what is on screen, which is a handful of pages.
@@ -59,6 +69,11 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
     val reading: StateFlow<ReadingState> = _reading.asStateFlow()
 
     private var searchJob: kotlinx.coroutines.Job? = null
+    private var bookmarkJob: kotlinx.coroutines.Job? = null
+    private var positionJob: kotlinx.coroutines.Job? = null
+
+    /** Rises each time anything asks for a jump, so the same page twice still scrolls. */
+    private var jumpToken = 0
 
     /**
      * Bitmaps for pages near the viewport.
@@ -67,13 +82,13 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
      * between a text page and a full-bleed scan, so a count-based cache would either waste
      * memory or thrash, depending on which document was open.
      *
-     * KEYED BY PAGE INDEX, WHICH IS ONLY SAFE BECAUSE [closeCurrent] EMPTIES IT BEFORE ANY NEW
-     * DOCUMENT IS OPENED. Without that, page 0 of the document being opened is served the
-     * previous document's page 0 - it looks like the new file has the old file's cover, and
-     * only for the pages the old document happened to reach.
+     * KEYED BY PAGE INDEX AND RENDER WIDTH, AND EMPTIED BY [closeCurrent] BEFORE ANY NEW
+     * DOCUMENT IS OPENED. The index alone served the previous document's page 0 as the new
+     * document's cover; the width is in the key because zooming renders the same page again at
+     * a larger size, and a cache that ignored it would hand back the blurry one for ever.
      */
-    private val pageCache = object : LruCache<Int, Bitmap>(PAGE_CACHE_KB) {
-        override fun sizeOf(key: Int, value: Bitmap): Int = value.byteCount / 1024
+    private val pageCache = object : LruCache<PageKey, Bitmap>(PAGE_CACHE_KB) {
+        override fun sizeOf(key: PageKey, value: Bitmap): Int = value.byteCount / 1024
     }
 
     fun open(uri: Uri) {
@@ -85,6 +100,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val imported = sheaf.documentStore.import(uri)
                 source = imported
+                sourceKey = uri.toString()
 
                 val opened = withContext(Dispatchers.IO) { sheaf.pdfEngine.open(imported.file) }
                 document = opened
@@ -96,6 +112,15 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                     renderLock.withLock { List(opened.pageCount) { opened.pageSize(it) } }
                 }
 
+                // Where the reader got to last time. Read before the state is published so the
+                // list can be positioned on its first layout rather than scrolling visibly.
+                val resumeAt = if (sheaf.settings.current.resumeReading) {
+                    sheaf.recents.positionFor(uri.toString())
+                        .coerceIn(0, (opened.pageCount - 1).coerceAtLeast(0))
+                } else {
+                    0
+                }
+
                 generation += 1
                 _state.value = ViewerState.Ready(
                     generation = generation,
@@ -103,10 +128,12 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                     displayName = imported.displayName,
                     pageCount = opened.pageCount,
                     pageSizes = sizes,
-                    sizeBytes = imported.sizeBytes
+                    sizeBytes = imported.sizeBytes,
+                    initialPage = resumeAt
                 )
 
                 sheaf.recents.record(uri, imported.displayName, opened.pageCount, imported.sizeBytes)
+                watchBookmarks(uri.toString())
 
                 // The outline is small and quick to read, so it is fetched with the document
                 // rather than when the sheet opens. Doing it later would leave the reader
@@ -133,7 +160,8 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
      * otherwise fine document should leave a gap the user can scroll past, not empty the screen.
      */
     suspend fun page(index: Int, widthPx: Int): Bitmap? {
-        pageCache.get(index)?.let { return it }
+        val key = PageKey(index, widthPx)
+        pageCache.get(key)?.let { return it }
         val doc = document ?: return null
 
         return try {
@@ -141,7 +169,8 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                 renderLock.withLock {
                     // Re-checked inside the lock: several composables can ask for the same page
                     // as it scrolls into view, and without this they each render it.
-                    pageCache.get(index) ?: doc.renderPage(index, widthPx).also { pageCache.put(index, it) }
+                    pageCache.get(key)
+                        ?: doc.renderPage(index, widthPx).also { pageCache.put(key, it) }
                 }
             }
         } catch (_: PdfException) {
@@ -162,6 +191,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
             _state.value = ViewerState.Loading
             try {
                 source = file
+                sourceKey = null
                 val opened = withContext(Dispatchers.IO) { sheaf.pdfEngine.open(file.file) }
                 document = opened
 
@@ -176,7 +206,8 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                     displayName = file.displayName,
                     pageCount = opened.pageCount,
                     pageSizes = sizes,
-                    sizeBytes = file.sizeBytes
+                    sizeBytes = file.sizeBytes,
+                    initialPage = 0
                 )
 
                 val outline = withContext(Dispatchers.IO) {
@@ -189,6 +220,9 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+
+    /** The file currently open, for printing and sharing. Null when nothing is open. */
+    fun currentFile(): SheafFile? = source
 
     /** Inverts the page rendering, for reading in the dark without a white rectangle. */
     fun toggleNightMode() {
@@ -208,7 +242,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
     fun search(query: String) {
         searchJob?.cancel()
         val source = source
-        _reading.value = _reading.value.copy(query = query)
+        _reading.value = _reading.value.copy(query = query, hitIndex = -1)
 
         if (query.isBlank() || source == null) {
             _reading.value = _reading.value.copy(
@@ -220,6 +254,9 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         searchJob = viewModelScope.launch {
+            // A pause before searching, so typing a six-letter word is one pass over the
+            // document rather than six. On a long scan each pass is seconds of work.
+            delay(SEARCH_DEBOUNCE_MS)
             _reading.value = _reading.value.copy(searching = true)
             val hits = withContext(Dispatchers.IO) {
                 runCatching { sheaf.surgeon.search(PdfInput(source.file), query) }
@@ -240,8 +277,95 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
             query = "",
             hits = emptyList(),
             highlights = emptyMap(),
+            hitIndex = -1,
             searching = false
         )
+    }
+
+    /**
+     * Walks the matches one at a time, wrapping round at either end.
+     *
+     * Page-level results are enough to navigate a report and useless in a contract where the
+     * word appears on every page, which is why this exists alongside the list.
+     */
+    fun stepHit(forward: Boolean) {
+        val hits = _reading.value.hits
+        if (hits.isEmpty()) return
+        val current = _reading.value.hitIndex
+        val next = when {
+            current < 0 -> if (forward) 0 else hits.lastIndex
+            forward -> (current + 1) % hits.size
+            else -> (current - 1 + hits.size) % hits.size
+        }
+        _reading.value = _reading.value.copy(hitIndex = next)
+        jumpTo(hits[next].pageIndex)
+    }
+
+    /**
+     * Asks the list to scroll to a page.
+     *
+     * Routed through the model rather than done in the screen so that everything which can
+     * move the reader - the outline, a bookmark, a search result, the page field - arrives by
+     * one path. The token is what makes jumping to the page you are already on still work.
+     */
+    fun jumpTo(pageIndex: Int) {
+        jumpToken += 1
+        _reading.value = _reading.value.copy(jump = Jump(pageIndex, jumpToken))
+    }
+
+    /**
+     * Records where the reader is, so the document reopens here.
+     *
+     * Debounced, and deliberately a plain UPDATE: scrolling must not reorder the recents list
+     * under the reader's thumb, and it must not write a row per page turned.
+     */
+    fun rememberPosition(pageIndex: Int) {
+        val key = sourceKey ?: return
+        if (!sheaf.settings.current.resumeReading) return
+        positionJob?.cancel()
+        positionJob = viewModelScope.launch {
+            delay(POSITION_SAVE_DELAY_MS)
+            runCatching { sheaf.recents.rememberPosition(key, pageIndex) }
+        }
+    }
+
+    /** Marks or unmarks the page, with the document's own outline supplying a label. */
+    fun toggleBookmark(pageIndex: Int) {
+        val key = sourceKey ?: return
+        val marked = _reading.value.bookmarks.any { it.pageIndex == pageIndex }
+        viewModelScope.launch {
+            if (marked) {
+                sheaf.bookmarks.remove(key, pageIndex)
+            } else {
+                // The nearest heading above this page names the mark, which is far more use
+                // later than a list of page numbers. Documents without an outline get the
+                // page number, which is all there is to say about them.
+                val heading = _reading.value.outline
+                    .filter { it.pageIndex <= pageIndex }
+                    .maxByOrNull { it.pageIndex }
+                    ?.title
+                    ?.takeIf { it.isNotBlank() }
+                sheaf.bookmarks.add(
+                    uri = key,
+                    pageIndex = pageIndex,
+                    label = heading ?: "Page ${pageIndex + 1}"
+                )
+            }
+        }
+    }
+
+    fun removeBookmark(pageIndex: Int) {
+        val key = sourceKey ?: return
+        viewModelScope.launch { sheaf.bookmarks.remove(key, pageIndex) }
+    }
+
+    private fun watchBookmarks(key: String) {
+        bookmarkJob?.cancel()
+        bookmarkJob = viewModelScope.launch {
+            sheaf.bookmarks.observeFor(key).collect { marks ->
+                _reading.value = _reading.value.copy(bookmarks = marks)
+            }
+        }
     }
 
     /**
@@ -255,6 +379,8 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun closeCurrent() {
         searchJob?.cancel()
+        bookmarkJob?.cancel()
+        positionJob?.cancel()
         _reading.value = ReadingState()
         pageCache.evictAll()
         runCatching { document?.close() }
@@ -263,6 +389,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
         // tool's list and deleting it here would take it out from under the reader.
         if (source?.origin is SheafFile.Origin.Imported) source?.file?.delete()
         source = null
+        sourceKey = null
     }
 
     override fun onCleared() {
@@ -273,18 +400,34 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
     companion object {
         /** Roughly a dozen screen-width pages. Enough to scroll smoothly, small enough to be safe. */
         private const val PAGE_CACHE_KB = 48 * 1024
+
+        /** One keystroke's grace before a search walks the whole document. */
+        private const val SEARCH_DEBOUNCE_MS = 250L
+
+        /** Long enough that scrolling through a book is one write, not four hundred. */
+        private const val POSITION_SAVE_DELAY_MS = 600L
     }
 }
+
+/** A rendered page is identified by which page it is and how wide it was drawn. */
+private data class PageKey(val index: Int, val width: Int)
+
+/** A request to move the reader, and the token that makes a repeat of it count. */
+data class Jump(val pageIndex: Int, val token: Int)
 
 /** Everything about how the document is being read, as opposed to what it contains. */
 data class ReadingState(
     val nightMode: Boolean = false,
     val outline: List<OutlineEntry> = emptyList(),
+    val bookmarks: List<BookmarkEntity> = emptyList(),
     val query: String = "",
     val hits: List<SearchHit> = emptyList(),
     /** Match rectangles by page index, so a page can draw its own without scanning [hits]. */
     val highlights: Map<Int, List<PageArea>> = emptyMap(),
-    val searching: Boolean = false
+    /** Which match the reader has stepped to, or -1 before they have stepped anywhere. */
+    val hitIndex: Int = -1,
+    val searching: Boolean = false,
+    val jump: Jump? = null
 )
 
 sealed interface ViewerState {
@@ -308,6 +451,8 @@ sealed interface ViewerState {
         val displayName: String,
         val pageCount: Int,
         val pageSizes: List<PageSize>,
-        val sizeBytes: Long
+        val sizeBytes: Long,
+        /** The page to open at: where the reader left off, or the first page. */
+        val initialPage: Int = 0
     ) : ViewerState
 }

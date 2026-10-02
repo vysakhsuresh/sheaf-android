@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Long-press the launcher icon.
+
+  Each shortcut is a VIEW on a sheaf:// Uri rather than an intent carrying an extra, because
+  a static shortcut cannot reliably hand over extras and a scheme costs nothing. MainActivity
+  reads the last path segment as a ToolId name.
+
+  Three, deliberately. Android shows four at most and the launcher may show fewer, so a list
+  of nine would be a list of whichever three the system picked.
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <shortcut
+        android:shortcutId="scan"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_scan"
+        android:shortcutShortLabel="@string/shortcut_scan_short"
+        android:shortcutLongLabel="@string/shortcut_scan_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="sheaf://tool/SCAN"
+            android:targetClass="com.layerbit.sheaf.MainActivity"
+            android:targetPackage="com.layerbit.sheaf" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="merge"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_merge"
+        android:shortcutShortLabel="@string/shortcut_merge_short"
+        android:shortcutLongLabel="@string/shortcut_merge_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="sheaf://tool/MERGE"
+            android:targetClass="com.layerbit.sheaf.MainActivity"
+            android:targetPackage="com.layerbit.sheaf" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="compress"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_compress"
+        android:shortcutShortLabel="@string/shortcut_compress_short"
+        android:shortcutLongLabel="@string/shortcut_compress_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="sheaf://tool/COMPRESS"
+            android:targetClass="com.layerbit.sheaf.MainActivity"
+            android:targetPackage="com.layerbit.sheaf" />
+    </shortcut>
+
+</shortcuts>

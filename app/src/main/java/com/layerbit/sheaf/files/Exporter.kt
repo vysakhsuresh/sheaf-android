@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
+import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FileOutputStream
@@ -52,6 +53,52 @@ class Exporter(private val context: Context) {
                 source.file.inputStream().use { input -> input.copyTo(output) }
             }
         } ?: throw IOException("Could not write to the location you chose.")
+    }
+
+    /**
+     * Asks the user for a folder to put results in, once.
+     *
+     * The persistable grant is what makes "do not ask me again" possible: without it the
+     * permission dies with the process and the next save would have to ask anyway. The
+     * caller takes the grant - this only builds the request.
+     */
+    fun openFolderIntent(): Intent =
+        Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+            )
+        }
+
+    /**
+     * Writes [source] into a folder the user granted earlier.
+     *
+     * This is what turns saving forty exported pages from forty system pickers into one
+     * gesture. It is also the only write path that does not go through a picker, which is why
+     * it refuses anything but a tree the user granted and never overwrites: a name already in
+     * use is handed to the provider, which makes it unique rather than replacing a file.
+     *
+     * @return null on success, or a sentence explaining what went wrong.
+     */
+    suspend fun writeInto(folder: Uri, source: SheafFile): String? = withContext(Dispatchers.IO) {
+        val tree = DocumentFile.fromTreeUri(context, folder)
+            ?: return@withContext "That folder is no longer available."
+        if (!tree.canWrite()) {
+            return@withContext "Sheaf is no longer allowed to write to that folder."
+        }
+
+        val target = tree.createFile(source.mimeType, source.displayName)
+            ?: return@withContext "${source.displayName} could not be created there."
+
+        try {
+            context.contentResolver.openOutputStream(target.uri, "wt")?.use { output ->
+                source.file.inputStream().use { input -> input.copyTo(output) }
+            } ?: return@withContext "${source.displayName} could not be written."
+        } catch (e: IOException) {
+            return@withContext e.message ?: "${source.displayName} could not be written."
+        }
+        null
     }
 
     /**

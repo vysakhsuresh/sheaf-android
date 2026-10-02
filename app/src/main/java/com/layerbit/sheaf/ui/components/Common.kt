@@ -2,7 +2,9 @@ package com.layerbit.sheaf.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -10,8 +12,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.border
 import com.layerbit.sheaf.ui.theme.SheafColors
 import java.util.Locale
 
@@ -28,21 +35,31 @@ import java.util.Locale
  * each invent their own padding.
  */
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Panel(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    /** A second gesture on the same panel - starring a tool, in practice. */
+    onLongClick: (() -> Unit)? = null,
+    highlighted: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val shape = RoundedCornerShape(14.dp)
     val base = modifier
         .clip(shape)
         .background(SheafColors.Surface)
-        .border(1.dp, SheafColors.Border, shape)
-    Column(
-        modifier = (if (onClick != null) base.clickable(onClick = onClick) else base).padding(16.dp),
-        content = content
-    )
+        .border(
+            1.dp,
+            if (highlighted) SheafColors.Band.copy(alpha = 0.55f) else SheafColors.Border,
+            shape
+        )
+    val tappable = when {
+        onClick == null -> base
+        onLongClick == null -> base.clickable(onClick = onClick)
+        else -> base.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+    }
+    Column(modifier = tappable.padding(16.dp), content = content)
 }
 
 @Composable
@@ -95,3 +112,84 @@ fun formatBytes(bytes: Long): String = when {
 }
 
 fun formatPageCount(pages: Int): String = if (pages == 1) "1 page" else "$pages pages"
+
+/**
+ * A row of mutually exclusive choices, as chips.
+ *
+ * One definition for the whole app. The tool options screen and the settings screen are the
+ * same control answering different questions, and two copies of it drift apart the first time
+ * one of them is adjusted.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun <T> ChipRow(
+    options: List<Pair<T, String>>,
+    selected: T,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        options.forEach { (value, label) ->
+            val active = value == selected
+            val shape = RoundedCornerShape(999.dp)
+            Row(
+                modifier = Modifier
+                    .background(if (active) SheafColors.BandDim else SheafColors.SurfaceDim, shape)
+                    .border(1.dp, if (active) SheafColors.Band else SheafColors.Border, shape)
+                    .clickable { onSelect(value) }
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (active) SheafColors.BandBright else SheafColors.Muted
+                )
+            }
+        }
+    }
+}
+
+/** A setting that is on or off, with the sentence that says what it costs. */
+@Composable
+fun ToggleRow(
+    title: String,
+    checked: Boolean,
+    onChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    detail: String? = null
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onChange(!checked) }
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = SheafColors.Text)
+            if (detail != null) {
+                Text(
+                    detail,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SheafColors.Dim,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = SheafColors.OnBand,
+                checkedTrackColor = SheafColors.Band,
+                uncheckedThumbColor = SheafColors.Muted,
+                uncheckedTrackColor = SheafColors.SurfaceDim,
+                uncheckedBorderColor = SheafColors.Border
+            )
+        )
+    }
+}
