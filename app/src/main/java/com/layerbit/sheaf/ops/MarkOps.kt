@@ -7,6 +7,7 @@ import com.layerbit.sheaf.pdf.PageArea
 import com.layerbit.sheaf.pdf.PageNumberSpec
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
+import com.layerbit.sheaf.pdf.StampSpec
 import com.layerbit.sheaf.pdf.TextNote
 import com.layerbit.sheaf.pdf.WatermarkSpec
 import kotlinx.coroutines.Dispatchers
@@ -212,6 +213,49 @@ class SignOp(private val stamp: ImageStamp) : Op {
                 "Signed on page ${stamp.pageIndex + 1}"
             )
         )
+    }
+}
+
+/**
+ * Runs a line along the top or the bottom of every page.
+ *
+ * Page numbers are the same mechanism with the format fixed, and this is deliberately not
+ * folded into that tool: "Confidential" at the top of every page of a contract and "page 3 of
+ * 40" at the bottom are two different jobs that people do at different moments, and one
+ * screen that did both would ask eight questions to answer either.
+ */
+class HeaderFooterOp(private val spec: StampSpec) : Op {
+
+    override val tool = ToolId.HEADER_FOOTER
+    override val title = "Header and footer"
+    override val arity = Op.Arity.EachIndependently
+
+    override suspend fun run(
+        inputs: List<SheafFile>,
+        context: OpContext,
+        onProgress: (Progress) -> Unit
+    ): List<OpOutcome> = withContext(Dispatchers.IO) {
+        if (spec.headerText.isBlank() && spec.footerText.isBlank()) {
+            return@withContext listOf(OpOutcome.Failed("", "Type a header or a footer first."))
+        }
+        eachFile(inputs, context, onProgress, "stamped", "Stamping") { input, pdfInput, output ->
+            var pages = 0
+            // The document's own name resolves {name}, which the engine cannot know.
+            context.surgeon.stampHeaderFooter(
+                pdfInput,
+                spec.copy(documentName = input.displayName),
+                output
+            ) { _, total ->
+                context.checkCancelled(); pages = total
+            }
+            val where = when {
+                spec.headerText.isNotBlank() && spec.footerText.isNotBlank() -> "header and footer"
+                spec.headerText.isNotBlank() -> "header"
+                else -> "footer"
+            }
+            "${input.baseName} stamped.pdf" to
+                "Added a $where to ${pages - spec.skipFirst} of $pages pages"
+        }
     }
 }
 

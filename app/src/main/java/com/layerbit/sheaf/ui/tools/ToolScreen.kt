@@ -92,6 +92,8 @@ fun ToolScreen(
     onOpenResult: (SheafFile) -> Unit,
     onLoadPreview: (SheafFile) -> Unit,
     onLoadPreviewPage: () -> Unit,
+    onLoadForm: () -> Unit,
+    onFormValue: (String, String) -> Unit,
     onCheckSize: () -> Unit,
     onCopy: (String) -> Unit,
     onDone: () -> Unit,
@@ -107,6 +109,8 @@ fun ToolScreen(
             // These change how a page looks, so one page is enough to show it.
             ToolId.CROP, ToolId.WATERMARK, ToolId.PAGE_NUMBERS, ToolId.SIGN,
             ToolId.ADD_TEXT -> onLoadPreviewPage()
+            // Filling a form needs to know whether there is one.
+            ToolId.FORMS -> onLoadForm()
             else -> Unit
         }
     }
@@ -224,6 +228,30 @@ fun ToolScreen(
                             page = state.previewPage,
                             signature = state.signatureBitmap
                         )
+                    }
+                } else if (tool == ToolId.FORMS && state.documents.isNotEmpty()) {
+                    if (!state.formRead) {
+                        item { Hint("Looking for form fields…") }
+                    } else if (state.formFields.isEmpty()) {
+                        item { NoFormFields() }
+                    } else {
+                        item {
+                            FormEditor(
+                                fields = state.formFields,
+                                values = state.formValues,
+                                onValue = onFormValue
+                            )
+                        }
+                        item {
+                            ToolOptions(
+                                tool = tool,
+                                config = state.config,
+                                pageCount = state.documents.firstOrNull()?.pageCount,
+                                sizeCheck = state.sizeCheck,
+                                onCheckSize = onCheckSize,
+                                onChange = onConfigChange
+                            )
+                        }
                     }
                 } else if (tool == ToolId.REDACT && state.pageOrder.isNotEmpty()) {
                     item {

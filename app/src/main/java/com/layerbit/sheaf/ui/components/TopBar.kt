@@ -22,7 +22,7 @@ import com.layerbit.sheaf.ui.theme.SheafColors
  *
  * It exists because navigation was previously invisible. Getting back relied on the system
  * gesture, and About sat at the very bottom of a long scroll, which on a screen that now holds
- * twenty-one tools meant it was effectively unreachable. A bar costs one row and puts both
+ * two dozen tools meant it was effectively unreachable. A bar costs one row and puts both
  * within reach from anywhere.
  */
 @Composable

@@ -131,6 +131,15 @@ class SplitOp(private val mode: Mode) : Op {
 
         /** One output per comma-separated group, e.g. "1-3, 4-8, 9-". */
         data class Ranges(val spec: String) : Mode
+
+        /**
+         * One output per top-level entry in the document's own table of contents.
+         *
+         * The natural way to break up a scanned book or a bundle of statements, because the
+         * author already said where the seams are. Only the top level is used: splitting at
+         * every sub-heading of a contract would produce a file per clause.
+         */
+        data object AtBookmarks : Mode
     }
 
     override val tool = ToolId.SPLIT
@@ -138,6 +147,7 @@ class SplitOp(private val mode: Mode) : Op {
         is Mode.EveryNPages -> "Split every ${mode.size} pages"
         Mode.EachPage -> "Split into single pages"
         is Mode.Ranges -> "Split by ranges"
+        Mode.AtBookmarks -> "Split at the bookmarks"
     }
     override val arity = Op.Arity.ExactlyOne
 
@@ -162,6 +172,32 @@ class SplitOp(private val mode: Mode) : Op {
             is Mode.Ranges -> mode.spec.split(',')
                 .map { PageSelection.parse(it, info.pageCount) }
                 .filter { it.isNotEmpty() }
+
+            Mode.AtBookmarks -> {
+                val starts = runCatching { context.surgeon.readOutline(pdfInput) }
+                    .getOrDefault(emptyList())
+                    .filter { it.depth == 0 }
+                    .map { it.pageIndex }
+                    .distinct()
+                    .sorted()
+                if (starts.isEmpty()) {
+                    return@withContext listOf(
+                        OpOutcome.Failed(
+                            input.displayName,
+                            "This document has no table of contents to split at. Split every " +
+                                "N pages, or by ranges, instead."
+                        )
+                    )
+                }
+                // Each part runs from its own heading up to the next one. A first heading
+                // that is not on page one leaves a front section, which is kept rather than
+                // dropped - it is usually the cover.
+                val boundaries = (if (starts.first() > 0) listOf(0) else emptyList()) + starts
+                boundaries.mapIndexed { index, start ->
+                    val end = boundaries.getOrNull(index + 1) ?: info.pageCount
+                    (start until end).toList()
+                }.filter { it.isNotEmpty() }
+            }
         }
 
         if (groups.isEmpty()) {
@@ -212,6 +248,81 @@ class SplitOp(private val mode: Mode) : Op {
  * from it is deleted. [rotations] is a delta in degrees applied to the original index, not the
  * new position, because that is what the user pointed at on screen.
  */
+/**
+ * Puts pages into a document at a chosen point - another document's, or blank ones.
+ *
+ * Merge already joins things end to end, so this exists for the case merge cannot do: the
+ * signed page that has to go in at twelve, the blank left side a double-sided print needs.
+ * Both halves are one tool because they answer the same question, and two tools would mean
+ * choosing between them before knowing which you needed.
+ *
+ * The first file chosen is the document being added to; the second, if there is one, is what
+ * gets inserted. Stated in those words on the screen, because with two files in a list there
+ * is otherwise no way to tell which way round it goes.
+ */
+class InsertPagesOp(
+    private val atPage: Int,
+    private val blankPages: Int
+) : Op {
+
+    override val tool = ToolId.INSERT
+    override val title = "Insert pages"
+
+    // Together rather than ExactlyOne: the second file is not another job, it is part of this
+    // one, and the two are read in the same pass.
+    override val arity = Op.Arity.Together(min = 1)
+
+    override suspend fun run(
+        inputs: List<SheafFile>,
+        context: OpContext,
+        onProgress: (Progress) -> Unit
+    ): List<OpOutcome> = withContext(Dispatchers.IO) {
+        val base = inputs.firstOrNull()
+            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+        val insert = inputs.getOrNull(1)
+
+        if (insert == null && blankPages <= 0) {
+            return@withContext listOf(
+                OpOutcome.Failed(
+                    base.displayName,
+                    "Add a second document to insert, or choose how many blank pages to add."
+                )
+            )
+        }
+
+        onProgress(Progress(0, 1, "Inserting into ${base.displayName}"))
+        val output = context.workspace.newOutput(base.baseName, "inserted")
+
+        try {
+            context.surgeon.insertPages(
+                input = PdfInput(base.file, context.passwords[base.file.path]),
+                insert = insert?.let { PdfInput(it.file, context.passwords[it.file.path]) },
+                blankPages = blankPages,
+                atIndex = (atPage - 1).coerceAtLeast(0),
+                output = output
+            )
+        } catch (e: PdfException) {
+            output.delete()
+            return@withContext listOf(OpOutcome.Failed(base.displayName, e.message ?: "Failed."))
+        }
+
+        onProgress(Progress(1, 1, "Done"))
+        val what = if (insert != null) insert.displayName else {
+            if (blankPages == 1) "1 blank page" else "$blankPages blank pages"
+        }
+        listOf(
+            OpOutcome.Produced(
+                SheafFile(
+                    output,
+                    "${base.baseName} inserted.pdf",
+                    SheafFile.Origin.Derived("inserted")
+                ),
+                "Put $what in at page $atPage"
+            )
+        )
+    }
+}
+
 class OrganiseOp(
     private val order: List<Int>,
     private val rotations: Map<Int, Int> = emptyMap()

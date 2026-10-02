@@ -173,6 +173,8 @@ fun ToolRoute(
             onOpenResult = onOpenResult,
             onLoadPreview = viewModel::loadPreview,
             onLoadPreviewPage = viewModel::loadPreviewPage,
+            onLoadForm = viewModel::loadFormFields,
+            onFormValue = viewModel::setFormValue,
             onCheckSize = viewModel::checkCompressedSize,
             onCopy = { text ->
                 viewModel.copyToClipboard(text)

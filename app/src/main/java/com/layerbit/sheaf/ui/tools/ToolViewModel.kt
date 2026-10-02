@@ -11,6 +11,9 @@ import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.jobs.JobState
 import com.layerbit.sheaf.jobs.belongsTo
 import com.layerbit.sheaf.ops.AddTextOp
+import com.layerbit.sheaf.ops.FillFormOp
+import com.layerbit.sheaf.ops.HeaderFooterOp
+import com.layerbit.sheaf.ops.InsertPagesOp
 import com.layerbit.sheaf.ops.CompressOp
 import com.layerbit.sheaf.ops.CropOp
 import com.layerbit.sheaf.ops.ExtractImagesOp
@@ -36,6 +39,9 @@ import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.pdf.CompressionLevel
 import com.layerbit.sheaf.pdf.CropSpec
 import com.layerbit.sheaf.pdf.DocumentMetadata
+import com.layerbit.sheaf.pdf.DocumentPermissions
+import com.layerbit.sheaf.pdf.FormField
+import com.layerbit.sheaf.pdf.StampSpec
 import com.layerbit.sheaf.pdf.ImageStamp
 import com.layerbit.sheaf.pdf.PageArea
 import com.layerbit.sheaf.pdf.PageNumberSpec
@@ -118,7 +124,16 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 } else {
                     current.documents + added
                 }
-                current.copy(documents = combined, busy = false, error = failure)
+                current.copy(
+                    documents = combined,
+                    busy = false,
+                    error = failure,
+                    // A different document is a different form, so what was read about the
+                    // last one has to go rather than be shown against this one.
+                    formFields = emptyList(),
+                    formValues = emptyMap(),
+                    formRead = false
+                )
             }
         }
     }
@@ -410,6 +425,26 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     cover = config.noteCover
                 )
             )
+            ToolId.HEADER_FOOTER -> HeaderFooterOp(
+                StampSpec(
+                    headerText = config.headerText,
+                    footerText = config.footerText,
+                    align = config.stampAlign,
+                    fontSize = config.stampSize,
+                    skipFirst = config.stampSkipFirst
+                )
+            )
+            ToolId.INSERT -> InsertPagesOp(
+                atPage = config.insertAt,
+                blankPages = if (state.documents.size > 1) 0 else config.blankPages
+            )
+            ToolId.FORMS -> FillFormOp(
+                // Only what was actually typed. Sending every field back would rewrite the
+                // ones the document already had values in, which is how a form loses an
+                // answer nobody touched.
+                values = state.formValues,
+                flatten = config.flattenForm
+            )
             ToolId.REDACT -> RedactOp(state.redactions)
             ToolId.N_UP -> NUpOp(config.perSheet)
             ToolId.SPLIT_BY_SIZE -> SplitBySizeOp(config.maxPartBytes)
@@ -432,6 +467,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     ToolConfig.SplitMode.EVERY_N -> SplitOp.Mode.EveryNPages(config.splitSize)
                     ToolConfig.SplitMode.EACH_PAGE -> SplitOp.Mode.EachPage
                     ToolConfig.SplitMode.RANGES -> SplitOp.Mode.Ranges(config.pageSpec)
+                    ToolConfig.SplitMode.AT_BOOKMARKS -> SplitOp.Mode.AtBookmarks
                 }
             )
             ToolId.ORGANISE -> OrganiseOp(state.pageOrder, state.rotations.filterValues { it != 0 })
@@ -453,7 +489,14 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     _state.update { it.copy(error = "The two passwords do not match.") }
                     return null
                 }
-                SetPasswordOp(config.newPassword)
+                SetPasswordOp(
+                    password = config.newPassword,
+                    permissions = DocumentPermissions(
+                        allowPrinting = config.allowPrinting,
+                        allowCopying = config.allowCopying,
+                        allowChanges = config.allowChanges
+                    )
+                )
             }
             ToolId.REMOVE_PASSWORD -> RemovePasswordOp()
         }
@@ -664,6 +707,42 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- forms ----
+
+    /**
+     * Reads the document's fillable fields.
+     *
+     * Most PDFs have none: a form has to have been built as one, and a scan of a printed form
+     * is a picture. [ToolUiState.formRead] is what lets the screen say that out loud instead
+     * of showing an empty list that looks like a failure.
+     */
+    fun loadFormFields() {
+        val doc = _state.value.documents.firstOrNull() ?: return
+        if (_state.value.formRead) return
+
+        viewModelScope.launch {
+            val fields = withContext(Dispatchers.IO) {
+                runCatching {
+                    sheaf.surgeon.readFormFields(PdfInput(doc.file.file, doc.password))
+                }.getOrDefault(emptyList())
+            }
+            _state.update { current ->
+                current.copy(
+                    formFields = fields,
+                    // Seeded with what the document already holds, so a half-filled form is
+                    // shown as it is rather than as empty boxes.
+                    formValues = fields.filter { it.value.isNotEmpty() }
+                        .associate { it.name to it.value },
+                    formRead = true
+                )
+            }
+        }
+    }
+
+    fun setFormValue(name: String, value: String) {
+        _state.update { it.copy(formValues = it.formValues + (name to value), error = null) }
+    }
+
     fun setRedactPage(index: Int) = _state.update { it.copy(redactPage = index) }
 
     fun addRedaction(page: Int, area: PageArea) {
@@ -752,7 +831,12 @@ data class ToolUiState(
     /** The drawn signature, for the placement preview. */
     val signatureBitmap: Bitmap? = null,
     /** What compressing this document would actually produce. */
-    val sizeCheck: SizeCheck = SizeCheck.Idle
+    val sizeCheck: SizeCheck = SizeCheck.Idle,
+    /** Fill in a form only: the fields the document declares, and what has been typed. */
+    val formFields: List<FormField> = emptyList(),
+    val formValues: Map<String, String> = emptyMap(),
+    /** True once the form has been looked for, which is how "none" differs from "not yet". */
+    val formRead: Boolean = false
 ) {
     /**
      * Why the button is disabled, or null when it is not.
@@ -777,6 +861,16 @@ data class ToolUiState(
             tool == ToolId.REDACT && redactions.values.all { it.isEmpty() } ->
                 "Drag a box over what should be removed."
             tool == ToolId.ADD_TEXT && config.noteText.isBlank() -> "Type the text to add."
+            tool == ToolId.HEADER_FOOTER &&
+                config.headerText.isBlank() && config.footerText.isBlank() ->
+                "Type a header or a footer."
+            tool == ToolId.INSERT && documents.size < 2 && config.blankPages <= 0 ->
+                "Add the PDF to insert, or choose how many blank pages to add."
+            tool == ToolId.FORMS && !formRead -> "Reading the form…"
+            tool == ToolId.FORMS && formFields.isEmpty() ->
+                "This document has no form fields. Use Add text to write on it instead."
+            tool == ToolId.FORMS && formValues.values.none { it.isNotBlank() } ->
+                "Fill in at least one field."
             tool == ToolId.WATERMARK && config.watermarkText.isBlank() ->
                 "Type the watermark text."
             tool == ToolId.SET_PASSWORD && config.newPassword.isBlank() ->
@@ -833,6 +927,24 @@ data class ToolConfig(
     val noteColour: Int = NOTE_BLACK,
     val noteCover: Boolean = false,
 
+    val headerText: String = "",
+    val footerText: String = "",
+    val stampAlign: StampSpec.Align = StampSpec.Align.CENTRE,
+    val stampSize: Float = 9f,
+    val stampSkipFirst: Int = 0,
+
+    /** Insert only: the page the new pages land at, and how many blanks if no file is given. */
+    val insertAt: Int = 1,
+    val blankPages: Int = 0,
+
+    /** Fill in a form only: draw the values into the page and take the fields away. */
+    val flattenForm: Boolean = false,
+
+    /** Add a password only: what the document asks readers to allow. */
+    val allowPrinting: Boolean = true,
+    val allowCopying: Boolean = true,
+    val allowChanges: Boolean = true,
+
     val perSheet: Int = 2,
     val maxPartBytes: Long = 10L * 1024 * 1024,
 
@@ -841,7 +953,7 @@ data class ToolConfig(
     val metaAuthor: String = "",
     val metaSubject: String = ""
 ) {
-    enum class SplitMode { EVERY_N, EACH_PAGE, RANGES }
+    enum class SplitMode { EVERY_N, EACH_PAGE, RANGES, AT_BOOKMARKS }
 
     companion object {
         fun defaultFor(tool: ToolId): ToolConfig = when (tool) {

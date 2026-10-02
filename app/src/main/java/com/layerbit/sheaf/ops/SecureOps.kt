@@ -2,6 +2,7 @@ package com.layerbit.sheaf.ops
 
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.pdf.CompressionLevel
+import com.layerbit.sheaf.pdf.DocumentPermissions
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
 import kotlinx.coroutines.Dispatchers
@@ -96,8 +97,16 @@ class CompressOp(private val level: CompressionLevel) : Op {
  *
  * That is worth saying out loud in the UI. Someone who encrypts their only copy of something
  * and forgets the password has lost it permanently, and no amount of support can undo it.
+ *
+ * The permission flags are a request rather than a lock, and the screen says so. The PDF
+ * specification asks a conforming reader to honour them; the bits sit inside a file the
+ * recipient's password opens, so a reader that ignores them can. Encryption is the part that
+ * actually holds.
  */
-class SetPasswordOp(private val password: String) : Op {
+class SetPasswordOp(
+    private val password: String,
+    private val permissions: DocumentPermissions = DocumentPermissions()
+) : Op {
 
     override val tool = ToolId.SET_PASSWORD
     override val title = "Add a password"
@@ -122,15 +131,26 @@ class SetPasswordOp(private val password: String) : Op {
                 context.surgeon.setPassword(
                     input = PdfInput(input.file, context.passwords[input.file.path]),
                     userPassword = password,
-                    output = output
+                    output = output,
+                    permissions = permissions
                 )
+                val withheld = buildList {
+                    if (!permissions.allowPrinting) add("printing")
+                    if (!permissions.allowCopying) add("copying text")
+                    if (!permissions.allowChanges) add("changes")
+                }
                 OpOutcome.Produced(
                     SheafFile(
                         output,
                         "${input.baseName} protected.pdf",
                         SheafFile.Origin.Derived("protected")
                     ),
-                    "Encrypted with AES-256"
+                    if (withheld.isEmpty()) {
+                        "Encrypted with AES-256"
+                    } else {
+                        "Encrypted with AES-256, asking readers not to allow " +
+                            withheld.joinToString(" or ")
+                    }
                 )
             } catch (e: PdfException) {
                 output.delete()

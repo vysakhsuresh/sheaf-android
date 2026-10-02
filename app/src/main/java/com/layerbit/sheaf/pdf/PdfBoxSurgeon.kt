@@ -14,6 +14,13 @@ import com.tom_roush.pdfbox.pdmodel.PDResources
 import com.tom_roush.pdfbox.pdmodel.common.PDStream
 import com.tom_roush.pdfbox.pdmodel.font.PDType1Font
 import com.tom_roush.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState
+import com.tom_roush.pdfbox.pdmodel.interactive.form.PDButton
+import com.tom_roush.pdfbox.pdmodel.interactive.form.PDCheckBox
+import com.tom_roush.pdfbox.pdmodel.interactive.form.PDChoice
+import com.tom_roush.pdfbox.pdmodel.interactive.form.PDField
+import com.tom_roush.pdfbox.pdmodel.interactive.form.PDNonTerminalField
+import com.tom_roush.pdfbox.pdmodel.interactive.form.PDRadioButton
+import com.tom_roush.pdfbox.pdmodel.interactive.form.PDTextField
 import com.tom_roush.pdfbox.util.Matrix
 import com.tom_roush.pdfbox.pdmodel.graphics.state.RenderingMode
 import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineItem
@@ -294,15 +301,30 @@ class PdfBoxSurgeon : PdfSurgeon {
         )
     }
 
-    override fun setPassword(input: PdfInput, userPassword: String, output: File) =
+    override fun setPassword(
+        input: PdfInput,
+        userPassword: String,
+        output: File,
+        permissions: DocumentPermissions
+    ) =
         withDocument(input) { doc ->
             if (userPassword.isBlank()) throw PdfException.Io("The password cannot be empty.")
 
             // The owner password is set to the same value deliberately. An owner password that
             // the user does not know is a document they can open but never change again, and a
             // random one would be worse - there would be no way to recover it.
-            val permissions = AccessPermission()
-            val policy = StandardProtectionPolicy(userPassword, userPassword, permissions).apply {
+            val access = AccessPermission().apply {
+                setCanPrint(permissions.allowPrinting)
+                setCanExtractContent(permissions.allowCopying)
+                setCanModify(permissions.allowChanges)
+                setCanModifyAnnotations(permissions.allowChanges)
+                setCanFillInForm(permissions.allowChanges)
+                setCanAssembleDocument(permissions.allowChanges)
+                // Never switched off. Turning this off is how a document stops working with a
+                // screen reader, and nothing this app is for needs that.
+                setCanExtractForAccessibility(true)
+            }
+            val policy = StandardProtectionPolicy(userPassword, userPassword, access).apply {
                 // AES-256. The 128-bit default is RC4-era and long past being worth shipping.
                 // setPreferAES is called rather than assigned: ProtectionPolicy keeps the
                 // field private and only exposes the setter.
@@ -792,33 +814,16 @@ class PdfBoxSurgeon : PdfSurgeon {
                 if (lines.isEmpty() || lines.all { it.isBlank() }) continue
 
                 val page = doc.getPage(note.pageIndex)
-                val box = page.cropBox ?: page.mediaBox ?: PDRectangle.A4
-                val rotation = normaliseRotation(page.rotation)
-                val quarterTurned = rotation % 180 == 90
-
                 // The page as the reader saw it when they tapped, which on a scan filed
                 // sideways is not the page as the file stores it.
-                val shownWidth = if (quarterTurned) box.height else box.width
-                val shownHeight = if (quarterTurned) box.width else box.height
+                val shown = ShownPage(page)
 
                 val size = note.sizePoints.coerceIn(MIN_NOTE_POINTS, MAX_NOTE_POINTS)
                 val lineHeight = size * LINE_SPACING
-                val across = note.left.coerceIn(0f, 1f) * shownWidth
+                val across = note.left.coerceIn(0f, 1f) * shown.width
                 // The tap marks the top of the line; the baseline sits one line below it.
-                val down = note.top.coerceIn(0f, 1f) * shownHeight + size
-
-                val originX = when (rotation) {
-                    90 -> box.lowerLeftX + down
-                    180 -> box.upperRightX - across
-                    270 -> box.upperRightX - down
-                    else -> box.lowerLeftX + across
-                }
-                val originY = when (rotation) {
-                    90 -> box.lowerLeftY + across
-                    180 -> box.lowerLeftY + down
-                    270 -> box.upperRightY - across
-                    else -> box.upperRightY - down
-                }
+                val down = note.top.coerceIn(0f, 1f) * shown.height + size
+                val (originX, originY) = shown.pointAt(across, down)
 
                 PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true)
                     .use { stream ->
@@ -826,13 +831,7 @@ class PdfBoxSurgeon : PdfSurgeon {
                         // One transform carries the position and the page's own quarter turn
                         // together, so everything after it is written as though the first line
                         // began at the origin and ran left to right.
-                        stream.transform(
-                            Matrix.getRotateInstance(
-                                Math.toRadians(rotation.toDouble()),
-                                originX,
-                                originY
-                            )
-                        )
+                        stream.transform(Matrix.getRotateInstance(shown.radians, originX, originY))
 
                         if (note.cover) {
                             val widest = lines.maxOf { widthOfHelvetica(it, size) }
@@ -868,6 +867,234 @@ class PdfBoxSurgeon : PdfSurgeon {
 
             doc.save(output)
         }
+
+    override fun stampHeaderFooter(
+        input: PdfInput,
+        spec: StampSpec,
+        output: File,
+        onProgress: (Int, Int) -> Unit
+    ) = withDocument(input) { doc ->
+        val header = spec.headerText.trim()
+        val footer = spec.footerText.trim()
+        if (header.isEmpty() && footer.isEmpty()) {
+            throw PdfException.Io("There is no header or footer text to add.")
+        }
+
+        val font = PDType1Font.HELVETICA
+        val size = spec.fontSize.coerceIn(5f, 48f)
+        val total = doc.numberOfPages
+        val today = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
+            .format(java.util.Date())
+        val name = spec.documentName.substringBeforeLast('.', spec.documentName)
+
+        for (index in 0 until total) {
+            if (index < spec.skipFirst) {
+                onProgress(index + 1, total)
+                continue
+            }
+
+            val page = doc.getPage(index)
+            val shown = ShownPage(page)
+            val margin = spec.marginPoints.coerceIn(8f, shown.height / 3f)
+
+            // Both lines are written in one stream, and both go through the same turn, so a
+            // sideways page gets a header along the edge the reader calls the top.
+            PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true)
+                .use { stream ->
+                    stream.setNonStrokingColor(0f, 0f, 0f)
+
+                    for ((text, fromTop) in listOf(
+                        header to margin,
+                        footer to shown.height - margin
+                    )) {
+                        val line = text
+                            .replace("{page}", (index + 1).toString())
+                            .replace("{total}", total.toString())
+                            .replace("{date}", today)
+                            .replace("{name}", name)
+                            .toWinAnsiSafe()
+                        if (line.isBlank()) continue
+
+                        val lineWidth = runCatching { font.getStringWidth(line) / 1000f * size }
+                            .getOrDefault(line.length * size * 0.5f)
+                        val across = when (spec.align) {
+                            StampSpec.Align.LEFT -> margin
+                            StampSpec.Align.CENTRE -> (shown.width - lineWidth) / 2f
+                            StampSpec.Align.RIGHT -> shown.width - lineWidth - margin
+                        }.coerceAtLeast(0f)
+
+                        val (x, y) = shown.pointAt(across, fromTop)
+                        stream.saveGraphicsState()
+                        stream.transform(Matrix.getRotateInstance(shown.radians, x, y))
+                        try {
+                            stream.beginText()
+                            stream.setFont(font, size)
+                            stream.newLineAtOffset(0f, 0f)
+                            stream.showText(line)
+                            stream.endText()
+                        } catch (_: Exception) {
+                            // A line that will not encode must not leave the stream inside a
+                            // text object, which would corrupt every page after this one.
+                            runCatching { stream.endText() }
+                        }
+                        stream.restoreGraphicsState()
+                    }
+                }
+            onProgress(index + 1, total)
+        }
+        doc.save(output)
+    }
+
+    override fun readFormFields(input: PdfInput): List<FormField> = withDocument(input) { doc ->
+        val form = doc.documentCatalog?.acroForm ?: return@withDocument emptyList()
+
+        buildList {
+            for (field in terminalFields(form.fields)) {
+                val name = field.fullyQualifiedName?.takeIf { it.isNotBlank() } ?: continue
+                val label = field.alternateFieldName?.takeIf { it.isNotBlank() }
+                val value = runCatching { field.valueAsString }.getOrNull().orEmpty()
+
+                when (field) {
+                    is PDTextField -> add(
+                        FormField(name, label, value, FormField.Kind.TEXT, readOnly = field.isReadOnly)
+                    )
+
+                    is PDCheckBox -> add(
+                        FormField(
+                            name = name,
+                            label = label,
+                            value = if (runCatching { field.isChecked }.getOrDefault(false)) {
+                                TICKED
+                            } else {
+                                ""
+                            },
+                            kind = FormField.Kind.TICK,
+                            options = listOf(runCatching { field.onValue }.getOrNull().orEmpty()),
+                            readOnly = field.isReadOnly
+                        )
+                    )
+
+                    is PDRadioButton -> add(
+                        FormField(
+                            name = name,
+                            label = label,
+                            value = value,
+                            kind = FormField.Kind.CHOICE,
+                            options = runCatching { field.onValues.toList() }.getOrDefault(emptyList()),
+                            readOnly = field.isReadOnly
+                        )
+                    )
+
+                    is PDChoice -> add(
+                        FormField(
+                            name = name,
+                            label = label,
+                            value = value,
+                            kind = FormField.Kind.CHOICE,
+                            options = runCatching { field.options.orEmpty() }.getOrDefault(emptyList()),
+                            readOnly = field.isReadOnly
+                        )
+                    )
+
+                    // Push buttons do something rather than hold something, and a signature
+                    // field needs a certificate this app deliberately does not have. Offering
+                    // either as a box to type in would be a lie about what it does.
+                    else -> Unit
+                }
+            }
+        }
+    }
+
+    override fun fillForm(
+        input: PdfInput,
+        values: Map<String, String>,
+        flatten: Boolean,
+        output: File
+    ) = withDocument(input) { doc ->
+        val form = doc.documentCatalog?.acroForm
+            ?: throw PdfException.Unsupported("this document has no form fields in it")
+
+        // Without this a viewer may show the old value until the field is clicked: the flag
+        // tells readers the appearances in the file are stale, and PDFBox then builds them.
+        form.setNeedAppearances(false)
+
+        for (field in terminalFields(form.fields)) {
+            val name = field.fullyQualifiedName ?: continue
+            val wanted = values[name] ?: continue
+            if (field.isReadOnly) continue
+
+            // One unsettable field must not cost the rest of the form its values. A radio
+            // button rejects a value that is not one of its own, and a text field with an
+            // unusual format can refuse too.
+            runCatching {
+                when (field) {
+                    is PDTextField -> field.value = wanted
+                    is PDCheckBox -> if (wanted.isBlank() || wanted == "false") {
+                        field.unCheck()
+                    } else {
+                        field.check()
+                    }
+                    is PDButton -> field.value = wanted
+                    is PDChoice -> field.value = wanted
+                    else -> Unit
+                }
+            }
+        }
+
+        if (flatten) {
+            // Draws the values into the pages and takes the fields away. The result behaves
+            // like a filled-in piece of paper: nobody can retype it, and no viewer can offer
+            // to. That is the point, and it cannot be undone.
+            runCatching { form.refreshAppearances() }
+            form.flatten()
+        }
+
+        doc.save(output)
+    }
+
+    override fun insertPages(
+        input: PdfInput,
+        insert: PdfInput?,
+        blankPages: Int,
+        atIndex: Int,
+        output: File
+    ) = withDocument(input) { doc ->
+        val at = atIndex.coerceIn(0, doc.numberOfPages)
+        // Null when the pages go at the end, which is where insertBefore cannot help.
+        val anchor = if (at < doc.numberOfPages) doc.getPage(at) else null
+
+        if (insert != null) {
+            // The imported pages share objects with the document they came from, so the
+            // source stays open until this one has been written.
+            withDocument(insert) { source ->
+                if (source.numberOfPages == 0) {
+                    throw PdfException.Io("The document to insert has no pages in it.")
+                }
+                for (page in source.pages) {
+                    val imported = doc.importPage(page)
+                    if (anchor != null) {
+                        // importPage appends; moving it is how it lands at the chosen point,
+                        // and doing it per page keeps them in their original order.
+                        doc.pages.remove(imported)
+                        doc.pages.insertBefore(imported, anchor)
+                    }
+                }
+                doc.save(output)
+            }
+        } else {
+            val count = blankPages.coerceIn(1, MAX_BLANK_PAGES)
+            val template = if (doc.numberOfPages > 0) {
+                doc.getPage(0).mediaBox ?: PDRectangle.A4
+            } else {
+                PDRectangle.A4
+            }
+            repeat(count) {
+                val blank = PDPage(PDRectangle(template.width, template.height))
+                if (anchor != null) doc.pages.insertBefore(blank, anchor) else doc.addPage(blank)
+            }
+            doc.save(output)
+        }
+    }
 
     // ---- P4: power tools ----
 
@@ -1199,6 +1426,71 @@ class PdfBoxSurgeon : PdfSurgeon {
 
         /** A hair either side of a covering patch, so it does not clip the type. */
         const val COVER_PADDING = 2f
+
+        /** Enough blank sheets for any real use; past it, somebody has mistyped. */
+        const val MAX_BLANK_PAGES = 100
+
+        /** The value a tick box carries when the UI has ticked it. */
+        const val TICKED = "true"
+    }
+}
+
+/**
+ * Flattens a form's field tree down to the fields that actually hold a value.
+ *
+ * A PDF form is a tree: a government form typically groups its fields into sections which
+ * group into pages, and only the leaves have values. Walking it rather than reading
+ * `form.fields` is the difference between seeing forty fields and seeing three.
+ *
+ * The depth is capped for the same reason the outline walk is: a malformed file can point at
+ * itself, and an uncapped recursion would not return.
+ */
+private fun terminalFields(fields: List<PDField>?): List<PDField> = buildList {
+    fun walk(list: List<PDField>?, depth: Int) {
+        if (list == null || depth > MAX_FIELD_DEPTH) return
+        for (field in list) {
+            if (field is PDNonTerminalField) walk(field.children, depth + 1) else add(field)
+        }
+    }
+    walk(fields, 0)
+}
+
+/** Deep enough for any real form; past it, the tree is pointing at itself. */
+private const val MAX_FIELD_DEPTH = 8
+
+/**
+ * A page as the reader sees it, which is not how the file stores it.
+ *
+ * Two things differ. The visible area is the crop box, whose origin is not necessarily zero;
+ * and a page with a /Rotate entry is shown turned, so its width and height have swapped and
+ * "along the top" is a different edge of the stored page. Every operation that places
+ * something at a spot a person pointed at needs both corrections, so they are written here
+ * once instead of in each of them.
+ */
+private class ShownPage(page: PDPage) {
+
+    val box: PDRectangle = page.cropBox ?: page.mediaBox ?: PDRectangle.A4
+    val rotation: Int = normaliseRotation(page.rotation)
+    private val quarterTurned = rotation % 180 == 90
+
+    /** What the reader sees, in points. Swapped from the stored box on a turned page. */
+    val width: Float = if (quarterTurned) box.height else box.width
+    val height: Float = if (quarterTurned) box.width else box.height
+
+    /** How far the text has to be turned, in radians, to read upright on this page. */
+    val radians: Double = Math.toRadians(rotation.toDouble())
+
+    /**
+     * Turns a point measured from the top-left of what the reader sees into page space.
+     *
+     * [across] runs left to right and [down] runs top to bottom, both in points, both in the
+     * space the reader is looking at.
+     */
+    fun pointAt(across: Float, down: Float): Pair<Float, Float> = when (rotation) {
+        90 -> (box.lowerLeftX + down) to (box.lowerLeftY + across)
+        180 -> (box.upperRightX - across) to (box.lowerLeftY + down)
+        270 -> (box.upperRightX - down) to (box.upperRightY - across)
+        else -> (box.lowerLeftX + across) to (box.upperRightY - down)
     }
 }
 

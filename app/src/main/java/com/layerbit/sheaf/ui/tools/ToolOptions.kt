@@ -21,7 +21,9 @@ import com.layerbit.sheaf.pdf.ImageFormat
 import com.layerbit.sheaf.pdf.ImageStamp
 import com.layerbit.sheaf.pdf.PageNumberSpec
 import com.layerbit.sheaf.pdf.PageSpec
+import com.layerbit.sheaf.pdf.StampSpec
 import com.layerbit.sheaf.ui.components.ChipRow
+import com.layerbit.sheaf.ui.components.ToggleRow
 import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.components.formatBytes
 import com.layerbit.sheaf.ui.theme.SheafColors
@@ -60,7 +62,8 @@ fun ToolOptions(
                     options = listOf(
                         ToolConfig.SplitMode.EVERY_N to "Every N pages",
                         ToolConfig.SplitMode.EACH_PAGE to "Single pages",
-                        ToolConfig.SplitMode.RANGES to "By ranges"
+                        ToolConfig.SplitMode.RANGES to "By ranges",
+                        ToolConfig.SplitMode.AT_BOOKMARKS to "At the bookmarks"
                     ),
                     selected = config.splitMode,
                     onSelect = { mode -> onChange { it.copy(splitMode = mode) } }
@@ -81,6 +84,11 @@ fun ToolOptions(
                         onChange = { spec -> onChange { it.copy(pageSpec = spec) } }
                     )
                     ToolConfig.SplitMode.EACH_PAGE -> Unit
+                    ToolConfig.SplitMode.AT_BOOKMARKS -> Hint(
+                        "One file per top-level entry in the document's own table of contents, " +
+                            "which is the natural way to break up a scanned book or a bundle " +
+                            "of statements. Documents without one say so rather than guessing."
+                    )
                 }
             }
 
@@ -202,6 +210,28 @@ fun ToolOptions(
                 Hint(
                     "Sheaf encrypts with AES-256 and does not keep the password anywhere. If you " +
                         "forget it, the document cannot be opened again - not by us either."
+                )
+                SectionHeading("What a reader may do")
+                ToggleRow(
+                    title = "Allow printing",
+                    checked = config.allowPrinting,
+                    onChange = { on -> onChange { it.copy(allowPrinting = on) } }
+                )
+                ToggleRow(
+                    title = "Allow copying text",
+                    checked = config.allowCopying,
+                    onChange = { on -> onChange { it.copy(allowCopying = on) } }
+                )
+                ToggleRow(
+                    title = "Allow changes",
+                    checked = config.allowChanges,
+                    onChange = { on -> onChange { it.copy(allowChanges = on) } }
+                )
+                Hint(
+                    "These three are a request, not a lock. The PDF standard asks readers to " +
+                        "honour them and most do, but the switches live inside a file the " +
+                        "password opens - so a reader that ignores them can. The encryption " +
+                        "is the part that actually holds."
                 )
             }
 
@@ -393,6 +423,91 @@ fun ToolOptions(
                 )
             }
 
+            ToolId.HEADER_FOOTER -> {
+                Field(
+                    value = config.headerText,
+                    label = "Along the top",
+                    keyboardType = KeyboardType.Text,
+                    onChange = { value -> onChange { it.copy(headerText = value) } }
+                )
+                Field(
+                    value = config.footerText,
+                    label = "Along the bottom",
+                    keyboardType = KeyboardType.Text,
+                    onChange = { value -> onChange { it.copy(footerText = value) } }
+                )
+                Hint(
+                    "Four things are filled in as each page is stamped: {page} the page " +
+                        "number, {total} how many there are, {date} today, and {name} the " +
+                        "document's name. \"Confidential - {date}\" works, so does " +
+                        "\"{name} - page {page} of {total}\"."
+                )
+                SectionHeading("Where")
+                ChoiceRow(
+                    options = listOf(
+                        StampSpec.Align.LEFT to "Left",
+                        StampSpec.Align.CENTRE to "Centre",
+                        StampSpec.Align.RIGHT to "Right"
+                    ),
+                    selected = config.stampAlign,
+                    onSelect = { value -> onChange { it.copy(stampAlign = value) } }
+                )
+                SectionHeading("Size")
+                ChoiceRow(
+                    options = listOf(8f to "Small", 9f to "Normal", 11f to "Large"),
+                    selected = config.stampSize,
+                    onSelect = { value -> onChange { it.copy(stampSize = value) } }
+                )
+                NumberField(
+                    value = config.stampSkipFirst,
+                    label = "Leave this many pages unstamped",
+                    min = 0,
+                    max = (pageCount ?: 9999) - 1,
+                    onChange = { value -> onChange { it.copy(stampSkipFirst = value) } }
+                )
+            }
+
+            ToolId.INSERT -> {
+                Hint(
+                    "The first file is the document being added to. Add a second file and its " +
+                        "pages go in; add nothing and you get blank pages instead."
+                )
+                NumberField(
+                    value = config.insertAt,
+                    label = "Insert at page",
+                    min = 1,
+                    max = (pageCount ?: 9999) + 1,
+                    onChange = { value -> onChange { it.copy(insertAt = value) } }
+                )
+                SectionHeading("Blank pages, if no second file")
+                ChoiceRow(
+                    options = listOf(0 to "None", 1 to "1", 2 to "2", 4 to "4"),
+                    selected = config.blankPages,
+                    onSelect = { value -> onChange { it.copy(blankPages = value) } }
+                )
+            }
+
+            ToolId.FORMS -> {
+                ChoiceRow(
+                    options = listOf(
+                        false to "Leave it editable",
+                        true to "Seal the answers in"
+                    ),
+                    selected = config.flattenForm,
+                    onSelect = { value -> onChange { it.copy(flattenForm = value) } }
+                )
+                Hint(
+                    if (config.flattenForm) {
+                        "Sealing draws the answers into the page and removes the fields, so " +
+                            "nobody can retype them. It cannot be undone, and the editable " +
+                            "original is untouched - Sheaf never writes to the file you chose."
+                    } else {
+                        "The result stays a form, so the answers can be changed later by " +
+                            "anyone who opens it."
+                    }
+                )
+            }
+
             ToolId.N_UP -> {
                 SectionHeading("Pages per sheet")
                 ChoiceRow(
@@ -559,8 +674,9 @@ internal fun Field(
 private fun <T> ChoiceRow(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) =
     ChipRow(options = options, selected = selected, onSelect = onSelect)
 
+/** A sentence under a control saying what it does, or what it costs. Shared with the screen. */
 @Composable
-private fun Hint(text: String) {
+internal fun Hint(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodySmall,

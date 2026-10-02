@@ -89,18 +89,21 @@ the signature. Resist any pull towards a convenient `fun run(input: SheafFile): 
 | Make searchable | OCR a scan into an invisible, selectable text layer |
 | Extract text | Pull the words out as plain text |
 | Merge | Join several PDFs, reorderable |
-| Split | Every N pages, single pages, or by ranges |
+| Split | Every N pages, single pages, by ranges, or at the document's own bookmarks |
 | Extract pages | Keep only the pages you name |
+| Insert pages | Put another PDF, or blank pages, in at a chosen page |
 | Organise pages | Thumbnail grid: reorder, rotate, delete |
 | Images to PDF | A4, Letter or fit-to-image, with margins |
 | PDF to images | PNG or JPEG at 96, 200 or 300 DPI |
 | Compress | Three levels, and it tells you when there was nothing to gain |
-| Add a password | AES-256 |
+| Add a password | AES-256, with the printing and copying flags as a stated request |
 | Remove a password | For a document whose password you know |
 | Watermark | DRAFT or a name, tiled or once, at three strengths |
 | Page numbers | Position, format, skip a cover, Bates padding |
 | Sign | Draw a signature and flatten it into a page |
 | Add text | Tap a page and write on it, covering what is there if you need to |
+| Fill in a form | Type into a real PDF form, and seal the answers so they cannot be retyped |
+| Header and footer | A line along the top or bottom of every page, with {page}, {total}, {date}, {name} |
 | Crop pages | Trim the margins, or put every page on A4 or Letter |
 | Pages per sheet | 2-up or 4-up for printing |
 | Split by size | Parts that fit a 5, 10 or 25 MB email limit |
@@ -108,8 +111,17 @@ the signature. Resist any pull towards a convenient `fun run(input: SheafFile): 
 | Remove areas | Genuine removal - see below |
 | Document details | Edit or strip title, author and hidden metadata |
 
-The viewer also does find-in-document, the PDF's own table of contents, and a night mode that
-inverts the page instead of re-rendering it.
+### The viewer is a reader, not a preview
+
+Pinch and double-tap zoom that **re-renders** rather than scaling the bitmap, so type stays
+sharp - the page cache keys on index and width so both sizes can live in it. Find in document
+with the matches boxed on the page and arrows that step through them. The document's own table
+of contents, and the reader's own marked pages beside it. It reopens where you left off. A page
+counter you tap to jump, a night mode that inverts the page at draw time, keep-the-screen-on,
+share, and print - which is also every Android device's save-as-PDF, and works with no INTERNET
+permission because the system's print service does the talking.
+
+Everything in it can be handed straight to any tool without going back through the picker.
 
 Every one of them runs as background work behind a foreground service, so a long job survives
 the user switching apps.
@@ -160,7 +172,8 @@ app/src/main/java/com/layerbit/sheaf/
             Exporter — the only component that may write to a Uri
   ops/      Op — the one operation shape; ToolId — every tool, in one list
   jobs/     JobRunner + OpWorker — every operation runs as WorkManager work
-  data/     Room: a recents list, and nothing read out of a document
+  data/     Room: recents, reading positions, marked pages - nothing read out of a document
+  prefs/    SharedPreferences: the theme and the handful of choices the user makes
   ui/       Compose screens; theme/ holds the palette and Space Grotesk
 ```
 
@@ -202,6 +215,7 @@ answer for compression and is the one most likely to be reached for by accident.
 | **P2** | 0.2.0 | ✅ Scanner, OCR, in-document search, outline, night mode. |
 | **P3** | 0.3.0 | ✅ Watermark, page numbers, sign, crop, redact. |
 | **P4** | 0.4.0+ | ✅ N-up, split by size, extract images, metadata. |
+| **P5** | 0.5.0 | ✅ Reader-grade viewer, forms, insert, header/footer, settings, light theme. |
 
 Each phase has an exit gate. P0's was: open a 500-page document, scroll it end to end at 60 fps,
 close it, and return to a flat heap. P1's is: every tool produces a file that opens correctly in

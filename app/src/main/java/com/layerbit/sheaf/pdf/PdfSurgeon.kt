@@ -84,7 +84,12 @@ interface PdfSurgeon {
 
     /** Writes an AES-256 encrypted copy. [userPassword] is the one needed to open it. */
     @Throws(PdfException::class)
-    fun setPassword(input: PdfInput, userPassword: String, output: File)
+    fun setPassword(
+        input: PdfInput,
+        userPassword: String,
+        output: File,
+        permissions: DocumentPermissions = DocumentPermissions()
+    )
 
     /** Writes an unencrypted copy. [input] must carry the correct password. */
     @Throws(PdfException::class)
@@ -168,6 +173,58 @@ interface PdfSurgeon {
      */
     @Throws(PdfException::class)
     fun addText(input: PdfInput, notes: List<TextNote>, output: File)
+
+    /**
+     * Lays a line of text along the top or the bottom of every page.
+     *
+     * The same machinery as page numbers, with the numbering taken out and placeholders put
+     * in, because "Confidential - page 3 of 40 - 2 October" is one stamp rather than three
+     * tools. See [StampSpec] for what can go in the text.
+     */
+    @Throws(PdfException::class)
+    fun stampHeaderFooter(
+        input: PdfInput,
+        spec: StampSpec,
+        output: File,
+        onProgress: (Int, Int) -> Unit = { _, _ -> }
+    )
+
+    /**
+     * The fillable fields in a document, in the order the form declares them.
+     *
+     * Empty for the overwhelming majority of PDFs: a form has to have been built as one. A
+     * scan of a printed form has no fields, which is why the UI says so rather than showing
+     * an empty list - and why Add text exists for that case.
+     */
+    @Throws(PdfException::class)
+    fun readFormFields(input: PdfInput): List<FormField>
+
+    /**
+     * Fills a form and writes a copy.
+     *
+     * @param values keyed by [FormField.name]. A field not in the map is left as it was.
+     * @param flatten draws the values into the page and removes the fields, which is what
+     *   makes a filled form behave like a signed piece of paper rather than a document the
+     *   next person can retype. Irreversible by design.
+     */
+    @Throws(PdfException::class)
+    fun fillForm(input: PdfInput, values: Map<String, String>, flatten: Boolean, output: File)
+
+    /**
+     * Puts pages into a document at a chosen point.
+     *
+     * Either the pages of [insert], or [blankPages] empty sheets the size of the first page.
+     * The two are one operation because they are the same question - what goes at page
+     * twelve - and splitting them would mean two tools that each do half of it.
+     */
+    @Throws(PdfException::class)
+    fun insertPages(
+        input: PdfInput,
+        insert: PdfInput?,
+        blankPages: Int,
+        atIndex: Int,
+        output: File
+    )
 
     // ---- P4: power tools ----
 
@@ -292,6 +349,68 @@ data class TextNote(
     /** Paints paper under the line first, so the note can replace what is already there. */
     val cover: Boolean = false
 )
+
+/**
+ * What a reader may do with an encrypted document.
+ *
+ * Every flag defaults to allowed, which is what an encrypted document meant before this
+ * existed. Turning one off is a request to the reader, not a lock: the PDF specification says
+ * a conforming reader should honour these, and the bits are inside a file the recipient's
+ * password opens. Sheaf says that in the UI rather than implying the document is enforcing
+ * anything.
+ *
+ * Extraction for accessibility is deliberately not offered and never disabled. Turning it off
+ * is how a document stops working with a screen reader, and no legitimate use of this app
+ * needs that.
+ */
+data class DocumentPermissions(
+    val allowPrinting: Boolean = true,
+    val allowCopying: Boolean = true,
+    val allowChanges: Boolean = true
+)
+
+/**
+ * A line along the top or the bottom of every page.
+ *
+ * Four placeholders are substituted as each page is stamped:
+ *  - `{page}` the page's own number
+ *  - `{total}` how many pages there are
+ *  - `{date}` today, as the device formats a medium date
+ *  - `{name}` the document's name, without the extension
+ */
+data class StampSpec(
+    val headerText: String = "",
+    val footerText: String = "",
+    val align: Align = Align.CENTRE,
+    val fontSize: Float = 9f,
+    /** Leaves a cover page unstamped, which is the usual reason to want it. */
+    val skipFirst: Int = 0,
+    val marginPoints: Float = 28f,
+    /** Resolves `{name}`. Passed in because the engine does not know what a file is called. */
+    val documentName: String = ""
+) {
+    enum class Align { LEFT, CENTRE, RIGHT }
+}
+
+/**
+ * One fillable field in a form.
+ *
+ * [name] is the fully qualified name the PDF uses and is what [PdfSurgeon.fillForm] takes;
+ * [label] is the human one the form's author wrote, when they wrote one. They are different
+ * strings surprisingly often - a field called "topmostSubform[0].Page1[0].f1_01[0]" is
+ * labelled "Your first name".
+ */
+data class FormField(
+    val name: String,
+    val label: String?,
+    val value: String,
+    val kind: Kind,
+    /** For a tick box, the value that means ticked. For a chooser, what can be chosen. */
+    val options: List<String> = emptyList(),
+    val readOnly: Boolean = false
+) {
+    enum class Kind { TEXT, TICK, CHOICE }
+}
 
 /** A page that matched a search, and enough context to recognise it. */
 data class SearchHit(

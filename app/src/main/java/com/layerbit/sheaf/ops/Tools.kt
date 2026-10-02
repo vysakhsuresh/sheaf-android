@@ -53,6 +53,12 @@ enum class ToolId(
         InputKind.ONE_PDF,
         Group.PAGES
     ),
+    INSERT(
+        "Insert pages",
+        "Put another PDF, or blank pages, in at a chosen page",
+        InputKind.SEVERAL_PDFS,
+        Group.PAGES
+    ),
     ORGANISE(
         "Organise pages",
         "Reorder, rotate and delete pages",
@@ -95,6 +101,18 @@ enum class ToolId(
         "Sign",
         "Draw your signature and place it on a page",
         InputKind.ONE_PDF,
+        Group.MARK
+    ),
+    FORMS(
+        "Fill in a form",
+        "Type into a PDF that has real form fields, and seal it",
+        InputKind.ONE_PDF,
+        Group.MARK
+    ),
+    HEADER_FOOTER(
+        "Header and footer",
+        "Run a line along the top or bottom of every page",
+        InputKind.SEVERAL_PDFS,
         Group.MARK
     ),
     ADD_TEXT(
@@ -196,6 +214,9 @@ enum class ToolId(
             PAGE_NUMBERS -> "Add the numbers"
             SIGN -> "Place the signature"
             ADD_TEXT -> "Write it on"
+            FORMS -> "Fill it in"
+            HEADER_FOOTER -> "Add them"
+            INSERT -> "Insert them"
             CROP -> "Crop it"
             N_UP -> "Lay it out"
             SPLIT_BY_SIZE -> "Split by size"
