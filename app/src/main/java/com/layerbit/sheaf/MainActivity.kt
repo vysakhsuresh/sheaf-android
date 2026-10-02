@@ -27,8 +27,13 @@ class MainActivity : ComponentActivity() {
     /** Bumped on every open, which is what tells the UI to show the viewer. */
     private var openTicket by mutableIntStateOf(0)
 
-    /** A tool a launcher shortcut asked for, held until the UI has navigated to it. */
-    private var shortcutTool by mutableStateOf<ToolId?>(null)
+    /**
+     * A tool to go straight to, held until the UI has navigated to it.
+     *
+     * Set by a launcher shortcut, and by a share of several documents - which the viewer
+     * cannot show and Merge can.
+     */
+    private var jumpToTool by mutableStateOf<ToolId?>(null)
 
     private val pickDocument = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -58,8 +63,8 @@ class MainActivity : ComponentActivity() {
                     settings = settings,
                     onSettingsChange = { transform -> sheaf.settings.update(transform) },
                     openTicket = openTicket,
-                    shortcutTool = shortcutTool,
-                    onShortcutHandled = { shortcutTool = null },
+                    jumpToTool = jumpToTool,
+                    onJumpHandled = { jumpToTool = null },
                     onPickDocument = { pickDocument.launch(arrayOf(Exporter.PDF_MIME)) },
                     onOpenRecentUri = { open(Uri.parse(it)) },
                     onForgetRecent = { uri -> lifecycleScope.launch { sheaf.recents.forget(uri) } }
@@ -80,8 +85,9 @@ class MainActivity : ComponentActivity() {
      * Documents and shortcuts arriving from outside the app.
      *
      * Being in the share sheet and the "open with" list is how people find Sheaf, so these
-     * paths matter as much as the picker does. SEND_MULTIPLE currently opens the first
-     * document; the rest become the input list for a tool once P1 gives it somewhere to go.
+     * paths matter as much as the picker does. One document opens in the viewer; several go
+     * to Merge with the whole set loaded, because a viewer can only show one of them and
+     * merging is the obvious thing to want with five.
      *
      * A launcher shortcut arrives as a VIEW on a sheaf:// Uri rather than as an extra,
      * because a static shortcut cannot reliably carry extras and a scheme it can.
@@ -89,15 +95,28 @@ class MainActivity : ComponentActivity() {
     private fun handleIntent(intent: Intent?) {
         if (intent?.action == Intent.ACTION_VIEW && intent.data?.scheme == SHORTCUT_SCHEME) {
             val name = intent.data?.lastPathSegment
-            shortcutTool = ToolId.entries.firstOrNull { it.name == name }
+            jumpToTool = ToolId.entries.firstOrNull { it.name == name }
+            return
+        }
+
+        // Several documents at once go to Merge with all of them loaded, rather than opening
+        // the first and silently dropping the rest - which is what sharing five PDFs to a
+        // viewer used to do.
+        if (intent?.action == Intent.ACTION_SEND_MULTIPLE) {
+            val uris = intent.parcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM).orEmpty()
+            when {
+                uris.size > 1 -> {
+                    sheaf.handoff.offer(uris)
+                    jumpToTool = ToolId.MERGE
+                }
+                uris.size == 1 -> open(uris.first())
+            }
             return
         }
 
         val uri: Uri? = when (intent?.action) {
             Intent.ACTION_VIEW -> intent.data
             Intent.ACTION_SEND -> intent.parcelableExtra(Intent.EXTRA_STREAM)
-            Intent.ACTION_SEND_MULTIPLE ->
-                intent.parcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)?.firstOrNull()
             else -> null
         }
         if (uri != null) open(uri)

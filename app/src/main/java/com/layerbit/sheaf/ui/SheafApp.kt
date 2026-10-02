@@ -52,13 +52,23 @@ object Routes {
      * optional uri is how the viewer hands the document it has open straight to a tool,
      * which is what stops "open a PDF" being a dead end that only shows you pages.
      */
-    const val TOOL = "tool/{tool}?uri={uri}"
+    const val TOOL = "tool/{tool}?uri={uri}&file={file}"
 
-    fun tool(tool: ToolId, uri: String? = null): String {
+    /**
+     * @param uri a document from outside the app, handed over by the viewer.
+     * @param file a file Sheaf already made - a finished result being passed to the next
+     *   tool. The two are separate because one has to be imported through the Storage Access
+     *   Framework and the other is already in the workspace.
+     */
+    fun tool(tool: ToolId, uri: String? = null, file: String? = null): String {
         val base = "tool/${tool.name}"
-        // Encoded because a content:// Uri is full of characters the route parser treats as
-        // structure - a raw one silently truncates at the first ? or #.
-        return if (uri == null) base else "$base?uri=" + Uri.encode(uri)
+        // Encoded because a content:// Uri and a path are both full of characters the route
+        // parser treats as structure - a raw one silently truncates at the first ? or #.
+        val arguments = buildList {
+            if (uri != null) add("uri=" + Uri.encode(uri))
+            if (file != null) add("file=" + Uri.encode(file))
+        }
+        return if (arguments.isEmpty()) base else base + "?" + arguments.joinToString("&")
     }
 }
 
@@ -85,9 +95,12 @@ fun SheafApp(
      * rather than a Uri, so opening the same document twice still navigates.
      */
     openTicket: Int,
-    /** A tool named by a launcher shortcut, consumed once and then forgotten. */
-    shortcutTool: ToolId? = null,
-    onShortcutHandled: () -> Unit = {},
+    /**
+     * A tool to go straight to - from a launcher shortcut, or from a share of several files
+     * that only a tool can take. Consumed once and then forgotten.
+     */
+    jumpToTool: ToolId? = null,
+    onJumpHandled: () -> Unit = {},
     onPickDocument: () -> Unit,
     onOpenRecentUri: (String) -> Unit,
     onForgetRecent: (String) -> Unit
@@ -117,11 +130,12 @@ fun SheafApp(
         }
     }
 
-    // A launcher shortcut lands on a tool instead of the home screen.
-    LaunchedEffect(shortcutTool) {
-        shortcutTool?.let { tool ->
+    // A launcher shortcut, or a share of several documents, lands on a tool rather than on
+    // the home screen.
+    LaunchedEffect(jumpToTool) {
+        jumpToTool?.let { tool ->
             navController.navigate(Routes.tool(tool)) { launchSingleTop = true }
-            onShortcutHandled()
+            onJumpHandled()
         }
     }
 
@@ -203,6 +217,11 @@ fun SheafApp(
                         type = NavType.StringType
                         nullable = true
                         defaultValue = null
+                    },
+                    navArgument("file") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
                     }
                 )
             ) { entry ->
@@ -227,12 +246,19 @@ fun SheafApp(
                         ToolRoute(
                             tool = tool,
                             preloadUri = entry.arguments?.getString("uri"),
+                            preloadFile = entry.arguments?.getString("file"),
                             openResultWhenDone = settings.openResultWhenDone,
                             onOpenResult = { file ->
                                 // Opened straight from the result list so a finished document
                                 // can be checked before anyone decides to save it.
                                 viewerViewModel.openLocal(file)
                                 navController.navigate(Routes.VIEWER) { launchSingleTop = true }
+                            },
+                            onChainTool = { next, file ->
+                                // A new route rather than a reset of this one, so back goes
+                                // to the result the user came from and the chain is walkable
+                                // in both directions.
+                                navController.navigate(Routes.tool(next, file = file.file.path))
                             }
                         )
                     }

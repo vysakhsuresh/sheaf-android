@@ -38,8 +38,12 @@ fun ToolRoute(
     modifier: Modifier = Modifier,
     /** Opens a finished PDF in the viewer, so a result can be checked before it is saved. */
     onOpenResult: (SheafFile) -> Unit = {},
+    /** Sends a finished result on to the next tool in a chain. */
+    onChainTool: (ToolId, SheafFile) -> Unit = { _, _ -> },
     /** A document handed over from the viewer, so the user does not pick the same file twice. */
     preloadUri: String? = null,
+    /** A finished result handed on by another tool: already Sheaf's own file, not a Uri. */
+    preloadFile: String? = null,
     /** Settings: show the finished document without waiting to be asked. */
     openResultWhenDone: Boolean = false,
     viewModel: ToolViewModel = viewModel()
@@ -57,9 +61,10 @@ fun ToolRoute(
     /** Results waiting for a folder, when one has not been granted yet. */
     var pendingBatch by remember { mutableStateOf<List<SheafFile>>(emptyList()) }
 
-    LaunchedEffect(tool, preloadUri) {
+    LaunchedEffect(tool, preloadUri, preloadFile) {
         viewModel.start(tool)
         if (preloadUri != null) viewModel.addDocuments(listOf(Uri.parse(preloadUri)))
+        if (preloadFile != null) viewModel.addLocalDocument(preloadFile)
     }
 
     /** Guards against reopening the same finished job every time this screen recomposes. */
@@ -155,6 +160,11 @@ fun ToolRoute(
             onMovePage = viewModel::movePage,
             onSigned = viewModel::setSignature,
             makeSignatureFile = viewModel::newSignatureFile,
+            onLoadSignatures = viewModel::loadSavedSignatures,
+            onKeepSignature = viewModel::keepSignature,
+            onUseSignature = viewModel::useSavedSignature,
+            onForgetSignature = viewModel::forgetSignature,
+            onUndoPageEdit = viewModel::undoPageEdit,
             onRedactPage = viewModel::setRedactPage,
             onAddRedaction = viewModel::addRedaction,
             onClearRedactions = viewModel::clearRedactions,
@@ -171,6 +181,7 @@ fun ToolRoute(
             onSaveAll = { files -> saveInto(files) },
             onShare = { files -> context.startActivity(viewModel.shareIntent(files)) },
             onOpenResult = onOpenResult,
+            onChainTool = onChainTool,
             onLoadPreview = viewModel::loadPreview,
             onLoadPreviewPage = viewModel::loadPreviewPage,
             onLoadForm = viewModel::loadFormFields,

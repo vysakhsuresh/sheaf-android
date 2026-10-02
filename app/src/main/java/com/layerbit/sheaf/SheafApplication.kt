@@ -5,6 +5,8 @@ import com.layerbit.sheaf.data.BookmarksRepository
 import com.layerbit.sheaf.data.RecentsRepository
 import com.layerbit.sheaf.data.db.SheafDatabase
 import com.layerbit.sheaf.files.DocumentStore
+import com.layerbit.sheaf.files.Handoff
+import com.layerbit.sheaf.files.SignatureStore
 import com.layerbit.sheaf.files.Exporter
 import com.layerbit.sheaf.files.Workspace
 import com.layerbit.sheaf.jobs.JobRunner
@@ -50,6 +52,12 @@ class SheafApplication : Application() {
      */
     val ocr: OcrEngine by lazy { MlKitOcrEngine() }
     val documentStore: DocumentStore by lazy { DocumentStore(this) }
+
+    /** Documents shared in from another app, waiting for the tool that can take them. */
+    val handoff: Handoff by lazy { Handoff() }
+
+    /** Signatures the user kept, so a signature is drawn once rather than once per document. */
+    val signatures: SignatureStore by lazy { SignatureStore(this) }
     val workspace: Workspace by lazy { Workspace(this) }
     val exporter: Exporter by lazy { Exporter(this) }
     val jobRunner: JobRunner by lazy { JobRunner(this) }

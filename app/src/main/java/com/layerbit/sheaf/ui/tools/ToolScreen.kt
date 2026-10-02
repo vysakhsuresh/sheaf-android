@@ -37,6 +37,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,6 +85,11 @@ fun ToolScreen(
     onMovePage: (Int, Int) -> Unit,
     onSigned: (java.io.File) -> Unit,
     makeSignatureFile: () -> java.io.File,
+    onLoadSignatures: () -> Unit,
+    onKeepSignature: () -> Unit,
+    onUseSignature: (java.io.File) -> Unit,
+    onForgetSignature: (java.io.File) -> Unit,
+    onUndoPageEdit: () -> Unit,
     onRedactPage: (Int) -> Unit,
     onAddRedaction: (Int, com.layerbit.sheaf.pdf.PageArea) -> Unit,
     onClearRedactions: (Int) -> Unit,
@@ -90,6 +99,8 @@ fun ToolScreen(
     onSaveAll: (List<SheafFile>) -> Unit,
     onShare: (List<SheafFile>) -> Unit,
     onOpenResult: (SheafFile) -> Unit,
+    /** Hands a finished file straight to another tool, with nothing saved in between. */
+    onChainTool: (ToolId, SheafFile) -> Unit,
     onLoadPreview: (SheafFile) -> Unit,
     onLoadPreviewPage: () -> Unit,
     onLoadForm: () -> Unit,
@@ -107,16 +118,24 @@ fun ToolScreen(
             // These edit pages, so they need every page rendered.
             ToolId.ORGANISE, ToolId.REDACT -> onLoadPages()
             // These change how a page looks, so one page is enough to show it.
-            ToolId.CROP, ToolId.WATERMARK, ToolId.PAGE_NUMBERS, ToolId.SIGN,
+            ToolId.CROP, ToolId.WATERMARK, ToolId.PAGE_NUMBERS,
             ToolId.ADD_TEXT -> onLoadPreviewPage()
             // Filling a form needs to know whether there is one.
             ToolId.FORMS -> onLoadForm()
+            // Signing offers the ones kept earlier before offering the pad.
+            ToolId.SIGN -> {
+                onLoadPreviewPage()
+                onLoadSignatures()
+            }
             else -> Unit
         }
     }
 
     val finished = jobState as? JobState.Finished
     val running = jobState as? JobState.Running
+
+    /** The finished file waiting for the user to pick the next tool for it. */
+    var chaining by remember { mutableStateOf<SheafFile?>(null) }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -135,6 +154,7 @@ fun ToolScreen(
                         preview = state.previews[produced.file.file.path],
                         onSave = { onSave(produced.file) },
                         onOpen = { onOpenResult(produced.file) },
+                        onChain = { chaining = produced.file },
                         onCopy = onCopy,
                         onNeedPreview = { onLoadPreview(produced.file) }
                     )
@@ -204,12 +224,33 @@ fun ToolScreen(
                             onTogglePage = onTogglePage,
                             onRotate = onRotateSelected,
                             onDelete = onDeleteSelected,
-                            onMovePage = onMovePage
+                            onMovePage = onMovePage,
+                            onUndo = onUndoPageEdit
                         )
                     }
                 } else if (tool == ToolId.SIGN && state.documents.isNotEmpty()) {
+                    if (state.savedSignatures.isNotEmpty()) {
+                        item {
+                            SavedSignatures(
+                                files = state.savedSignatures,
+                                onUse = onUseSignature,
+                                onForget = onForgetSignature
+                            )
+                        }
+                    }
                     item {
                         SignaturePad(onSigned = onSigned, makeFile = makeSignatureFile)
+                    }
+                    if (state.signatureFile != null) {
+                        item {
+                            TextButton(onClick = onKeepSignature) {
+                                Text(
+                                    "Keep this signature for next time",
+                                    color = SheafColors.Band,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
                     }
                     item {
                         ToolOptions(
@@ -348,6 +389,20 @@ fun ToolScreen(
             }
         }
     }
+
+    // The same tool is left in the list on purpose: a second note on another page, or a
+    // second range out of the file just split, are both things people want next.
+    chaining?.let { file ->
+        ToolPickerSheet(
+            heading = "Use another tool on this",
+            documentName = file.displayName,
+            onDismiss = { chaining = null },
+            onPick = { next ->
+                chaining = null
+                onChainTool(next, file)
+            }
+        )
+    }
 }
 
 @Composable
@@ -414,6 +469,7 @@ private fun ResultRow(
     preview: ResultPreview?,
     onSave: () -> Unit,
     onOpen: () -> Unit,
+    onChain: () -> Unit,
     onCopy: (String) -> Unit,
     onNeedPreview: () -> Unit
 ) {
@@ -487,6 +543,9 @@ private fun ResultRow(
             Row {
                 if (file.isPdf) {
                     TextButton(onClick = onOpen) { Text("Open", color = SheafColors.Muted) }
+                    // The chain. Without this, compressing something you just merged means
+                    // saving it, leaving, and finding the same file again in the picker.
+                    TextButton(onClick = onChain) { Text("Then…", color = SheafColors.Muted) }
                 }
                 TextButton(onClick = onSave) { Text("Save", color = SheafColors.Band) }
             }
@@ -593,7 +652,8 @@ private fun OrganisePanel(
     onTogglePage: (Int) -> Unit,
     onRotate: (Int) -> Unit,
     onDelete: () -> Unit,
-    onMovePage: (Int, Int) -> Unit
+    onMovePage: (Int, Int) -> Unit,
+    onUndo: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         RowBetween {
@@ -636,6 +696,69 @@ private fun OrganisePanel(
                 onClick = onDelete,
                 enabled = state.selectedPages.isNotEmpty()
             ) { Text("Delete", color = SheafColors.Failed) }
+            // Nothing here has been written yet - the whole screen is a plan - so stepping
+            // back is just the previous plan, and deleting the wrong page costs a tap.
+            OutlinedButton(
+                onClick = onUndo,
+                enabled = state.canUndoPageEdit
+            ) {
+                Text(
+                    "Undo",
+                    color = if (state.canUndoPageEdit) SheafColors.Text else SheafColors.Dim
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Signatures kept from before, so one is drawn once rather than once per document.
+ *
+ * Tap to use, and the small cross forgets one. Decoded here rather than in the view model
+ * because these are a few hundred kilobytes between them and holding them in state would mean
+ * owning their recycling for the life of the screen.
+ */
+@Composable
+private fun SavedSignatures(
+    files: List<java.io.File>,
+    onUse: (java.io.File) -> Unit,
+    onForget: (java.io.File) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeading("Your signatures")
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            files.forEach { file ->
+                val bitmap = remember(file.path, file.lastModified()) {
+                    runCatching { android.graphics.BitmapFactory.decodeFile(file.path) }.getOrNull()
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .size(width = 108.dp, height = 56.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(SheafColors.Paper)
+                            .border(1.dp, SheafColors.Border, RoundedCornerShape(8.dp))
+                            .clickable { onUse(file) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (bitmap != null) {
+                            Image(
+                                bitmap = bitmap.asImageBitmap(),
+                                contentDescription = "A signature you kept",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize().padding(4.dp)
+                            )
+                        }
+                    }
+                    TextButton(onClick = { onForget(file) }) {
+                        Text(
+                            "Forget",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SheafColors.Dim
+                        )
+                    }
+                }
+            }
         }
     }
 }

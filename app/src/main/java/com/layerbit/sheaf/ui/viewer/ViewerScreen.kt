@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -33,14 +32,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
@@ -66,7 +63,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -84,7 +80,7 @@ import com.layerbit.sheaf.pdf.PageSize
 import com.layerbit.sheaf.ui.components.RowBetween
 import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.theme.SheafColors
-import com.layerbit.sheaf.ui.tools.iconFor
+import com.layerbit.sheaf.ui.tools.ToolPickerSheet
 import kotlinx.coroutines.launch
 
 /**
@@ -275,7 +271,8 @@ fun ViewerScreen(
     }
 
     if (showTools && state is ViewerState.Ready) {
-        ToolSheet(
+        ToolPickerSheet(
+            heading = "Use on this document",
             documentName = state.displayName,
             onDismiss = { showTools = false },
             onPick = { tool ->
@@ -712,77 +709,6 @@ private fun highlight(text: String, query: String): AnnotatedString {
 
 private const val MAX_VISIBLE_HITS = 12
 
-/**
- * The tools that can act on the document currently open.
- *
- * Images to PDF is left out: its input is photographs, so offering it here would be offering
- * something that cannot accept what is on screen.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ToolSheet(documentName: String, onDismiss: () -> Unit, onPick: (ToolId) -> Unit) {
-    val sheetState = rememberModalBottomSheetState()
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = SheafColors.Surface
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
-            SectionHeading("Use on this document")
-            Text(
-                text = documentName,
-                style = MaterialTheme.typography.titleMedium,
-                color = SheafColors.Text,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 4.dp, bottom = 10.dp)
-            )
-            ToolId.entries
-                .filter { it != ToolId.IMAGES_TO_PDF && it != ToolId.SCAN }
-                .forEach { tool ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onPick(tool) }
-                            .padding(vertical = 12.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(iconFor(tool)),
-                            contentDescription = null,
-                            tint = SheafColors.Muted,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Column(modifier = Modifier.padding(start = 14.dp)) {
-                            Text(
-                                tool.title,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = SheafColors.Text
-                            )
-                            Text(
-                                tool.summary,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = SheafColors.Dim
-                            )
-                        }
-                    }
-                }
-        }
-    }
-}
-
-/**
- * The pages, at whatever magnification the reader has pinched to.
- *
- * Zoom is not a transform over the rendered bitmaps. Scaling up what was drawn for a phone
- * width gives a blurry page, which is the one thing a document reader cannot be - so a zoom
- * past a whole step re-renders the pages at the larger width and the engine draws the type at
- * that size. The steps are whole numbers so that a slow pinch re-renders the document twice,
- * not forty times, and the page cache keys on width so both versions can sit in it.
- *
- * Above 1x the content is wider than the window, so it goes inside a horizontal scroll. Below
- * it, that scroll has nothing to move and costs nothing.
- */
 @Composable
 private fun PageList(
     state: ViewerState.Ready,

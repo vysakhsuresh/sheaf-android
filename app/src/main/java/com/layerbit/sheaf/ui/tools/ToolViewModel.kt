@@ -92,9 +92,66 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         if (_state.value.tool == tool) return
         sheaf.jobRunner.acknowledge()
         _state.value = ToolUiState(tool = tool, config = ToolConfig.defaultFor(tool))
+
+        // A share of several documents from another app lands here rather than in the viewer,
+        // which can only show one of them. The list is taken once and cleared, so coming back
+        // to this tool later does not reload what was shared an hour ago.
+        val shared = sheaf.handoff.take()
+        if (shared.isNotEmpty()) addDocuments(shared)
     }
 
     // ---- choosing documents ----
+
+    /**
+     * Takes a file Sheaf already made - the result of the previous tool in a chain.
+     *
+     * Not imported, because there is nothing to import from: it is already in the workspace.
+     * It is copied all the same, so that the next tool's output cannot be mistaken for its
+     * input and so that this tool's own list owns what it holds.
+     */
+    fun addLocalDocument(path: String) {
+        val source = java.io.File(path)
+        if (!source.isFile) {
+            _state.update { it.copy(error = "That result is no longer available.") }
+            return
+        }
+
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true, error = null) }
+            val copied = withContext(Dispatchers.IO) {
+                runCatching {
+                    val destination = sheaf.workspace.newOutput(
+                        source.nameWithoutExtension,
+                        "carried",
+                        source.extension.ifBlank { "pdf" }
+                    )
+                    source.copyTo(destination, overwrite = true)
+                    SheafFile(destination, source.name, SheafFile.Origin.Derived("carried"))
+                }.getOrNull()
+            }
+
+            if (copied == null) {
+                _state.update { it.copy(busy = false, error = "That result could not be read.") }
+                return@launch
+            }
+
+            val inspected = inspect(copied)
+            _state.update { current ->
+                val combined = if (current.tool?.acceptsMultiple == false) {
+                    listOf(inspected)
+                } else {
+                    current.documents + inspected
+                }
+                current.copy(
+                    documents = combined,
+                    busy = false,
+                    formFields = emptyList(),
+                    formValues = emptyMap(),
+                    formRead = false
+                )
+            }
+        }
+    }
 
     fun addDocuments(uris: List<Uri>) {
         if (uris.isEmpty()) return
@@ -321,7 +378,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             for (index in current.selectedPages) {
                 rotations[index] = ((rotations[index] ?: 0) + degrees).mod(360)
             }
-            current.copy(rotations = rotations)
+            current.copy(rotations = rotations, pageEdits = current.withEditRemembered())
         }
     }
 
@@ -333,7 +390,12 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             if (remaining.isEmpty()) {
                 return@update current.copy(error = "A document has to keep at least one page.")
             }
-            current.copy(pageOrder = remaining, selectedPages = emptySet(), error = null)
+            current.copy(
+                pageOrder = remaining,
+                selectedPages = emptySet(),
+                error = null,
+                pageEdits = current.withEditRemembered()
+            )
         }
     }
 
@@ -342,7 +404,27 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             val order = current.pageOrder.toMutableList()
             if (from !in order.indices || to !in order.indices) return@update current
             order.add(to, order.removeAt(from))
-            current.copy(pageOrder = order)
+            current.copy(pageOrder = order.toList(), pageEdits = current.withEditRemembered())
+        }
+    }
+
+    /**
+     * Steps back through the page edits.
+     *
+     * Reordering forty pages by hand and then deleting the wrong one is the moment this app
+     * either keeps or loses someone's afternoon. Nothing has been written to disk yet - the
+     * whole organise screen is a plan - so undo is just the previous plan.
+     */
+    fun undoPageEdit() {
+        _state.update { current ->
+            val previous = current.pageEdits.lastOrNull() ?: return@update current
+            current.copy(
+                pageOrder = previous.order,
+                rotations = previous.rotations,
+                pageEdits = current.pageEdits.dropLast(1),
+                selectedPages = emptySet(),
+                error = null
+            )
         }
     }
 
@@ -690,6 +772,58 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
     /** Where a freshly drawn signature is written. */
     fun newSignatureFile(): java.io.File = sheaf.workspace.newOutput("signature", "ink", "png")
 
+    /** The signatures the user kept, for the row above the pad. */
+    fun loadSavedSignatures() {
+        if (_state.value.savedSignatures.isNotEmpty()) return
+        viewModelScope.launch {
+            val kept = withContext(Dispatchers.IO) { sheaf.signatures.list() }
+            _state.update { it.copy(savedSignatures = kept) }
+        }
+    }
+
+    /** Keeps the signature now on the pad, so it can be used again without redrawing it. */
+    fun keepSignature() {
+        val drawn = _state.value.signatureFile ?: return
+        viewModelScope.launch {
+            val kept = withContext(Dispatchers.IO) { sheaf.signatures.keep(drawn) }
+            if (kept == null) {
+                _state.update { it.copy(error = "That signature could not be kept.") }
+            } else {
+                _state.update { it.copy(savedSignatures = sheaf.signatures.list(), error = null) }
+            }
+        }
+    }
+
+    /**
+     * Uses a kept signature for this document.
+     *
+     * Copied into the workspace first. The job reads the file it is given, and handing it the
+     * stored one would mean an operation reading from the folder that is meant to outlive it.
+     */
+    fun useSavedSignature(kept: java.io.File) {
+        viewModelScope.launch {
+            val copy = withContext(Dispatchers.IO) {
+                runCatching {
+                    val destination = newSignatureFile()
+                    kept.copyTo(destination, overwrite = true)
+                    destination
+                }.getOrNull()
+            }
+            if (copy == null) {
+                _state.update { it.copy(error = "That signature could not be read.") }
+            } else {
+                setSignature(copy)
+            }
+        }
+    }
+
+    fun forgetSignature(kept: java.io.File) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { sheaf.signatures.forget(kept) }
+            _state.update { it.copy(savedSignatures = sheaf.signatures.list()) }
+        }
+    }
+
     /** Stores the drawn signature. Replaces any previous one rather than accumulating files. */
     fun setSignature(file: java.io.File) {
         _state.update { current ->
@@ -793,6 +927,12 @@ sealed interface ResultPreview {
     data class Picture(val bitmap: Bitmap) : ResultPreview
 }
 
+/** One state of the organise screen's plan, kept so the next edit can be undone. */
+data class PageEdit(val order: List<Int>, val rotations: Map<Int, Int>)
+
+/** Deep enough that nobody reaches the bottom; shallow enough to be a few kilobytes. */
+private const val MAX_PAGE_EDITS = 30
+
 /** A document the user picked, and what we know about it. */
 data class SelectedDoc(
     val file: SheafFile,
@@ -832,12 +972,22 @@ data class ToolUiState(
     val signatureBitmap: Bitmap? = null,
     /** What compressing this document would actually produce. */
     val sizeCheck: SizeCheck = SizeCheck.Idle,
+    /** Organise only: the plans before each edit, newest last, for undo. */
+    val pageEdits: List<PageEdit> = emptyList(),
+    /** Sign only: signatures the user kept, newest first. */
+    val savedSignatures: List<java.io.File> = emptyList(),
     /** Fill in a form only: the fields the document declares, and what has been typed. */
     val formFields: List<FormField> = emptyList(),
     val formValues: Map<String, String> = emptyMap(),
     /** True once the form has been looked for, which is how "none" differs from "not yet". */
     val formRead: Boolean = false
 ) {
+    /** The plan as it stands, pushed onto the undo stack before it is changed. */
+    fun withEditRemembered(): List<PageEdit> =
+        (pageEdits + PageEdit(pageOrder, rotations)).takeLast(MAX_PAGE_EDITS)
+
+    val canUndoPageEdit: Boolean get() = pageEdits.isNotEmpty()
+
     /**
      * Why the button is disabled, or null when it is not.
      *
