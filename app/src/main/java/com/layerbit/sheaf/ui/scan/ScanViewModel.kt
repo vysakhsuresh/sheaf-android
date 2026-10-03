@@ -58,12 +58,13 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
             _state.update { it.copy(busy = true, error = null) }
             val bitmap = withContext(Dispatchers.IO) {
                 runCatching {
-                    val decoded = BitmapFactory.decodeFile(file.absolutePath)
-                        ?: return@runCatching null
+                    val decoded = decodeSampled(file) ?: return@runCatching null
                     // The sensor writes orientation into EXIF rather than rotating the pixels,
                     // so a portrait capture decodes sideways unless this is applied.
                     val upright = applyExifRotation(file, decoded)
-                    PageProcessor.downscale(upright)
+                    val scaled = PageProcessor.downscale(upright)
+                    if (scaled !== upright) upright.recycle()
+                    scaled
                 }.getOrNull()
             }
             file.delete()
@@ -208,6 +209,35 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
         super.onCleared()
         _state.value.editing?.bitmap?.recycle()
         _state.value.pages.forEach { it.thumbnail.recycle() }
+    }
+
+    /**
+     * Decodes the capture already subsampled, but never below what [PageProcessor.downscale]
+     * is about to produce anyway.
+     *
+     * A 12-megapixel capture decoded whole is 48 MB, the rotation below holds a second copy of
+     * it while it works, and the downscale adds a third before either is collected. On a phone
+     * with a small heap that is an OutOfMemoryError, and because the caller's `runCatching`
+     * takes a Throwable it surfaces as "That photo could not be read." - blaming the photo.
+     *
+     * Subsampling by a power of two is nearly free inside the decoder. Stopping at the last
+     * power that still leaves the long edge above [PageProcessor.MAX_CAPTURE_DIMENSION] means
+     * the proper resample still does the final step, so nothing is lost to the cheap one.
+     */
+    private fun decodeSampled(file: File): Bitmap? {
+        val options = BitmapFactory.Options()
+        options.inJustDecodeBounds = true
+        BitmapFactory.decodeFile(file.absolutePath, options)
+
+        val longest = maxOf(options.outWidth, options.outHeight)
+        if (longest <= 0) return null
+
+        var sample = 1
+        while (longest / (sample * 2) >= PageProcessor.MAX_CAPTURE_DIMENSION) sample *= 2
+
+        options.inSampleSize = sample
+        options.inJustDecodeBounds = false
+        return BitmapFactory.decodeFile(file.absolutePath, options)
     }
 
     private fun applyExifRotation(file: File, bitmap: Bitmap): Bitmap {

@@ -21,6 +21,10 @@ interface RecentDao {
     @Query("DELETE FROM recents")
     suspend fun clear()
 
+    /** Every Uri the list holds, for checking which persisted grants still have a row behind them. */
+    @Query("SELECT uri FROM recents")
+    suspend fun allUris(): List<String>
+
     /** Where the reader got to, or zero for a document this list has never seen. */
     @Query("SELECT lastPage FROM recents WHERE uri = :uri")
     suspend fun positionFor(uri: String): Int?
@@ -41,4 +45,13 @@ interface RecentDao {
      */
     @Query("DELETE FROM recents WHERE uri NOT IN (SELECT uri FROM recents ORDER BY lastOpenedAt DESC LIMIT :keep)")
     suspend fun trimTo(keep: Int)
+
+    /**
+     * The Uris [trimTo] is about to drop, read before it runs.
+     *
+     * Each of those rows is holding a persisted Uri grant that has to be handed back with
+     * it, and once the delete has happened there is nothing left to say which Uris they were.
+     */
+    @Query("SELECT uri FROM recents WHERE uri NOT IN (SELECT uri FROM recents ORDER BY lastOpenedAt DESC LIMIT :keep)")
+    suspend fun urisBeyond(keep: Int): List<String>
 }

@@ -258,12 +258,33 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun removeDocument(index: Int) {
+    /**
+     * Drops one chosen document, named rather than numbered.
+     *
+     * A row's index belongs to the frame it was composed in, so two Removes tapped before the
+     * next frame both arrive carrying the same index - once valid, once pointing at whichever
+     * row has since slid into that place. Taking the document itself makes the second tap a
+     * no-op rather than a crash or, worse, the removal of its neighbour. The match is on the
+     * cache copy's path, which is unique per import and survives the row being replaced by
+     * [setPasswordFor] or [verifyPassword] while the tap is in flight.
+     */
+    fun removeDocument(doc: SelectedDoc) {
+        var removed: SelectedDoc? = null
         _state.update { current ->
+            // Cleared on entry, not just at the start of the call: update re-runs its lambda
+            // whenever another writer wins the compare-and-set, and the delete below must see
+            // only what the attempt that won actually did.
+            removed = null
             val remaining = current.documents.toMutableList()
-            remaining.removeAt(index).also { it.file.file.delete() }
+            val at = remaining.indexOfFirst { it.file.file == doc.file.file }
+            if (at < 0) return@update current
+            removed = remaining.removeAt(at)
             current.copy(documents = remaining, pageOrder = emptyList(), rotations = emptyMap())
         }
+        // Deleting the copy this screen owns waits until the state is committed, because a
+        // delete inside the lambda would run once per attempt - on files the surviving list
+        // still expects to be there.
+        removed?.file?.file?.delete()
     }
 
     /** Merge order is the output order, so the list has to be rearrangeable. */

@@ -7,6 +7,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
+import android.util.Log
 import java.io.File
 import java.io.IOException
 
@@ -134,9 +135,24 @@ private class PlatformPdfDocument(
 
     override fun close() {
         // Order matters: PdfRenderer holds the descriptor and closing it the other way round
-        // leaves a native handle pointing at a closed fd.
-        runCatching { renderer.close() }
-        descriptor.closeQuietly()
+        // leaves a native handle pointing at a closed fd. The descriptor goes in a finally so
+        // that a renderer which will not close cannot cost a file descriptor as well - that
+        // one leaks for the life of the process where a native handle does not.
+        try {
+            renderer.close()
+        } catch (e: Exception) {
+            // The only thing that provokes this is a close racing a render, which is a caller
+            // ordering bug rather than anything about the file; it used to disappear here,
+            // which is precisely why it went unnoticed. There is nobody to report it to - the
+            // document is already gone from wherever it was being read - so it is logged.
+            Log.w(TAG, "renderer would not close; releasing its descriptor anyway", e)
+        } finally {
+            descriptor.closeQuietly()
+        }
+    }
+
+    private companion object {
+        const val TAG = "PlatformPdfEngine"
     }
 }
 

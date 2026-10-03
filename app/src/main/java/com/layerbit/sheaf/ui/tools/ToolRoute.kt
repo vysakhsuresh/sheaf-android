@@ -139,8 +139,19 @@ fun ToolRoute(
                 // reasons here are real: a removed card, a revoked grant, a full disk.
                 message = error ?: "Saved ${file.displayName}"
             }
+        } else if (result.resultCode == Activity.RESULT_OK && destination != null) {
+            // A destination came back and the result it was asked for did not: pendingSave is
+            // remembered, not saved, so a trip through the picker that outlived this screen
+            // returns with nowhere to read from. ACTION_CREATE_DOCUMENT created the file the
+            // moment the user named it, and that empty file stays whatever is said here - so
+            // what the message buys is the user knowing it is not their result, and saving
+            // again over it instead of keeping a document that will not open.
+            message = "That save was interrupted. Tap Save again."
         }
     }
+
+    /** The document list this composition drew, which is the one the rows below count against. */
+    val documents = state.documents
 
     Box(modifier = modifier.fillMaxSize()) {
         ToolScreen(
@@ -148,7 +159,11 @@ fun ToolRoute(
             state = state,
             jobState = jobState,
             onAddFiles = { pickFiles.launch(tool.mimeFilter) },
-            onRemoveFile = viewModel::removeDocument,
+            // The screen hands back the row's index, and it means the row of the list this
+            // composition drew. Resolving it here against that same list, rather than letting
+            // the view model look it up in whatever the state holds by then, is what keeps a
+            // second tap arriving before the next frame from removing the following document.
+            onRemoveFile = { index -> documents.getOrNull(index)?.let(viewModel::removeDocument) },
             onMoveFile = viewModel::moveDocument,
             onSetPassword = viewModel::setPasswordFor,
             onVerifyPassword = viewModel::verifyPassword,

@@ -5,6 +5,7 @@ import com.layerbit.sheaf.files.Workspace
 import com.layerbit.sheaf.pdf.OcrEngine
 import com.layerbit.sheaf.pdf.PdfEngine
 import com.layerbit.sheaf.pdf.PdfSurgeon
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Every tool in Sheaf, expressed as one shape.
@@ -130,5 +131,18 @@ data class Progress(
         get() = if (unitsTotal <= 0) 0f else (unitsDone.toFloat() / unitsTotal).coerceIn(0f, 1f)
 }
 
-/** Thrown out of [Op.run] when the user cancelled. Not an error; nothing is reported for it. */
-class OpCancelled : Exception("Cancelled")
+/**
+ * Thrown out of [Op.run] when the user cancelled. Not an error; nothing is reported for it.
+ *
+ * It is a [CancellationException] so that the coroutine machinery treats a cancel as a cancel
+ * rather than as a job that failed, and so that anything written to be cancellation-aware -
+ * `withContext`, a future `coroutineScope` - unwinds for the right reason. It is not on its own
+ * a defence: a plain `catch (e: Exception)` still catches it, which is why the catches that turn
+ * a problem into [OpOutcome.Failed] are narrowed to [com.layerbit.sheaf.pdf.PdfException] or
+ * rethrow this type above the broad arm.
+ *
+ * The cost of the choice is that structured concurrency can absorb it silently, so
+ * [com.layerbit.sheaf.jobs.OpWorker] checks for a stop after a run returns normally instead of
+ * trusting the throw to arrive.
+ */
+class OpCancelled : CancellationException("Cancelled")

@@ -53,6 +53,18 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        sheaf.recents.useResolver(applicationContext.contentResolver)
+        if (savedInstanceState == null) {
+            // Persisted grants are capped per package and crossing the cap is silent: takes
+            // start failing and every document opened after that stops reopening once the
+            // process is gone. Reconciling on a cold start keeps the count in step with the
+            // list that uses it. The save folder is the one grant with no row behind it, so
+            // it is named explicitly or the next silent save would ask for a folder again.
+            lifecycleScope.launch {
+                sheaf.recents.reconcileGrants(setOfNotNull(sheaf.settings.current.saveFolder))
+            }
+        }
+
         setContent {
             val settings by sheaf.settings.state.collectAsState()
 

@@ -4,6 +4,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.util.Log
+import com.layerbit.sheaf.ops.OpCancelled
 import com.tom_roush.pdfbox.io.MemoryUsageSetting
 import com.tom_roush.pdfbox.multipdf.LayerUtility
 import com.tom_roush.pdfbox.multipdf.PDFMergerUtility
@@ -43,18 +45,24 @@ import java.io.IOException
  *
  * Two habits run through every method here and both are load-bearing:
  *
- * 1. Documents are opened with [MemoryUsageSetting.setupTempFileOnly]. PDFBox will happily
- *    read a whole document into the heap otherwise, and a 90 MB scan does not fit. Spilling to
- *    a temp file is slower and is the only version that survives the files people actually
- *    have.
+ * 1. Every document goes through [scratchMemory], inputs being read and outputs being built
+ *    alike. PDFBox buffers both in the heap by default, and neither a 90 MB scan being opened
+ *    nor thirty photos being assembled fits there. Spilling to a temp file is slower and is
+ *    the only version that survives the files people actually have.
  *
  * 2. Every open is inside `use`, and the output is written to a fresh file. Nothing here can
  *    touch an input, which is the same guarantee DocumentStore makes one layer up.
  *
  * Every failure is translated into [PdfException]. Callers never see a PDFBox type, which is
  * what keeps this swappable for QPDF later.
+ *
+ * @param scratchDir where PDFBox puts the buffers it keeps out of the heap. The app passes the
+ *   workspace's own scratch directory, so a spill orphaned by a process that died
+ *   mid-operation is pruned along with stale results. Null - the default, for a caller with no
+ *   workspace to point at - leaves the spill in the process temp directory, which on Android is
+ *   the app's cache root: correct, but cleared on Android's schedule rather than the app's.
  */
-class PdfBoxSurgeon : PdfSurgeon {
+class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
 
     override fun inspect(input: PdfInput): DocumentInfo = withDocument(input) { doc ->
         DocumentInfo(
@@ -86,11 +94,17 @@ class PdfBoxSurgeon : PdfSurgeon {
                 merger.addSource(input.file)
                 onProgress(index + 1, inputs.size)
             }
-            merger.mergeDocuments(MemoryUsageSetting.setupTempFileOnly())
+            merger.mergeDocuments(scratchMemory())
         } catch (e: PdfException) {
             throw e
         } catch (e: OutOfMemoryError) {
             throw PdfException.OutOfMemory("merging ${inputs.size} documents", e)
+        } catch (e: OpCancelled) {
+            // A cancel reaches here through the progress callback, which runs inside this try.
+            // It is control flow and not a failure, and the arm below would turn it into
+            // PdfException.Corrupt - telling someone who tapped cancel that their document
+            // could not be read as a PDF.
+            throw e
         } catch (e: Exception) {
             throw e.asPdfException("merge")
         }
@@ -104,7 +118,7 @@ class PdfBoxSurgeon : PdfSurgeon {
     ) = withDocument(input) { source ->
         if (pages.isEmpty()) throw PdfException.Io("No pages were selected.")
 
-        PDDocument().use { target ->
+        PDDocument(scratchMemory()).use { target ->
             for (index in pages) {
                 if (index !in 0 until source.numberOfPages) {
                     throw PdfException.Io("Page ${index + 1} does not exist in this document.")
@@ -113,9 +127,10 @@ class PdfBoxSurgeon : PdfSurgeon {
                 rotations[index]?.let { delta ->
                     page.rotation = normaliseRotation(page.rotation + delta)
                 }
-                // importPage copies the page's dictionary into the new document but shares the
-                // underlying content streams with the source, which is why the source must stay
-                // open until after the save below - it is, since this is inside withDocument.
+                // importPage copies the page's dictionary and re-deflates its content stream
+                // into the new document, but the resources that stream names stay indirect
+                // references into the source - which is why the source must stay open until
+                // after the save below. It is, since this is inside withDocument.
                 target.importPage(page)
             }
             target.save(output)
@@ -141,7 +156,7 @@ class PdfBoxSurgeon : PdfSurgeon {
     ) {
         if (images.isEmpty()) throw PdfException.Io("No images were selected.")
         try {
-            PDDocument().use { doc ->
+            PDDocument(scratchMemory()).use { doc ->
                 images.forEachIndexed { index, imageFile ->
                     val image = try {
                         PDImageXObject.createFromFile(imageFile.absolutePath, doc)
@@ -182,6 +197,9 @@ class PdfBoxSurgeon : PdfSurgeon {
             throw e
         } catch (e: OutOfMemoryError) {
             throw PdfException.OutOfMemory("building a PDF from ${images.size} images", e)
+        } catch (e: OpCancelled) {
+            // Thrown by the progress callback above; rethrown for the reason merge gives.
+            throw e
         } catch (e: Exception) {
             throw e.asPdfException("images to PDF")
         }
@@ -622,7 +640,7 @@ class PdfBoxSurgeon : PdfSurgeon {
         // Resizing is a different operation from cropping and cannot be done by setting a box.
         // A page has to be redrawn at the new size, so each one is imported as a form and
         // placed, scaled to fit, on a fresh sheet - the same technique N-up uses.
-        PDDocument().use { target ->
+        PDDocument(scratchMemory()).use { target ->
             // One utility per target document. It holds the import cache, so building a new
             // one per page would copy shared resources again for every page.
             val layers = LayerUtility(target)
@@ -695,15 +713,22 @@ class PdfBoxSurgeon : PdfSurgeon {
         val marked = areas.filterValues { it.isNotEmpty() }
         if (marked.isEmpty()) throw PdfException.Io("Nothing was marked for removal.")
 
-        val flattened = withDocument(input) { source ->
-            val renderer = PDFRenderer(source)
+        // One page at a time, rendered and replaced before the next one is touched. Rendering
+        // every marked page first and replacing them afterwards kept one full-resolution
+        // bitmap alive per marked page, and the clamp that sizes them is a per-page budget: a
+        // ten-page redaction of A4 at 200 DPI held ten lots of 14.7 MiB against a ceiling that
+        // had only ever been asked about one. Sorted, because the marks arrive in the order
+        // the pages were visited, and walking a lazily parsed document backwards is the one
+        // order it is worst at.
+        withDocument(input) { doc ->
+            val renderer = PDFRenderer(doc)
             val total = marked.size
             var done = 0
 
-            val images = mutableMapOf<Int, Pair<Bitmap, PageSize>>()
-            for ((index, rectangles) in marked) {
-                if (index !in 0 until source.numberOfPages) continue
-                val size = source.getPage(index).toPageSize()
+            for ((index, rectangles) in marked.toSortedMap()) {
+                if (index !in 0 until doc.numberOfPages) continue
+                val page = doc.getPage(index)
+                val size = page.toPageSize()
                 val requested = BitmapBudget.widthForDpi(size.widthPoints, dpi)
                 val width = BitmapBudget.clampWidth(requested, size.aspectRatio, RENDER_HEAP_BUDGET)
                 val scale = if (size.widthPoints <= 0f) 1f else width / size.widthPoints
@@ -714,30 +739,19 @@ class PdfBoxSurgeon : PdfSurgeon {
                     throw PdfException.OutOfMemory("page ${index + 1}", e)
                 }
 
-                Canvas(bitmap).apply {
-                    val paint = Paint().apply { color = Color.BLACK; isAntiAlias = false }
-                    for (area in rectangles) {
-                        drawRect(
-                            area.left * bitmap.width,
-                            area.top * bitmap.height,
-                            (area.left + area.width) * bitmap.width,
-                            (area.top + area.height) * bitmap.height,
-                            paint
-                        )
+                try {
+                    Canvas(bitmap).apply {
+                        val paint = Paint().apply { color = Color.BLACK; isAntiAlias = false }
+                        for (area in rectangles) {
+                            drawRect(
+                                area.left * bitmap.width,
+                                area.top * bitmap.height,
+                                (area.left + area.width) * bitmap.width,
+                                (area.top + area.height) * bitmap.height,
+                                paint
+                            )
+                        }
                     }
-                }
-                images[index] = bitmap to size
-                done++
-                onProgress(done, total)
-            }
-            images
-        }
-
-        try {
-            withDocument(input) { doc ->
-                for ((index, pair) in flattened) {
-                    val (bitmap, size) = pair
-                    val page = doc.getPage(index)
 
                     // The existing content is replaced rather than appended to. This is the
                     // line that makes the removal real: the new page has no text operators in
@@ -753,11 +767,17 @@ class PdfBoxSurgeon : PdfSurgeon {
                     // Rotation is already baked into the rendered image, so leaving it set
                     // would turn the page a second time.
                     page.rotation = 0
+                } finally {
+                    // The JPEG is in the document by now and this bitmap is nobody else's -
+                    // unlike the ones PDImageXObject hands out - so it goes before the next
+                    // page is rendered, failure or not.
+                    bitmap.recycle()
                 }
-                doc.save(output)
+
+                done++
+                onProgress(done, total)
             }
-        } finally {
-            flattened.values.forEach { (bitmap, _) -> bitmap.recycle() }
+            doc.save(output)
         }
     }
 
@@ -1198,7 +1218,7 @@ class PdfBoxSurgeon : PdfSurgeon {
             val rows = if (perSheet >= 4) 2 else 2
             val slots = columns * rows
 
-            PDDocument().use { target ->
+            PDDocument(scratchMemory()).use { target ->
                 val layers = LayerUtility(target)
                 val total = source.numberOfPages
                 var index = 0
@@ -1380,17 +1400,39 @@ class PdfBoxSurgeon : PdfSurgeon {
     // ---- internals ----
 
     /**
-     * Opens, runs [block], and always closes - translating every failure on the way out.
+     * How PDFBox buffers a document here, and it is not optional either way round.
      *
-     * setupTempFileOnly is not optional. PDFBox's default buffers the whole document in the
-     * heap, and the documents that matter here are exactly the ones too big for that.
+     * Reading, the default holds the whole file in the heap and the documents that matter are
+     * exactly the ones too big for that. Writing, the no-arg `PDDocument()` resolves to
+     * setupMainMemoryOnly, so an output buffers entirely in the heap until save is called -
+     * thirty gallery photos at 5 MB each is ~150 MB held before a byte is written, and the
+     * OutOfMemoryError comes out of PDFBox, which the user is shown as the document being too
+     * large to process on this device for a request that is nothing of the kind.
+     *
+     * The trade is honest: this buys heap with cache I/O, so every save does real disk work it
+     * did not do before. A slower save is still a save.
+     */
+    private fun scratchMemory(): MemoryUsageSetting {
+        val setting = MemoryUsageSetting.setupTempFileOnly()
+        val dir = scratchDir ?: return setting
+        // PDFBox creates its spill file in this directory but will not create the directory,
+        // and refuses outright the moment it is missing - which it can be at any point, since
+        // the cache belongs to Android and clearing it takes the directory with the files.
+        // Falling back to the process temp directory keeps the operation alive; losing the
+        // pruning is a smaller loss than failing a merge over where a buffer goes.
+        if (!dir.isDirectory && !dir.mkdirs()) return setting
+        return setting.setTempDir(dir)
+    }
+
+    /**
+     * Opens, runs [block], and always closes - translating every failure on the way out.
      */
     private inline fun <T> withDocument(input: PdfInput, block: (PDDocument) -> T): T {
         val doc = try {
             PDDocument.load(
                 input.file,
                 input.password ?: "",
-                MemoryUsageSetting.setupTempFileOnly()
+                scratchMemory()
             )
         } catch (e: InvalidPasswordException) {
             throw PdfException.PasswordRequired(e)
@@ -1407,6 +1449,12 @@ class PdfBoxSurgeon : PdfSurgeon {
                 throw e
             } catch (e: OutOfMemoryError) {
                 throw PdfException.OutOfMemory(input.file.name, e)
+            } catch (e: OpCancelled) {
+                // Every progress callback in this class runs inside block, so a cancel
+                // surfaces here. Rethrown as itself: the arm below would report it as a
+                // document that could not be read, and redaction now does all of its work
+                // inside one of these, so this is the only window a cancel has.
+                throw e
             } catch (e: Exception) {
                 throw e.asPdfException("process")
             }
@@ -1774,10 +1822,20 @@ private class PdfBoxDocument(private val doc: PDDocument) : PdfDocument {
     }
 
     override fun close() {
-        runCatching { doc.close() }
+        try {
+            doc.close()
+        } catch (e: Exception) {
+            // PDDocument closes the file, the COS document and every font it owns before it
+            // rethrows the first failure, so unlike PlatformPdfDocument there is no descriptor
+            // left here to release by hand. What the interface still asks for is that the
+            // refusal is not dropped, and by the time a document is closing the reader has
+            // moved on and there is nobody to show it to - so it is logged.
+            Log.w(TAG, "document would not close cleanly", e)
+        }
     }
 
     private companion object {
         const val VIEWER_HEAP_BUDGET = 96L * 1024 * 1024
+        const val TAG = "PdfBoxEngine"
     }
 }

@@ -20,6 +20,19 @@ class Workspace(private val context: Context) {
         get() = File(context.cacheDir, "work").apply { mkdirs() }
 
     /**
+     * The directory itself, for the one kind of caller that writes here without going through
+     * [newOutput]: PDFBox spills the buffers it keeps out of the heap into a temp directory,
+     * and the surgeon is handed this one. PDFBox deletes its own spill when the document
+     * closes, so what pointing it here buys is that a spill orphaned by a process killed
+     * mid-operation gets swept up by [trimTo] like any other stale result.
+     *
+     * Reading this creates the directory, which the caller depends on: PDFBox refuses a temp
+     * directory that does not already exist rather than creating one.
+     */
+    val scratchDir: File
+        get() = root
+
+    /**
      * A fresh, empty file for an operation to write into.
      *
      * @param baseName the human name the result should carry, without extension.

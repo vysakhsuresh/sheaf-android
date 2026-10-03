@@ -62,6 +62,17 @@ interface PdfDocument : Closeable {
      */
     @Throws(PdfException::class)
     fun renderPage(index: Int, targetWidthPx: Int): Bitmap
+
+    /**
+     * Releases the file descriptor and whatever native handle the engine holds.
+     *
+     * Two things an engine owes the caller here. The descriptor is released even if the
+     * engine's own handle refused to close, because a descriptor leaks for the life of the
+     * process where a handle is only memory. And a refusal is reported rather than dropped:
+     * the one thing that causes it is a close racing a render that is still in flight, and an
+     * engine that hides it hides the caller's ordering bug with it.
+     */
+    override fun close()
 }
 
 /** Page dimensions in PostScript points. A4 is 595.3 x 841.9; US Letter is 612 x 792. */

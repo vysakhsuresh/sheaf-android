@@ -41,8 +41,14 @@ class SheafApplication : Application() {
      */
     val encryptedReader: PdfEngine by lazy { PdfBoxEngine() }
 
-    /** Restructuring and writing. Everything in ops/ goes through this. */
-    val surgeon: PdfSurgeon by lazy { PdfBoxSurgeon() }
+    /**
+     * Restructuring and writing. Everything in ops/ goes through this.
+     *
+     * It is handed the workspace's scratch directory, so the buffers PDFBox keeps out of the
+     * heap land in the one place this app already prunes rather than wherever the process
+     * temp directory happens to point.
+     */
+    val surgeon: PdfSurgeon by lazy { PdfBoxSurgeon(workspace.scratchDir) }
 
     /**
      * Reading words out of a picture of a page, on the bundled ML Kit model.

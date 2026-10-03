@@ -77,6 +77,16 @@ android {
     }
 }
 
+// Supplied by org.jetbrains.kotlin.plugin.compose. Recomposition work is otherwise argued about
+// rather than measured: these reports are the only place the compiler says out loud which
+// composables it made skippable and which parameters it considers unstable, so every claim that a
+// screen stopped recomposing gets checked against build/compose/reports/*-composables.txt.
+composeCompiler {
+    reportsDestination = layout.buildDirectory.dir("compose/reports")
+    metricsDestination = layout.buildDirectory.dir("compose/metrics")
+    stabilityConfigurationFile = layout.projectDirectory.file("compose_compiler_config.conf")
+}
+
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
