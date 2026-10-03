@@ -14,10 +14,32 @@ import org.junit.runner.RunWith
  * composer and layout pass is cold. The profile is a list of the methods this run touched, and
  * ART compiles them at install time instead.
  *
- * Run it with `gradlew :baselineprofile:generateBaselineProfile` against a connected device
+ * Run it with `gradlew :app:generateBaselineProfile` against a connected device
  * running API 28 or newer, then commit what lands in `app/src/main/generated/baselineProfiles`.
  * It is not part of a release build: a build that cannot be made without a phone attached is a
  * build nobody can make.
+ *
+ * TWO THINGS TO KNOW BEFORE RUNNING IT, both found the hard way on a moto g84 on Android 15.
+ *
+ * The Gradle task fails even when the run succeeds. AGP's test-result collector reports
+ * "Failed to receive the UTP test results" while the instrumentation itself passes and writes
+ * a perfectly good profile, so the build goes red and the plugin never copies the file into
+ * src/. When that happens the run is not wasted - drive it by hand and take the file:
+ *
+ *     adb install -r -t app/build/outputs/apk/nonMinifiedRelease/app-nonMinifiedRelease.apk
+ *     adb install -r -t baselineprofile/build/outputs/apk/nonMinifiedRelease/baselineprofile-nonMinifiedRelease.apk
+ *     adb shell am instrument -w com.layerbit.sheaf.baselineprofile/androidx.test.runner.AndroidJUnitRunner
+ *     adb pull /sdcard/Android/media/com.layerbit.sheaf.baselineprofile/StartupProfileGenerator_generate-startup-prof.txt \
+ *         app/src/main/generated/baselineProfiles/baseline-prof.txt
+ *
+ * And the profile that is checked in has NOT been shown to make this app start faster. It is
+ * generated, it is packaged - assets/dexopt/baseline.prof is in the release APK - and
+ * ProfileInstaller installs it without complaint, but `pm art dump` still reports
+ * status=verify afterwards, and a force-stop cold start measures the same with it and
+ * without. That may only mean the measurement is wrong: a force-stop leaves the page cache
+ * warm, and a sideloaded APK does not take the install-time path that Play uses. Settling it
+ * needs a macrobenchmark StartupBenchmark comparing CompilationMode.None with Partial, which
+ * is the tool for the question and is not written yet.
  *
  * The journey stops at the first idle frame of the launcher screen. That covers process start,
  * the Application graph, the theme, navigation and the recents list, which is the expensive part

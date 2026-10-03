@@ -264,7 +264,7 @@ a terminal.
 **Generating the baseline profile** needs a device or emulator on API 28 or newer, plugged in:
 
 ```
-./gradlew :baselineprofile:generateBaselineProfile
+./gradlew :app:generateBaselineProfile
 ```
 
 It writes `app/src/main/generated/baselineProfiles/baseline-prof.txt`, which is checked in and

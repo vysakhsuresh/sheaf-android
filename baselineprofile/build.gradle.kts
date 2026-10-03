@@ -3,6 +3,20 @@ plugins {
     id("org.jetbrains.kotlin.android")
     // The version is named here, and again in :app, because the root build file puts AGP, Kotlin
     // and KSP on the classpath every module inherits and this plugin is not one of them.
+    //
+    // Deliberately a version BEHIND benchmark-macro-junit4 below, which is the one thing in
+    // this file that looks like an oversight and is not.
+    //
+    // The device-side library has to be 1.5.0, because 1.3.3 cannot generate a profile on
+    // Android 15 at all: it parses `pm dump-profiles` and insists the output is either empty
+    // or the single "Profile saved to ..." line, and API 35 prints two lines about flushing
+    // in front of it, so the run throws after driving the whole journey. The Gradle plugin
+    // cannot follow it up, because 1.5.0 fails to configure against this project's AGP and
+    // KSP - `Illegal char <?> ... app\provider(?)` while creating kspNonMinifiedReleaseKotlin.
+    //
+    // The two are separable: the parsing happens on the phone, the plugin only orchestrates
+    // and then reads the file back. Revisit when AGP and KSP are next upgraded, and put them
+    // back on one version then.
     id("androidx.baselineprofile") version "1.3.3"
 }
 
@@ -42,5 +56,5 @@ baselineProfile {
 dependencies {
     implementation("androidx.test.ext:junit:1.2.1")
     implementation("androidx.test.uiautomator:uiautomator:2.3.0")
-    implementation("androidx.benchmark:benchmark-macro-junit4:1.3.3")
+    implementation("androidx.benchmark:benchmark-macro-junit4:1.5.0")
 }
