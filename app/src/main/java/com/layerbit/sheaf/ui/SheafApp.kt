@@ -1,6 +1,11 @@
 package com.layerbit.sheaf.ui
 
 import android.net.Uri
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -145,7 +150,27 @@ fun SheafApp(
             .background(SheafColors.Background)
             .windowInsetsPadding(WindowInsets.systemBars)
     ) {
-        NavHost(navController = navController, startDestination = Routes.HOME) {
+        // The four transitions, chosen rather than inherited.
+        //
+        // navigation-compose defaults all four to fadeIn/fadeOut over 700ms, and because
+        // popEnter and popExit default to the same lambdas as enter and exit, going forward
+        // and coming back looked identical - a long, directionless dissolve that said nothing
+        // about where you were in the app. Going in slides from the right; coming back slides
+        // out to the right, and the screen behind simply fades up.
+        //
+        // An eighth of the width, not the whole of it: every route draws its own SheafTopBar
+        // at the same place, and a full-width slide makes the bar look as though it travels
+        // across the screen rather than the content moving underneath it.
+        NavHost(
+            navController = navController,
+            startDestination = Routes.HOME,
+            enterTransition = { slideInHorizontally(tween(260)) { it / 8 } + fadeIn(tween(200)) },
+            exitTransition = { fadeOut(tween(160)) },
+            popEnterTransition = { fadeIn(tween(200)) },
+            popExitTransition = {
+                slideOutHorizontally(tween(260)) { it / 8 } + fadeOut(tween(160))
+            }
+        ) {
             composable(Routes.HOME) {
                 Column {
                     SheafTopBar(
@@ -176,7 +201,11 @@ fun SheafApp(
                 ViewerScreen(
                     state = viewerState,
                     reading = reading,
+                    favourites = settings.favouriteTools,
                     renderPage = { index, width -> viewerViewModel.page(index, width) },
+                    renderTile = { index, fullWidth, tile, outWidth, outHeight ->
+                        viewerViewModel.tile(index, fullWidth, tile, outWidth, outHeight)
+                    },
                     onUseTool = { tool, uri -> navController.navigate(Routes.tool(tool, uri)) },
                     onBack = { navController.popBackStack() },
                     onToggleNight = viewerViewModel::toggleNightMode,
@@ -234,7 +263,19 @@ fun SheafApp(
                             subtitle = ToolId.SCAN.summary,
                             onBack = { navController.popBackStack() }
                         )
-                        ScanRoute(onFinished = { navController.popBackStack() })
+                        ScanRoute(
+                            onFinished = { navController.popBackStack() },
+                            onOpenResult = { file ->
+                                viewerViewModel.openLocal(file)
+                                navController.navigate(Routes.VIEWER) { launchSingleTop = true }
+                            },
+                            // The same route a tool result takes, so a scan chains onward on
+                            // the same terms: a new destination rather than a reset of this
+                            // one, and back walks the chain in reverse.
+                            onChainTool = { next, file ->
+                                navController.navigate(Routes.tool(next, file = file.file.path))
+                            }
+                        )
                     }
                 } else if (tool != null) {
                     Column {
@@ -248,6 +289,7 @@ fun SheafApp(
                             preloadUri = entry.arguments?.getString("uri"),
                             preloadFile = entry.arguments?.getString("file"),
                             openResultWhenDone = settings.openResultWhenDone,
+                            favourites = settings.favouriteTools,
                             onOpenResult = { file ->
                                 // Opened straight from the result list so a finished document
                                 // can be checked before anyone decides to save it.
@@ -276,6 +318,7 @@ fun SheafApp(
                         settings = settings,
                         workspaceBytes = workspaceBytes,
                         bookmarkCount = bookmarkCount,
+                        recentCount = recents.size,
                         onChange = onSettingsChange,
                         onClearWorkspace = {
                             sheaf.workspace.clear()

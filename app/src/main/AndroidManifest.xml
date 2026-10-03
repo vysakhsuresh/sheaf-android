@@ -65,10 +65,18 @@
       biggest Play review trap in this category avoided.
     -->
 
+    <!--
+      enableOnBackInvokedCallback turns on predictive back from Android 13. Nothing in the app
+      intercepts back itself - the only back behaviour is the navigation graph's, through
+      OnBackPressedDispatcher, which androidx.activity forwards to the platform callback once this
+      is set. So the flag is the whole change: the system gets to animate the gesture instead of
+      waiting to find out whether the app will handle it.
+    -->
     <application
         android:name=".SheafApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"

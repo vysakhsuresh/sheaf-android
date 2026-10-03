@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Mirrors SheafColors.Background in the DARK palette, which is this app's own default.
+      The light twin is in values/colors.xml; change both together.
+
+      ic_launcher_background is deliberately absent: the launcher icon is not themed.
+    -->
+    <color name="window_background">#101A2B</color>
+</resources>

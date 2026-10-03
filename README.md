@@ -240,8 +240,8 @@ another reader, and a batch with one unreadable file still finishes the rest.
 ## Requirements
 
 - Android Studio with an SDK for **compileSdk/targetSdk 36**
-- JDK 17
-- `minSdk` is 26
+- **JDK 21 to run Gradle**, targeting Java 17 bytecode — see Building, the two are not the same
+- `minSdk` is 26, and API 28 or newer on the device that generates the baseline profile
 
 ## Building
 
@@ -250,11 +250,26 @@ another reader, and a batch with one unreadable file still finishes the rest.
 ./gradlew :app:testDebugUnitTest
 ```
 
-**Not yet built end to end.** The environment this was written in had no Android SDK and no
-access to Google's Maven repository, so Gradle could not be run. The source was written and
-reviewed by hand against the AndroidX, Compose and `android.graphics.pdf` APIs. Open the
-project in Android Studio and sync to pull dependencies and catch anything environment
-specific — expect to fix a version or an import on the first sync.
+The two commands above are run and green: a debug APK builds and the unit tests pass. A
+release build — R8, the resource shrinker and the bundle — has not been put through its paces
+as often, and it is the one that fails differently from debug, so cut one before trusting a
+shrinker rule.
+
+**Gradle needs JDK 21.** Not 17, which is only what the compiler targets, and not 25: the
+Kotlin DSL in the 8.11.1 wrapper cannot parse that version string and dies with a bare
+`IllegalArgumentException: 25.0.3` that names no file and never mentions Java. Android
+Studio's own bundled runtime is 25, so set `JAVA_HOME` to a 21 before running `gradlew` from
+a terminal.
+
+**Generating the baseline profile** needs a device or emulator on API 28 or newer, plugged in:
+
+```
+./gradlew :baselineprofile:generateBaselineProfile
+```
+
+It writes `app/src/main/generated/baselineProfiles/baseline-prof.txt`, which is checked in and
+packaged. No release build ever runs it — a release that needs a phone attached is a release
+nobody can cut.
 
 ## Icon
 

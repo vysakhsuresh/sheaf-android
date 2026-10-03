@@ -1,8 +1,21 @@
 package com.layerbit.sheaf.ui.tools
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -10,7 +23,11 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -164,7 +181,7 @@ fun ToolOptions(
                 // question being asked is whether this will fit under an attachment limit.
                 when (sizeCheck) {
                     SizeCheck.Idle -> TextButton(onClick = onCheckSize) {
-                        Text("Check the size first", color = SheafColors.Band)
+                        Text("Check the size first", color = SheafColors.BandBright)
                     }
                     SizeCheck.Working -> Text(
                         "Trying it…",
@@ -505,7 +522,7 @@ fun ToolOptions(
                 )
                 SectionHeading("Colour")
                 if (config.markupPen) {
-                    ChoiceRow(
+                    ColourChoiceRow(
                         options = listOf(
                             NOTE_BLACK to "Black",
                             NOTE_BLUE to "Blue",
@@ -521,7 +538,7 @@ fun ToolOptions(
                         onSelect = { value -> onChange { it.copy(penWidth = value) } }
                     )
                 } else {
-                    ChoiceRow(
+                    ColourChoiceRow(
                         options = listOf(
                             HIGHLIGHT_YELLOW to "Yellow",
                             HIGHLIGHT_GREEN to "Green",
@@ -725,6 +742,75 @@ internal fun Field(
 @Composable
 private fun <T> ChoiceRow(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) =
     ChipRow(options = options, selected = selected, onSelect = onSelect)
+
+/**
+ * The same row of choices, each chip carrying the colour it names.
+ *
+ * The one control in the app whose subject is colour was the one control showing none of it.
+ * "Yellow" against "Green" is a difference nobody can judge from two words, and the comment on
+ * the pen-or-highlighter switch above already turns on the distinction being visible - a
+ * yellow pen is invisible and a black highlight is a redaction, so the reader has to be able
+ * to see which is which before choosing.
+ *
+ * Drawn here rather than in [ChipRow] because the shared chip takes its options as plain
+ * strings and has no slot to put a swatch in. If that foundation ever grows one, this should
+ * fold back into it; until then the geometry below deliberately matches it line for line - the
+ * 48dp target, the pill, the selection semantics - so the two do not read as different
+ * controls on the same screen.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ColourChoiceRow(
+    options: List<Pair<Int, String>>,
+    selected: Int,
+    onSelect: (Int) -> Unit
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
+        modifier = Modifier.fillMaxWidth().selectableGroup()
+    ) {
+        options.forEach { (argb, label) ->
+            val active = argb == selected
+            val shape = RoundedCornerShape(999.dp)
+            Box(
+                modifier = Modifier
+                    .defaultMinSize(minHeight = 48.dp)
+                    .selectable(
+                        selected = active,
+                        role = Role.RadioButton,
+                        onClick = { onSelect(argb) }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .clip(shape)
+                        .background(if (active) SheafColors.BandDim else SheafColors.SurfaceDim)
+                        .border(1.dp, if (active) SheafColors.Band else SheafColors.Border, shape)
+                        .padding(start = 10.dp, end = 14.dp, top = 8.dp, bottom = 8.dp)
+                ) {
+                    // The outline is what keeps black ink from disappearing into the chip and
+                    // pale yellow from disappearing into nothing at all.
+                    Box(
+                        modifier = Modifier
+                            .size(14.dp)
+                            .clip(CircleShape)
+                            .background(Color(argb))
+                            .border(1.dp, SheafColors.Border, CircleShape)
+                    )
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (active) SheafColors.BandBright else SheafColors.Muted
+                    )
+                }
+            }
+        }
+    }
+}
 
 /** A sentence under a control saying what it does, or what it costs. Shared with the screen. */
 @Composable

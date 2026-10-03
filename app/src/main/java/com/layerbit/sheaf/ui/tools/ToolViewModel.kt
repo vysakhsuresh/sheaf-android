@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.layerbit.sheaf.SheafApplication
@@ -121,7 +122,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         viewModelScope.launch {
-            _state.update { it.copy(busy = true, error = null) }
+            _state.update { it.copy(busyLabel = "Reading the file…", error = null) }
             val copied = withContext(Dispatchers.IO) {
                 runCatching {
                     val destination = sheaf.workspace.newOutput(
@@ -135,7 +136,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             }
 
             if (copied == null) {
-                _state.update { it.copy(busy = false, error = "That result could not be read.") }
+                _state.update { it.copy(busyLabel = null, error = "That result could not be read.") }
                 return@launch
             }
 
@@ -148,10 +149,11 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 current.copy(
                     documents = combined,
-                    busy = false,
+                    busyLabel = null,
                     formFields = emptyList(),
                     formValues = emptyMap(),
-                    formRead = false
+                    formRead = false,
+                    pagesLoaded = false
                 )
             }
         }
@@ -160,19 +162,28 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
     fun addDocuments(uris: List<Uri>) {
         if (uris.isEmpty()) return
         viewModelScope.launch {
-            _state.update { it.copy(busy = true, error = null) }
+            _state.update { it.copy(busyLabel = "Reading the file…", error = null) }
             val added = mutableListOf<SelectedDoc>()
-            var failure: String? = null
+            // Say which one failed. "Could not add file" when four were picked leaves the
+            // user to work out which by elimination - and a single String here was
+            // overwritten on each turn of the loop, so three failures out of five named one
+            // of the three and left the other two to be found the same way.
+            val unreadable = mutableListOf<String>()
 
             for (uri in uris) {
                 try {
                     val imported = sheaf.documentStore.import(uri)
                     added += inspect(imported)
-                } catch (e: Exception) {
-                    // Say which one failed. "Could not add file" when four were picked leaves
-                    // the user to work out which by elimination.
-                    failure = e.message ?: "One of those files could not be read."
+                } catch (_: Exception) {
+                    unreadable += pickedName(uri)
                 }
+            }
+
+            val failure = when {
+                unreadable.isEmpty() -> null
+                unreadable.size == 1 -> "Could not read ${unreadable.single()}."
+                else -> "Could not read ${unreadable.size} of the ${uris.size} files: " +
+                    unreadable.joinToString(", ") + "."
             }
 
             _state.update { current ->
@@ -187,16 +198,29 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 current.copy(
                     documents = combined,
-                    busy = false,
+                    busyLabel = null,
                     error = failure,
                     // A different document is a different form, so what was read about the
                     // last one has to go rather than be shown against this one.
                     formFields = emptyList(),
                     formValues = emptyMap(),
-                    formRead = false
+                    formRead = false,
+                    pagesLoaded = false
                 )
             }
         }
+    }
+
+    /**
+     * The name the owning app reports for a document that could not be imported.
+     *
+     * DocumentStore works this out too and keeps it private, which is right - it needs the
+     * name on the way in. This is the failure path, where there is no SheafFile left to ask.
+     */
+    private suspend fun pickedName(uri: Uri): String = withContext(Dispatchers.IO) {
+        runCatching { DocumentFile.fromSingleUri(sheaf, uri)?.name }.getOrNull()
+            ?: uri.lastPathSegment?.substringAfterLast('/')
+            ?: "one of those files"
     }
 
     /**
@@ -326,7 +350,18 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     },
                     onFailure = { list[index].copy(unreadableReason = "That password did not open it.") }
                 )
-                current.copy(documents = list, pageOrder = emptyList())
+                // The page order is dropped because it belonged to the locked document, and
+                // pagesLoaded with it: the screen is back to not having looked yet, which is
+                // what makes the loader run again rather than report what the lock caused.
+                // previewFailed goes too: the lock is the usual reason the preview could not
+                // be drawn, so an unlock has to let it be attempted again rather than leave
+                // the screen reporting a failure the password has just resolved.
+                current.copy(
+                    documents = list,
+                    pageOrder = emptyList(),
+                    pagesLoaded = false,
+                    previewFailed = false
+                )
             }
         }
     }
@@ -344,7 +379,10 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             current.copy(
                 config = updated,
                 sizeCheck = if (clearCheck) SizeCheck.Idle else current.sizeCheck,
-                previewPage = if (clearPage) null else current.previewPage
+                previewPage = if (clearPage) null else current.previewPage,
+                // Cleared with the page, so asking for a different one is a fresh attempt
+                // rather than a screen that still reports the previous page's failure.
+                previewFailed = if (clearPage) false else current.previewFailed
             )
         }
     }
@@ -372,8 +410,8 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         viewModelScope.launch {
-            _state.update { it.copy(busy = true) }
-            val thumbs = withContext(Dispatchers.IO) {
+            _state.update { it.copy(busyLabel = "Drawing the pages…") }
+            val rendered = withContext(Dispatchers.IO) {
                 runCatching {
                     val engine = if (doc.encrypted) sheaf.encryptedReader else sheaf.pdfEngine
                     engine.open(doc.file.file, doc.password).use { opened ->
@@ -392,12 +430,22 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                             index to bitmap
                         }
                     }
-                }.getOrNull().orEmpty()
+                }
             }
+            // A document that will not open used to come back as an empty list, which this
+            // screen draws as no grid, no hint and no reason - the whole point of Organise,
+            // missing, with nothing said. The failure is kept so it can be reported.
+            val thumbs = rendered.getOrNull().orEmpty()
             _state.update { current ->
                 val order = thumbs.map { (index, _) -> index }
                 current.copy(
-                    busy = false,
+                    busyLabel = null,
+                    pagesLoaded = true,
+                    error = when {
+                        rendered.isFailure -> "The pages of this document could not be read."
+                        order.isEmpty() -> "This document has no pages in it."
+                        else -> null
+                    },
                     pageOrder = order,
                     thumbnails = thumbs
                         .mapNotNull { (index, bitmap) -> bitmap?.let { b -> index to b } }
@@ -419,14 +467,29 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
     /** Lists the pages without drawing them, then draws the first one. */
     private fun loadPageCountOnly(doc: SelectedDoc) {
         viewModelScope.launch {
-            _state.update { it.copy(busy = true) }
-            val count = withContext(Dispatchers.IO) {
+            _state.update { it.copy(busyLabel = "Counting the pages…") }
+            val counted = withContext(Dispatchers.IO) {
                 runCatching {
                     val engine = if (doc.encrypted) sheaf.encryptedReader else sheaf.pdfEngine
                     engine.open(doc.file.file, doc.password).use { it.pageCount }
-                }.getOrDefault(0)
+                }
             }
-            _state.update { it.copy(busy = false, pageOrder = (0 until count).toList()) }
+            // Same reason as loadPages: a count of zero was indistinguishable from a document
+            // that could not be opened at all, and Remove areas and Mark up come through here
+            // rather than there.
+            val count = counted.getOrDefault(0)
+            _state.update {
+                it.copy(
+                    busyLabel = null,
+                    pagesLoaded = true,
+                    error = when {
+                        counted.isFailure -> "The pages of this document could not be read."
+                        count == 0 -> "This document has no pages in it."
+                        else -> null
+                    },
+                    pageOrder = (0 until count).toList()
+                )
+            }
             if (count > 0) renderBigPage(0)
         }
     }
@@ -453,7 +516,15 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 }.getOrNull()
             }
             _state.update { current ->
-                if (bitmap == null) current else current.copy(thumbnails = mapOf(index to bitmap))
+                // A failure is recorded rather than dropped. Leaving state untouched meant
+                // thumbnails[index] stayed null for ever and the canvas showed a spinner
+                // nothing would ever replace - the same defect the preview had, reached
+                // most easily by jumping straight to a distant page.
+                if (bitmap == null) {
+                    current.copy(failedPages = current.failedPages + index)
+                } else {
+                    current.copy(thumbnails = mapOf(index to bitmap), failedPages = emptySet())
+                }
             }
         }
     }
@@ -553,6 +624,12 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
     // ---- running ----
 
     fun run() {
+        // A crashed job is sticky until something acknowledges it, and the screen's "Try
+        // again" is this. Done before the checks below so that a run which cannot even be
+        // built still leaves the crash behind, rather than stranding the screen on it.
+        // Harmless otherwise: acknowledge() leaves a running job alone.
+        sheaf.jobRunner.acknowledge()
+
         val current = _state.value
         val tool = current.tool ?: return
         val ready = current.documents.filter { it.isReady }
@@ -566,7 +643,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             .mapNotNull { doc -> doc.password?.takeIf { it.isNotEmpty() }?.let { doc.file.file.path to it } }
             .toMap()
 
-        _state.update { it.copy(error = null) }
+        _state.update { it.copy(error = null, saved = emptySet()) }
         sheaf.jobRunner.submit(op, ready.map { it.file }, passwords)
     }
 
@@ -711,7 +788,27 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
 
     fun acknowledgeResult() {
         sheaf.jobRunner.acknowledge()
-        _state.update { it.copy(pageOrder = emptyList(), selectedPages = emptySet(), rotations = emptyMap()) }
+        _state.update {
+            it.copy(
+                pageOrder = emptyList(),
+                pagesLoaded = false,
+                selectedPages = emptySet(),
+                rotations = emptyMap(),
+                saved = emptySet()
+            )
+        }
+    }
+
+    /**
+     * Records that a produced file reached the user's own storage.
+     *
+     * The workspace is trimmed on the next launch and nothing in the app lists what is in
+     * it, so "saved" and "not saved yet" is the difference between a file the user has and a
+     * file they are about to lose. A snackbar cannot carry that: it is gone by the time the
+     * second file in a batch is saved.
+     */
+    fun markSaved(path: String) {
+        _state.update { it.copy(saved = it.saved + path) }
     }
 
     // ---- results ----
@@ -769,6 +866,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
     fun writeTo(destination: Uri, file: SheafFile, onDone: (String?) -> Unit) {
         viewModelScope.launch {
             val result = runCatching { sheaf.exporter.writeTo(destination, file) }
+            if (result.isSuccess) markSaved(file.file.path)
             onDone(result.exceptionOrNull()?.message)
         }
     }
@@ -803,7 +901,12 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             for (file in files) {
                 val problem = runCatching { sheaf.exporter.writeInto(folder, file) }
                     .getOrElse { it.message ?: "${file.displayName} could not be written." }
-                if (problem == null) saved += 1 else if (firstProblem == null) firstProblem = problem
+                if (problem == null) {
+                    saved += 1
+                    markSaved(file.file.path)
+                } else if (firstProblem == null) {
+                    firstProblem = problem
+                }
             }
             onDone(
                 when {
@@ -849,7 +952,11 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 }.getOrNull()
             }
-            _state.update { it.copy(previewPage = bitmap) }
+            // The failure is recorded, not just the absence of a page. Nothing retries this,
+            // so a null that only means "not here" and a null that means "asked, and the
+            // engine could not" are the difference between a preview that is still coming and
+            // a spinner that will turn until the screen is closed.
+            _state.update { it.copy(previewPage = bitmap, previewFailed = bitmap == null) }
         }
     }
 
@@ -1012,6 +1119,15 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Drops the last box drawn on this page, exactly as [undoMark] drops the last mark. */
+    fun undoRedaction(page: Int) {
+        _state.update { current ->
+            val existing = current.redactions[page].orEmpty()
+            if (existing.isEmpty()) return@update current
+            current.copy(redactions = current.redactions + (page to existing.dropLast(1)))
+        }
+    }
+
     fun clearRedactions(page: Int) {
         _state.update { it.copy(redactions = it.redactions - page) }
     }
@@ -1123,7 +1239,14 @@ data class ToolUiState(
     val tool: ToolId? = null,
     val documents: List<SelectedDoc> = emptyList(),
     val config: ToolConfig = ToolConfig(),
-    val busy: Boolean = false,
+    /**
+     * What the screen is waiting for, in words, or null when it is not waiting.
+     *
+     * A sentence rather than a Boolean because an unlabelled spinner says only "something".
+     * Everywhere else this app names the wait - "Looking for form fields…", "Searching…" -
+     * and the three waits that reach here are not the same wait.
+     */
+    val busyLabel: String? = null,
     val error: String? = null,
     /** Organise only: the page order being edited, as indices into the original document. */
     val pageOrder: List<Int> = emptyList(),
@@ -1140,6 +1263,17 @@ data class ToolUiState(
     val previews: Map<String, ResultPreview> = emptyMap(),
     /** Page one, for the tools whose effect can be shown before running. */
     val previewPage: Bitmap? = null,
+    /**
+     * The preview was asked for and could not be produced - a locked document, or a page the
+     * engine refused. Distinct from [previewPage] being null because nothing has asked yet,
+     * and nothing ever retries, so the screen has to say so rather than spin.
+     */
+    val previewFailed: Boolean = false,
+    /**
+     * Pages the engine was asked for and could not render, for the canvases. Only ever holds
+     * the page being looked at, because [ToolUiState.thumbnails] holds only that one too.
+     */
+    val failedPages: Set<Int> = emptySet(),
     /** The drawn signature, for the placement preview. */
     val signatureBitmap: Bitmap? = null,
     /** What compressing this document would actually produce. */
@@ -1156,8 +1290,14 @@ data class ToolUiState(
     val formFields: List<FormField> = emptyList(),
     val formValues: Map<String, String> = emptyMap(),
     /** True once the form has been looked for, which is how "none" differs from "not yet". */
-    val formRead: Boolean = false
+    val formRead: Boolean = false,
+    /** True once the pages have been looked for, the same distinction as [formRead]. */
+    val pagesLoaded: Boolean = false,
+    /** The produced files that have reached the user's own storage, by workspace path. */
+    val saved: Set<String> = emptySet()
 ) {
+    val busy: Boolean get() = busyLabel != null
+
     /** The plan as it stands, pushed onto the undo stack before it is changed. */
     fun withEditRemembered(): List<PageEdit> =
         (pageEdits + PageEdit(pageOrder, rotations)).takeLast(MAX_PAGE_EDITS)
@@ -1184,6 +1324,10 @@ data class ToolUiState(
                     ?: "One file still needs its password."
             tool == ToolId.MERGE && documents.size < 2 -> "Merging needs at least two files."
             tool == ToolId.SIGN && signatureFile == null -> "Draw your signature above."
+            // Telling someone to drag a box over a screen with no page on it is worse than
+            // saying nothing.
+            (tool == ToolId.ANNOTATE || tool == ToolId.REDACT) && pagesLoaded && pageOrder.isEmpty() ->
+                "The pages could not be read, so there is nothing to mark."
             tool == ToolId.ANNOTATE && marks.values.all { it.isEmpty() } ->
                 "Highlight a line or draw on the page."
             tool == ToolId.REDACT && redactions.values.all { it.isEmpty() } ->

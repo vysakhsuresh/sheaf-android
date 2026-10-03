@@ -1,8 +1,11 @@
 package com.layerbit.sheaf.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -16,6 +19,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.layerbit.sheaf.R
 import com.layerbit.sheaf.prefs.ThemeChoice
@@ -31,6 +35,12 @@ import com.layerbit.sheaf.prefs.ThemeChoice
  * That band colour is spent in exactly one place at a time: the primary action on screen.
  * Everything else is ink, paper and the greys between them, which is what makes a page of a
  * document the brightest thing in the window rather than the chrome around it.
+ *
+ * BAND IS WHAT YOU PAINT WITH, BANDBRIGHT IS WHAT YOU WRITE WITH. Band fills a button, draws
+ * a border, washes a selection; BandBright is for a glyph or a word that has to be read. The
+ * rule exists because [Band] on [Surface] is 3.5:1, which is under AA for body text, and
+ * because the app was using both for text and so could not look consistent even where it was
+ * legible. Anywhere the accent is ink - a label, a count, a link - reach for BandBright.
  *
  * WHY THESE ARE OBSERVABLE STATE RATHER THAN CONSTANTS. Every screen reads SheafColors
  * directly, which was the right call while there was one palette and the wrong one the moment
@@ -143,7 +153,13 @@ internal val Dark = Palette(
     borderStrong = Color(0xFF31435E),
     text = Color(0xFFF0F3F8),
     muted = Color(0xFF9BAAC2),
-    dim = Color(0xFF64748B),
+    // Raised from #64748B, which was 3.30:1 on Surface and so under AA for body text. Dim is
+    // the colour of nearly every explanatory line in the app - section headings, hints, tool
+    // summaries, "Page 7 of 212" - so the prose carrying the app's character was the hardest
+    // text in it to read. #8795A8 is 5.15:1 on Surface, 5.72:1 on Background, and still a
+    // clear step below Muted at 6.67:1, which is what keeps the three-level ink ramp legible
+    // as a ramp.
+    dim = Color(0xFF8795A8),
     band = Color(0xFFE0257A),
     bandBright = Color(0xFFFF5C9E),
     bandDim = Color(0xFF3A0E22),
@@ -172,7 +188,10 @@ internal val Light = Palette(
     borderStrong = Color(0xFFBDB5A4),
     text = Color(0xFF121A26),
     muted = Color(0xFF4C5869),
-    dim = Color(0xFF78849B),
+    // The same AA fix as the dark palette, in the other direction: on a light ground the
+    // under-contrast grey has to go darker, not lighter. 5.37:1 on Surface, 4.80:1 on
+    // Background.
+    dim = Color(0xFF5F6B82),
     band = Color(0xFFC81E6C),
     bandBright = Color(0xFF9E1453),
     bandDim = Color(0xFFFBE2EE),
@@ -200,7 +219,40 @@ private val SheafTypography = Typography(
     bodyLarge = TextStyle(fontFamily = SpaceGrotesk, fontSize = 15.sp, fontWeight = FontWeight.Normal),
     bodyMedium = TextStyle(fontFamily = SpaceGrotesk, fontSize = 13.5.sp, fontWeight = FontWeight.Normal),
     bodySmall = TextStyle(fontFamily = SpaceGrotesk, fontSize = 12.5.sp, fontWeight = FontWeight.Normal),
+    // The one slot that is not a choice about this app's voice but about whether it is heard
+    // at all. Material3's Button, OutlinedButton and TextButton each wrap their content in
+    // ProvideContentColorTextStyle(typography.labelLarge), which overrides the LocalTextStyle
+    // set at the bottom of this file - so while this was undefined it resolved to Material's
+    // own default, and every one of the app's sixty-odd button labels rendered in Roboto
+    // beside Space Grotesk body text in the same panel. The styles above are the design; this
+    // one is the design reaching the buttons.
+    labelLarge = TextStyle(fontFamily = SpaceGrotesk, fontSize = 14.sp, fontWeight = FontWeight.Medium),
     labelSmall = TextStyle(fontFamily = SpaceGrotesk, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+)
+
+/**
+ * Two radii, named, so that a twelfth one is never typed.
+ *
+ * Panels, sheets and cards are 14; fields, chips-that-are-not-pills and small wells are 8.
+ * Before this there were ten distinct corner radii in the app and four of them were not
+ * chosen by anyone here - a 4.dp search field and three 28.dp bottom sheets, all Material
+ * defaults sitting directly above 14.dp panels.
+ *
+ * Material's five-step scale is collapsed onto those two deliberately: large and extraLarge
+ * both answer 14 because a bottom sheet in this app is a panel that arrived from below, not
+ * a different kind of surface. Two exceptions stay at their call sites with the comment that
+ * earns them - a rendered page keeps its near-square 3.dp, because paper does, and a chip
+ * keeps its stadium, because a chip is not a card.
+ *
+ * Note that Button does NOT read this: ButtonDefaults.shape resolves a hardcoded CircleShape,
+ * so a button that should not be a pill has to say so itself.
+ */
+private val SheafShapes = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(8.dp),
+    medium = RoundedCornerShape(14.dp),
+    large = RoundedCornerShape(14.dp),
+    extraLarge = RoundedCornerShape(14.dp)
 )
 
 @Composable
@@ -213,6 +265,14 @@ fun SheafTheme(theme: ThemeChoice = ThemeChoice.DARK, content: @Composable () ->
     val palette = if (dark) Dark else Light
     SheafColors.apply(palette)
 
+    // The roles below are every one Material will reach for in this app, not every one it
+    // defines. The ones that were missing were not neutral: a scheme leaves its gaps at
+    // Material's own baseline, and the baseline is a warm purple-grey that shows up in
+    // exactly the two places that float above everything else - surfaceContainer, which is
+    // what a DropdownMenu paints itself with, and inverseSurface, which is what a Snackbar
+    // paints itself with. So the viewer's overflow menu and every confirmation in the app
+    // were the two surfaces not drawn from this palette. Scrim is deliberately left alone:
+    // the baseline is already black and listing it would imply somebody chose it.
     val scheme = if (dark) {
         darkColorScheme(
             primary = palette.band,
@@ -223,7 +283,15 @@ fun SheafTheme(theme: ThemeChoice = ThemeChoice.DARK, content: @Composable () ->
             onSurface = palette.text,
             surfaceVariant = palette.surfaceDim,
             onSurfaceVariant = palette.muted,
+            surfaceContainerLowest = palette.surfaceDim,
+            surfaceContainerLow = palette.surfaceDim,
+            surfaceContainer = palette.surface,
+            surfaceContainerHigh = palette.surface,
+            surfaceContainerHighest = palette.surface,
+            inverseSurface = palette.text,
+            inverseOnSurface = palette.background,
             outline = palette.border,
+            outlineVariant = palette.border,
             error = palette.failed
         )
     } else {
@@ -236,16 +304,32 @@ fun SheafTheme(theme: ThemeChoice = ThemeChoice.DARK, content: @Composable () ->
             onSurface = palette.text,
             surfaceVariant = palette.surfaceDim,
             onSurfaceVariant = palette.muted,
+            surfaceContainerLowest = palette.surfaceDim,
+            surfaceContainerLow = palette.surfaceDim,
+            surfaceContainer = palette.surface,
+            surfaceContainerHigh = palette.surface,
+            surfaceContainerHighest = palette.surface,
+            inverseSurface = palette.text,
+            inverseOnSurface = palette.background,
             outline = palette.border,
+            outlineVariant = palette.border,
             error = palette.failed
         )
     }
 
-    MaterialTheme(colorScheme = scheme, typography = SheafTypography) {
-        // Anything drawing raw Text outside a styled slot still lands on the family face
-        // rather than falling back to the platform default.
+    MaterialTheme(colorScheme = scheme, typography = SheafTypography, shapes = SheafShapes) {
         CompositionLocalProvider(
+            // Anything drawing raw Text outside a styled slot still lands on the family face
+            // rather than falling back to the platform default.
             LocalTextStyle provides SheafTypography.bodyLarge,
+            // Not cosmetic, and not reachable through the colour scheme. LocalContentColor
+            // defaults to Color.Black and only a Surface composable changes it - and there is
+            // no Surface anywhere in this app, because every panel is drawn by hand. Material
+            // tints the press ripple from this value, so until now every bare .clickable in
+            // the app drew a black ripple on a near-black panel: a press that produced no
+            // feedback at all. One line gives Panel, ChipRow, ToggleRow, the recents rows,
+            // the search results and the page thumbs a visible touch response.
+            LocalContentColor provides palette.text,
             content = content
         )
     }

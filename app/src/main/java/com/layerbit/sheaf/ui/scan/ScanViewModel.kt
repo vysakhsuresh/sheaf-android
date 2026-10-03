@@ -202,6 +202,18 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearError() = _state.update { it.copy(error = null) }
 
+    /**
+     * A shutter press that produced no file.
+     *
+     * Every other write to [ScanUiState.error] comes from work this model did itself, so the
+     * camera had nowhere to report to and the viewfinder swallowed its failures in silence -
+     * a press that did nothing at all, with no page appearing and no reason given. [reason]
+     * is phrased by the caller, which is the only place that knows what CameraX objected to.
+     */
+    fun captureFailed(reason: String) {
+        _state.update { it.copy(error = reason) }
+    }
+
     /** Where CameraX should write the next capture. */
     fun captureTarget(): File = sheaf.workspace.newOutput("capture", "raw", "jpg")
 

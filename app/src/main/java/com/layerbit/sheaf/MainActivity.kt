@@ -1,13 +1,16 @@
 package com.layerbit.sheaf
 
 import android.content.Intent
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -17,6 +20,7 @@ import androidx.lifecycle.lifecycleScope
 import com.layerbit.sheaf.files.Exporter
 import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.ui.SheafApp
+import com.layerbit.sheaf.ui.theme.SheafColors
 import com.layerbit.sheaf.ui.theme.SheafTheme
 import kotlinx.coroutines.launch
 
@@ -69,6 +73,28 @@ class MainActivity : ComponentActivity() {
             val settings by sheaf.settings.state.collectAsState()
 
             SheafTheme(theme = settings.theme) {
+                // The status and navigation bar glyphs, re-decided once the palette is known.
+                //
+                // The enableEdgeToEdge() in onCreate defaults to SystemBarStyle.auto(), which
+                // reads light or dark from the phone's night-mode setting rather than from
+                // this app's ThemeChoice. Those agree for SYSTEM, which is the default, and
+                // disagree for anyone who picked against their phone - and the failure is not
+                // subtle: near-black status icons on a #101A2B bar, which is an unreadable
+                // clock. Reapplying here is the only place that knows which palette won.
+                //
+                // LaunchedEffect rather than SideEffect: this needs to run when the palette
+                // flips, not on every recomposition of the whole app. enableEdgeToEdge is
+                // idempotent, and it draws its own navigation-bar scrim below API 27, so
+                // minSdk 26 degrades without a version check.
+                LaunchedEffect(SheafColors.isDark) {
+                    val style = if (SheafColors.isDark) {
+                        SystemBarStyle.dark(Color.TRANSPARENT)
+                    } else {
+                        SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+                    }
+                    enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+                }
+
                 SheafApp(
                     recentsFlow = sheaf.recents.observe(),
                     bookmarkCountFlow = sheaf.bookmarks.observeCount(),

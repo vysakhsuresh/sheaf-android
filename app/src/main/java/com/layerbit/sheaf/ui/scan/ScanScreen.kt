@@ -3,7 +3,6 @@ package com.layerbit.sheaf.ui.scan
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,6 +39,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.scan.PageProcessor
+import com.layerbit.sheaf.ui.components.ChipRow
 import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.theme.SheafColors
 import kotlin.math.hypot
@@ -164,25 +164,11 @@ fun PageEditor(
         }
 
         Spacer(Modifier.height(14.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PageProcessor.Filter.entries.forEach { filter ->
-                val active = filter == editing.filter
-                val shape = RoundedCornerShape(999.dp)
-                Box(
-                    modifier = Modifier
-                        .background(if (active) SheafColors.BandDim else SheafColors.SurfaceDim, shape)
-                        .border(1.dp, if (active) SheafColors.Band else SheafColors.Border, shape)
-                        .clickable { onFilter(filter) }
-                        .padding(horizontal = 16.dp, vertical = 9.dp)
-                ) {
-                    Text(
-                        filter.label,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (active) SheafColors.BandBright else SheafColors.Muted
-                    )
-                }
-            }
-        }
+        ChipRow(
+            options = PageProcessor.Filter.entries.map { it to it.label },
+            selected = editing.filter,
+            onSelect = onFilter
+        )
 
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

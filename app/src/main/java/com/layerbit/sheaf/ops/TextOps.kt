@@ -1,5 +1,6 @@
 package com.layerbit.sheaf.ops
 
+import android.graphics.Bitmap
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.pdf.BitmapBudget
 import com.layerbit.sheaf.pdf.PageSelection
@@ -59,6 +60,19 @@ class OcrOp(private val dpi: Int = DEFAULT_DPI) : Op {
             var recognised = 0
 
             val engine = if (info.isEncrypted) context.encryptedReader else context.engine
+
+            // The sheet every page of this document is rendered onto, offered back to the
+            // engine on each call.
+            //
+            // A scan is three hundred pages of one size, and this pass used to allocate and
+            // throw away a full-page bitmap for every one of them - at 200 DPI an A4 page is
+            // 13 MB, so the better part of four gigabytes is churned through the same heap the
+            // recogniser is working in. Held across pages it is a single allocation.
+            //
+            // Safe to hand over only because nothing else ever sees it. The recogniser has
+            // finished with the bitmap by the time `read` returns - which is what made the
+            // immediate recycle below correct too - and no bitmap from here reaches the UI.
+            var sheet: Bitmap? = null
             val failure = try {
                 engine.open(input.file, context.passwords[input.file.path]).use { doc ->
                     for (index in 0 until doc.pageCount) {
@@ -67,28 +81,37 @@ class OcrOp(private val dpi: Int = DEFAULT_DPI) : Op {
 
                         val size = doc.pageSize(index)
                         val width = BitmapBudget.widthForDpi(size.widthPoints, dpi)
-                        val bitmap = runCatching { doc.renderPage(index, width) }.getOrNull() ?: continue
+                        val bitmap = runCatching { doc.renderPage(index, width, sheet) }
+                            .getOrNull() ?: continue
 
-                        try {
-                            val result = ocr.read(bitmap)
-                            if (!result.isEmpty) {
-                                recognised++
-                                layers[index] = result.lines.map { line ->
-                                    // Normalised against the bitmap that was actually produced,
-                                    // not the one that was asked for - BitmapBudget may have
-                                    // clamped it, and normalising against the request would put
-                                    // every word in the wrong place on a large page.
-                                    TextPlacement(
-                                        text = line.text,
-                                        left = line.left / bitmap.width,
-                                        top = line.top / bitmap.height,
-                                        width = line.width / bitmap.width,
-                                        height = line.height / bitmap.height
-                                    )
-                                }
+                        // The offer is an offer and never a promise: an engine with no reuse
+                        // path, or a page of a size the sheet does not match, renders fresh,
+                        // and that fresh bitmap becomes the sheet. Comparing identity is the
+                        // only way to find out which of the two happened. A mixed-size
+                        // document therefore reallocates where the size changes and reuses
+                        // everywhere it does not, which is the best this can do without
+                        // keeping one sheet per size and the memory that implies.
+                        if (bitmap !== sheet) {
+                            sheet?.recycle()
+                            sheet = bitmap
+                        }
+
+                        val result = ocr.read(bitmap)
+                        if (!result.isEmpty) {
+                            recognised++
+                            layers[index] = result.lines.map { line ->
+                                // Normalised against the bitmap that was actually produced,
+                                // not the one that was asked for - BitmapBudget may have
+                                // clamped it, and normalising against the request would put
+                                // every word in the wrong place on a large page.
+                                TextPlacement(
+                                    text = line.text,
+                                    left = line.left / bitmap.width,
+                                    top = line.top / bitmap.height,
+                                    width = line.width / bitmap.width,
+                                    height = line.height / bitmap.height
+                                )
                             }
-                        } finally {
-                            bitmap.recycle()
                         }
                     }
                 }
@@ -97,6 +120,11 @@ class OcrOp(private val dpi: Int = DEFAULT_DPI) : Op {
                 throw e
             } catch (e: Exception) {
                 e.message ?: "This document could not be read."
+            } finally {
+                // Per document, not per batch: the next file's pages are a different size as
+                // often as not, and a sheet carried across would be refused anyway.
+                sheet?.recycle()
+                sheet = null
             }
 
             if (failure != null) {

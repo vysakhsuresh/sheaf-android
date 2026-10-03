@@ -93,9 +93,9 @@ fun AboutScreen(modifier: Modifier = Modifier) {
                         subject = "Sheaf ${BuildConfig.VERSION_NAME} - feedback",
                         body = ""
                     )
-                }) { Text("Email us", color = SheafColors.Band) }
+                }) { Text("Email us", color = SheafColors.BandBright) }
                 TextButton(onClick = { BrandLinks.openUrl(context, BrandLinks.WHATSAPP_URL) }) {
-                    Text("Message us on WhatsApp", color = SheafColors.Band)
+                    Text("Message us on WhatsApp", color = SheafColors.BandBright)
                 }
                 Text(
                     text = "Opening either hands the address to another app, which does the " +
@@ -137,7 +137,7 @@ fun AboutScreen(modifier: Modifier = Modifier) {
                     ) {
                         Text(
                             "Clear now",
-                            color = if (workingBytes > 0 && !cleared) SheafColors.Band else SheafColors.Dim
+                            color = if (workingBytes > 0 && !cleared) SheafColors.BandBright else SheafColors.Dim
                         )
                     }
                 }
@@ -165,7 +165,7 @@ fun AboutScreen(modifier: Modifier = Modifier) {
                 TextButton(
                     onClick = { BrandLinks.openUrl(context, BrandLinks.COFFEE_URL) },
                     modifier = Modifier.padding(top = 4.dp)
-                ) { Text("Buy us a coffee", color = SheafColors.Band) }
+                ) { Text("Buy us a coffee", color = SheafColors.BandBright) }
             }
         }
 

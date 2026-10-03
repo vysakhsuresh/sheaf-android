@@ -1,6 +1,7 @@
 package com.layerbit.sheaf.pdf
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -67,7 +68,12 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     override fun inspect(input: PdfInput): DocumentInfo = withDocument(input) { doc ->
         DocumentInfo(
             pageCount = doc.numberOfPages,
-            pageSizes = (0 until doc.numberOfPages).map { doc.getPage(it).toPageSize() },
+            // doc.pages, not getPage(i) in a loop. The page tree is a tree, and getPage walks
+            // it from the root every time it is called, so asking for every page by index is
+            // quadratic in the page count - on a 300-page scan that is the difference between
+            // one walk and three hundred. Every loop in this file that wants all the pages
+            // iterates for this reason; the ones that want a handful still index.
+            pageSizes = doc.pages.map { it.toPageSize() },
             isEncrypted = doc.isEncrypted,
             title = doc.documentInformation?.title,
             author = doc.documentInformation?.author,
@@ -78,7 +84,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     }
 
     override fun merge(inputs: List<PdfInput>, output: File, onProgress: (Int, Int) -> Unit) {
-        if (inputs.isEmpty()) throw PdfException.Io("Nothing to merge.")
+        if (inputs.isEmpty()) throw PdfException.Refused("Nothing to merge.")
         try {
             val merger = PDFMergerUtility()
             merger.destinationFileName = output.absolutePath
@@ -116,12 +122,12 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         rotations: Map<Int, Int>,
         output: File
     ) = withDocument(input) { source ->
-        if (pages.isEmpty()) throw PdfException.Io("No pages were selected.")
+        if (pages.isEmpty()) throw PdfException.Refused("No pages were selected.")
 
         PDDocument(scratchMemory()).use { target ->
             for (index in pages) {
                 if (index !in 0 until source.numberOfPages) {
-                    throw PdfException.Io("Page ${index + 1} does not exist in this document.")
+                    throw PdfException.Refused("Page ${index + 1} does not exist in this document.")
                 }
                 val page = source.getPage(index)
                 rotations[index]?.let { delta ->
@@ -140,9 +146,8 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     override fun rotate(input: PdfInput, pages: Collection<Int>, degrees: Int, output: File) =
         withDocument(input) { doc ->
             val targets = pages.toSet()
-            for (index in 0 until doc.numberOfPages) {
+            for ((index, page) in doc.pages.withIndex()) {
                 if (index !in targets) continue
-                val page = doc.getPage(index)
                 page.rotation = normaliseRotation(page.rotation + degrees)
             }
             doc.save(output)
@@ -154,30 +159,38 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         output: File,
         onProgress: (Int, Int) -> Unit
     ) {
-        if (images.isEmpty()) throw PdfException.Io("No images were selected.")
+        if (images.isEmpty()) throw PdfException.Refused("No images were selected.")
         try {
             PDDocument(scratchMemory()).use { doc ->
                 images.forEachIndexed { index, imageFile ->
-                    val image = try {
-                        PDImageXObject.createFromFile(imageFile.absolutePath, doc)
-                    } catch (e: OutOfMemoryError) {
-                        throw PdfException.OutOfMemory(imageFile.name, e)
-                    } catch (e: Exception) {
-                        throw PdfException.Corrupt("${imageFile.name} could not be read as an image", e)
-                    }
+                    val (sourceWidth, sourceHeight) = measureImage(imageFile)
 
-                    val page = PDPage(pageBoxFor(spec, image.width.toFloat(), image.height.toFloat()))
+                    // The page is sized from the photo as it arrived, not from the pixels that
+                    // end up inside it. A FIT_IMAGE page takes its size in points from the
+                    // image's own pixel count, so sizing it from the downscaled copy would
+                    // silently change every page size this tool has ever produced.
+                    val page = PDPage(pageBoxFor(spec, sourceWidth.toFloat(), sourceHeight.toFloat()))
                     doc.addPage(page)
 
-                    PDPageContentStream(doc, page).use { stream ->
-                        val box = page.mediaBox
-                        val margin = if (spec.size == PageSpec.Size.FIT_IMAGE) 0f else spec.marginPoints
-                        val available = box.width - margin * 2 to box.height - margin * 2
+                    val box = page.mediaBox
+                    val margin = if (spec.size == PageSpec.Size.FIT_IMAGE) 0f else spec.marginPoints
+                    val availableWidth = box.width - margin * 2
+                    val availableHeight = box.height - margin * 2
 
+                    val image = embeddedImage(
+                        doc = doc,
+                        file = imageFile,
+                        sourceWidth = sourceWidth,
+                        sourceHeight = sourceHeight,
+                        availableWidth = availableWidth,
+                        availableHeight = availableHeight
+                    )
+
+                    PDPageContentStream(doc, page).use { stream ->
                         // Fit, never fill: an image is never cropped to make a page look tidy.
                         val scale = minOf(
-                            available.first / image.width,
-                            available.second / image.height
+                            availableWidth / image.width,
+                            availableHeight / image.height
                         )
                         val drawWidth = image.width * scale
                         val drawHeight = image.height * scale
@@ -189,6 +202,9 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                             drawHeight
                         )
                     }
+                    // Also where a cancel is noticed: the callback the ops layer passes throws,
+                    // and one image per check is the right grain - the decode below it is the
+                    // only slow part and it cannot be interrupted halfway.
                     onProgress(index + 1, images.size)
                 }
                 doc.save(output)
@@ -220,7 +236,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
 
         pages.forEachIndexed { position, index ->
             if (index !in 0 until doc.numberOfPages) {
-                throw PdfException.Io("Page ${index + 1} does not exist in this document.")
+                throw PdfException.Refused("Page ${index + 1} does not exist in this document.")
             }
 
             // PDFBox renders at a scale relative to 72 DPI, which is PDF's own unit, so the
@@ -267,47 +283,73 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         onProgress: (Int, Int) -> Unit
     ): CompressionResult = withDocument(input) { doc ->
         val originalBytes = input.file.length()
+        val total = doc.numberOfPages
         var recompressed = 0
         var skipped = 0
 
-        for (pageIndex in 0 until doc.numberOfPages) {
-            val resources = doc.getPage(pageIndex).resources ?: continue
+        // One decision per distinct image, held by identity the way extractImages counts them.
+        // A letterhead logo is a single object in the file that every page points at: without
+        // this it was decoded, scaled and re-encoded once per page, and each page was then
+        // given its own copy of the result - so a fifty-page document came out carrying fifty
+        // logos, which is the opposite of what this operation is for. An image left alone is
+        // remembered too, so both counts are per image rather than per placement.
+        val replacements = java.util.IdentityHashMap<Any, PDImageXObject>()
+        val declined = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Any, Boolean>())
 
-            // getXObjectNames is lazy over the resource dictionary and replacing an entry
-            // while iterating it is undefined, so the names are taken first.
-            for (name in resources.xObjectNames.toList()) {
-                val existing = try {
-                    resources.getXObject(name)
-                } catch (_: Exception) {
-                    skipped++
-                    continue
-                }
-                if (existing !is PDImageXObject) continue
+        for ((pageIndex, page) in doc.pages.withIndex()) {
+            val resources = page.resources
+            if (resources != null) {
+                // getXObjectNames is lazy over the resource dictionary and replacing an entry
+                // while iterating it is undefined, so the names are taken first.
+                for (name in resources.xObjectNames.toList()) {
+                    val existing = try {
+                        resources.getXObject(name)
+                    } catch (_: Exception) {
+                        skipped++
+                        continue
+                    }
+                    if (existing !is PDImageXObject) continue
 
-                // A soft mask carries transparency and JPEG has no alpha channel, so
-                // re-encoding one as JPEG would turn transparent areas black. Left alone.
-                if (existing.softMask != null) {
-                    skipped++
-                    continue
-                }
+                    val key: Any = existing.cosObject
+                    val ready = replacements[key]
+                    if (ready != null) {
+                        resources.put(name, ready)
+                        continue
+                    }
+                    if (declined.contains(key)) continue
 
-                val shrunk = shrink(existing, level)
-                if (shrunk == null) {
-                    skipped++
-                    continue
-                }
+                    // A soft mask carries transparency and JPEG has no alpha channel, so
+                    // re-encoding one as JPEG would turn transparent areas black. Left alone.
+                    if (existing.softMask != null) {
+                        declined.add(key)
+                        skipped++
+                        continue
+                    }
 
-                try {
-                    val replacement = JPEGFactory.createFromImage(doc, shrunk, level.jpegQuality / 100f)
-                    resources.put(name, replacement)
-                    recompressed++
-                } catch (_: Exception) {
-                    skipped++
-                } finally {
-                    shrunk.recycle()
+                    val shrunk = shrink(existing, level)
+                    if (shrunk == null) {
+                        declined.add(key)
+                        skipped++
+                        continue
+                    }
+
+                    try {
+                        val replacement = JPEGFactory.createFromImage(doc, shrunk, level.jpegQuality / 100f)
+                        resources.put(name, replacement)
+                        replacements[key] = replacement
+                        recompressed++
+                    } catch (_: Exception) {
+                        declined.add(key)
+                        skipped++
+                    } finally {
+                        shrunk.recycle()
+                    }
                 }
             }
-            onProgress(pageIndex + 1, doc.numberOfPages)
+            // Outside the resources check, because this is the only cancellation point in the
+            // operation: a document of pages with nothing to compress used to run to the end
+            // without ever giving the caller a chance to stop it.
+            onProgress(pageIndex + 1, total)
         }
 
         doc.save(output)
@@ -326,7 +368,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         permissions: DocumentPermissions
     ) =
         withDocument(input) { doc ->
-            if (userPassword.isBlank()) throw PdfException.Io("The password cannot be empty.")
+            if (userPassword.isBlank()) throw PdfException.Refused("The password cannot be empty.")
 
             // The owner password is set to the same value deliberately. An owner password that
             // the user does not know is a document they can open but never change again, and a
@@ -354,7 +396,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         }
 
     override fun removePassword(input: PdfInput, output: File) = withDocument(input) { doc ->
-        if (!doc.isEncrypted) throw PdfException.Io("This document is not password-protected.")
+        if (!doc.isEncrypted) throw PdfException.Refused("This document is not password-protected.")
         doc.isAllSecurityToBeRemoved = true
         doc.save(output)
     }
@@ -366,10 +408,9 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         onProgress: (Int, Int) -> Unit
     ) = withDocument(input) { doc ->
         val total = doc.numberOfPages
-        for (index in 0 until total) {
+        for ((index, page) in doc.pages.withIndex()) {
             val placements = layers[index].orEmpty()
             if (placements.isNotEmpty()) {
-                val page = doc.getPage(index)
                 val box = page.mediaBox ?: PDRectangle.A4
 
                 // APPEND with resetContext, so the layer goes on top of the page that is
@@ -437,9 +478,12 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         val needle = query.trim()
         if (needle.isEmpty()) return@withDocument emptyList()
 
+        // Compiled once. Neither the needle nor the flags change from page to page, and a
+        // document of three hundred pages was parsing the same pattern three hundred times.
+        val pattern = Regex(Regex.escape(needle), RegexOption.IGNORE_CASE)
+
         buildList {
-            for (index in 0 until doc.numberOfPages) {
-                val page = doc.getPage(index)
+            for ((index, page) in doc.pages.withIndex()) {
                 val box = page.cropBox ?: page.mediaBox ?: PDRectangle.A4
 
                 // A stripper that keeps the glyph positions, not just the words. Page numbers
@@ -459,7 +503,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                 finder.endPage = index + 1
                 val text = runCatching { finder.getText(doc) }.getOrNull() ?: continue
 
-                val matches = Regex(Regex.escape(needle), RegexOption.IGNORE_CASE).findAll(text).toList()
+                val matches = pattern.findAll(text).toList()
                 if (matches.isEmpty()) continue
 
                 val first = matches.first().range.first
@@ -509,13 +553,16 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         onProgress: (Int, Int) -> Unit
     ) = withDocument(input) { doc ->
         val text = spec.text.toWinAnsiSafe()
-        if (text.isBlank()) throw PdfException.Io("The watermark has no text in it.")
+        if (text.isBlank()) throw PdfException.Refused("The watermark has no text in it.")
 
         val font = PDType1Font.HELVETICA_BOLD
         val total = doc.numberOfPages
 
-        for (index in 0 until total) {
-            val page = doc.getPage(index)
+        // The text and the type size are the same on every page, so its width is too. Measuring
+        // it inside the loop walked the font's metrics once per glyph per sheet.
+        val widthPoints = font.getStringWidth(text) / 1000f * spec.fontSize
+
+        for ((index, page) in doc.pages.withIndex()) {
             val box = page.mediaBox ?: PDRectangle.A4
 
             PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true)
@@ -531,7 +578,6 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                     stream.setNonStrokingColor(0.35f, 0.35f, 0.35f)
                     stream.setFont(font, spec.fontSize)
 
-                    val widthPoints = font.getStringWidth(text) / 1000f * spec.fontSize
                     val positions = if (spec.tiled) {
                         tilePositions(box.width, box.height, widthPoints, spec.fontSize)
                     } else {
@@ -562,7 +608,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         val total = doc.numberOfPages
         val numbered = total - spec.skipFirst
 
-        for (index in 0 until total) {
+        for ((index, page) in doc.pages.withIndex()) {
             if (index < spec.skipFirst) {
                 onProgress(index + 1, total)
                 continue
@@ -579,7 +625,6 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                 continue
             }
 
-            val page = doc.getPage(index)
             val box = page.mediaBox ?: PDRectangle.A4
             val width = font.getStringWidth(label) / 1000f * spec.fontSize
             val margin = MARGIN_POINTS
@@ -617,8 +662,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     ) = withDocument(input) { doc ->
         val total = doc.numberOfPages
 
-        for (index in 0 until total) {
-            val page = doc.getPage(index)
+        for ((index, page) in doc.pages.withIndex()) {
             val box = page.cropBox ?: page.mediaBox ?: PDRectangle.A4
 
             val left = box.lowerLeftX + box.width * spec.left.coerceIn(0f, MAX_TRIM)
@@ -711,7 +755,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         // stops being selectable and searchable, and the file gets bigger. Only the marked
         // pages are treated this way; the rest of the document keeps its text untouched.
         val marked = areas.filterValues { it.isNotEmpty() }
-        if (marked.isEmpty()) throw PdfException.Io("Nothing was marked for removal.")
+        if (marked.isEmpty()) throw PdfException.Refused("Nothing was marked for removal.")
 
         // One page at a time, rendered and replaced before the next one is touched. Rendering
         // every marked page first and replacing them afterwards kept one full-resolution
@@ -784,7 +828,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     override fun stampImage(input: PdfInput, stamp: ImageStamp, output: File) =
         withDocument(input) { doc ->
             if (stamp.pageIndex !in 0 until doc.numberOfPages) {
-                throw PdfException.Io("Page ${stamp.pageIndex + 1} does not exist in this document.")
+                throw PdfException.Refused("Page ${stamp.pageIndex + 1} does not exist in this document.")
             }
             val page = doc.getPage(stamp.pageIndex)
             val box = page.mediaBox ?: PDRectangle.A4
@@ -826,7 +870,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         withDocument(input) { doc ->
             for (note in notes) {
                 if (note.pageIndex !in 0 until doc.numberOfPages) {
-                    throw PdfException.Io("Page ${note.pageIndex + 1} does not exist in this document.")
+                    throw PdfException.Refused("Page ${note.pageIndex + 1} does not exist in this document.")
                 }
 
                 val lines = note.text.lines().map { it.toWinAnsiSafe() }
@@ -895,7 +939,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         onProgress: (Int, Int) -> Unit
     ) = withDocument(input) { doc ->
         val marked = marks.filterValues { it.isNotEmpty() }
-        if (marked.isEmpty()) throw PdfException.Io("Nothing was marked on any page.")
+        if (marked.isEmpty()) throw PdfException.Refused("Nothing was marked on any page.")
 
         val total = marked.size
         var done = 0
@@ -991,7 +1035,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         val header = spec.headerText.trim()
         val footer = spec.footerText.trim()
         if (header.isEmpty() && footer.isEmpty()) {
-            throw PdfException.Io("There is no header or footer text to add.")
+            throw PdfException.Refused("There is no header or footer text to add.")
         }
 
         val font = PDType1Font.HELVETICA
@@ -1182,7 +1226,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
             // source stays open until this one has been written.
             withDocument(insert) { source ->
                 if (source.numberOfPages == 0) {
-                    throw PdfException.Io("The document to insert has no pages in it.")
+                    throw PdfException.Refused("The document to insert has no pages in it.")
                 }
                 for (page in source.pages) {
                     val imported = doc.importPage(page)
@@ -1472,6 +1516,12 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         val longest = maxOf(image.width, image.height)
         if (longest <= 0) return null
 
+        // Already small enough. Re-encoding would only degrade it - and the question is asked
+        // before the decode rather than after, because the dictionary knows the size and the
+        // decode is the expensive part: a document of correctly sized images used to be
+        // decoded in full, to a bitmap PDImageXObject then held, to learn nothing.
+        if (longest <= level.maxDimension) return null
+
         val decoded = try {
             image.image
         } catch (_: Exception) {
@@ -1479,9 +1529,6 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         } catch (_: OutOfMemoryError) {
             return null
         } ?: return null
-
-        // Already small enough. Re-encoding would only degrade it.
-        if (longest <= level.maxDimension) return null
 
         val scale = level.maxDimension.toFloat() / longest
         val width = (decoded.width * scale).toInt().coerceAtLeast(1)
@@ -1499,6 +1546,120 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         } catch (_: IllegalStateException) {
             null
         }
+    }
+
+    /**
+     * The pixel size of an image file, without decoding it.
+     *
+     * inJustDecodeBounds reads the header and nothing else, which is what makes it safe to ask
+     * this about a twelve-megapixel photo before deciding how much of it to keep.
+     */
+    private fun measureImage(file: File): Pair<Int, Int> {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.absolutePath, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+            throw PdfException.Corrupt("${file.name} could not be read as an image")
+        }
+        return bounds.outWidth to bounds.outHeight
+    }
+
+    /**
+     * The image to put on a page with [availableWidth] x [availableHeight] points to fill.
+     *
+     * A phone camera hands over twelve megapixels. Fitted to A4 at [EMBED_DPI] that page can
+     * show about 1.6 of them, so the rest is weight nobody can ever see: thirty gallery photos
+     * embedded whole are a document of a hundred megabytes, mailed and synced and backed up
+     * forever, and each one costs a full-size decode on the way in. The source is therefore
+     * subsampled to roughly what the page can show and re-encoded at [EMBED_JPEG_QUALITY],
+     * which is a scan's quality and is honest about being one.
+     *
+     * [MAX_EMBED_EDGE] is the second ceiling and the only one a FIT_IMAGE page ever meets,
+     * because such a page is as many points across as the photo is pixels - a resolution target
+     * expressed against it can never bite.
+     *
+     * An image already inside both ceilings is embedded exactly as it arrived: for a JPEG that
+     * means its own bytes go into the file without being decoded at all, and for a PNG it means
+     * keeping the lossless encoding rather than trading it for artefacts at the same size. It
+     * is the bargain [shrink] makes for compression, for the same reason.
+     */
+    private fun embeddedImage(
+        doc: PDDocument,
+        file: File,
+        sourceWidth: Int,
+        sourceHeight: Int,
+        availableWidth: Float,
+        availableHeight: Float
+    ): PDImageXObject {
+        // How wide the image will actually be drawn, which is the width that decides how many
+        // pixels are worth carrying. The fit is the same one the caller draws with.
+        val fit = minOf(availableWidth / sourceWidth, availableHeight / sourceHeight)
+        // A margin wider than the page leaves nothing to fill, and answering that with a
+        // one-pixel image would throw the photo away over a setting the user can undo.
+        val widthByDpi = if (fit > 0f) {
+            BitmapBudget.widthForDpi(sourceWidth * fit, EMBED_DPI)
+        } else {
+            sourceWidth
+        }
+        val longestEdge = maxOf(sourceWidth, sourceHeight)
+        val widthByEdge = (MAX_EMBED_EDGE.toLong() * sourceWidth / longestEdge).toInt()
+        val targetWidth = minOf(sourceWidth, widthByDpi, widthByEdge).coerceAtLeast(1)
+
+        if (targetWidth >= sourceWidth) {
+            return try {
+                PDImageXObject.createFromFile(file.absolutePath, doc)
+            } catch (e: OutOfMemoryError) {
+                throw PdfException.OutOfMemory(file.name, e)
+            } catch (e: Exception) {
+                throw PdfException.Corrupt("${file.name} could not be read as an image", e)
+            }
+        }
+
+        val options = BitmapFactory.Options().apply {
+            // Halvings only, and never past the target: the full-size decode is the allocation
+            // this method exists to avoid, so this gets as close to the target as the decoder
+            // can on its own and never overshoots it downwards.
+            inSampleSize = sampleSizeFor(sourceWidth, targetWidth)
+        }
+        val decoded = try {
+            BitmapFactory.decodeFile(file.absolutePath, options)
+        } catch (e: OutOfMemoryError) {
+            throw PdfException.OutOfMemory(file.name, e)
+        } ?: throw PdfException.Corrupt("${file.name} could not be read as an image")
+
+        // A halving lands somewhere between the target and twice it, so the last step down is
+        // taken here - where it copies the subsampled bitmap rather than the original.
+        val scaled = try {
+            if (decoded.width > targetWidth) {
+                val height = (decoded.height.toLong() * targetWidth / decoded.width)
+                    .toInt().coerceAtLeast(1)
+                Bitmap.createScaledBitmap(decoded, targetWidth, height, true)
+            } else {
+                decoded
+            }
+        } catch (e: OutOfMemoryError) {
+            decoded.recycle()
+            throw PdfException.OutOfMemory(file.name, e)
+        }
+        if (scaled !== decoded) decoded.recycle()
+
+        return try {
+            JPEGFactory.createFromImage(doc, scaled, EMBED_JPEG_QUALITY)
+        } catch (e: OutOfMemoryError) {
+            throw PdfException.OutOfMemory(file.name, e)
+        } catch (e: Exception) {
+            throw PdfException.Corrupt("${file.name} could not be read as an image", e)
+        } finally {
+            // The JPEG is in the document by now and this bitmap is nobody else's - unlike the
+            // ones PDImageXObject hands out - so it goes before the next image is decoded.
+            scaled.recycle()
+        }
+    }
+
+    /** The largest halving of [sourceWidth] that is still at least [targetWidth] wide. */
+    private fun sampleSizeFor(sourceWidth: Int, targetWidth: Int): Int {
+        var sample = 1
+        while (sourceWidth / (sample * 2) >= targetWidth) sample *= 2
+        return sample
     }
 
     private fun pageBoxFor(spec: PageSpec, imageWidth: Float, imageHeight: Float): PDRectangle =
@@ -1535,6 +1696,28 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
 
         /** PNG ignores this; JPEG uses it. Separate from the compression tiers on purpose. */
         const val JPEG_EXPORT_QUALITY = 92
+
+        /**
+         * What a photo is worth once it is a page of a document.
+         *
+         * 200 DPI is a scan: a 10pt word is twenty-eight pixels tall, which reads cleanly on a
+         * screen and prints without looking soft. It is also the default the export tool
+         * offers, so the two directions agree about what a page is worth.
+         *
+         * No user-facing setting feeds this yet, which it should - see PageSpec.
+         */
+        const val EMBED_DPI = 200
+
+        /**
+         * Hard ceiling on the longest edge of an embedded photo, in pixels.
+         *
+         * 2400 is A4 at [EMBED_DPI] with room to spare, and it is the one limit that applies to
+         * a FIT_IMAGE page, whose size in points is the photo's own pixel count.
+         */
+        const val MAX_EMBED_EDGE = 2400
+
+        /** A photo of a document is a scan; this is a scan's quality, not a photograph's. */
+        const val EMBED_JPEG_QUALITY = 0.82f
 
         /** Characters of context either side of a search match. */
         const val SNIPPET_LEAD = 40

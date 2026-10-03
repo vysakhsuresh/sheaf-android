@@ -2,6 +2,7 @@ package com.layerbit.sheaf.ui.viewer
 
 import android.app.Application
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.net.Uri
 import android.util.LruCache
 import androidx.lifecycle.AndroidViewModel
@@ -31,6 +32,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileNotFoundException
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -200,11 +202,11 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 _reading.value = _reading.value.copy(outline = outline)
             } catch (_: PdfException.PasswordRequired) {
-                _state.value = ViewerState.NeedsPassword
+                _state.value = ViewerState.NeedsPassword(uri.toString())
             } catch (e: PdfException) {
                 _state.value = ViewerState.Failed(e.message ?: "This document could not be opened.")
             } catch (e: Exception) {
-                _state.value = ViewerState.Failed(e.message ?: "This document could not be opened.")
+                _state.value = ViewerState.Failed(readableFailure(e))
             }
         }
     }
@@ -274,6 +276,54 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
+     * Renders one rectangular region of a page at the resolution it is being shown at.
+     *
+     * This is what makes zoom cost what is on the screen rather than what is on the page. A
+     * whole-page render at 3x screen width is nine times the pixels of the screen, and on a
+     * 1080p phone that is a 54 MB bitmap for one A4 page - more than the whole page cache,
+     * so every scroll re-rendered it. A tile of the visible region at screen resolution is
+     * about 10 MB whatever the zoom, and it is the same picture, because nothing outside the
+     * screen and nothing finer than a device pixel was ever going to be seen.
+     *
+     * [tile] is in the coordinate space [PdfDocument.renderTile] defines: pixels of the page
+     * as it would be rendered whole at [fullWidthPx]. Working that out is the caller's half
+     * of the bargain, and the viewer does it against the same [BitmapBudget.heightFor] the
+     * engine uses.
+     *
+     * Deliberately not cached. A tile answers one viewport and nothing else, and a cache of
+     * them would hold screenfuls of pixels for regions the reader has already scrolled past -
+     * which is the cost this exists to remove. The whole-page render underneath is what gets
+     * cached, and it is what the reader looks at for the moment a tile takes to arrive.
+     *
+     * @return the tile, or null if the page cannot be drawn, the document went while this
+     *   waited, or the engine has no tile path at all. The caller shows the whole-page render
+     *   instead; all three are the same thing from where it stands.
+     */
+    suspend fun tile(
+        index: Int,
+        fullWidthPx: Int,
+        tile: Rect,
+        outWidthPx: Int,
+        outHeightPx: Int
+    ): Bitmap? {
+        val doc = document ?: return null
+        val gen = generation
+
+        return try {
+            withContext(Dispatchers.IO) {
+                renderLock.withLock {
+                    // Same guard as [page], and for the same reason: this waited for the lock,
+                    // and the document it was asked about may have closed in the meantime.
+                    if (gen != generation || document !== doc) return@withLock null
+                    doc.renderTile(index, fullWidthPx, tile, outWidthPx, outHeightPx)
+                }
+            }
+        } catch (_: PdfException) {
+            null
+        }
+    }
+
+    /**
      * Opens a file Sheaf already owns - a finished result - without importing it again.
      *
      * The point is being able to check what a tool produced before deciding to save it. The
@@ -311,10 +361,38 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                         .getOrDefault(emptyList())
                 }
                 _reading.value = _reading.value.copy(outline = outline)
+            } catch (_: PdfException.PasswordRequired) {
+                // The same screen the Uri path gets, with an empty Uri: a tool result is a
+                // file Sheaf already owns and there is nothing to hand on to Remove a
+                // password. The screen reads the empty string and sends the reader the long
+                // way round rather than offering a button that could not work. Without this
+                // arm a locked result fell through to Failed and printed the exception.
+                _state.value = ViewerState.NeedsPassword("")
             } catch (e: Exception) {
-                _state.value = ViewerState.Failed(e.message ?: "This document could not be opened.")
+                _state.value = ViewerState.Failed(readableFailure(e))
             }
         }
+    }
+
+    /**
+     * Turns an exception from the open path into something worth putting on a screen.
+     *
+     * Only the two that actually reach a reader are rewritten, and both come from the same
+     * ordinary mistake: tapping a Recent for a file that has gone, or whose Uri grant Android
+     * has since dropped. What those throw is a path and a class name.
+     *
+     * Everything else is passed through as it is, including the rest of the IOExceptions:
+     * DocumentStore.import already throws sentences with the file's name in them, and those
+     * are better than anything that could be substituted for them here. PdfException is not
+     * mapped at all, for the same reason - see PdfEngine, where those messages are written.
+     */
+    private fun readableFailure(e: Exception): String = when (e) {
+        is FileNotFoundException ->
+            "That file is not there any more. It may have been moved or deleted."
+        is SecurityException ->
+            "Android no longer lets Sheaf read that file. Open it again from Files, or from " +
+                "the app you got it from."
+        else -> e.message ?: "This document could not be opened."
     }
 
     /** The file currently open, for printing and sharing. Null when nothing is open. */
@@ -483,7 +561,10 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
         searchJob?.cancel()
         bookmarkJob?.cancel()
         positionJob?.cancel()
-        _reading.value = ReadingState()
+        // Night colours describe the room, not the document, so that one field is carried
+        // across. The rest of ReadingState is about the document that is going - its outline,
+        // its marks, the query and its hits - and all of it has to go with it.
+        _reading.value = ReadingState(nightMode = _reading.value.nightMode)
         pageCache.evictAll()
 
         // The field is cleared first so no new render can reach this document, and the handle
@@ -576,7 +657,12 @@ data class ReadingState(
 
 sealed interface ViewerState {
     data object Loading : ViewerState
-    data object NeedsPassword : ViewerState
+    /**
+     * [sourceUri] is carried so the screen can offer Remove a password on this very document
+     * rather than naming the tool and leaving the reader to find the file again. Empty for a
+     * document opened from a tool's own result list, which has no Uri to hand on.
+     */
+    data class NeedsPassword(val sourceUri: String) : ViewerState
     data class Failed(val reason: String) : ViewerState
     data class Ready(
         /**

@@ -11,7 +11,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -22,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -43,8 +43,14 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.pdf.PageArea
 import com.layerbit.sheaf.pdf.PageMark
@@ -104,6 +110,14 @@ fun SignaturePad(
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
+                    // Without this a screen reader goes straight from the "Sign here" heading
+                    // to the "Use this signature" button, and the 200dp of pad between them
+                    // does not exist at all. The state is the other half: whether any ink has
+                    // been laid down is otherwise reported only by that button being enabled.
+                    .semantics {
+                        contentDescription = "Signature pad"
+                        stateDescription = if (hasInk) "Has a signature" else "Empty"
+                    }
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {
@@ -147,7 +161,7 @@ fun SignaturePad(
                 for (stroke in strokes) {
                     drawPath(
                         path = stroke.path,
-                        color = Color(0xFF101A2B),
+                        color = SIGNATURE_INK,
                         style = Stroke(width = INK_WIDTH_PX, cap = StrokeCap.Round, join = StrokeJoin.Round)
                     )
                 }
@@ -228,7 +242,7 @@ private fun writeSignature(strokes: List<SignatureStroke>, file: File) {
     val bitmap = Bitmap.createBitmap(SIGNATURE_WIDTH_PX, SIGNATURE_HEIGHT_PX, Bitmap.Config.ARGB_8888)
     val canvas = AndroidCanvas(bitmap)
     val paint = AndroidPaint().apply {
-        color = android.graphics.Color.BLACK
+        color = SIGNATURE_INK.toArgb()
         style = AndroidPaint.Style.STROKE
         strokeWidth = SIGNATURE_WIDTH_PX * 0.012f
         strokeCap = AndroidPaint.Cap.ROUND
@@ -281,7 +295,13 @@ fun RedactCanvas(
     onPage: (Int) -> Unit,
     onAdd: (PageArea) -> Unit,
     onClear: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Boxes on every page, not just this one. Null while the caller does not know. */
+    documentTotal: Int? = null,
+    /** The engine was asked for this page and could not draw it. Never retried. */
+    pageFailed: Boolean = false,
+    /** Drops the last box on this page. Absent until the caller offers it. */
+    onUndo: (() -> Unit)? = null
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -301,7 +321,13 @@ fun RedactCanvas(
             }
         }
 
-        BoxWithConstraints(
+        // Redacting an address on page 150 of a contract was 149 taps on Next, each one a full
+        // page render. The field is on its own line because it is a full-width text field with
+        // a floating label and will not sit beside the arrows - which is also how Sign and Add
+        // text present the very same control.
+        PageJumpField(pageIndex = pageIndex, pageCount = pageCount, onPage = onPage)
+
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 10.dp)
@@ -310,7 +336,10 @@ fun RedactCanvas(
                 )
                 .clip(RoundedCornerShape(6.dp))
                 .background(SheafColors.Paper)
-                .border(1.dp, SheafColors.Border, RoundedCornerShape(6.dp))
+                .border(1.dp, SheafColors.Border, RoundedCornerShape(6.dp)),
+            // Paging is the whole loop of this tool, so the gap between pages is a state the
+            // user looks at constantly. Without the alignment the spinner sits in the corner.
+            contentAlignment = Alignment.Center
         ) {
             if (page != null) {
                 Image(
@@ -319,6 +348,19 @@ fun RedactCanvas(
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize()
                 )
+            } else if (pageFailed) {
+                // Nothing retries this render, so a spinner here would turn until the screen
+                // was closed. Say what happened and name the way out instead.
+                Text(
+                    "Page ${pageIndex + 1} could not be drawn. Try another page, or go back " +
+                        "and check the document opens.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SheafColors.Dim,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(24.dp)
+                )
+            } else {
+                CircularProgressIndicator(color = SheafColors.Band, strokeWidth = 2.dp)
             }
 
             var dragStart by remember(pageIndex) { mutableStateOf<Offset?>(null) }
@@ -327,6 +369,10 @@ fun RedactCanvas(
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
+                    // Named but not described: how many boxes are on the page is already a
+                    // visible line of text directly below, and a stateDescription here would
+                    // only make a screen reader say the same sentence twice.
+                    .semantics { contentDescription = "Drag a box over what should be removed" }
                     .pointerInput(pageIndex) {
                         detectDragGestures(
                             onDragStart = { start -> dragStart = start; dragNow = start },
@@ -380,12 +426,22 @@ fun RedactCanvas(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                if (areas.isEmpty()) "Drag a box over anything that should go" else "${areas.size} on this page",
+                markCaption(
+                    onThisPage = areas.size,
+                    documentTotal = documentTotal,
+                    empty = "Drag a box over anything that should go"
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = SheafColors.Dim,
                 modifier = Modifier.weight(1f)
             )
             if (areas.isNotEmpty()) {
+                // A finger slips, and redrawing the lot is not it - the argument markup was
+                // already given, which holds doubly here, where a freehand drag over small
+                // print makes a slightly-wrong box the normal case.
+                if (onUndo != null) {
+                    OutlinedButton(onClick = onUndo) { Text("Undo", color = SheafColors.Muted) }
+                }
                 OutlinedButton(onClick = onClear) { Text("Clear page", color = SheafColors.Muted) }
             }
         }
@@ -418,7 +474,11 @@ fun MarkupCanvas(
     onInk: (List<PagePoint>) -> Unit,
     onUndo: () -> Unit,
     onClear: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Marks on every page, not just this one. Null while the caller does not know. */
+    documentTotal: Int? = null,
+    /** The engine was asked for this page and could not draw it. Never retried. */
+    pageFailed: Boolean = false
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -438,6 +498,10 @@ fun MarkupCanvas(
                 enabled = pageIndex < pageCount - 1
             ) { Text("Next", color = SheafColors.Muted) }
         }
+
+        // On its own line, for the same reason as in the redaction canvas: walking a long
+        // document a tap at a time is not a way to reach page 150.
+        PageJumpField(pageIndex = pageIndex, pageCount = pageCount, onPage = onPage)
 
         // The in-progress gestures. Neither is snapshot state that Compose walks: the stroke
         // is a Path appended to as points arrive, and one counter read inside the draw lambda
@@ -523,7 +587,10 @@ fun MarkupCanvas(
                 )
                 .clip(RoundedCornerShape(6.dp))
                 .background(SheafColors.Paper)
-                .border(1.dp, SheafColors.Border, RoundedCornerShape(6.dp))
+                .border(1.dp, SheafColors.Border, RoundedCornerShape(6.dp)),
+            // As in the redaction canvas: without this the spinner between pages lands in the
+            // top-left corner rather than on the page it is standing in for.
+            contentAlignment = Alignment.Center
         ) {
             if (page != null) {
                 Image(
@@ -532,9 +599,35 @@ fun MarkupCanvas(
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize()
                 )
+            } else if (pageFailed) {
+                // Nothing retries this render, so a spinner here would turn until the screen
+                // was closed. Say what happened and name the way out instead.
+                Text(
+                    "Page ${pageIndex + 1} could not be drawn. Try another page, or go back " +
+                        "and check the document opens.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SheafColors.Dim,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(24.dp)
+                )
+            } else {
+                CircularProgressIndicator(color = SheafColors.Band, strokeWidth = 2.dp)
             }
 
-            Canvas(modifier = Modifier.fillMaxSize().then(gestures)) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    // Named but not described - the mark count is already read out from the
+                    // line of text below, and repeating it here would say it twice.
+                    .semantics {
+                        contentDescription = if (pen) {
+                            "Draw on the page with your finger"
+                        } else {
+                            "Drag across a line to highlight it"
+                        }
+                    }
+                    .then(gestures)
+            ) {
                 // Read so the draw is invalidated as points arrive. The stroke itself is
                 // invisible to Compose on purpose.
                 @Suppress("UNUSED_EXPRESSION") version
@@ -606,11 +699,15 @@ fun MarkupCanvas(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                when {
-                    marks.isEmpty() && pen -> "Draw on the page with your finger"
-                    marks.isEmpty() -> "Drag across a line to highlight it"
-                    else -> "${marks.size} on this page"
-                },
+                markCaption(
+                    onThisPage = marks.size,
+                    documentTotal = documentTotal,
+                    empty = if (pen) {
+                        "Draw on the page with your finger"
+                    } else {
+                        "Drag across a line to highlight it"
+                    }
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = SheafColors.Dim,
                 modifier = Modifier.weight(1f)
@@ -623,10 +720,79 @@ fun MarkupCanvas(
     }
 }
 
+/**
+ * Type a page number instead of walking to it.
+ *
+ * Built on the same [Field] the rest of the tool options use, so it looks and reads like the
+ * "which page" control elsewhere - but it keeps the typed text itself rather than deriving it
+ * from the page, which NumberField does.
+ *
+ * That difference matters here and nowhere else. NumberField maps a blank field to its
+ * minimum, which is harmless on "Every N pages" and quietly wrong on a navigator: clearing
+ * the field snapped it back to "1" AND moved the canvas to page 1, so the next digit typed
+ * appended to that 1. Clearing the field and typing 2 to reach page 2 landed you on page 12.
+ * Holding the text here lets the field be empty without moving anything, and only a number
+ * that is actually inside the document navigates.
+ */
+@Composable
+private fun PageJumpField(pageIndex: Int, pageCount: Int, onPage: (Int) -> Unit) {
+    // Keyed on the page, so Previous, Next and a committed jump all re-sync the text. A jump
+    // re-syncs it to what was just typed, so the field does not flicker under the finger.
+    var typed by remember(pageIndex) { mutableStateOf((pageIndex + 1).toString()) }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
+        Field(
+            value = typed,
+            label = "Go to page",
+            keyboardType = KeyboardType.Number,
+            onChange = { text ->
+                val digits = text.filter { it.isDigit() }.take(6)
+                typed = digits
+                val page = digits.toIntOrNull()
+                // Out of range is left on screen rather than coerced: a silent snap to the
+                // last page is indistinguishable from the jump having worked.
+                if (page != null && page in 1..pageCount && page - 1 != pageIndex) {
+                    onPage(page - 1)
+                }
+            }
+        )
+    }
+}
+
+/**
+ * The line under a canvas saying what is marked.
+ *
+ * It names the document total as well as this page's, because a reader who boxed something on
+ * page 4 and came back to page 1 was told "Drag a box over anything that should go" and quite
+ * reasonably concluded that nothing was marked at all.
+ */
+private fun markCaption(onThisPage: Int, documentTotal: Int?, empty: String): String {
+    val elsewhere = if (documentTotal != null && documentTotal > onThisPage) documentTotal else null
+    return when {
+        onThisPage == 0 && elsewhere == null -> empty
+        elsewhere == null -> "$onThisPage on this page"
+        onThisPage == 0 -> "None on this page · $elsewhere in the document"
+        else -> "$onThisPage on this page · $elsewhere in the document"
+    }
+}
+
 /** On screen a highlight can be a little stronger than on paper, and still read as ink. */
 private const val HIGHLIGHT_PREVIEW_ALPHA = 0.4f
 
 private const val INK_WIDTH_PX = 5f
+
+/**
+ * The colour a signature is drawn in, on the pad and in the file alike.
+ *
+ * Blue-black rather than pure black, because that is what a pen looks like on a page and pure
+ * black looks like print - and a signature that reads as print is the one thing it must not do.
+ *
+ * Named, and used in both places, because it was neither before: the pad drew an undeclared
+ * copy of the app's own dark background over a Paper-coloured pad, so recolouring the theme
+ * would have silently recoloured everyone's signature, and the exported PNG ignored it and
+ * stamped pure black, so what you signed was never quite what landed in the document.
+ */
+private val SIGNATURE_INK = Color(0xFF101A2B)
 
 /** Sub-pixel jitter costs a path segment and adds nothing anyone can see. */
 private const val MIN_SEGMENT_PX = 2.2f

@@ -59,6 +59,13 @@ fun EffectPreview(
     signature: Bitmap?,
     modifier: Modifier = Modifier,
     /**
+     * The document is password-protected and has not been unlocked yet. The page cannot be
+     * drawn until it is, and nothing will retry on its own, so the preview has to say so.
+     */
+    locked: Boolean = false,
+    /** The engine was asked for the page and could not produce it. Also never retried. */
+    previewFailed: Boolean = false,
+    /**
      * Where the user tapped, as a fraction of the page. Only tools that place something at a
      * point pass this; for the rest the preview is something to look at rather than to touch.
      */
@@ -94,7 +101,28 @@ fun EffectPreview(
             contentAlignment = Alignment.Center
         ) {
             if (page == null) {
-                CircularProgressIndicator(color = SheafColors.Band, strokeWidth = 2.dp)
+                // A spinner means "wait". Neither of these two is a wait: the request has
+                // already been made and already finished without a page, and the key it was
+                // made under will not change on its own, so nothing is coming. Spinning here
+                // is simply untrue, and the user sits in front of it.
+                val stalled = when {
+                    locked -> "Unlock the document above to see the preview."
+                    previewFailed ->
+                        "This page could not be drawn, so there is nothing to preview. " +
+                            "The tool will still run."
+                    else -> null
+                }
+                if (stalled == null) {
+                    CircularProgressIndicator(color = SheafColors.Band, strokeWidth = 2.dp)
+                } else {
+                    Text(
+                        text = stalled,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SheafColors.Dim,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
+                }
             } else {
                 Image(
                     bitmap = page.asImageBitmap(),

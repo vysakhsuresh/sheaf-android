@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -23,6 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.jobs.JobState
 import com.layerbit.sheaf.ops.ToolId
+import com.layerbit.sheaf.ui.theme.SheafColors
 
 /**
  * Owns the system pickers a tool needs, and joins the view model to the screen.
@@ -46,6 +48,8 @@ fun ToolRoute(
     preloadFile: String? = null,
     /** Settings: show the finished document without waiting to be asked. */
     openResultWhenDone: Boolean = false,
+    /** The starred tools, so chaining offers them first. Empty until anyone has starred one. */
+    favourites: Set<String> = emptySet(),
     viewModel: ToolViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -157,6 +161,7 @@ fun ToolRoute(
         ToolScreen(
             tool = tool,
             state = state,
+            favourites = favourites,
             jobState = jobState,
             onAddFiles = { pickFiles.launch(tool.mimeFilter) },
             // The screen hands back the row's index, and it means the row of the list this
@@ -190,6 +195,7 @@ fun ToolRoute(
             onClearMarks = viewModel::clearMarks,
             onAddRedaction = viewModel::addRedaction,
             onClearRedactions = viewModel::clearRedactions,
+            onUndoRedaction = viewModel::undoRedaction,
             onRun = viewModel::run,
             onCancel = viewModel::cancel,
             onSave = { file ->
@@ -216,7 +222,22 @@ fun ToolRoute(
             onDone = viewModel::acknowledgeResult
         )
 
-        SnackbarHost(snackbar, modifier = Modifier.align(Alignment.BottomCenter))
+        // The snackbar is the app's only confirmation channel - "Saved", "Copied", every
+        // "could not" - and left to itself it draws from inverseSurface, which the colour
+        // scheme now sets but which still pairs a Material-shaped pill with a Material
+        // action colour. Said here so the one thing that appears over every screen is the
+        // one thing that is not an exception to the palette.
+        SnackbarHost(
+            snackbar,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) { data ->
+            Snackbar(
+                snackbarData = data,
+                containerColor = SheafColors.Surface,
+                contentColor = SheafColors.Text,
+                actionColor = SheafColors.BandBright
+            )
+        }
     }
 
     LaunchedEffect(message) {

@@ -37,6 +37,7 @@ fun SettingsScreen(
     settings: Settings,
     workspaceBytes: Long,
     bookmarkCount: Int,
+    recentCount: Int,
     onChange: ((Settings) -> Settings) -> Unit,
     onClearWorkspace: () -> Unit,
     onClearRecents: () -> Unit,
@@ -137,8 +138,18 @@ fun SettingsScreen(
                 }
 
                 Spacer(Modifier.height(10.dp))
+                // Both of these name their count, so the tap has something visible to change
+                // and there is nothing to tap when the list is already empty. "Clear the
+                // recents list" told you neither.
                 TextButton(onClick = onClearRecents) {
-                    Text("Clear the recents list", color = SheafColors.Muted)
+                    Text(
+                        if (recentCount > 0) {
+                            "Remove all $recentCount recent documents"
+                        } else {
+                            "No recent documents"
+                        },
+                        color = if (recentCount > 0) SheafColors.Muted else SheafColors.Dim
+                    )
                 }
                 TextButton(onClick = onClearBookmarks) {
                     Text(

@@ -6,26 +6,42 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.border
 import com.layerbit.sheaf.ui.theme.SheafColors
 import java.util.Locale
 
@@ -54,10 +70,22 @@ fun Panel(
             if (highlighted) SheafColors.Band.copy(alpha = 0.55f) else SheafColors.Border,
             shape
         )
+    val haptics = LocalHapticFeedback.current
     val tappable = when {
         onClick == null -> base
         onLongClick == null -> base.clickable(onClick = onClick)
-        else -> base.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+        else -> base.combinedClickable(
+            onClick = onClick,
+            // Compose Foundation, unlike the View system, performs no haptic of its own on a
+            // long press. Starring a tool is the only long press in the app and it confirms
+            // itself with a 1dp border and a small star, both underneath the finger that is
+            // still holding the card down - so without this the gesture completes with no
+            // sign at all that it worked.
+            onLongClick = {
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                onLongClick()
+            }
+        )
     }
     Column(modifier = tappable.padding(16.dp), content = content)
 }
@@ -130,24 +158,47 @@ fun <T> ChipRow(
 ) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.fillMaxWidth()
+        // Zero, not 8, because each chip now sits in a 48dp box and brings 7dp of its own air
+        // above and below. Spacing the boxes as well would put 22dp between two wrapped rows
+        // of what is meant to read as one control.
+        verticalArrangement = Arrangement.spacedBy(0.dp),
+        // Tells a screen reader these are one set of alternatives rather than a handful of
+        // unrelated buttons, so it can announce "2 of 4" as it moves between them.
+        modifier = modifier.fillMaxWidth().selectableGroup()
     ) {
         options.forEach { (value, label) ->
             val active = value == selected
             val shape = RoundedCornerShape(999.dp)
-            Row(
+            // The gesture is on this box and not on the pill, which is the whole point of the
+            // box. A pill is about 34dp tall - 13.5sp of text and 8dp either side - and a bare
+            // clickable gets none of the 48dp minimum that Material's own controls enforce, so
+            // every choice in the app was a target a third smaller than the guideline. The box
+            // takes the touch and stays invisible; the pill keeps its own size.
+            Box(
                 modifier = Modifier
-                    .background(if (active) SheafColors.BandDim else SheafColors.SurfaceDim, shape)
-                    .border(1.dp, if (active) SheafColors.Band else SheafColors.Border, shape)
-                    .clickable { onSelect(value) }
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                    .defaultMinSize(minHeight = 48.dp)
+                    .selectable(
+                        selected = active,
+                        role = Role.RadioButton,
+                        onClick = { onSelect(value) }
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (active) SheafColors.BandBright else SheafColors.Muted
-                )
+                Row(
+                    modifier = Modifier
+                        // Ahead of the background, so the ripple is a pill too. Without it the
+                        // press washed a rectangle across a rounded chip.
+                        .clip(shape)
+                        .background(if (active) SheafColors.BandDim else SheafColors.SurfaceDim)
+                        .border(1.dp, if (active) SheafColors.Band else SheafColors.Border, shape)
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (active) SheafColors.BandBright else SheafColors.Muted
+                    )
+                }
             }
         }
     }
@@ -165,7 +216,11 @@ fun ToggleRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onChange(!checked) }
+            // toggleable rather than clickable, so the row carries the state as well as the
+            // gesture. As a clickable it announced itself as an unlabelled tappable thing and
+            // the Switch beside it announced a state with no name, so every setting in the
+            // app was read out twice and neither half was a sentence.
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -182,7 +237,9 @@ fun ToggleRow(
         }
         Switch(
             checked = checked,
-            onCheckedChange = onChange,
+            // Null hands the gesture to the row above, which is the thing that is labelled.
+            // Tapping the switch still works - the touch falls through to the same toggleable.
+            onCheckedChange = null,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = SheafColors.OnBand,
                 checkedTrackColor = SheafColors.Band,
@@ -193,3 +250,104 @@ fun ToggleRow(
         )
     }
 }
+
+/**
+ * An icon that does something, with a name a screen reader can say.
+ *
+ * Before this there were seven controls in the app drawn as punctuation - a back chevron that
+ * was a literal "<" at three different sizes depending on the screen, search step arrows, an
+ * overflow glyph, the page-reorder arrows. None of them had an accessible name, so TalkBack
+ * read them out as "left-pointing single angle quotation mark, button" or skipped them
+ * entirely, and none of them matched the twenty-seven drawn tool icons sitting beside them.
+ *
+ * [label] is required rather than optional, which is the point of having this at all: the
+ * drawing problem and the accessibility problem were the same problem, and a primitive that
+ * cannot be built without a name closes both of them permanently.
+ *
+ * [state] is for a control that is on or off - night mode, a bookmark - and is announced
+ * after the name, so TalkBack says "Night colours, on" rather than leaving the reader to
+ * work out which way the switch is sitting.
+ *
+ * The semantics go on the button's own modifier chain and the Icon inside is explicitly
+ * undescribed. Putting clearAndSetSemantics on the button instead would take the click
+ * action out of the semantics tree with it, and TalkBack could then name the control but not
+ * press it.
+ */
+@Composable
+fun IconAction(
+    icon: Int,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = SheafColors.Muted,
+    state: String? = null,
+    enabled: Boolean = true
+) {
+    TextButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.semantics {
+            contentDescription = label
+            if (state != null) stateDescription = state
+        }
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = null,
+            tint = if (enabled) tint else SheafColors.Dim,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+/**
+ * One thing that went wrong, named and explained.
+ *
+ * Lifted out of the tool screen, where it was private, because three other places need the
+ * same shape and two of them are in packages that could not see it: a job that crashed, a
+ * capture the scanner could not write, a camera that would not bind. A failure should look
+ * the same wherever it is reported, and the alternative to this was each screen inventing
+ * its own red text.
+ *
+ * [isError] separates "this did not work" from "this was left alone", which the batch runner
+ * already distinguishes and which the colours should too.
+ */
+@Composable
+fun ProblemRow(name: String?, reason: String, isError: Boolean, modifier: Modifier = Modifier) {
+    val accent = if (isError) SheafColors.Failed else SheafColors.Skipped
+    val shape = RoundedCornerShape(12.dp)
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(SheafColors.SurfaceDim)
+            .border(1.dp, accent.copy(alpha = 0.45f), shape)
+            .padding(14.dp)
+    ) {
+        if (!name.isNullOrBlank()) {
+            Text(
+                name,
+                style = MaterialTheme.typography.titleMedium,
+                color = accent,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Text(reason, style = MaterialTheme.typography.bodyMedium, color = SheafColors.Muted)
+    }
+}
+
+/**
+ * The rhythm a scrolling screen is laid out on.
+ *
+ * Four screens had invented four: Home 10/12/32, Settings 12/12/40, About 12/8/32, Tool
+ * 14/20/20. None of them is wrong and the difference is invisible on any one screen, but
+ * having a name for it is what stops the next screen inventing a fifth.
+ */
+val ScreenGutter = 20.dp
+
+/** Content padding for a full-screen LazyColumn. The bottom is generous so the last row clears the gesture bar. */
+val ListRhythm = PaddingValues(start = ScreenGutter, end = ScreenGutter, top = 12.dp, bottom = 32.dp)
+
+/** The gap between rows of such a list, stated once. */
+val ListGap = 12.dp

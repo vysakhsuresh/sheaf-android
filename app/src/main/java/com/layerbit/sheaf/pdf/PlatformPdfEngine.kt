@@ -3,13 +3,15 @@ package com.layerbit.sheaf.pdf
 import android.app.ActivityManager
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Matrix
+import android.graphics.Rect
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import java.io.File
 import java.io.IOException
+import kotlin.math.max
 
 /**
  * [PdfEngine] on android.graphics.pdf.PdfRenderer - the renderer built into Android.
@@ -18,6 +20,10 @@ import java.io.IOException
  * worry about, and is already on every device Sheaf runs on. It renders and it measures, and
  * that is all: it cannot open an encrypted file, cannot write one, and cannot touch the page
  * tree. Those arrive in P1 behind this same interface.
+ *
+ * What it does have beyond measuring and rendering is a clip-and-transform render in native
+ * code, which is why [PdfDocument.renderTile] costs nothing extra here: pdfium was always
+ * able to rasterise a region, the app simply was not asking it to.
  *
  * Its real value is as a reference. When the PDFBox engine lands, its output for a page can
  * be compared against this one, and a disagreement is a bug in the new engine rather than a
@@ -72,6 +78,16 @@ class PlatformPdfEngine(context: Context) : PdfEngine {
     }
 }
 
+/**
+ * One PdfRenderer and the descriptor it was opened on.
+ *
+ * PdfRenderer will have exactly one page open at a time - openPage throws while another page
+ * is unclosed - and it is not thread-safe: two renders at once, or a close arriving while a
+ * render is in flight, are undefined rather than merely slow. Every method here therefore
+ * opens a page, uses it and closes it within the call, and callers serialise the calls
+ * themselves. The viewer does that with a lock it also closes the document under, which is
+ * what makes the ordering in [close] safe to rely on.
+ */
 private class PlatformPdfDocument(
     private val renderer: PdfRenderer,
     private val descriptor: ParcelFileDescriptor,
@@ -93,38 +109,138 @@ private class PlatformPdfDocument(
         }
     }
 
-    override fun renderPage(index: Int, targetWidthPx: Int): Bitmap {
+    override fun renderPage(index: Int, targetWidthPx: Int): Bitmap =
+        renderPage(index, targetWidthPx, null)
+
+    override fun renderPage(index: Int, targetWidthPx: Int, reuse: Bitmap?): Bitmap {
         checkIndex(index)
         try {
             renderer.openPage(index).use { page ->
                 val aspect = if (page.height <= 0) 1f else page.width.toFloat() / page.height.toFloat()
                 val width = BitmapBudget.clampWidth(targetWidthPx, aspect, maxHeapBytes)
                 val height = BitmapBudget.heightFor(width, aspect)
+                val bitmap = sheetFor(reuse, width, height, index)
 
-                val bitmap = try {
-                    Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                } catch (e: OutOfMemoryError) {
-                    // Caught deliberately. The budget makes this rare but not impossible:
-                    // another part of the app may have taken the heap between the clamp and
-                    // here. An OOM while rendering one page of a batch should fail that page
-                    // rather than take the process down.
-                    throw PdfException.OutOfMemory("page ${index + 1} at ${width}x$height", e)
-                }
-
-                // PdfRenderer composites onto whatever is already in the bitmap and a fresh
-                // one is transparent, so an unpainted page renders as text on nothing and
-                // turns unreadable the moment it is drawn on a dark background. Every page
-                // gets its white sheet first.
-                Canvas(bitmap).drawColor(Color.WHITE)
-
+                // A null transform tells PdfRenderer to stretch the page across the whole
+                // bitmap, which is why the size above is derived from the page's own aspect
+                // ratio: anything else would distort it.
                 page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                return bitmap
+                return opaque(bitmap)
             }
         } catch (e: PdfException) {
             throw e
         } catch (e: Exception) {
             throw PdfException.Corrupt("page ${index + 1} could not be rendered", e)
         }
+    }
+
+    override fun renderTile(
+        index: Int,
+        fullWidthPx: Int,
+        tile: Rect,
+        outWidthPx: Int,
+        outHeightPx: Int,
+        reuse: Bitmap?
+    ): Bitmap {
+        checkIndex(index)
+        // These are all caller arithmetic rather than anything about the file, and every one
+        // of them would otherwise reach the native renderer as a division by zero or an
+        // inverted matrix. Reported the same way a bad page index is, so a caller handling
+        // one hierarchy keeps handling one hierarchy.
+        if (fullWidthPx <= 0) {
+            throw PdfException.Io("a tile cannot be cut from a page rendered ${fullWidthPx}px wide")
+        }
+        if (tile.isEmpty) {
+            throw PdfException.Io("tile ${tile.toShortString()} on page ${index + 1} is empty")
+        }
+        if (outWidthPx <= 0 || outHeightPx <= 0) {
+            throw PdfException.Io("a tile cannot be rendered at ${outWidthPx}x$outHeightPx")
+        }
+
+        try {
+            renderer.openPage(index).use { page ->
+                val aspect = if (page.height <= 0) 1f else page.width.toFloat() / page.height.toFloat()
+                val fullHeightPx = BitmapBudget.heightFor(fullWidthPx, aspect)
+                val bitmap = sheetFor(reuse, outWidthPx, outHeightPx, index)
+
+                // Three stages, applied in this order because each is expressed in the space
+                // the one before it produced. Points to full-scale pixels first, taking x and
+                // y separately so that the result matches a whole-page render at fullWidthPx
+                // exactly - heightFor truncates, so the two axes are not quite the same
+                // factor, and a tile at the foot of the page would otherwise drift. Then the
+                // tile's own origin to zero. Then whatever scale makes the region fill the
+                // output, which is the saving: the full-scale page is only ever a coordinate
+                // system here, never a buffer.
+                val transform = Matrix().apply {
+                    setScale(
+                        fullWidthPx.toFloat() / max(1, page.width),
+                        fullHeightPx.toFloat() / max(1, page.height)
+                    )
+                    postTranslate(-tile.left.toFloat(), -tile.top.toFloat())
+                    postScale(
+                        outWidthPx.toFloat() / tile.width(),
+                        outHeightPx.toFloat() / tile.height()
+                    )
+                }
+
+                // The clip stays null, meaning the whole bitmap: the transform has already
+                // put the wanted region there, and PdfRenderer clips to the destination
+                // anyway, so content either side of the tile is dropped in native code
+                // instead of being rasterised into pixels nobody sees.
+                page.render(bitmap, null, transform, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                return opaque(bitmap)
+            }
+        } catch (e: PdfException) {
+            throw e
+        } catch (e: Exception) {
+            throw PdfException.Corrupt(
+                "tile ${tile.toShortString()} of page ${index + 1} could not be rendered", e
+            )
+        }
+    }
+
+    /**
+     * A white [width] x [height] bitmap to render into, [candidate] itself where it can be.
+     *
+     * PdfRenderer composites onto whatever is already in the bitmap, and a fresh one is
+     * transparent, so an unpainted page renders as text on nothing and turns unreadable the
+     * moment it is drawn on a dark background. Every page gets its white sheet first, and
+     * that same fill is what makes a pooled bitmap clean enough to draw on again.
+     *
+     * A candidate is refused on any doubt. ARGB_8888 is the only config PdfRenderer accepts;
+     * an immutable or recycled bitmap cannot be drawn into at all, and a hardware one reads
+     * as immutable here; a mismatched size would silently rescale the page. None of those is
+     * worth failing a page over when allocating is the answer.
+     */
+    private fun sheetFor(candidate: Bitmap?, width: Int, height: Int, index: Int): Bitmap {
+        val pooled = candidate?.takeIf {
+            !it.isRecycled && it.isMutable && it.config == Bitmap.Config.ARGB_8888 &&
+                it.width == width && it.height == height
+        }
+
+        val bitmap = if (pooled != null) pooled else try {
+            Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        } catch (e: OutOfMemoryError) {
+            // Caught deliberately. The budget makes this rare but not impossible: another
+            // part of the app may have taken the heap between the clamp and here. An OOM
+            // while rendering one page of a batch should fail that page rather than take the
+            // process down.
+            throw PdfException.OutOfMemory("page ${index + 1} at ${width}x$height", e)
+        }
+
+        bitmap.eraseColor(Color.WHITE)
+        return bitmap
+    }
+
+    /**
+     * Marks a rendered bitmap opaque, which it is: it was filled white before anything was
+     * drawn, and source-over onto an opaque sheet cannot produce a transparent pixel. Saying
+     * so lets the framework skip blending when compositing, and a viewer scrolling a page
+     * composites it on every frame.
+     */
+    private fun opaque(bitmap: Bitmap): Bitmap {
+        bitmap.setHasAlpha(false)
+        return bitmap
     }
 
     private fun checkIndex(index: Int) {

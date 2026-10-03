@@ -203,6 +203,10 @@ enum class ToolId(
      * A button repeating the screen's own title tells nobody what pressing it does - "Document
      * details" on the Document details screen was the clearest case. Every one of these is a
      * verb.
+     *
+     * None of them is "Save". Running a tool produces a result that then has to be saved to
+     * Files, and that second button is the one that says Save. Four of these used to say it
+     * too, which made the word mean two different acts on the same screen.
      */
     val action: String
         get() = when (this) {
@@ -212,15 +216,15 @@ enum class ToolId(
             MERGE -> "Merge into one file"
             SPLIT -> "Split it up"
             EXTRACT -> "Keep these pages"
-            ORGANISE -> "Save the new order"
+            ORGANISE -> "Apply the new order"
             IMAGES_TO_PDF -> "Make a PDF"
-            PDF_TO_IMAGES -> "Save as images"
+            PDF_TO_IMAGES -> "Make the images"
             COMPRESS -> "Compress it"
             WATERMARK -> "Add the watermark"
             PAGE_NUMBERS -> "Add the numbers"
             SIGN -> "Place the signature"
             ADD_TEXT -> "Write it on"
-            ANNOTATE -> "Save the marks"
+            ANNOTATE -> "Draw the marks in"
             FORMS -> "Fill it in"
             HEADER_FOOTER -> "Add them"
             INSERT -> "Insert them"
@@ -229,7 +233,7 @@ enum class ToolId(
             SPLIT_BY_SIZE -> "Split by size"
             EXTRACT_IMAGES -> "Pull the images out"
             REDACT -> "Remove them for good"
-            METADATA -> "Save the details"
+            METADATA -> "Write the details in"
             SET_PASSWORD -> "Protect it"
             REMOVE_PASSWORD -> "Unlock it"
         }

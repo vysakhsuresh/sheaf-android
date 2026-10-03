@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Mirrors SheafColors.Background. Change both together. -->
-    <color name="window_background">#101A2B</color>
+    <!--
+      Mirrors SheafColors.Background in the LIGHT palette. Change both together.
+
+      The light value lives here, in the qualifier-less folder, and the dark one in
+      values-night/, because that is the pairing the platform resolves: a phone in light mode
+      reads this file. Holding the dark value here instead painted every light-mode cold start
+      near-black for a frame before Compose drew over it.
+    -->
+    <color name="window_background">#F4F2EC</color>
+
+    <!-- Not themed. A launcher icon keeps one background whatever the phone is set to. -->
     <color name="ic_launcher_background">#101A2B</color>
 </resources>

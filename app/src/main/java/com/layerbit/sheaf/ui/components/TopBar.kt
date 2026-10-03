@@ -9,12 +9,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.ui.theme.SheafColors
 
 /**
@@ -42,9 +42,11 @@ fun SheafTopBar(
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         if (onBack != null) {
-            TextButton(onClick = onBack) {
-                Text("‹", style = MaterialTheme.typography.titleLarge, color = SheafColors.Muted)
-            }
+            IconAction(
+                icon = R.drawable.ic_chevron_left,
+                label = "Back",
+                onClick = onBack
+            )
         }
 
         Column(modifier = Modifier.weight(1f).padding(start = if (onBack == null) 12.dp else 0.dp)) {
@@ -60,7 +62,12 @@ fun SheafTopBar(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = SheafColors.Dim,
-                    maxLines = 1,
+                    // Two lines here where the title gets one. A filename has to be capped
+                    // somewhere, but this line is a sentence: on a tool screen it is that
+                    // tool's summary, and the summary appears nowhere else once you are
+                    // inside the tool. In a bar that has already given up a back button's
+                    // width, the longer ones do not fit on a 360dp screen in one line.
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }

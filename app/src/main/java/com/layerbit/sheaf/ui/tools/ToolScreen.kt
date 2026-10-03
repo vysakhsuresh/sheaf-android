@@ -1,5 +1,10 @@
 package com.layerbit.sheaf.ui.tools
 
+import android.graphics.Bitmap
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -26,10 +31,12 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed as itemsIndexedInColumn
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -47,13 +54,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.jobs.JobState
 import com.layerbit.sheaf.ops.OpOutcome
 import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.ui.components.Panel
+import com.layerbit.sheaf.ui.components.ProblemRow
 import com.layerbit.sheaf.ui.components.RowBetween
 import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.components.formatBytes
@@ -72,6 +86,8 @@ fun ToolScreen(
     tool: ToolId,
     state: ToolUiState,
     jobState: JobState,
+    /** Starred tools, so the chain sheet offers them first. */
+    favourites: Set<String> = emptySet(),
     onAddFiles: () -> Unit,
     onRemoveFile: (Int) -> Unit,
     onMoveFile: (Int, Int) -> Unit,
@@ -100,6 +116,7 @@ fun ToolScreen(
     onClearMarks: (Int) -> Unit,
     onAddRedaction: (Int, com.layerbit.sheaf.pdf.PageArea) -> Unit,
     onClearRedactions: (Int) -> Unit,
+    onUndoRedaction: (Int) -> Unit,
     onRun: () -> Unit,
     onCancel: () -> Unit,
     onSave: (SheafFile) -> Unit,
@@ -119,7 +136,18 @@ fun ToolScreen(
 ) {
     // Organise and Remove areas both draw on rendered pages, and only once a document is
     // actually present.
-    LaunchedEffect(tool, state.documents.firstOrNull()?.file?.file?.path, state.config.markPage) {
+    //
+    // The password is a key as well. Unlocking a protected document throws away the page
+    // order it could not read, and this effect is the only thing that ever asks for a new
+    // one - so without it the prompt disappears, the Run button goes live, and the grid that
+    // is the entire point of the screen never arrives. Both loaders return early when their
+    // work is already done, so re-running this costs nothing where nothing changed.
+    LaunchedEffect(
+        tool,
+        state.documents.firstOrNull()?.file?.file?.path,
+        state.documents.firstOrNull()?.needsPassword,
+        state.config.markPage
+    ) {
         if (state.documents.isEmpty()) return@LaunchedEffect
         when (tool) {
             // These edit pages, so they need the pages themselves.
@@ -141,6 +169,7 @@ fun ToolScreen(
 
     val finished = jobState as? JobState.Finished
     val running = jobState as? JobState.Running
+    val crashed = jobState as? JobState.Crashed
 
     /** The finished file waiting for the user to pick the next tool for it. */
     var chaining by remember { mutableStateOf<SheafFile?>(null) }
@@ -155,11 +184,12 @@ fun ToolScreen(
 
             finished != null -> {
                 item { SectionHeading("Result") }
-                item { ResultSummary(finished) }
+                item { ResultSummary(finished, state.saved) }
                 items(finished.produced, key = { it.file.file.path }) { produced ->
                     ResultRow(
                         outcome = produced,
                         preview = state.previews[produced.file.file.path],
+                        saved = produced.file.file.path in state.saved,
                         onSave = { onSave(produced.file) },
                         onOpen = { onOpenResult(produced.file) },
                         onChain = { chaining = produced.file },
@@ -194,10 +224,40 @@ fun ToolScreen(
                 }
             }
 
+            // The job could not run at all - out of memory, or the system refusing to start
+            // the foreground service. Four places publish this and nothing used to read it,
+            // so the screen fell through to the ordinary setup form and a compress killed
+            // while the app was in the background returned the user to a live Run button
+            // with nothing said. Cancelled is deliberately left out: the runner reports only
+            // a cancel the user asked for, and returning someone who pressed Stop to their
+            // untouched form is the right answer.
+            crashed != null -> {
+                item { SectionHeading("It did not run") }
+                item { ProblemRow(null, crashed.reason, isError = true) }
+                item {
+                    // onRun clears the crashed state before it submits, which is what gets
+                    // the screen out of here even when the run cannot start a second time.
+                    Button(
+                        onClick = onRun,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = SheafColors.Band,
+                            contentColor = SheafColors.OnBand
+                        )
+                    ) { Text("Try again") }
+                }
+            }
+
             else -> {
                 item { SectionHeading(if (tool.acceptsMultiple) "Files" else "File") }
 
-                itemsIndexedInColumn(state.documents) { index, doc ->
+                // Keyed by the file, which is what makes the reorder legible: without a key
+                // these rows are identified by position, so moving one up swapped two sets
+                // of contents in place and animated nothing. Merge order is the whole point
+                // of this list, so seeing which row moved is the feature.
+                itemsIndexedInColumn(
+                    state.documents,
+                    key = { _, doc -> doc.file.file.path }
+                ) { index, doc ->
                     DocumentRow(
                         doc = doc,
                         canReorder = tool == ToolId.MERGE && state.documents.size > 1,
@@ -207,7 +267,8 @@ fun ToolScreen(
                         onUp = { onMoveFile(index, index - 1) },
                         onDown = { onMoveFile(index, index + 1) },
                         onPasswordChange = { onSetPassword(index, it) },
-                        onPasswordDone = { onVerifyPassword(index) }
+                        onPasswordDone = { onVerifyPassword(index) },
+                        modifier = Modifier.animateItem(placementSpec = tween(220))
                     )
                 }
 
@@ -223,12 +284,38 @@ fun ToolScreen(
                             color = SheafColors.Text
                         )
                     }
+                    // The wait belongs to the file that was just added, so it is said here
+                    // rather than under the Run button - which is greyed and, because
+                    // blockedReason returns null while busy, silent for as long as it lasts.
+                    state.busyLabel?.let { label ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.padding(top = 10.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                color = SheafColors.Band,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                label,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SheafColors.Muted
+                            )
+                        }
+                    }
                 }
 
                 if (tool == ToolId.ORGANISE && state.pageOrder.isNotEmpty()) {
                     item {
                         OrganisePanel(
-                            state = state,
+                            pageOrder = state.pageOrder,
+                            selectedPages = state.selectedPages,
+                            rotations = state.rotations,
+                            thumbnails = state.thumbnails,
+                            thumbnailsCapped = state.thumbnailsCapped,
+                            canUndoPageEdit = state.canUndoPageEdit,
                             onTogglePage = onTogglePage,
                             onRotate = onRotateSelected,
                             onDelete = onDeleteSelected,
@@ -254,7 +341,7 @@ fun ToolScreen(
                             TextButton(onClick = onKeepSignature) {
                                 Text(
                                     "Keep this signature for next time",
-                                    color = SheafColors.Band,
+                                    color = SheafColors.BandBright,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -275,13 +362,19 @@ fun ToolScreen(
                             tool = tool,
                             config = state.config,
                             page = state.previewPage,
-                            signature = state.signatureBitmap
+                            signature = state.signatureBitmap,
+                            locked = state.documents.firstOrNull()?.needsPassword == true,
+                            previewFailed = state.previewFailed
                         )
                     }
                 } else if (tool == ToolId.EXTRACT && state.pageOrder.isNotEmpty()) {
                     item {
                         PageChooser(
-                            state = state,
+                            pageOrder = state.pageOrder,
+                            selectedPages = state.selectedPages,
+                            rotations = state.rotations,
+                            thumbnails = state.thumbnails,
+                            thumbnailsCapped = state.thumbnailsCapped,
                             onTogglePage = onTogglePage,
                             onAll = onSelectAllPages,
                             onNone = onClearPageSelection
@@ -334,7 +427,9 @@ fun ToolScreen(
                             onHighlight = { area -> onHighlight(state.canvasPage, area) },
                             onInk = { points -> onInk(state.canvasPage, points) },
                             onUndo = { onUndoMark(state.canvasPage) },
-                            onClear = { onClearMarks(state.canvasPage) }
+                            onClear = { onClearMarks(state.canvasPage) },
+                            documentTotal = state.marks.values.sumOf { it.size },
+                            pageFailed = state.canvasPage in state.failedPages
                         )
                     }
                     item {
@@ -356,7 +451,10 @@ fun ToolScreen(
                             areas = state.redactions[state.canvasPage].orEmpty(),
                             onPage = onRedactPage,
                             onAdd = { area -> onAddRedaction(state.canvasPage, area) },
-                            onClear = { onClearRedactions(state.canvasPage) }
+                            onClear = { onClearRedactions(state.canvasPage) },
+                            documentTotal = state.redactions.values.sumOf { it.size },
+                            onUndo = { onUndoRedaction(state.canvasPage) },
+                            pageFailed = state.canvasPage in state.failedPages
                         )
                     }
                     item {
@@ -389,6 +487,8 @@ fun ToolScreen(
                                 config = state.config,
                                 page = state.previewPage,
                                 signature = null,
+                                locked = state.documents.firstOrNull()?.needsPassword == true,
+                                previewFailed = state.previewFailed,
                                 // Only Add text is placed by hand; the others sit where their
                                 // own settings put them, and a stray tap should not move them.
                                 onPlace = if (tool == ToolId.ADD_TEXT) {
@@ -431,14 +531,6 @@ fun ToolScreen(
                             )
                         }
                 }
-
-                if (state.busy) {
-                    item {
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = SheafColors.Band, strokeWidth = 2.dp)
-                        }
-                    }
-                }
             }
         }
     }
@@ -449,6 +541,7 @@ fun ToolScreen(
         ToolPickerSheet(
             heading = "Use another tool on this",
             documentName = file.displayName,
+            favourites = favourites,
             onDismiss = { chaining = null },
             onPick = { next ->
                 chaining = null
@@ -473,8 +566,25 @@ private fun RunningPanel(running: JobState.Running, onCancel: () -> Unit) {
         }
         Spacer(Modifier.height(12.dp))
         if (running.unitsTotal > 0) {
+            // Glided between units instead of jumped.
+            //
+            // Progress arrives one unit at a time, so a twelve-page compress used to make
+            // twelve 8% leaps and stand perfectly still in between - and a bar that is not
+            // moving is what makes someone force-quit an operation that is working fine.
+            //
+            // Linear, not an ease: this stands for real work, and an ease-out would claim
+            // the end is nearer than it is. The "N of M" line below is left unanimated on
+            // purpose, so the exact count sits beside the approximate bar. Note the panel is
+            // replaced the moment the job finishes, so the last glide is cut off part way
+            // and the bar is never seen to reach the end - which is fine, because what
+            // replaces it says the job is done, but it is better said than discovered.
+            val shown by animateFloatAsState(
+                targetValue = running.fraction,
+                animationSpec = tween(320, easing = LinearEasing),
+                label = "progress"
+            )
             LinearProgressIndicator(
-                progress = { running.fraction },
+                progress = { shown },
                 color = SheafColors.Band,
                 trackColor = SheafColors.SurfaceDim,
                 modifier = Modifier.fillMaxWidth()
@@ -498,15 +608,33 @@ private fun RunningPanel(running: JobState.Running, onCancel: () -> Unit) {
     }
 }
 
+/**
+ * What was produced, and whether any of it is anywhere the user can find it.
+ *
+ * A result lives in Sheaf's workspace, which is trimmed on the next launch, and nothing in
+ * the app lists what is in there - so Done is the last moment the file is reachable. Settings
+ * already carries the right sentence, "Results waiting to be saved", on the wrong screen. The
+ * second sentence drops away as the files are saved rather than staying as a standing warning.
+ */
 @Composable
-private fun ResultSummary(finished: JobState.Finished) {
+private fun ResultSummary(finished: JobState.Finished, saved: Set<String>) {
     val text = when {
         finished.produced.isEmpty() && finished.failed.isNotEmpty() -> "Nothing was produced."
         finished.allSucceeded && finished.produced.size == 1 -> "One file is ready."
         finished.allSucceeded -> "${finished.produced.size} files are ready."
         else -> "${finished.produced.size} of ${finished.outcomes.size} finished."
     }
-    Text(text, style = MaterialTheme.typography.bodyMedium, color = SheafColors.Muted)
+    val unsaved = finished.produced.count { it.file.file.path !in saved }
+    val note = when {
+        unsaved == 0 -> null
+        finished.produced.size == 1 -> "It is not saved to your phone yet."
+        else -> "They are not saved to your phone yet."
+    }
+    Text(
+        listOfNotNull(text, note).joinToString(" "),
+        style = MaterialTheme.typography.bodyMedium,
+        color = SheafColors.Muted
+    )
 }
 
 /**
@@ -520,6 +648,7 @@ private fun ResultSummary(finished: JobState.Finished) {
 private fun ResultRow(
     outcome: OpOutcome.Produced,
     preview: ResultPreview?,
+    saved: Boolean,
     onSave: () -> Unit,
     onOpen: () -> Unit,
     onChain: () -> Unit,
@@ -572,7 +701,7 @@ private fun ResultRow(
                     }
                 }
                 TextButton(onClick = { onCopy(preview.content) }) {
-                    Text("Copy text", color = SheafColors.Band)
+                    Text("Copy text", color = SheafColors.BandBright)
                 }
             }
 
@@ -592,36 +721,45 @@ private fun ResultRow(
         }
 
         RowBetween(modifier = Modifier.padding(top = 6.dp)) {
-            Text(formatBytes(file.sizeBytes), style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
+            // Weighted so the three buttons measure first and this gives way rather than
+            // pushing Save off the edge: "Next tool…" and "Saved" together are close to all
+            // of a 360dp row.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
+                Text(
+                    formatBytes(file.sizeBytes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SheafColors.Dim,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                // Said on the row rather than in a snackbar, which is gone by the time the
+                // second file of a batch is saved and cannot be gone back to.
+                if (saved) {
+                    Text(
+                        "Saved",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SheafColors.Done,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
             Row {
                 if (file.isPdf) {
                     TextButton(onClick = onOpen) { Text("Open", color = SheafColors.Muted) }
                     // The chain. Without this, compressing something you just merged means
                     // saving it, leaving, and finding the same file again in the picker.
-                    TextButton(onClick = onChain) { Text("Then…", color = SheafColors.Muted) }
+                    // Named for what it opens: beside Open and Save, "Then…" read as a third
+                    // thing to do with the file rather than as another tool.
+                    TextButton(onClick = onChain) { Text("Next tool…", color = SheafColors.Muted) }
                 }
-                TextButton(onClick = onSave) { Text("Save", color = SheafColors.Band) }
+                TextButton(onClick = onSave) { Text("Save", color = SheafColors.BandBright) }
             }
         }
-    }
-}
-
-@Composable
-private fun ProblemRow(name: String?, reason: String, isError: Boolean) {
-    val accent = if (isError) SheafColors.Failed else SheafColors.Skipped
-    val shape = RoundedCornerShape(12.dp)
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(SheafColors.SurfaceDim)
-            .border(1.dp, accent.copy(alpha = 0.45f), shape)
-            .padding(14.dp)
-    ) {
-        if (!name.isNullOrBlank()) {
-            Text(name, style = MaterialTheme.typography.titleMedium, color = accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        Text(reason, style = MaterialTheme.typography.bodyMedium, color = SheafColors.Muted)
     }
 }
 
@@ -635,9 +773,10 @@ private fun DocumentRow(
     onUp: () -> Unit,
     onDown: () -> Unit,
     onPasswordChange: (String) -> Unit,
-    onPasswordDone: () -> Unit
+    onPasswordDone: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Panel(modifier = Modifier.fillMaxWidth()) {
+    Panel(modifier = modifier.fillMaxWidth()) {
         Text(
             doc.file.displayName,
             style = MaterialTheme.typography.titleMedium,
@@ -654,7 +793,11 @@ private fun DocumentRow(
         Text(detail, style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
 
         doc.unreadableReason?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall, color = SheafColors.Failed, modifier = Modifier.padding(top = 6.dp))
+            // The same bordered shape a failed job gets, rather than a line of red text that
+            // reads as part of the detail line above it. A file that cannot be used is the
+            // most important thing in its own row.
+            Spacer(Modifier.height(8.dp))
+            ProblemRow(name = null, reason = it, isError = true)
         }
 
         if (doc.needsPassword) {
@@ -687,7 +830,7 @@ private fun DocumentRow(
 private fun PasswordPrompt(value: String, onChange: (String) -> Unit, onSubmit: () -> Unit) {
     Column {
         PasswordField(value = value, label = "Password", onChange = onChange)
-        TextButton(onClick = onSubmit) { Text("Unlock", color = SheafColors.Band) }
+        TextButton(onClick = onSubmit) { Text("Unlock", color = SheafColors.BandBright) }
     }
 }
 
@@ -698,10 +841,20 @@ private fun PasswordPrompt(value: String, onChange: (String) -> Unit, onSubmit: 
  * and drop: drag inside a scrolling grid is finicky to get right and easy to trigger by
  * accident, and getting page order wrong is not a small mistake. Drag can come later, once
  * there is a reason to trust it.
+ *
+ * Takes the fields it draws rather than the whole ToolUiState. Every keystroke anywhere on the
+ * screen emits a fresh state object, and a parameter of that type is compared by instance, so a
+ * panel holding one recomposes the grid and every cell in it for an edit that touched none of
+ * these collections.
  */
 @Composable
 private fun OrganisePanel(
-    state: ToolUiState,
+    pageOrder: List<Int>,
+    selectedPages: Set<Int>,
+    rotations: Map<Int, Int>,
+    thumbnails: Map<Int, Bitmap>,
+    thumbnailsCapped: Boolean,
+    canUndoPageEdit: Boolean,
     onTogglePage: (Int) -> Unit,
     onRotate: (Int) -> Unit,
     onDelete: () -> Unit,
@@ -710,10 +863,10 @@ private fun OrganisePanel(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         RowBetween {
-            SectionHeading("${state.pageOrder.size} pages")
-            if (state.selectedPages.isNotEmpty()) {
+            SectionHeading("${pageOrder.size} pages")
+            if (selectedPages.isNotEmpty()) {
                 Text(
-                    "${state.selectedPages.size} selected",
+                    "${selectedPages.size} selected",
                     style = MaterialTheme.typography.bodySmall,
                     color = SheafColors.BandBright
                 )
@@ -728,19 +881,31 @@ private fun OrganisePanel(
             // LazyColumn. Tall enough for three rows, and it scrolls within itself.
             modifier = Modifier.heightIn(max = 420.dp)
         ) {
-            itemsIndexed(state.pageOrder, key = { _, page -> page }) { position, page ->
+            // The lookups belong in here rather than above the grid: position and the
+            // last-page test are per-cell, and reading them outside the item lambda leaves
+            // them stale the moment the order changes.
+            itemsIndexed(pageOrder, key = { _, page -> page }) { position, page ->
                 PageThumb(
                     position = position,
                     pageIndex = page,
-                    state = state,
+                    thumb = thumbnails[page],
+                    selected = page in selectedPages,
+                    rotation = rotations[page] ?: 0,
+                    isLast = position == pageOrder.lastIndex,
                     onTap = { onTogglePage(page) },
                     onLeft = { onMovePage(position, position - 1) },
-                    onRight = { onMovePage(position, position + 1) }
+                    onRight = { onMovePage(position, position + 1) },
+                    // Placement only. The grid is keyed by page, so a tap on an arrow now
+                    // slides two thumbnails past each other instead of swapping their
+                    // contents in place. The comment above this panel rejected drag because
+                    // getting page order wrong is not a small mistake - which makes seeing
+                    // what the arrow actually did the thing carrying the whole feature.
+                    modifier = Modifier.animateItem(placementSpec = tween(220))
                 )
             }
         }
 
-        if (state.thumbnailsCapped) {
+        if (thumbnailsCapped) {
             Hint(
                 "Only the first pages are shown as pictures - a few hundred thumbnails is " +
                     "more memory than this app is allowed. The rest are still here and keep " +
@@ -751,21 +916,21 @@ private fun OrganisePanel(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(
                 onClick = { onRotate(90) },
-                enabled = state.selectedPages.isNotEmpty()
+                enabled = selectedPages.isNotEmpty()
             ) { Text("Rotate", color = SheafColors.Text) }
             OutlinedButton(
                 onClick = onDelete,
-                enabled = state.selectedPages.isNotEmpty()
+                enabled = selectedPages.isNotEmpty()
             ) { Text("Delete", color = SheafColors.Failed) }
             // Nothing here has been written yet - the whole screen is a plan - so stepping
             // back is just the previous plan, and deleting the wrong page costs a tap.
             OutlinedButton(
                 onClick = onUndo,
-                enabled = state.canUndoPageEdit
+                enabled = canUndoPageEdit
             ) {
                 Text(
                     "Undo",
-                    color = if (state.canUndoPageEdit) SheafColors.Text else SheafColors.Dim
+                    color = if (canUndoPageEdit) SheafColors.Text else SheafColors.Dim
                 )
             }
         }
@@ -831,10 +996,17 @@ private fun SavedSignatures(
  * twelve-page one, where the question is really "which of these do I want" and the answer is
  * in front of you. Both work and both write the same value, so the typed field below is not a
  * fallback - it is the other half of the same control.
+ *
+ * The fields are taken one by one for the same reason as OrganisePanel, and here it is the whole
+ * point: typing in the range field is exactly what used to redraw this grid on every keystroke.
  */
 @Composable
 private fun PageChooser(
-    state: ToolUiState,
+    pageOrder: List<Int>,
+    selectedPages: Set<Int>,
+    rotations: Map<Int, Int>,
+    thumbnails: Map<Int, Bitmap>,
+    thumbnailsCapped: Boolean,
     onTogglePage: (Int) -> Unit,
     onAll: () -> Unit,
     onNone: () -> Unit
@@ -842,10 +1014,10 @@ private fun PageChooser(
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         RowBetween {
             SectionHeading(
-                if (state.selectedPages.isEmpty()) {
+                if (selectedPages.isEmpty()) {
                     "Tap the pages to keep"
                 } else {
-                    "${state.selectedPages.size} of ${state.pageOrder.size} pages"
+                    "${selectedPages.size} of ${pageOrder.size} pages"
                 }
             )
             Row {
@@ -866,11 +1038,14 @@ private fun PageChooser(
             // LazyColumn. Tall enough for three rows, and it scrolls within itself.
             modifier = Modifier.heightIn(max = 420.dp)
         ) {
-            itemsIndexed(state.pageOrder, key = { _, page -> page }) { position, page ->
+            itemsIndexed(pageOrder, key = { _, page -> page }) { position, page ->
                 PageThumb(
                     position = position,
                     pageIndex = page,
-                    state = state,
+                    thumb = thumbnails[page],
+                    selected = page in selectedPages,
+                    rotation = rotations[page] ?: 0,
+                    isLast = position == pageOrder.lastIndex,
                     onTap = { onTogglePage(page) },
                     onLeft = {},
                     onRight = {},
@@ -879,7 +1054,7 @@ private fun PageChooser(
             }
         }
 
-        if (state.thumbnailsCapped) {
+        if (thumbnailsCapped) {
             Hint(
                 "Only the first pages are shown as pictures - a few hundred thumbnails is " +
                     "more memory than this app is allowed. The rest are still here, numbered " +
@@ -893,33 +1068,63 @@ private fun PageChooser(
 private fun PageThumb(
     position: Int,
     pageIndex: Int,
-    state: ToolUiState,
+    thumb: Bitmap?,
+    selected: Boolean,
+    rotation: Int,
+    isLast: Boolean,
     onTap: () -> Unit,
     onLeft: () -> Unit,
     onRight: () -> Unit,
     /** Off where the order is not the user's to change - picking pages out, for instance. */
-    reorderable: Boolean = true
+    reorderable: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
-    val selected = pageIndex in state.selectedPages
-    val rotation = state.rotations[pageIndex] ?: 0
     val shape = RoundedCornerShape(6.dp)
+    val turn = ((rotation % 360) + 360) % 360
+    // The rotation is said rather than coloured. Selected and rotated used to paint the same
+    // accent on the same number, so a page that was one looked exactly like a page that was
+    // the other, and a page that was both looked like either.
+    val caption = if (turn == 0) "${position + 1}" else "${position + 1}, $turn°"
+    val edge by animateColorAsState(
+        targetValue = if (selected) SheafColors.Band else SheafColors.Border,
+        animationSpec = tween(120),
+        label = "pageEdge"
+    )
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(0.707f)
                 .clip(shape)
                 .background(SheafColors.Paper)
-                .border(2.dp, if (selected) SheafColors.Band else SheafColors.Border, shape)
-                .clickable(onClick = onTap),
+                .border(2.dp, edge, shape)
+                .toggleable(value = selected, role = Role.Checkbox, onValueChange = { onTap() })
+                // On the frame rather than on the picture, so a page past the thumbnail cap
+                // has something to announce as well - those cells used to say nothing at all.
+                // Position, not page index, because that is what the caption on the cell and
+                // the two reorder buttons beside it both say. Announcing the original page
+                // number here meant that after any reorder a screen reader called a cell
+                // "Page 3" while it was captioned "1" and its button said "Move page 1 later".
+                .semantics {
+                    contentDescription = if (turn == 0) {
+                        "Page ${position + 1}"
+                    } else {
+                        "Page ${position + 1}, rotated $turn degrees"
+                    }
+                    stateDescription = if (selected) "kept" else "not kept"
+                },
             contentAlignment = Alignment.Center
         ) {
-            val thumb = state.thumbnails[pageIndex]
             if (thumb != null) {
+                // asImageBitmap() hands back a new wrapper every call, and that wrapper is the
+                // key Image remembers its painter by: without this the cell rebuilds the
+                // painter and redraws the page on any recomposition at all.
+                val image = remember(thumb) { thumb.asImageBitmap() }
                 Image(
-                    bitmap = thumb.asImageBitmap(),
-                    contentDescription = "Page ${pageIndex + 1}",
+                    bitmap = image,
+                    // Named on the frame above. Both, and TalkBack reads "Page 4" twice.
+                    contentDescription = null,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .fillMaxSize()
@@ -927,31 +1132,82 @@ private fun PageThumb(
                         .rotate(rotation.toFloat())
                 )
             }
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (reorderable) {
-                TextButton(
-                    onClick = onLeft,
-                    enabled = position > 0,
-                    modifier = Modifier.size(34.dp)
-                ) { Text("‹", color = SheafColors.Muted) }
+            // Selection has to read across the whole grid rather than at the one 2dp edge
+            // under the fingertip that just set it, which is invisible from reading distance.
+            if (selected) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(SheafColors.Band.copy(alpha = 0.14f))
+                )
             }
+            // The number sits on the page rather than under it. The row below is now the
+            // reorder strip, and two buttons at the 48dp Material lays them out at - which
+            // .size(34.dp) only squeezed the content box of, never the button - plus a
+            // number came to more than a 96dp cell holds, so the chevrons drew outside it.
             Text(
-                "${position + 1}",
+                caption,
                 style = MaterialTheme.typography.bodySmall,
-                color = when {
-                    selected -> SheafColors.BandBright
-                    rotation != 0 -> SheafColors.BandBright
-                    else -> SheafColors.Dim
-                }
+                color = if (selected) SheafColors.BandBright else SheafColors.Dim,
+                maxLines = 1,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(4.dp)
+                    .clip(MaterialTheme.shapes.small)
+                    .background(SheafColors.Surface.copy(alpha = 0.88f))
+                    .padding(horizontal = 5.dp, vertical = 1.dp)
             )
-            if (reorderable) {
-                TextButton(
+        }
+        if (reorderable) {
+            Row(Modifier.fillMaxWidth()) {
+                PageArrow(
+                    icon = R.drawable.ic_chevron_left,
+                    label = "Move page ${position + 1} earlier",
+                    enabled = position > 0,
+                    onClick = onLeft,
+                    modifier = Modifier.weight(1f)
+                )
+                PageArrow(
+                    icon = R.drawable.ic_chevron_right,
+                    label = "Move page ${position + 1} later",
+                    enabled = !isLast,
                     onClick = onRight,
-                    enabled = position < state.pageOrder.lastIndex,
-                    modifier = Modifier.size(34.dp)
-                ) { Text("›", color = SheafColors.Muted) }
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
+    }
+}
+
+/**
+ * One half of a cell's reorder strip.
+ *
+ * Not [com.layerbit.sheaf.ui.components.IconAction], which keeps a text button's 24dp side
+ * padding: two of those need 136dp and the cell is 96dp wide. Here the touch target is the
+ * weighted half itself, which is 48dp high and at least 48dp wide, so dropping the content
+ * padding costs nothing.
+ */
+@Composable
+private fun PageArrow(
+    icon: Int,
+    label: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    TextButton(
+        onClick = onClick,
+        enabled = enabled,
+        contentPadding = PaddingValues(0.dp),
+        modifier = modifier
+            .height(48.dp)
+            .semantics { contentDescription = label }
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = null,
+            tint = if (enabled) SheafColors.Muted else SheafColors.Dim,
+            modifier = Modifier.size(20.dp)
+        )
     }
 }

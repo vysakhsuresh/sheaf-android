@@ -1,5 +1,7 @@
 *.iml
 .gradle/
+# Where the Kotlin compiler keeps its session files. Build output, not source.
+.kotlin/
 /local.properties
 /.idea/
 .DS_Store
@@ -11,6 +13,9 @@
 *.aab
 /app/build
 /app/release
+# :baselineprofile builds like any other module, and like any other module its output is
+# not source. The profile it produces is, and that lands in app/src/main/generated.
+/baselineprofile/build
 
 # Real signing credentials - never commit these. Copy keystore.properties.example to
 # keystore.properties (git-ignored) and fill in your own values, and keep the .jks/.keystore

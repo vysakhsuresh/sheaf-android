@@ -1,6 +1,7 @@
 package com.layerbit.sheaf.pdf
 
 import android.graphics.Bitmap
+import android.graphics.Rect
 import java.io.Closeable
 import java.io.File
 
@@ -64,6 +65,66 @@ interface PdfDocument : Closeable {
     fun renderPage(index: Int, targetWidthPx: Int): Bitmap
 
     /**
+     * [renderPage], offering a bitmap for it to draw into.
+     *
+     * [reuse] is taken only when it is unrecycled, mutable, ARGB_8888, and exactly the size
+     * this render settles on - which is not always the size that was asked for, since the
+     * [BitmapBudget] clamp may shrink it. A bitmap that fails any of those tests is ignored
+     * rather than complained about: a pool handing back something stale should cost an
+     * allocation, not a page.
+     *
+     * Ownership does not move in either direction. The engine never recycles what it was
+     * handed, because the caller may still be drawing it, so a caller whose bitmap was not
+     * taken still owns a usable bitmap. Equally, an engine with no interest in pooling
+     * satisfies this by rendering fresh - a non-null [reuse] is an offer and never a
+     * promise, and the only way to know which bitmap came back is to compare identity.
+     */
+    @Throws(PdfException::class)
+    fun renderPage(index: Int, targetWidthPx: Int, reuse: Bitmap?): Bitmap =
+        renderPage(index, targetWidthPx)
+
+    /**
+     * Renders one rectangular region of a page into a bitmap of exactly [outWidthPx] by
+     * [outHeightPx].
+     *
+     * The viewer's cost at high zoom is otherwise set by the page rather than by the screen.
+     * Filling one screen at zoom 2.5 by rendering the whole page at the zoomed width
+     * allocates, rasterises and uploads something like twenty-four times the pixels that
+     * reach the display; a tile pays for what is visible, at the size it is visible at.
+     *
+     * The coordinate convention, which every caller has to agree on exactly: [tile] is in
+     * pixels of the page as it would be rendered whole at [fullWidthPx], origin at the
+     * page's top left, x to the right and y down. That space is [fullWidthPx] by
+     * `BitmapBudget.heightFor(fullWidthPx, pageSize(index).aspectRatio)`, which is how
+     * [renderPage] turns a width into a height - so tiles of one page tessellate exactly,
+     * and at a width the budget would have allowed they fall on the same pixels a
+     * whole-page render did.
+     *
+     * [fullWidthPx] is the zoomed width and is deliberately not clamped by [BitmapBudget]:
+     * no bitmap of that size is ever allocated, which is the whole point. The output bitmap
+     * is not clamped either, because the region must fill it exactly or the caller's
+     * geometry is a lie; keeping the output down to screen size is the caller's half of
+     * that bargain, and tiling is what makes it easy to keep.
+     *
+     * A [tile] reaching past the page edge is legal, and the overhang comes back white like
+     * the rest of the sheet. The rect is read during the call and not retained.
+     *
+     * @param reuse a bitmap to draw into, on the terms [renderPage] states, except that the
+     *   size it must match is simply [outWidthPx] by [outHeightPx].
+     * @return the rendered tile, or null from an engine that has no tile path at all, in
+     *   which case the caller falls back to [renderPage]. Real failures throw.
+     */
+    @Throws(PdfException::class)
+    fun renderTile(
+        index: Int,
+        fullWidthPx: Int,
+        tile: Rect,
+        outWidthPx: Int,
+        outHeightPx: Int,
+        reuse: Bitmap? = null
+    ): Bitmap? = null
+
+    /**
      * Releases the file descriptor and whatever native handle the engine holds.
      *
      * Two things an engine owes the caller here. The descriptor is released even if the
@@ -125,4 +186,13 @@ sealed class PdfException(message: String, cause: Throwable? = null) : Exception
     /** Reading or writing the file itself failed. */
     class Io(detail: String, cause: Throwable? = null) :
         PdfException("Could not read or write the file: $detail", cause)
+
+    /**
+     * The job cannot proceed as asked: nothing was selected, the page is not there, the
+     * document is not in the state the operation needs. Nothing is wrong with the file or
+     * the disk, so this one carries no prefix - the message is the whole explanation, and
+     * the call site writes it as a finished sentence.
+     */
+    class Refused(message: String, cause: Throwable? = null) :
+        PdfException(message, cause)
 }
