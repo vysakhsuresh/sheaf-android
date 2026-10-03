@@ -821,7 +821,14 @@ private fun DocumentRow(
                     TextButton(onClick = onDown, enabled = !isLast) { Text("Down", color = SheafColors.Muted) }
                 }
             }
-            TextButton(onClick = onRemove) { Text("Remove", color = SheafColors.Dim) }
+            // Named for a screen reader, because a list of files is a column of buttons all
+            // reading "Remove" with nothing to say which file each one takes away.
+            TextButton(
+                onClick = onRemove,
+                modifier = Modifier.semantics {
+                    contentDescription = "Remove ${doc.file.displayName}"
+                }
+            ) { Text("Remove", color = SheafColors.Dim) }
         }
     }
 }

@@ -80,6 +80,8 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -753,7 +755,14 @@ private fun ContentsSheet(
                                 color = SheafColors.Dim
                             )
                         }
-                        TextButton(onClick = { onRemoveBookmark(mark.pageIndex) }) {
+                        // Same reason as the file list: every mark offers a button saying
+                        // "Remove", and only the page number tells them apart.
+                        TextButton(
+                            onClick = { onRemoveBookmark(mark.pageIndex) },
+                            modifier = Modifier.semantics {
+                                contentDescription = "Remove the mark on page ${mark.pageIndex + 1}"
+                            }
+                        ) {
                             Text(
                                 "Remove",
                                 style = MaterialTheme.typography.bodySmall,
