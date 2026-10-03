@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.prefs.Settings
 import com.layerbit.sheaf.prefs.ThemeChoice
 import com.layerbit.sheaf.ui.components.ChipRow
+import com.layerbit.sheaf.ui.components.ListRhythm
 import com.layerbit.sheaf.ui.components.Panel
 import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.components.ToggleRow
@@ -46,7 +47,7 @@ fun SettingsScreen(
 ) {
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 40.dp),
+        contentPadding = ListRhythm,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {

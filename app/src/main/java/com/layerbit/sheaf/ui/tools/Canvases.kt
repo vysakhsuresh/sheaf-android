@@ -103,9 +103,9 @@ fun SignaturePad(
                 .fillMaxWidth()
                 .height(200.dp)
                 .padding(top = 8.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .clip(MaterialTheme.shapes.small)
                 .background(SheafColors.Paper)
-                .border(1.dp, SheafColors.Border, RoundedCornerShape(10.dp))
+                .border(1.dp, SheafColors.Border, MaterialTheme.shapes.small)
         ) {
             Canvas(
                 modifier = Modifier
@@ -334,9 +334,9 @@ fun RedactCanvas(
                 .aspectRatio(
                     if (page != null && page.height > 0) page.width.toFloat() / page.height else 0.707f
                 )
-                .clip(RoundedCornerShape(6.dp))
+                .clip(MaterialTheme.shapes.small)
                 .background(SheafColors.Paper)
-                .border(1.dp, SheafColors.Border, RoundedCornerShape(6.dp)),
+                .border(1.dp, SheafColors.Border, MaterialTheme.shapes.small),
             // Paging is the whole loop of this tool, so the gap between pages is a state the
             // user looks at constantly. Without the alignment the spinner sits in the corner.
             contentAlignment = Alignment.Center
@@ -585,9 +585,9 @@ fun MarkupCanvas(
                 .aspectRatio(
                     if (page != null && page.height > 0) page.width.toFloat() / page.height else 0.707f
                 )
-                .clip(RoundedCornerShape(6.dp))
+                .clip(MaterialTheme.shapes.small)
                 .background(SheafColors.Paper)
-                .border(1.dp, SheafColors.Border, RoundedCornerShape(6.dp)),
+                .border(1.dp, SheafColors.Border, MaterialTheme.shapes.small),
             // As in the redaction canvas: without this the spinner between pages lands in the
             // top-left corner rather than on the page it is standing in for.
             contentAlignment = Alignment.Center

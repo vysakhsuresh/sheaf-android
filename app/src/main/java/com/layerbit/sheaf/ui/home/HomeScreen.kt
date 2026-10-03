@@ -388,7 +388,7 @@ private fun Card(
                         // most common thing people do, and this marks it without lifting it
                         // out of the grid the way a separate button did.
                         if (accent) SheafColors.Band.copy(alpha = 0.16f) else SheafColors.SurfaceDim,
-                        RoundedCornerShape(10.dp)
+                        MaterialTheme.shapes.small
                     ),
                 contentAlignment = Alignment.Center
             ) {

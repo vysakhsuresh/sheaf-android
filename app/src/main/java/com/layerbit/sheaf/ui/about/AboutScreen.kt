@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.BuildConfig
 import com.layerbit.sheaf.SheafApplication
 import com.layerbit.sheaf.brand.BrandLinks
+import com.layerbit.sheaf.ui.components.ListRhythm
 import com.layerbit.sheaf.ui.components.Panel
 import com.layerbit.sheaf.ui.components.RowBetween
 import com.layerbit.sheaf.ui.components.SectionHeading
@@ -47,7 +48,7 @@ fun AboutScreen(modifier: Modifier = Modifier) {
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 32.dp),
+        contentPadding = ListRhythm,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {

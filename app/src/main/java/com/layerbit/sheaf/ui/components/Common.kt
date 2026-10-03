@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
@@ -61,7 +62,7 @@ fun Panel(
     highlighted: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val shape = RoundedCornerShape(14.dp)
+    val shape = MaterialTheme.shapes.medium
     val base = modifier
         .clip(shape)
         .background(SheafColors.Surface)
@@ -154,7 +155,16 @@ fun <T> ChipRow(
     options: List<Pair<T, String>>,
     selected: T,
     onSelect: (T) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /**
+     * The colour each option stands for, drawn as a disc before its label.
+     *
+     * Only the markup tools pass this, and only because theirs is the one control in the app
+     * whose subject is colour: "Yellow" against "Green" is a difference nobody can judge from
+     * two words. It is a parameter here rather than a second copy of this composable because
+     * a second copy is what existed before, and it had already drifted.
+     */
+    swatch: ((T) -> Color)? = null
 ) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -185,14 +195,32 @@ fun <T> ChipRow(
                 contentAlignment = Alignment.Center
             ) {
                 Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier
                         // Ahead of the background, so the ripple is a pill too. Without it the
                         // press washed a rectangle across a rounded chip.
                         .clip(shape)
                         .background(if (active) SheafColors.BandDim else SheafColors.SurfaceDim)
                         .border(1.dp, if (active) SheafColors.Band else SheafColors.Border, shape)
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                        .padding(
+                            start = if (swatch == null) 14.dp else 10.dp,
+                            end = 14.dp,
+                            top = 8.dp,
+                            bottom = 8.dp
+                        )
                 ) {
+                    if (swatch != null) {
+                        // Ringed, which is what keeps black ink from disappearing into the
+                        // chip and pale yellow from disappearing into nothing at all.
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(swatch(value))
+                                .border(1.dp, SheafColors.Border, CircleShape)
+                        )
+                    }
                     Text(
                         text = label,
                         style = MaterialTheme.typography.bodyMedium,
@@ -315,7 +343,7 @@ fun IconAction(
 @Composable
 fun ProblemRow(name: String?, reason: String, isError: Boolean, modifier: Modifier = Modifier) {
     val accent = if (isError) SheafColors.Failed else SheafColors.Skipped
-    val shape = RoundedCornerShape(12.dp)
+    val shape = MaterialTheme.shapes.medium
     Column(
         modifier = modifier
             .fillMaxWidth()

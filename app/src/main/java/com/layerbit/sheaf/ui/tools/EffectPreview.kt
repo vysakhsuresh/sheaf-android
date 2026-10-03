@@ -79,9 +79,9 @@ fun EffectPreview(
                 .fillMaxWidth()
                 .padding(top = 8.dp)
                 .aspectRatio(if (page != null && page.height > 0) page.width.toFloat() / page.height else 0.707f)
-                .clip(RoundedCornerShape(6.dp))
+                .clip(MaterialTheme.shapes.small)
                 .background(SheafColors.Paper)
-                .border(1.dp, SheafColors.Border, RoundedCornerShape(6.dp))
+                .border(1.dp, SheafColors.Border, MaterialTheme.shapes.small)
                 .then(
                     if (onPlace == null) {
                         Modifier

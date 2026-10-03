@@ -66,6 +66,7 @@ import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.jobs.JobState
 import com.layerbit.sheaf.ops.OpOutcome
 import com.layerbit.sheaf.ops.ToolId
+import com.layerbit.sheaf.ui.components.ListRhythm
 import com.layerbit.sheaf.ui.components.Panel
 import com.layerbit.sheaf.ui.components.ProblemRow
 import com.layerbit.sheaf.ui.components.RowBetween
@@ -176,7 +177,7 @@ fun ToolScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(20.dp),
+        contentPadding = ListRhythm,
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         when {
@@ -685,7 +686,7 @@ private fun ResultRow(
                         .fillMaxWidth()
                         .padding(top = 10.dp)
                         .heightIn(max = 220.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .background(SheafColors.SurfaceDim)
                         .verticalScroll(rememberScrollState())
                         .padding(12.dp)
@@ -713,7 +714,7 @@ private fun ResultRow(
                     .fillMaxWidth()
                     .heightIn(max = 220.dp)
                     .padding(top = 10.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(MaterialTheme.shapes.small)
                     .background(SheafColors.Paper)
             )
 
@@ -968,9 +969,9 @@ private fun SavedSignatures(
                     Box(
                         modifier = Modifier
                             .size(width = 108.dp, height = 56.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(MaterialTheme.shapes.small)
                             .background(SheafColors.Paper)
-                            .border(1.dp, SheafColors.Border, RoundedCornerShape(8.dp))
+                            .border(1.dp, SheafColors.Border, MaterialTheme.shapes.small)
                             .clickable { onUse(file) },
                         contentAlignment = Alignment.Center
                     ) {
@@ -1086,7 +1087,7 @@ private fun PageThumb(
     reorderable: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(6.dp)
+    val shape = MaterialTheme.shapes.small
     val turn = ((rotation % 360) + 360) % 360
     // The rotation is said rather than coloured. Selected and rotated used to paint the same
     // accent on the same number, so a page that was one looked exactly like a page that was

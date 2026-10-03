@@ -243,6 +243,15 @@ another reader, and a batch with one unreadable file still finishes the rest.
 - **JDK 21 to run Gradle**, targeting Java 17 bytecode — see Building, the two are not the same
 - `minSdk` is 26, and API 28 or newer on the device that generates the baseline profile
 
+Toolchain: Gradle 8.14.5, AGP 8.13.2, Kotlin 2.2.21, KSP 2.2.21-2.0.5. KSP is what pins
+Kotlin — Room needs it, and it had no release for Kotlin 2.3 or 2.4 when this was last moved.
+
+**The next library upgrade is an AGP 9 migration, not a version bump.** Compose 1.12, core
+1.19, lifecycle 2.11 and navigation 2.10 all declare `requires Android Gradle plugin 9.1.0 or
+higher` in their AAR metadata, which is a hard refusal rather than a warning, and AGP 9 wants
+Gradle 9 with it. The versions pinned here are the last ones on the near side of that line.
+Crossing it is worth doing deliberately, with a device to test on, and not as housekeeping.
+
 ## Building
 
 ```
@@ -269,7 +278,20 @@ a terminal.
 
 It writes `app/src/main/generated/baselineProfiles/baseline-prof.txt`, which is checked in and
 packaged. No release build ever runs it — a release that needs a phone attached is a release
-nobody can cut.
+nobody can cut. Read `StartupProfileGenerator`'s own comment first: the Gradle task fails on
+Android 15 even when the run succeeds, and the four commands that get the file out by hand
+are written down there.
+
+**Whether that profile is worth anything has not been measured.** It is generated, it reaches
+`assets/dexopt/baseline.prof` in the release APK, and ProfileInstaller installs it — but a
+hand-timed cold start was the same with it and without. `StartupBenchmark` exists to settle
+it properly, comparing `CompilationMode.None` against `Partial` over ten cold iterations:
+
+```
+./gradlew :baselineprofile:connectedBenchmarkReleaseAndroidTest
+```
+
+Until someone runs that and writes the number down, treat the startup win as unproven.
 
 ## Icon
 

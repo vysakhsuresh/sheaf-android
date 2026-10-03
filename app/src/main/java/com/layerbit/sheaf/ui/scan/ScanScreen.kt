@@ -208,7 +208,7 @@ fun ScannedPages(
                         modifier = Modifier
                             .height(96.dp)
                             .aspectRatio(0.72f)
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(MaterialTheme.shapes.small)
                             .background(SheafColors.Paper)
                     )
                     TextButton(onClick = { onRemove(index) }) {

@@ -8,7 +8,7 @@ plugins {
     // Consumes :baselineprofile's output and adds the variants that produce it. The version is
     // named here, and again in that module, because the root build file puts AGP, Kotlin and KSP
     // on the classpath every module inherits and this plugin is not one of them.
-    id("androidx.baselineprofile") version "1.3.3"
+    id("androidx.baselineprofile") version "1.5.0"
 }
 
 // Release signing credentials live only in a local, git-ignored keystore.properties (see
@@ -148,19 +148,19 @@ ksp {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.09.03")
+    val composeBom = platform("androidx.compose:compose-bom:2026.06.01")
     implementation(composeBom)
 
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.activity:activity-compose:1.9.2")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
-    implementation("androidx.navigation:navigation-compose:2.8.2")
+    implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.activity:activity-compose:1.12.4")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.4")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
+    implementation("androidx.navigation:navigation-compose:2.9.8")
 
     // Carries the baseline profile into ART's own profile shortly after the first launch. The
     // platform does this itself from API 31; below that nothing does, and this app's floor is 26.
-    implementation("androidx.profileinstaller:profileinstaller:1.3.1")
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
@@ -173,16 +173,16 @@ dependencies {
     // Reads display names and sizes back out of a SAF content:// Uri without holding the
     // document open. The platform DocumentsContract calls would do it, at the cost of a
     // cursor dance at every call site.
-    implementation("androidx.documentfile:documentfile:1.0.1")
+    implementation("androidx.documentfile:documentfile:1.1.0")
 
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
+    implementation("androidx.room:room-runtime:2.8.5")
+    implementation("androidx.room:room-ktx:2.8.5")
+    ksp("androidx.room:room-compiler:2.8.5")
 
     // Every operation runs as a Worker, not a viewModelScope coroutine. A four-hundred-page
     // job has to survive the user switching to WhatsApp, and a foreground-service Worker is
     // the only thing on Android that reliably does.
-    implementation("androidx.work:work-runtime-ktx:2.9.1")
+    implementation("androidx.work:work-runtime-ktx:2.12.0")
 
     // Apache-2.0. Everything structural - merge, split, page tree, encryption, content
     // streams - goes through this, behind PdfSurgeon. The platform renderer stays the
@@ -200,7 +200,7 @@ dependencies {
     // CameraX drives the scanner. Photographing a page is a first-class way documents get into
     // Sheaf, so it gets a purpose-built viewfinder with corner adjustment rather than an
     // ACTION_IMAGE_CAPTURE hand-off to whatever camera app happens to be installed.
-    val cameraX = "1.3.4"
+    val cameraX = "1.6.2"
     implementation("androidx.camera:camera-core:$cameraX")
     implementation("androidx.camera:camera-camera2:$cameraX")
     implementation("androidx.camera:camera-lifecycle:$cameraX")
@@ -208,7 +208,7 @@ dependencies {
 
     // The sensor writes orientation into EXIF rather than rotating the pixels, so a portrait
     // capture decodes sideways without this.
-    implementation("androidx.exifinterface:exifinterface:1.3.7")
+    implementation("androidx.exifinterface:exifinterface:1.4.2")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
