@@ -1129,7 +1129,7 @@ class PdfBoxSurgeon : PdfSurgeon {
                         field.check()
                     }
                     is PDButton -> field.value = wanted
-                    is PDChoice -> field.value = wanted
+                    is PDChoice -> field.setValue(wanted)
                     else -> Unit
                 }
             }
