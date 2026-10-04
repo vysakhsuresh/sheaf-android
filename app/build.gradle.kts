@@ -30,6 +30,10 @@ android {
         // a newer platform than 26 except page-level PdfRenderer features added in 35, and
         // those are additions behind PdfEngine rather than requirements.
         minSdk = 26
+        // Behind compileSdk deliberately. Raising this is not a version bump: it opts the app
+        // into every behaviour change the new platform gates on targetSdk, and those have to
+        // be found on a device rather than in a build. Lint calls it OldTargetApi; that is the
+        // warning being accepted, not missed.
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
@@ -211,7 +215,7 @@ dependencies {
     implementation("androidx.exifinterface:exifinterface:1.4.2")
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
 
     // Not a runtime dependency: this is how the plugin finds the module that generates the
     // profile. Nothing in :baselineprofile reaches the device as part of the app.
