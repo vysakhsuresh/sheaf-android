@@ -92,11 +92,19 @@ fun Panel(
 }
 
 @Composable
-fun SectionHeading(text: String, modifier: Modifier = Modifier) {
+fun SectionHeading(
+    text: String,
+    modifier: Modifier = Modifier,
+    /**
+     * The group's own hue, where the heading labels one. Grey everywhere else, which is most
+     * places - a heading that is merely organising a form has no group to belong to.
+     */
+    color: Color = SheafColors.Dim
+) {
     Text(
         text = text.uppercase(Locale.ROOT),
         style = MaterialTheme.typography.labelSmall,
-        color = SheafColors.Dim,
+        color = color,
         modifier = modifier
     )
 }

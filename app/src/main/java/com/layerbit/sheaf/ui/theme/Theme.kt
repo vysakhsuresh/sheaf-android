@@ -2,6 +2,7 @@ package com.layerbit.sheaf.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Immutable
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +42,25 @@ import com.layerbit.sheaf.prefs.ThemeChoice
  * rule exists because [Band] on [Surface] is 3.5:1, which is under AA for body text, and
  * because the app was using both for text and so could not look consistent even where it was
  * legible. Anywhere the accent is ink - a label, a count, a link - reach for BandBright.
+ *
+ * AND THEN THERE ARE THE FIVE. The paragraph above used to end by saying the band was the
+ * only saturated colour in the app and everything else was ink, paper and grey. That was
+ * true, and on one screen it was a mistake: the board is twenty-six tool cards and
+ * twenty-five of them were drawn identically - the same grey tile, the same grey glyph, the
+ * same two lines of text - so a wall of equally-weighted rectangles was the first thing
+ * anybody saw. Restraint and uniformity are not the same thing, and what had been built was
+ * the second one.
+ *
+ * So each of the five tool groups now owns a hue, in [ToolAccents]. It is wayfinding and not
+ * decoration: the colour is what lets someone find the page tools again without reading
+ * twenty-six titles, and a group's heading wears the same hue as its cards so the two read as
+ * one block. Five is deliberate - it is the number of groups, it is near the limit of what
+ * anyone can hold as a set, and no sixth may be added without a sixth group to justify it.
+ *
+ * Where they may NOT go: on a document. A rendered page sits on [Paper] and the chrome around
+ * it stays grey, because the original argument still holds - the page has to be the brightest
+ * thing in the window. These live on the tool board, in the tool picker, and nowhere a
+ * document is on screen.
  *
  * WHY THESE ARE OBSERVABLE STATE RATHER THAN CONSTANTS. Every screen reads SheafColors
  * directly, which was the right call while there was one palette and the wrong one the moment
@@ -95,6 +115,10 @@ object SheafColors {
     var Skipped by mutableStateOf(Dark.skipped)
         private set
 
+    /** The five tool-group hues, in group order. See the note on [ToolAccent]. */
+    var ToolAccents by mutableStateOf(Dark.toolAccents)
+        private set
+
     /** True while the dark palette is in force, for the few places that need to know. */
     var isDark by mutableStateOf(true)
         private set
@@ -114,6 +138,7 @@ object SheafColors {
         BandDim = palette.bandDim
         OnBand = palette.onBand
         Paper = palette.paper
+        ToolAccents = palette.toolAccents
         Running = palette.running
         Done = palette.done
         Failed = palette.failed
@@ -121,6 +146,20 @@ object SheafColors {
         isDark = palette.dark
     }
 }
+
+/**
+ * The two colours one tool group is drawn in.
+ *
+ * [tile] is the wash behind a 36dp icon, [ink] is the glyph on it and the group's heading.
+ * They come as a pair because they are only ever correct together: every [ink] here clears
+ * 4.5:1 on its own [tile] and on [Surface], and no other combination of the ten has been
+ * checked.
+ *
+ * Two colours and not three. A hue that also had to supply a border or a pressed state would
+ * be a theme of its own, five times over, and the chip would stop being the same chip.
+ */
+@Immutable
+data class ToolAccent(val tile: Color, val ink: Color)
 
 /** One palette. Two instances exist and nothing else may construct one. */
 internal data class Palette(
@@ -138,6 +177,7 @@ internal data class Palette(
     val bandDim: Color,
     val onBand: Color,
     val paper: Color,
+    val toolAccents: List<ToolAccent>,
     val running: Color,
     val done: Color,
     val failed: Color,
@@ -165,6 +205,18 @@ internal val Dark = Palette(
     bandDim = Color(0xFF3A0E22),
     onBand = Color(0xFFFFF2F7),
     paper = Color(0xFFF7F5EF),
+    // Read, Pages, Mark up, Convert, Protect - in Group order, because that is how they are
+    // indexed. Read keeps the band, so the colour the app already had stays where it already
+    // was; the other four are set at the same lightness as each other so no group shouts
+    // louder than its neighbours. Every ink clears AA on its own tile and on Surface, the
+    // worst of the ten being 5.75:1.
+    toolAccents = listOf(
+        ToolAccent(tile = Color(0xFF3A0E22), ink = Color(0xFFFF5C9E)),
+        ToolAccent(tile = Color(0xFF0E2A3F), ink = Color(0xFF5BB8F5)),
+        ToolAccent(tile = Color(0xFF35260B), ink = Color(0xFFF2B544)),
+        ToolAccent(tile = Color(0xFF0E2E24), ink = Color(0xFF4ECB92)),
+        ToolAccent(tile = Color(0xFF241C3F), ink = Color(0xFFA58BFF))
+    ),
     running = Color(0xFF5BA9E8),
     done = Color(0xFF58C08C),
     failed = Color(0xFFE0705F),
@@ -197,6 +249,15 @@ internal val Light = Palette(
     bandDim = Color(0xFFFBE2EE),
     onBand = Color(0xFFFFF7FA),
     paper = Color(0xFFFFFFFF),
+    // The same five in daylight, and not an inversion of them: on a light ground the tile is
+    // the pale end and the ink is the dark end, which is the same swap the band makes above.
+    toolAccents = listOf(
+        ToolAccent(tile = Color(0xFFFBE2EE), ink = Color(0xFF9E1453)),
+        ToolAccent(tile = Color(0xFFE3F0FA), ink = Color(0xFF11557F)),
+        ToolAccent(tile = Color(0xFFFAF0DA), ink = Color(0xFF7A5410)),
+        ToolAccent(tile = Color(0xFFDFF2E9), ink = Color(0xFF116244)),
+        ToolAccent(tile = Color(0xFFECE6FB), ink = Color(0xFF4B32A8))
+    ),
     running = Color(0xFF1C6FB8),
     done = Color(0xFF17784E),
     failed = Color(0xFFA83C27),

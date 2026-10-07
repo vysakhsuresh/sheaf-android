@@ -105,7 +105,12 @@ fun ToolPickerSheet(
  */
 @Composable
 private fun ToolGroup(title: String, tools: List<ToolId>, onPick: (ToolId) -> Unit) {
-    SectionHeading(title, modifier = Modifier.padding(top = 14.dp, bottom = 2.dp))
+    SectionHeading(
+        title,
+        modifier = Modifier.padding(top = 14.dp, bottom = 2.dp),
+        color = tools.firstOrNull()?.let { SheafColors.ToolAccents[it.group.ordinal].ink }
+            ?: SheafColors.Dim
+    )
     tools.forEach { tool ->
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -117,10 +122,12 @@ private fun ToolGroup(title: String, tools: List<ToolId>, onPick: (ToolId) -> Un
                 .clickable { onPick(tool) }
                 .padding(vertical = 12.dp, horizontal = 4.dp)
         ) {
+            // The same hue the tool wears on the board, so moving between the two screens is
+            // recognising a colour rather than re-reading a list.
             Icon(
                 painter = painterResource(iconFor(tool)),
                 contentDescription = null,
-                tint = SheafColors.Muted,
+                tint = SheafColors.ToolAccents[tool.group.ordinal].ink,
                 modifier = Modifier.size(22.dp)
             )
             Column(modifier = Modifier.padding(start = 14.dp)) {

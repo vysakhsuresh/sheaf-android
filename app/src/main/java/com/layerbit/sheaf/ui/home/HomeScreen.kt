@@ -45,6 +45,7 @@ import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.components.formatBytes
 import com.layerbit.sheaf.ui.components.formatPageCount
 import com.layerbit.sheaf.ui.theme.SheafColors
+import com.layerbit.sheaf.ui.theme.ToolAccent
 import com.layerbit.sheaf.ui.tools.iconFor
 
 /**
@@ -205,7 +206,7 @@ fun HomeScreen(
             ToolId.Group.entries.forEach { group ->
                 item(key = "group-${group.name}") {
                     Spacer(Modifier.height(HEADING_ABOVE))
-                    SectionHeading(group.title)
+                    SectionHeading(group.title, color = accentFor(group).ink)
                     Spacer(Modifier.height(HEADING_BELOW))
                     ToolCards(
                         tools = ToolId.entries.filter { it.group == group },
@@ -333,7 +334,7 @@ private fun ToolCards(
                     iconRes = R.drawable.ic_tool_read,
                     title = "Read a PDF",
                     summary = "Open a document, then use any tool on it from there",
-                    accent = true,
+                    accent = accentFor(ToolId.Group.READ),
                     starred = false,
                     onClick = onRead,
                     onLongClick = null,
@@ -345,7 +346,10 @@ private fun ToolCards(
                     iconRes = iconFor(tool),
                     title = tool.title,
                     summary = tool.summary,
-                    accent = false,
+                    // Its own group's hue, even in search results and in "Yours", where the
+                    // cards are not sitting under their heading. The colour has to mean the
+                    // same thing wherever a card turns up or it means nothing anywhere.
+                    accent = accentFor(tool.group),
                     starred = tool.name in favourites,
                     onClick = { onTool(tool) },
                     onLongClick = { onToggleFavourite(tool) },
@@ -363,11 +367,21 @@ private fun ToolCards(
 }
 
 @Composable
+/**
+ * The group hue for a tool, by position in [ToolId.Group].
+ *
+ * Indexed rather than matched in a `when`, so adding a group without adding its colour is a
+ * crash on the first draw instead of a sixth grey card nobody notices for a month.
+ */
+private fun accentFor(group: ToolId.Group): ToolAccent =
+    SheafColors.ToolAccents[group.ordinal]
+
+@Composable
 private fun Card(
     iconRes: Int,
     title: String,
     summary: String,
-    accent: Boolean,
+    accent: ToolAccent,
     starred: Boolean,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)?,
@@ -383,19 +397,13 @@ private fun Card(
             Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .background(
-                        // The reading card carries the band colour at low opacity. It is the
-                        // most common thing people do, and this marks it without lifting it
-                        // out of the grid the way a separate button did.
-                        if (accent) SheafColors.Band.copy(alpha = 0.16f) else SheafColors.SurfaceDim,
-                        MaterialTheme.shapes.small
-                    ),
+                    .background(accent.tile, MaterialTheme.shapes.small),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     painter = painterResource(iconRes),
                     contentDescription = null,
-                    tint = if (accent) SheafColors.BandBright else SheafColors.Muted,
+                    tint = accent.ink,
                     modifier = Modifier.size(20.dp)
                 )
             }
