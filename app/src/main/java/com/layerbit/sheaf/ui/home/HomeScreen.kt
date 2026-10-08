@@ -10,9 +10,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -148,16 +151,22 @@ fun HomeScreen(
                 }
             }
         } else {
-            // One row, for the one document. The full Recent section stays where it is, at the
-            // bottom: the board is a thing you browse and the document you were in the middle
-            // of is a thing you come back to, and only the second of those is worth putting
-            // above five groups of cards. Lifting the whole section up here would rebuild the
-            // false hierarchy described at the top of this file - three or four hundred dp of
-            // documents would once again turn the tools underneath into a list of things you
-            // read about. One 52dp row costs the first group heading nothing.
-            recents.firstOrNull()?.let { newest ->
+            // One row high, however many documents there are, because it scrolls sideways.
+            //
+            // This was a single row showing only the newest document, and the argument for
+            // that was sound as far as it went: the full Recent list stacked up here would be
+            // three or four hundred dp of documents above the board, which would rebuild the
+            // false hierarchy described at the top of this file and turn the tools into a
+            // list of things you read about.
+            //
+            // But that left the other documents at the bottom, under about 2,400dp of cards,
+            // which is to say nowhere. Going sideways settles it: the vertical cost is the
+            // same one row it always was, and eight documents fit in it instead of one. The
+            // full section stays at the bottom, and is now about managing them - forgetting
+            // one, seeing what it costs - rather than the only way to reach them.
+            if (recents.isNotEmpty()) {
                 item(key = "resume") {
-                    ResumeRow(recent = newest, onOpen = { onOpenRecent(newest) })
+                    RecentStrip(recents = recents, onOpen = onOpenRecent)
                 }
             }
 
@@ -176,21 +185,13 @@ fun HomeScreen(
             }
 
             item {
-                Text(
-                    text = "Everything happens on this phone. Nothing is uploaded, because Sheaf " +
-                        "cannot use the internet at all.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SheafColors.Muted,
-                    modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
-                )
                 if (favourites.isEmpty()) {
                     // Starring is the one thing that answers "this is a lot", and until you
                     // have found the gesture there is nothing on screen that mentions it: the
                     // "Yours" heading only appears once you have used it and the star only
-                    // shows on a card that already has one. Its own dimmer line rather than an
-                    // extra clause on the sentence above, which is a promise about what the
-                    // app does not do; running an instruction into it blurs both. It goes as
-                    // soon as it has been acted on, so it never becomes furniture.
+                    // shows on a card that already has one. It is the one line left above the
+                    // board, and it earns that because it is onboarding rather than furniture
+                    // - it goes the moment it has been acted on and never comes back.
                     Text(
                         text = "Hold a tool to keep it at the top.",
                         style = MaterialTheme.typography.bodySmall,
@@ -245,7 +246,27 @@ fun HomeScreen(
 
         item {
             Spacer(Modifier.height(22.dp))
-            TextButton(onClick = onAbout) {
+            // The promise reads here rather than above the board.
+            //
+            // It is the most important sentence in the app and it was costing 46dp at the top
+            // of every launch to say a thing that does not change. Someone deciding whether to
+            // trust an offline PDF tool reads it once; after that it is furniture standing
+            // between them and the tools. Down here it is still on the first screen, still
+            // unmissable to anyone who scrolls, and it is no longer rent.
+            Text(
+                text = "Everything happens on this phone. Nothing is uploaded, because Sheaf " +
+                    "cannot use the internet at all.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = SheafColors.Muted
+            )
+            // Zero horizontal content padding, so this starts on the same gutter as the
+            // sentence above it. A TextButton brings 12dp of its own, which is right when it
+            // sits in a row of buttons and wrong when it is the second line of a paragraph.
+            TextButton(
+                onClick = onAbout,
+                contentPadding = PaddingValues(vertical = 8.dp),
+                modifier = Modifier.padding(top = 2.dp)
+            ) {
                 Text(
                     "Free, offline, and from ${BrandLinks.BRAND_LABEL}",
                     style = MaterialTheme.typography.bodySmall,
@@ -484,39 +505,53 @@ private fun RecentRow(
 }
 
 /**
- * The newest document, in one line, above the board.
+ * The way back into what you were reading, one row high and scrolling sideways.
  *
- * No Remove button and no size: this is not the Recent list in miniature, it is the way back
- * into the thing you were reading ten minutes ago. Everything else about that document is
- * still in the full section at the bottom.
+ * No Remove button and no file size: this is not the Recent list in miniature, it is the door
+ * back into the document you had open ten minutes ago. Managing them - forgetting one, seeing
+ * what the copies cost - is the full section at the bottom, and that is the right place for
+ * it, because managing is a thing you do on purpose and resuming is a thing you do constantly.
+ *
+ * [RECENT_STRIP_MAX] rather than all of them. The strip is a shortcut and a shortcut with
+ * forty entries is a list; past the first handful nobody is scrolling sideways to find
+ * anything, they are going to the section at the bottom that has a heading and a search above
+ * it. Capping it also keeps the row cheap: eight composed cards, not however many documents
+ * this phone has opened since the app was installed.
  */
 @Composable
-private fun ResumeRow(
-    recent: RecentEntity,
-    onOpen: () -> Unit,
+private fun RecentStrip(
+    recents: List<RecentEntity>,
+    onOpen: (RecentEntity) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Panel(modifier = modifier.fillMaxWidth(), onClick = onOpen) {
-        RowBetween {
-            Text(
-                text = recent.displayName,
-                style = MaterialTheme.typography.titleMedium,
-                color = SheafColors.Text,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false)
-            )
-            Text(
-                text = if (recent.lastPage > 0) {
-                    "read to page ${recent.lastPage + 1}"
-                } else {
-                    formatPageCount(recent.pageCount)
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = SheafColors.Dim,
-                maxLines = 1,
-                modifier = Modifier.padding(start = 12.dp)
-            )
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        items(recents.take(RECENT_STRIP_MAX), key = { it.uri }) { recent ->
+            Panel(
+                modifier = Modifier.width(RECENT_CARD_WIDTH),
+                onClick = { onOpen(recent) }
+            ) {
+                Text(
+                    text = recent.displayName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = SheafColors.Text,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = if (recent.lastPage > 0) {
+                        "read to page ${recent.lastPage + 1}"
+                    } else {
+                        formatPageCount(recent.pageCount)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SheafColors.Dim,
+                    maxLines = 1,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
         }
     }
 }
@@ -532,5 +567,16 @@ private val TOOL_CARD_MIN_WIDTH = 180.dp
  * figure here is what is left to make up 24dp above; below the heading there is no list gap to
  * subtract, because the heading and the grid it labels sit in the same item.
  */
+/**
+ * How many documents the strip offers before it stops.
+ *
+ * Eight is about three screens of sideways scroll on a phone, which is as far as anyone will
+ * push a shortcut before going to look at the proper list instead.
+ */
+private const val RECENT_STRIP_MAX = 8
+
+/** Wide enough for a real filename to be recognised, narrow enough that the next one peeks. */
+private val RECENT_CARD_WIDTH = 176.dp
+
 private val HEADING_ABOVE = 12.dp
 private val HEADING_BELOW = 8.dp
