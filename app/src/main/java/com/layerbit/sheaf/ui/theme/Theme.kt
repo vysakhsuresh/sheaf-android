@@ -206,16 +206,24 @@ internal val Dark = Palette(
     onBand = Color(0xFFFFF2F7),
     paper = Color(0xFFF7F5EF),
     // Read, Pages, Mark up, Convert, Protect - in Group order, because that is how they are
-    // indexed. Read keeps the band, so the colour the app already had stays where it already
-    // was; the other four are set at the same lightness as each other so no group shouts
-    // louder than its neighbours. Every ink clears AA on its own tile and on Surface, the
-    // worst of the ten being 5.75:1.
+    // indexed.
+    //
+    // THE TILES ARE LIFTED WELL CLEAR OF SURFACE, and that is the whole lesson of the first
+    // attempt. They were originally near-black washes sitting at 1.02 to 1.07:1 against the
+    // card they are drawn on - which is to say invisible as shapes. Four of them got away
+    // with it on hue alone, because rose, amber, jade and iris are nowhere near a blue-black
+    // ground. Azure was not so lucky: this app's base IS navy, so a navy chip on it had
+    // neither lightness nor hue to separate by, and the Pages group came out looking unfinished
+    // beside the others. These sit at 1.34 to 1.50:1, close enough together that no group
+    // shouts over its neighbours, and far enough from Surface to read as an object.
+    //
+    // Every ink still clears AA on its own tile and on Surface; the worst of the ten is 5.22:1.
     toolAccents = listOf(
-        ToolAccent(tile = Color(0xFF3A0E22), ink = Color(0xFFFF5C9E)),
-        ToolAccent(tile = Color(0xFF0E2A3F), ink = Color(0xFF5BB8F5)),
-        ToolAccent(tile = Color(0xFF35260B), ink = Color(0xFFF2B544)),
-        ToolAccent(tile = Color(0xFF0E2E24), ink = Color(0xFF4ECB92)),
-        ToolAccent(tile = Color(0xFF241C3F), ink = Color(0xFFA58BFF))
+        ToolAccent(tile = Color(0xFF6E1C3E), ink = Color(0xFFFF8FBC)),
+        ToolAccent(tile = Color(0xFF14415F), ink = Color(0xFF7FCDFF)),
+        ToolAccent(tile = Color(0xFF533A10), ink = Color(0xFFFFCB63)),
+        ToolAccent(tile = Color(0xFF114835), ink = Color(0xFF6FE0AC)),
+        ToolAccent(tile = Color(0xFF3B2E6B), ink = Color(0xFFBCA6FF))
     ),
     running = Color(0xFF5BA9E8),
     done = Color(0xFF58C08C),
@@ -251,12 +259,14 @@ internal val Light = Palette(
     paper = Color(0xFFFFFFFF),
     // The same five in daylight, and not an inversion of them: on a light ground the tile is
     // the pale end and the ink is the dark end, which is the same swap the band makes above.
+    // Deepened for the same reason the dark ones were lifted - a tint a shade off white is a
+    // chip nobody can see. 1.26 to 1.41:1 against Surface, inks from 5.38:1 on their tile.
     toolAccents = listOf(
-        ToolAccent(tile = Color(0xFFFBE2EE), ink = Color(0xFF9E1453)),
-        ToolAccent(tile = Color(0xFFE3F0FA), ink = Color(0xFF11557F)),
-        ToolAccent(tile = Color(0xFFFAF0DA), ink = Color(0xFF7A5410)),
-        ToolAccent(tile = Color(0xFFDFF2E9), ink = Color(0xFF116244)),
-        ToolAccent(tile = Color(0xFFECE6FB), ink = Color(0xFF4B32A8))
+        ToolAccent(tile = Color(0xFFF7CEE1), ink = Color(0xFF9E1453)),
+        ToolAccent(tile = Color(0xFFD2E6F6), ink = Color(0xFF11557F)),
+        ToolAccent(tile = Color(0xFFF5E4BC), ink = Color(0xFF7A5410)),
+        ToolAccent(tile = Color(0xFFCBEBDB), ink = Color(0xFF116244)),
+        ToolAccent(tile = Color(0xFFDED4F7), ink = Color(0xFF4B32A8))
     ),
     running = Color(0xFF1C6FB8),
     done = Color(0xFF17784E),
