@@ -6,7 +6,9 @@ import android.os.Build
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.layerbit.sheaf.SheafApplication
+import com.layerbit.sheaf.data.OutputStore
 import com.layerbit.sheaf.ops.Op
+import com.layerbit.sheaf.ops.OpOutcome
 import com.layerbit.sheaf.ops.OpCancelled
 import com.layerbit.sheaf.ops.OpContext
 import com.layerbit.sheaf.ops.Progress
@@ -85,7 +87,7 @@ class OpWorker(
         )
 
         return try {
-            runWork(runner, jobId, op, request, opContext)
+            runWork(runner, jobId, op, request, opContext, app.outputs)
         } finally {
             // Every exit, including the two that throw: once a terminal state is published this
             // worker will not consult the runner again, and an id left behind is one a later
@@ -99,7 +101,9 @@ class OpWorker(
         jobId: String,
         op: Op,
         request: JobRunner.Request,
-        opContext: OpContext
+        opContext: OpContext,
+        /** Where a produced file is written down, before anything is told it exists. */
+        outputs: OutputStore
     ): Result {
         return try {
             setForeground(JobNotifications.foregroundInfo(applicationContext, op.title, 0, 0))
@@ -119,6 +123,14 @@ class OpWorker(
             if (runner.wasCancelledByUser(jobId)) {
                 runner.publish(JobState.Cancelled(op.tool))
             } else {
+                // Written down before the state is published, so the Library knows about a
+                // result by the time any screen can show it. This is the window the whole
+                // outputs table exists to close: between a file being produced and the user
+                // getting round to exporting it, something has to know it is worth keeping.
+                val now = System.currentTimeMillis()
+                outcomes.filterIsInstance<OpOutcome.Produced>().forEach { produced ->
+                    outputs.record(produced.file, op.tool, now)
+                }
                 runner.publish(JobState.Finished(op.tool, op.title, outcomes))
             }
             Result.success()

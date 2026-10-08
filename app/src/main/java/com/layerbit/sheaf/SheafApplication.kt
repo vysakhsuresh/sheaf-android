@@ -2,6 +2,7 @@ package com.layerbit.sheaf
 
 import android.app.Application
 import com.layerbit.sheaf.data.BookmarksRepository
+import com.layerbit.sheaf.data.OutputStore
 import com.layerbit.sheaf.data.RecentsRepository
 import com.layerbit.sheaf.data.db.SheafDatabase
 import com.layerbit.sheaf.files.DocumentStore
@@ -19,6 +20,10 @@ import com.layerbit.sheaf.pdf.PdfEngine
 import com.layerbit.sheaf.pdf.PdfSurgeon
 import com.layerbit.sheaf.pdf.PlatformPdfEngine
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * The app's object graph, assembled by hand.
@@ -77,6 +82,16 @@ class SheafApplication : Application() {
     }
 
     /**
+     * Everything Sheaf has produced: the Library, the bin, and the rule a trim obeys.
+     *
+     * It exists because the workspace alone could not tell a result somebody was waiting on
+     * from a stale intermediate, and so deleted whichever was oldest.
+     */
+    val outputs: OutputStore by lazy {
+        OutputStore(SheafDatabase.get(this).outputDao())
+    }
+
+    /**
      * Preferences, in memory. The theme is read before the first frame composes and on every
      * recomposition after it, which is why these live in SharedPreferences and not in Room.
      */
@@ -88,9 +103,30 @@ class SheafApplication : Application() {
         // call that touches a font throws. Cheap, and it must happen before any operation.
         PDFBoxResourceLoader.init(this)
 
-        // Results from a previous session are of no use now and the user has already exported
-        // anything they wanted. Trimming at startup rather than on a timer keeps the cache
-        // bounded without a background job to maintain.
-        workspace.trimTo(Workspace.DEFAULT_LIMIT_BYTES)
+        // Keeping the cache bounded, at startup rather than on a timer, so there is no
+        // background job to maintain.
+        //
+        // Through the OutputStore rather than the Workspace, which is the whole point of
+        // that class: it knows which files are results somebody is waiting on and which are
+        // stale intermediates, so it can take the already-saved and the already-binned
+        // before it touches unsaved work. The bare Workspace.trimTo this replaces knew only
+        // modification times, and would take the result of the last thing the user ran if it
+        // happened to be the oldest file in the directory.
+        //
+        // Reconcile first: Android may have cleared the cache since, and a Library promising
+        // files that are not there is worse than one that admits they went.
+        applicationScope.launch {
+            val now = System.currentTimeMillis()
+            outputs.reconcile(now)
+            outputs.trim(Workspace.DEFAULT_LIMIT_BYTES, now = now)
+        }
     }
+
+    /**
+     * For the handful of jobs that outlive any screen - the startup trim, recording a result.
+     *
+     * Not a scope that can be cancelled: this work is short and finishing it matters more
+     * than tidiness at shutdown, and there is nothing to cancel it from anyway.
+     */
+    val applicationScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 }

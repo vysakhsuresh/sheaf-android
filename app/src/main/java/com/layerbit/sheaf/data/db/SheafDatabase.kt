@@ -15,8 +15,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * migration can be written against the real previous version rather than a remembered one.
  */
 @Database(
-    entities = [RecentEntity::class, BookmarkEntity::class],
-    version = 2,
+    entities = [RecentEntity::class, BookmarkEntity::class, OutputEntity::class],
+    version = 3,
     exportSchema = true
 )
 abstract class SheafDatabase : RoomDatabase() {
@@ -24,6 +24,8 @@ abstract class SheafDatabase : RoomDatabase() {
     abstract fun recentDao(): RecentDao
 
     abstract fun bookmarkDao(): BookmarkDao
+
+    abstract fun outputDao(): OutputDao
 
     companion object {
         @Volatile
@@ -53,6 +55,32 @@ abstract class SheafDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * The Library and the bin.
+         *
+         * A pure addition - no existing column moves - because what it records was previously
+         * not recorded anywhere: which files Sheaf has produced. Anything made before this
+         * version is not in the table and cannot be, since the only evidence it ever existed
+         * is a file in a scratch directory with no provenance. The Library therefore starts
+         * empty on upgrade, which is honest; inventing rows from whatever happens to be on
+         * disk would put files in it that the user may already have saved and forgotten.
+         */
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS outputs (" +
+                        "path TEXT NOT NULL, " +
+                        "displayName TEXT NOT NULL, " +
+                        "toolId TEXT NOT NULL, " +
+                        "sizeBytes INTEGER NOT NULL, " +
+                        "createdAt INTEGER NOT NULL, " +
+                        "savedAt INTEGER, " +
+                        "deletedAt INTEGER, " +
+                        "PRIMARY KEY(path))"
+                )
+            }
+        }
+
         fun get(context: Context): SheafDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
@@ -60,7 +88,7 @@ abstract class SheafDatabase : RoomDatabase() {
                     SheafDatabase::class.java,
                     "sheaf.db"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build().also { instance = it }
             }
     }
