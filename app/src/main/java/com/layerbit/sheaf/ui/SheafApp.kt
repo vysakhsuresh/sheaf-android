@@ -1,6 +1,20 @@
 package com.layerbit.sheaf.ui
 
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.data.db.OutputEntity
+import com.layerbit.sheaf.files.SheafFile
+import com.layerbit.sheaf.ui.components.BottomDestination
+import com.layerbit.sheaf.ui.components.SheafBottomBar
+import com.layerbit.sheaf.ui.library.LibraryScreen
+import com.layerbit.sheaf.ui.library.RecentlyDeletedScreen
+import com.layerbit.sheaf.ui.library.SessionsScreen
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -20,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -51,6 +66,20 @@ object Routes {
     const val VIEWER = "viewer"
     const val ABOUT = "about"
     const val SETTINGS = "settings"
+
+    /** Work finished, and work abandoned part-way. Both are bottom-bar destinations. */
+    const val LIBRARY = "library"
+    const val SESSIONS = "sessions"
+
+    /** The bin. Reached from the Library, so it is not a fourth tab that is usually empty. */
+    const val DELETED = "deleted"
+
+    /**
+     * The screens the bottom bar appears on, and therefore the ones that may not assume they
+     * own the bottom of the window. Everything else - the viewer, a tool, settings, the bin -
+     * is somewhere you went on purpose and leave with the back arrow.
+     */
+    val TOP_LEVEL = setOf(HOME, SESSIONS, LIBRARY)
 
     /**
      * The tool's enum name is the argument, so a route survives a reordering of ToolId. The
@@ -124,6 +153,48 @@ fun SheafApp(
     // the user clears it, and a file-system walk per frame would be an odd thing to pay for.
     var workspaceBytes by remember { mutableLongStateOf(0L) }
 
+    // The Library and the bin. Observed, because a job finishing writes to this table from a
+    // worker and the screen has to notice without being told.
+    val library by sheaf.outputs.observeLibrary().collectAsState(initial = emptyList())
+    val deleted by sheaf.outputs.observeDeleted().collectAsState(initial = emptyList())
+
+    // One line of feedback for the Library's actions. The tool screens have their own; this
+    // is the first thing at this level that needed to say anything back.
+    val snackbar = remember { SnackbarHostState() }
+    var message by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(message) {
+        message?.let {
+            snackbar.showSnackbar(it)
+            message = null
+        }
+    }
+
+    // Which Library file the system save picker is currently collecting a destination for.
+    // Held across the launcher round trip, because the result arrives with only a Uri.
+    var saving by remember { mutableStateOf<SheafFile?>(null) }
+    val saveDocument = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val destination = result.data?.data
+        val source = saving
+        saving = null
+        if (destination != null && source != null) {
+            scope.launch {
+                // writeTo throws rather than returning a reason, and it has already cleaned
+                // up a partial file by the time it does.
+                message = try {
+                    sheaf.exporter.writeTo(destination, source)
+                    // Recorded, so the Library can say this one is safe elsewhere and a trim
+                    // knows it may take this before it takes anything unsaved.
+                    sheaf.outputs.markSaved(source.file, System.currentTimeMillis())
+                    "Saved."
+                } catch (e: Exception) {
+                    e.message ?: "That could not be saved."
+                }
+            }
+        }
+    }
+
     // The ONLY place the viewer is navigated to. Opening a recent used to navigate here and
     // from its own callback as well, which pushed the viewer onto the back stack twice - the
     // first back press popped one copy and appeared to do nothing. launchSingleTop keeps that
@@ -144,12 +215,18 @@ fun SheafApp(
         }
     }
 
-    Box(
+    // Which screen is showing, so the bar can mark its tab and know whether to appear at all.
+    val backStack by navController.currentBackStackEntryAsState()
+    val currentRoute = backStack?.destination?.route
+    val onTopLevel = currentRoute in Routes.TOP_LEVEL
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(SheafColors.Background)
             .windowInsetsPadding(WindowInsets.systemBars)
     ) {
+    Box(modifier = Modifier.weight(1f)) {
         // The four transitions, chosen rather than inherited.
         //
         // navigation-compose defaults all four to fadeIn/fadeOut over 700ms, and because
@@ -336,6 +413,131 @@ fun SheafApp(
                     AboutScreen()
                 }
             }
+
+            composable(Routes.LIBRARY) {
+                LibraryScreen(
+                    outputs = library,
+                    onOpen = { output ->
+                        val file = output.asSheafFile()
+                        if (file == null) {
+                            message = "That file is no longer on this phone."
+                        } else {
+                            viewerViewModel.openLocal(file)
+                            navController.navigate(Routes.VIEWER) { launchSingleTop = true }
+                        }
+                    },
+                    onSave = { output ->
+                        val file = output.asSheafFile()
+                        if (file == null) {
+                            message = "That file is no longer on this phone."
+                        } else {
+                            saving = file
+                            saveDocument.launch(
+                                sheaf.exporter.createDocumentIntent(file.displayName, file.mimeType)
+                            )
+                        }
+                    },
+                    onDelete = { output ->
+                        scope.launch {
+                            sheaf.outputs.delete(output.path, System.currentTimeMillis())
+                            message = "Moved to Recently deleted."
+                        }
+                    },
+                    onDeleted = { navController.navigate(Routes.DELETED) }
+                )
+            }
+
+            composable(Routes.DELETED) {
+                RecentlyDeletedScreen(
+                    outputs = deleted,
+                    onBack = { navController.popBackStack() },
+                    onRestore = { output ->
+                        scope.launch {
+                            // Says so rather than failing quietly: the row outlives the file
+                            // when a trim has had to give the bytes up, and a Put back that
+                            // appears to work and does nothing is worse than a refusal.
+                            message = if (sheaf.outputs.restore(output.path)) {
+                                "Put back in the Library."
+                            } else {
+                                "That one is gone - Sheaf needed the space. " +
+                                    "${toolTitleFor(output.toolId)} would make it again."
+                            }
+                        }
+                    },
+                    onForget = { output ->
+                        scope.launch { sheaf.outputs.forget(output.path) }
+                    }
+                )
+            }
+
+            composable(Routes.SESSIONS) {
+                SessionsScreen(onPickTool = { navController.navigate(Routes.HOME) })
+            }
         }
     }
+
+        SnackbarHost(
+            snackbar,
+            snackbar = { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = SheafColors.Surface,
+                    contentColor = SheafColors.Text,
+                    actionColor = SheafColors.BandBright
+                )
+            }
+        )
+
+        if (onTopLevel) {
+            SheafBottomBar(
+                destinations = BOTTOM_DESTINATIONS,
+                currentRoute = currentRoute,
+                onSelect = { destination ->
+                    if (destination.route != currentRoute) {
+                        navController.navigate(destination.route) {
+                            // One entry per destination rather than a back stack that grows
+                            // every time somebody taps between tabs. Back from any of them
+                            // goes to the board, and from the board it leaves the app, which
+                            // is what the system back button is expected to do.
+                            popUpTo(Routes.HOME) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                }
+            )
+        }
+    }
+}
+
+/** The three places things live. Order is left-to-right in the bar. */
+private val BOTTOM_DESTINATIONS = listOf(
+    BottomDestination(Routes.HOME, "Tools", R.drawable.ic_nav_tools),
+    BottomDestination(Routes.SESSIONS, "In progress", R.drawable.ic_nav_sessions),
+    BottomDestination(Routes.LIBRARY, "Library", R.drawable.ic_nav_library)
+)
+
+private fun toolTitleFor(toolId: String): String =
+    ToolId.entries.firstOrNull { it.name == toolId }?.title ?: "The tool that made it"
+
+/**
+ * The Library's record as something the rest of the app can take.
+ *
+ * Null when the bytes have gone - a trim took them, or Android cleared the cache since the
+ * screen was drawn. Every caller has to answer that case, which is the point of returning it
+ * rather than handing back a SheafFile pointing at nothing.
+ */
+private fun OutputEntity.asSheafFile(): SheafFile? {
+    val file = java.io.File(path)
+    if (!file.isFile) return null
+    return SheafFile(
+        file = file,
+        displayName = displayName,
+        origin = SheafFile.Origin.Derived(toolId),
+        mimeType = if (displayName.endsWith(".pdf", ignoreCase = true)) {
+            SheafFile.MIME_PDF
+        } else {
+            "application/octet-stream"
+        }
+    )
 }
