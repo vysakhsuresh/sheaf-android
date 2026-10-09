@@ -151,25 +151,6 @@ fun HomeScreen(
                 }
             }
         } else {
-            // One row high, however many documents there are, because it scrolls sideways.
-            //
-            // This was a single row showing only the newest document, and the argument for
-            // that was sound as far as it went: the full Recent list stacked up here would be
-            // three or four hundred dp of documents above the board, which would rebuild the
-            // false hierarchy described at the top of this file and turn the tools into a
-            // list of things you read about.
-            //
-            // But that left the other documents at the bottom, under about 2,400dp of cards,
-            // which is to say nowhere. Going sideways settles it: the vertical cost is the
-            // same one row it always was, and eight documents fit in it instead of one. The
-            // full section stays at the bottom, and is now about managing them - forgetting
-            // one, seeing what it costs - rather than the only way to reach them.
-            if (recents.isNotEmpty()) {
-                item(key = "resume") {
-                    RecentStrip(recents = recents, onOpen = onOpenRecent)
-                }
-            }
-
             if (starred.isNotEmpty()) {
                 item(key = "favourites") {
                     Spacer(Modifier.height(HEADING_ABOVE))
@@ -221,28 +202,6 @@ fun HomeScreen(
             }
         }
 
-        if (recents.isNotEmpty() && query.isBlank()) {
-            item {
-                Spacer(Modifier.height(HEADING_ABOVE))
-                SectionHeading("Recent")
-                // This one keeps a heading item of its own. Its rows are separate items so
-                // that a forgotten document can animate out, which means the gap below the
-                // heading is the list's own and cannot be brought down to 8 without folding
-                // the heading into the first row.
-                Spacer(Modifier.height(4.dp))
-            }
-            items(recents, key = { it.uri }) { recent ->
-                RecentRow(
-                    recent = recent,
-                    onOpen = { onOpenRecent(recent) },
-                    onForget = { onForgetRecent(recent) },
-                    // The full animateItem, not just placement: a forgotten document should
-                    // fade out where it stood and let the list close up afterwards, rather
-                    // than vanish and have everything below it jump.
-                    modifier = Modifier.animateItem()
-                )
-            }
-        }
 
         item {
             Spacer(Modifier.height(22.dp))
@@ -460,102 +419,6 @@ private fun Card(
     }
 }
 
-@Composable
-private fun RecentRow(
-    recent: RecentEntity,
-    onOpen: () -> Unit,
-    onForget: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Panel(modifier = modifier.fillMaxWidth(), onClick = onOpen) {
-        Text(
-            text = recent.displayName,
-            style = MaterialTheme.typography.titleMedium,
-            color = SheafColors.Text,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        RowBetween(modifier = Modifier.padding(top = 4.dp)) {
-            Text(
-                text = buildString {
-                    append(formatPageCount(recent.pageCount))
-                    append(" · ")
-                    append(formatBytes(recent.sizeBytes))
-                    // Where they got to, so the list says which of two statements is the one
-                    // half-read rather than making the reader open both to find out.
-                    if (recent.lastPage > 0) append(" · read to page ${recent.lastPage + 1}")
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = SheafColors.Dim
-            )
-            // The word on screen stays short, because the row above it already says which
-            // document this is. A screen reader does not get that: TalkBack's Actions list
-            // and its controls granularity read button labels on their own, so a list of
-            // recents was a column of identical "Remove" buttons. Nothing changes visually.
-            TextButton(
-                onClick = onForget,
-                modifier = Modifier.semantics {
-                    contentDescription = "Remove ${recent.displayName} from recents"
-                }
-            ) {
-                Text("Remove", style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
-            }
-        }
-    }
-}
-
-/**
- * The way back into what you were reading, one row high and scrolling sideways.
- *
- * No Remove button and no file size: this is not the Recent list in miniature, it is the door
- * back into the document you had open ten minutes ago. Managing them - forgetting one, seeing
- * what the copies cost - is the full section at the bottom, and that is the right place for
- * it, because managing is a thing you do on purpose and resuming is a thing you do constantly.
- *
- * [RECENT_STRIP_MAX] rather than all of them. The strip is a shortcut and a shortcut with
- * forty entries is a list; past the first handful nobody is scrolling sideways to find
- * anything, they are going to the section at the bottom that has a heading and a search above
- * it. Capping it also keeps the row cheap: eight composed cards, not however many documents
- * this phone has opened since the app was installed.
- */
-@Composable
-private fun RecentStrip(
-    recents: List<RecentEntity>,
-    onOpen: (RecentEntity) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.fillMaxWidth()
-    ) {
-        items(recents.take(RECENT_STRIP_MAX), key = { it.uri }) { recent ->
-            Panel(
-                modifier = Modifier.width(RECENT_CARD_WIDTH),
-                onClick = { onOpen(recent) }
-            ) {
-                Text(
-                    text = recent.displayName,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = SheafColors.Text,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = if (recent.lastPage > 0) {
-                        "read to page ${recent.lastPage + 1}"
-                    } else {
-                        formatPageCount(recent.pageCount)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = SheafColors.Dim,
-                    maxLines = 1,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-        }
-    }
-}
-
 /** Tall enough for the icon tile, a one-line title and a three-line summary. */
 private val TOOL_CARD_HEIGHT = 158.dp
 
@@ -567,16 +430,5 @@ private val TOOL_CARD_MIN_WIDTH = 180.dp
  * figure here is what is left to make up 24dp above; below the heading there is no list gap to
  * subtract, because the heading and the grid it labels sit in the same item.
  */
-/**
- * How many documents the strip offers before it stops.
- *
- * Eight is about three screens of sideways scroll on a phone, which is as far as anyone will
- * push a shortcut before going to look at the proper list instead.
- */
-private const val RECENT_STRIP_MAX = 8
-
-/** Wide enough for a real filename to be recognised, narrow enough that the next one peeks. */
-private val RECENT_CARD_WIDTH = 176.dp
-
 private val HEADING_ABOVE = 12.dp
 private val HEADING_BELOW = 8.dp

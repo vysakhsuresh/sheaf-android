@@ -12,6 +12,7 @@ import com.layerbit.sheaf.data.db.OutputEntity
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.ui.components.BottomDestination
 import com.layerbit.sheaf.ui.components.SheafBottomBar
+import com.layerbit.sheaf.ui.home.RecentScreen
 import com.layerbit.sheaf.ui.library.LibraryScreen
 import com.layerbit.sheaf.ui.library.RecentlyDeletedScreen
 import com.layerbit.sheaf.ui.library.SessionsScreen
@@ -73,6 +74,12 @@ object Routes {
 
     /** The bin. Reached from the Library, so it is not a fourth tab that is usually empty. */
     const val DELETED = "deleted"
+
+    /**
+     * Documents that have been opened here. Behind the board rather than on it, and separate
+     * from the Library, which holds what Sheaf produced rather than what it was handed.
+     */
+    const val RECENT = "recent"
 
     /**
      * The screens the bottom bar appears on, and therefore the ones that may not assume they
@@ -253,6 +260,15 @@ fun SheafApp(
                     SheafTopBar(
                         title = "Sheaf",
                         actions = {
+                            // Documents live behind this now rather than on the board. The
+                            // board is a board of tools; a strip of files across the top and
+                            // a list of them at the bottom made it two screens wearing one
+                            // name, and the files were the half that kept growing.
+                            if (recents.isNotEmpty()) {
+                                TextButton(onClick = { navController.navigate(Routes.RECENT) }) {
+                                    Text("Recent", color = SheafColors.Muted)
+                                }
+                            }
                             TextButton(onClick = { navController.navigate(Routes.SETTINGS) }) {
                                 Text("Settings", color = SheafColors.Muted)
                             }
@@ -467,6 +483,15 @@ fun SheafApp(
                     onForget = { output ->
                         scope.launch { sheaf.outputs.forget(output.path) }
                     }
+                )
+            }
+
+            composable(Routes.RECENT) {
+                RecentScreen(
+                    recents = recents,
+                    onBack = { navController.popBackStack() },
+                    onOpen = { onOpenRecentUri(it.uri) },
+                    onForget = { onForgetRecent(it.uri) }
                 )
             }
 
