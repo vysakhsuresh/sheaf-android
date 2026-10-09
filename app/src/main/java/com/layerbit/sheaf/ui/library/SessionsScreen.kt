@@ -1,16 +1,16 @@
 package com.layerbit.sheaf.ui.library
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.ops.ToolId
+import com.layerbit.sheaf.ui.components.EmptyState
 import com.layerbit.sheaf.ui.components.SheafTopBar
 import com.layerbit.sheaf.ui.theme.SheafColors
 
@@ -31,20 +31,15 @@ import com.layerbit.sheaf.ui.theme.SheafColors
 fun SessionsScreen(onPickTool: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier = modifier.fillMaxSize()) {
         SheafTopBar(title = "In progress")
-        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-            Spacer(Modifier.height(24.dp))
-            Text(
-                "Nothing in progress.",
-                style = MaterialTheme.typography.titleMedium,
-                color = SheafColors.Text
-            )
-            Text(
-                "Sheaf does not yet remember a tool you set up and left. Until it does, a " +
-                    "tool you walk away from starts fresh when you come back to it.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = SheafColors.Muted,
-                modifier = Modifier.padding(top = 6.dp)
-            )
+        EmptyState(
+            // Mark up's amber. This tab is for a tool left half-configured, and marking up is
+            // the group where that happens most.
+            icon = R.drawable.ic_nav_sessions,
+            accent = SheafColors.ToolAccents[ToolId.Group.MARK.ordinal],
+            heading = "Nothing in progress.",
+            detail = "Sheaf does not yet remember a tool you set up and left. Until it " +
+                "does, a tool you walk away from starts fresh when you come back to it."
+        ) {
             TextButton(onClick = onPickTool, modifier = Modifier.padding(top = 8.dp)) {
                 Text("Pick a tool", color = SheafColors.BandBright)
             }

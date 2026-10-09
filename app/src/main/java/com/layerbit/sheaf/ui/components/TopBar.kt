@@ -16,6 +16,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.R
 import com.layerbit.sheaf.ui.theme.SheafColors
+import com.layerbit.sheaf.ui.theme.ToolAccent
+import com.layerbit.sheaf.ui.theme.chromeSweep
 
 /**
  * The bar every screen wears.
@@ -31,12 +33,24 @@ fun SheafTopBar(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     onBack: (() -> Unit)? = null,
+    /**
+     * The tool this screen belongs to, drawn as the same chip its card wears on the board.
+     *
+     * Both or neither. A tool screen used to open as a title over an empty form, with no
+     * sign that it was the violet card you had just tapped; the chip is the one thing that
+     * carries the board colour through the tap. Screens that are not a tool - Settings,
+     * About, the Library - pass nothing and keep the plain bar.
+     */
+    icon: Int? = null,
+    accent: ToolAccent? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(SheafColors.Background)
+            // A shallow lift that fades back into the background, so the title has a plane of
+            // its own without a drawn line under it.
+            .background(chromeSweep())
             .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -49,7 +63,20 @@ fun SheafTopBar(
             )
         }
 
-        Column(modifier = Modifier.weight(1f).padding(start = if (onBack == null) 12.dp else 0.dp)) {
+        if (icon != null && accent != null) {
+            AccentTile(
+                icon = icon,
+                accent = accent,
+                size = 30.dp,
+                modifier = Modifier.padding(start = if (onBack == null) 12.dp else 4.dp, end = 4.dp)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = if (onBack == null && icon == null) 12.dp else 0.dp)
+        ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,

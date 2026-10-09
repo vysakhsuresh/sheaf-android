@@ -3,7 +3,9 @@ package com.layerbit.sheaf.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,7 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.layerbit.sheaf.ui.theme.SheafColors
+import com.layerbit.sheaf.ui.theme.brandSweep
 
 /**
  * The three places Sheaf keeps things: the board, work in progress, and work finished.
@@ -46,40 +50,71 @@ fun SheafBottomBar(
     onSelect: (BottomDestination) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(SheafColors.Surface)
-            .selectableGroup(),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        destinations.forEach { destination ->
-            val selected = currentRoute == destination.route
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .weight(1f)
-                    .defaultMinSize(minHeight = 56.dp)
-                    .selectable(
-                        selected = selected,
-                        role = Role.Tab,
-                        onClick = { onSelect(destination) }
+    Column(modifier = modifier.fillMaxWidth()) {
+        // A hairline, not a shadow. The bar is a lift of a few per cent against the content
+        // behind it, which is enough to read as a different plane but not enough to find an
+        // edge in a hurry; one line does that and costs a pixel.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(SheafColors.Border)
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(SheafColors.SurfaceTint)
+                .selectableGroup(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            destinations.forEach { destination ->
+                val selected = currentRoute == destination.route
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 56.dp)
+                        .selectable(
+                            selected = selected,
+                            role = Role.Tab,
+                            onClick = { onSelect(destination) }
+                        )
+                        .padding(vertical = 8.dp)
+                ) {
+                    // The selected tab is painted, not merely tinted.
+                    //
+                    // It used to be a magenta glyph beside two grey ones, which is a 20dp
+                    // difference in a 56dp row: on the shelf of the three places the app
+                    // keeps things, you had to look to see where you were. A filled pill in
+                    // the brand sweep is the same information at arm's length, and it is the
+                    // one place in the chrome the band is spent.
+                    Box(
+                        modifier = Modifier
+                            .size(width = 44.dp, height = 26.dp)
+                            .then(
+                                if (selected) {
+                                    Modifier.background(brandSweep(), RoundedCornerShape(999.dp))
+                                } else {
+                                    Modifier
+                                }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(destination.icon),
+                            contentDescription = null,
+                            tint = if (selected) SheafColors.OnBand else SheafColors.Dim,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Text(
+                        text = destination.label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (selected) SheafColors.BandBright else SheafColors.Dim,
+                        modifier = Modifier.padding(top = 3.dp)
                     )
-                    .padding(vertical = 8.dp)
-            ) {
-                Icon(
-                    painter = painterResource(destination.icon),
-                    contentDescription = null,
-                    tint = if (selected) SheafColors.BandBright else SheafColors.Dim,
-                    modifier = Modifier.size(20.dp)
-                )
-                Text(
-                    text = destination.label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (selected) SheafColors.BandBright else SheafColors.Dim,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
+                }
             }
         }
     }

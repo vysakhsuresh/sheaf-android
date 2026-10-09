@@ -57,6 +57,7 @@ import com.layerbit.sheaf.ui.scan.ScanRoute
 import com.layerbit.sheaf.ui.settings.SettingsScreen
 import com.layerbit.sheaf.ui.theme.SheafColors
 import com.layerbit.sheaf.ui.tools.ToolRoute
+import com.layerbit.sheaf.ui.tools.iconFor
 import com.layerbit.sheaf.ui.viewer.ViewerScreen
 import com.layerbit.sheaf.ui.viewer.ViewerState
 import com.layerbit.sheaf.ui.viewer.ViewerViewModel
@@ -353,6 +354,8 @@ fun SheafApp(
                     Column {
                         SheafTopBar(
                             title = ToolId.SCAN.title,
+                            icon = iconFor(ToolId.SCAN),
+                            accent = SheafColors.ToolAccents[ToolId.SCAN.group.ordinal],
                             subtitle = ToolId.SCAN.summary,
                             onBack = { navController.popBackStack() }
                         )
@@ -374,6 +377,8 @@ fun SheafApp(
                     Column {
                         SheafTopBar(
                             title = tool.title,
+                            icon = iconFor(tool),
+                            accent = SheafColors.ToolAccents[tool.group.ordinal],
                             subtitle = tool.summary,
                             onBack = { navController.popBackStack() }
                         )

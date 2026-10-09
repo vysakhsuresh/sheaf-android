@@ -1,8 +1,10 @@
 package com.layerbit.sheaf.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -40,6 +44,7 @@ import com.layerbit.sheaf.R
 import com.layerbit.sheaf.brand.BrandLinks
 import com.layerbit.sheaf.data.db.RecentEntity
 import com.layerbit.sheaf.ops.ToolId
+import com.layerbit.sheaf.ui.components.AccentTile
 import com.layerbit.sheaf.ui.components.ListGap
 import com.layerbit.sheaf.ui.components.ListRhythm
 import com.layerbit.sheaf.ui.components.Panel
@@ -49,6 +54,8 @@ import com.layerbit.sheaf.ui.components.formatBytes
 import com.layerbit.sheaf.ui.components.formatPageCount
 import com.layerbit.sheaf.ui.theme.SheafColors
 import com.layerbit.sheaf.ui.theme.ToolAccent
+import com.layerbit.sheaf.ui.theme.brandSweep
+import com.layerbit.sheaf.ui.theme.sweep
 import com.layerbit.sheaf.ui.tools.iconFor
 
 /**
@@ -120,7 +127,14 @@ fun HomeScreen(
                     unfocusedBorderColor = SheafColors.Border,
                     focusedTextColor = SheafColors.Text,
                     unfocusedTextColor = SheafColors.Text,
-                    cursorColor = SheafColors.Band
+                    cursorColor = SheafColors.Band,
+                    // Filled rather than transparent. An outlined field on the background is
+                    // a rectangle of nothing at the top of the board; on Surface it is the
+                    // same object as the cards below it.
+                    focusedContainerColor = SheafColors.Surface,
+                    unfocusedContainerColor = SheafColors.Surface,
+                    focusedPlaceholderColor = SheafColors.Dim,
+                    unfocusedPlaceholderColor = SheafColors.Dim
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -188,7 +202,7 @@ fun HomeScreen(
             ToolId.Group.entries.forEach { group ->
                 item(key = "group-${group.name}") {
                     Spacer(Modifier.height(HEADING_ABOVE))
-                    SectionHeading(group.title, color = accentFor(group).ink)
+                    GroupHeading(group.title, accentFor(group))
                     Spacer(Modifier.height(HEADING_BELOW))
                     ToolCards(
                         tools = ToolId.entries.filter { it.group == group },
@@ -212,25 +226,48 @@ fun HomeScreen(
             // trust an offline PDF tool reads it once; after that it is furniture standing
             // between them and the tools. Down here it is still on the first screen, still
             // unmissable to anyone who scrolls, and it is no longer rent.
-            Text(
-                text = "Everything happens on this phone. Nothing is uploaded, because Sheaf " +
-                    "cannot use the internet at all.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = SheafColors.Muted
-            )
-            // Zero horizontal content padding, so this starts on the same gutter as the
-            // sentence above it. A TextButton brings 12dp of its own, which is right when it
-            // sits in a row of buttons and wrong when it is the second line of a paragraph.
-            TextButton(
-                onClick = onAbout,
-                contentPadding = PaddingValues(vertical = 8.dp),
-                modifier = Modifier.padding(top = 2.dp)
+            //
+            // It is now a card rather than a loose paragraph, and the band is why. Below the
+            // last group the board simply stopped, and the one sentence that has to be
+            // believed was two lines of grey floating in the space where the list ran out. A
+            // panel in the brand colour ends the scroll on the thing the app most wants
+            // remembered - and the band belongs here as much as anywhere, because this is the
+            // claim Sheaf is making about itself.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(SheafColors.Band.copy(alpha = 0.10f))
+                    .border(1.dp, SheafColors.Band.copy(alpha = 0.45f), MaterialTheme.shapes.medium)
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
-                Text(
-                    "Free, offline, and from ${BrandLinks.BRAND_LABEL}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = SheafColors.Dim
+                Box(
+                    modifier = Modifier
+                        .size(width = 34.dp, height = 4.dp)
+                        .background(brandSweep(), RoundedCornerShape(2.dp))
                 )
+                Text(
+                    text = "Everything happens on this phone. Nothing is uploaded, because " +
+                        "Sheaf cannot use the internet at all.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SheafColors.Text,
+                    modifier = Modifier.padding(top = 12.dp)
+                )
+                // Zero horizontal content padding, so this starts on the same gutter as the
+                // sentence above it. A TextButton brings 12dp of its own, which is right when
+                // it sits in a row of buttons and wrong when it is the second line of a
+                // paragraph.
+                TextButton(
+                    onClick = onAbout,
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                    modifier = Modifier.padding(top = 2.dp)
+                ) {
+                    Text(
+                        "Free, offline, and from ${BrandLinks.BRAND_LABEL}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SheafColors.BandBright
+                    )
+                }
             }
         }
     }
@@ -371,22 +408,13 @@ private fun Card(
         modifier = modifier.heightIn(min = TOOL_CARD_HEIGHT),
         onClick = onClick,
         onLongClick = onLongClick,
-        highlighted = starred
+        highlighted = starred,
+        // The card wears its group colour: a tinted border and a wash of the tile. The 36dp
+        // chip alone was never going to carry a hue across a board this size.
+        accent = accent
     ) {
         RowBetween {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .background(accent.tile, MaterialTheme.shapes.small),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(iconRes),
-                    contentDescription = null,
-                    tint = accent.ink,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            AccentTile(icon = iconRes, accent = accent)
             if (starred) {
                 // The drawn star, not the "★" character, so it belongs to the same set as the
                 // twenty-seven tool icons it sits beside. It is a mark on the card rather than
@@ -416,6 +444,27 @@ private fun Card(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 2.dp)
         )
+    }
+}
+
+/**
+ * A group's name, with a slice of its colour in front of it.
+ *
+ * The bar is doing the work the text cannot. A heading in a hue is still a line of small
+ * uppercase type, and at labelSmall the colour of eleven letters is not what anyone scrolling
+ * sees; a 3dp block of the same gradient the cards below it wear is. It also ties the heading
+ * to its block, which is the whole point of the five colours - find the bar, and the tools
+ * under it are the ones you were looking for.
+ */
+@Composable
+private fun GroupHeading(title: String, accent: ToolAccent) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(width = 3.dp, height = 12.dp)
+                .background(accent.sweep(), RoundedCornerShape(2.dp))
+        )
+        SectionHeading(title, color = accent.ink, modifier = Modifier.padding(start = 8.dp))
     }
 }
 

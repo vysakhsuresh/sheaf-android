@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
@@ -42,8 +43,12 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.ui.theme.SheafColors
+import com.layerbit.sheaf.ui.theme.ToolAccent
+import com.layerbit.sheaf.ui.theme.brandSweep
+import com.layerbit.sheaf.ui.theme.sweep
 import java.util.Locale
 
 /**
@@ -51,6 +56,40 @@ import java.util.Locale
  * components/Common.kt: one definition of a panel and a section heading, so screens do not
  * each invent their own padding.
  */
+
+/**
+ * The chip a tool, a result or a document is identified by.
+ *
+ * One definition for the three lists that show it - the tool board, the Library and the
+ * recents - because the chip is the only thing carrying a group's colour outside the board,
+ * and three hand-rolled copies of a 36dp box is how it stops matching.
+ *
+ * The glyph is [ToolAccent.onTile] and not [ToolAccent.ink]: the tile is a saturated gradient
+ * in both palettes, so what sits on it is near-white either way. See [ToolAccent].
+ */
+@Composable
+fun AccentTile(
+    icon: Int,
+    accent: ToolAccent,
+    modifier: Modifier = Modifier,
+    size: Dp = 36.dp
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .background(accent.sweep(), MaterialTheme.shapes.small),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = null,
+            tint = accent.onTile,
+            // Proportional, so a 28dp chip in a list row and a 36dp chip on a card hold the
+            // same glyph at the same weight rather than one of them looking padded.
+            modifier = Modifier.size(size * 0.56f)
+        )
+    }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -60,15 +99,37 @@ fun Panel(
     /** A second gesture on the same panel - starring a tool, in practice. */
     onLongClick: (() -> Unit)? = null,
     highlighted: Boolean = false,
+    /**
+     * The group this panel belongs to, where it belongs to one.
+     *
+     * A panel with an accent is drawn in that group's colour: its border is the group's
+     * [ToolAccent.edge] and a tenth-opacity wash of the tile sits over Surface. Null is the
+     * ordinary panel - a form, a details card, a settings block - and stays grey, because
+     * those belong to no group and tinting them would make the colour mean nothing.
+     *
+     * The wash is an alpha over Surface rather than a colour of its own so that it is
+     * automatically right in both palettes, and a tenth because the title and summary on top
+     * of it are still Text on Surface: any heavier and twenty-six cards would each need their
+     * own contrast check.
+     */
+    accent: ToolAccent? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val shape = MaterialTheme.shapes.medium
     val base = modifier
         .clip(shape)
         .background(SheafColors.Surface)
+        .then(
+            if (accent == null) Modifier
+            else Modifier.background(accent.tile.copy(alpha = 0.10f))
+        )
         .border(
             1.dp,
-            if (highlighted) SheafColors.Band.copy(alpha = 0.55f) else SheafColors.Border,
+            when {
+                highlighted -> SheafColors.Band
+                accent != null -> accent.edge
+                else -> SheafColors.Border
+            },
             shape
         )
     val haptics = LocalHapticFeedback.current
@@ -387,3 +448,85 @@ val ListRhythm = PaddingValues(start = ScreenGutter, end = ScreenGutter, top = 1
 
 /** The gap between rows of such a list, stated once. */
 val ListGap = 12.dp
+
+/**
+ * A list with nothing in it yet.
+ *
+ * One definition, where there were three hand-rolled copies with the same 24dp spacer and
+ * the same two lines of type - the Library, the bin, the recents and the sessions tab, each
+ * having independently arrived at the same shape.
+ *
+ * IT LEADS WITH A MARK BECAUSE AN EMPTY SCREEN IS MOSTLY NOT A SCREEN. Two paragraphs at the
+ * top of a 2400px void is what these were, and the void is the part the eye lands on: the
+ * app looked unfinished at exactly the moment it was explaining itself. A 64dp tile in the
+ * group's colour is the same answer the board uses - it costs nothing to read and it gives
+ * the sentence something to belong to.
+ *
+ * Left-aligned rather than floated into the middle of the screen, because the list that
+ * replaces it starts at this gutter, and an empty state that sits somewhere else makes the
+ * first item feel like it moved.
+ */
+@Composable
+fun EmptyState(
+    icon: Int,
+    accent: ToolAccent,
+    heading: String,
+    detail: String,
+    modifier: Modifier = Modifier,
+    action: @Composable (() -> Unit)? = null
+) {
+    Column(modifier = modifier.padding(horizontal = ScreenGutter, vertical = 28.dp)) {
+        AccentTile(icon = icon, accent = accent, size = 64.dp)
+        Text(
+            heading,
+            style = MaterialTheme.typography.titleLarge,
+            color = SheafColors.Text,
+            modifier = Modifier.padding(top = 18.dp)
+        )
+        Text(
+            detail,
+            style = MaterialTheme.typography.bodyMedium,
+            color = SheafColors.Muted,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+        if (action != null) action()
+    }
+}
+
+/**
+ * The one button on a screen that does the thing.
+ *
+ * Material's Button takes a container colour and not a brush, so the brand sweep cannot
+ * reach it - and the run button at the bottom of every tool is the single most important
+ * control in the app. This is that button, drawn by hand so it can wear the gradient.
+ *
+ * Disabled is deliberately not a faded version of the gradient. A tool that cannot run yet
+ * says why in the line underneath, and a washed-out sweep reads as a rendering fault rather
+ * than as a state; SurfaceDim with Dim text is the same "not yet" the rest of the app uses.
+ */
+@Composable
+fun PrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    val shape = RoundedCornerShape(999.dp)
+    Box(
+        modifier = modifier
+            .defaultMinSize(minHeight = 48.dp)
+            // Clipped ahead of the fill, so the press ripple is a pill rather than a
+            // rectangle washing across the corners.
+            .clip(shape)
+            .background(if (enabled) brandSweep() else SolidColor(SheafColors.SurfaceDim))
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleMedium,
+            color = if (enabled) SheafColors.OnBand else SheafColors.Dim
+        )
+    }
+}

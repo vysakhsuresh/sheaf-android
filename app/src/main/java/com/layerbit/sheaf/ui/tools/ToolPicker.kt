@@ -23,6 +23,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.ops.ToolId
+import com.layerbit.sheaf.ui.components.AccentTile
 import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.theme.SheafColors
 
@@ -124,11 +125,10 @@ private fun ToolGroup(title: String, tools: List<ToolId>, onPick: (ToolId) -> Un
         ) {
             // The same hue the tool wears on the board, so moving between the two screens is
             // recognising a colour rather than re-reading a list.
-            Icon(
-                painter = painterResource(iconFor(tool)),
-                contentDescription = null,
-                tint = SheafColors.ToolAccents[tool.group.ordinal].ink,
-                modifier = Modifier.size(22.dp)
+            AccentTile(
+                icon = iconFor(tool),
+                accent = SheafColors.ToolAccents[tool.group.ordinal],
+                size = 28.dp
             )
             Column(modifier = Modifier.padding(start = 14.dp)) {
                 Text(

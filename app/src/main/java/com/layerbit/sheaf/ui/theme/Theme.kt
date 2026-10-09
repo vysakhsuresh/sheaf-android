@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -77,6 +78,10 @@ object SheafColors {
         private set
     var SurfaceDim by mutableStateOf(Dark.surfaceDim)
         private set
+
+    /** The lift the chrome sits on, so a bar is not the same flat field as the content. */
+    var SurfaceTint by mutableStateOf(Dark.surfaceTint)
+        private set
     var Border by mutableStateOf(Dark.border)
         private set
     var BorderStrong by mutableStateOf(Dark.borderStrong)
@@ -89,6 +94,10 @@ object SheafColors {
         private set
 
     var Band by mutableStateOf(Dark.band)
+        private set
+
+    /** The far end of the brand sweep. Paint with [BrandSweep], not with this directly. */
+    var BandTo by mutableStateOf(Dark.bandTo)
         private set
     var BandBright by mutableStateOf(Dark.bandBright)
         private set
@@ -128,12 +137,14 @@ object SheafColors {
         Background = palette.background
         Surface = palette.surface
         SurfaceDim = palette.surfaceDim
+        SurfaceTint = palette.surfaceTint
         Border = palette.border
         BorderStrong = palette.borderStrong
         Text = palette.text
         Muted = palette.muted
         Dim = palette.dim
         Band = palette.band
+        BandTo = palette.bandTo
         BandBright = palette.bandBright
         BandDim = palette.bandDim
         OnBand = palette.onBand
@@ -148,18 +159,75 @@ object SheafColors {
 }
 
 /**
- * The two colours one tool group is drawn in.
+ * The colours one tool group is drawn in.
  *
- * [tile] is the wash behind a 36dp icon, [ink] is the glyph on it and the group's heading.
- * They come as a pair because they are only ever correct together: every [ink] here clears
- * 4.5:1 on its own [tile] and on [Surface], and no other combination of the ten has been
- * checked.
+ * [tile] and [tileTo] are the two stops of the gradient behind a 36dp icon, [onTile] is the
+ * glyph on it, [ink] is the group's name in text, and [edge] is the card's border. They come
+ * as a set because they are only ever correct together.
  *
- * Two colours and not three. A hue that also had to supply a border or a pressed state would
- * be a theme of its own, five times over, and the chip would stop being the same chip.
+ * FIVE ROLES, WHERE THERE USED TO BE TWO, AND WHY THAT CHANGED. The first version of this
+ * held a tile and an ink and argued that a third colour would make each hue a theme of its
+ * own. The argument was sound and the result was still wrong: the tiles sat at 1.34 to
+ * 1.50:1 against the card they were drawn on, so the one coloured thing on a tool card was a
+ * 36dp square you had to look for. Twenty-six cards, each a grey rectangle with a grey
+ * border, differing in a wash nobody could see - the board read as grey no matter how
+ * carefully the five hues had been picked.
+ *
+ * So the hue now carries the card rather than decorating it: a saturated gradient tile you
+ * can see across the room, the card's own border in the same family, and a wash of [tile] at
+ * a tenth opacity behind the whole panel. That is what makes the board five blocks of colour
+ * instead of a wall.
+ *
+ * THE SPLIT BETWEEN [onTile] AND [ink] IS THE WHOLE TRICK, and it is why this is five roles
+ * and not three. The tile is now a saturated mid-dark in BOTH palettes - which is what lets
+ * the same chip read on a navy card and on a white one - so the glyph on it is near-white
+ * either way. But the group's name is text on [SheafColors.Surface], and there emphasis runs
+ * the other way: lighter than the ground in the dark palette, darker in the light one. One
+ * colour cannot do both jobs, and when it tried, the amber group's heading was the hardest
+ * line of text in the app.
+ *
+ * Every pair here has been checked. [onTile] clears 4.5:1 on both gradient stops - the worst
+ * of the ten is 4.92:1 - and [ink] clears 4.5:1 on Surface. No other combination of these
+ * has been checked, so none of them may be mixed.
  */
 @Immutable
-data class ToolAccent(val tile: Color, val ink: Color)
+data class ToolAccent(
+    val tile: Color,
+    val tileTo: Color,
+    val onTile: Color,
+    val ink: Color,
+    val edge: Color
+)
+
+/**
+ * The brand sweep: the band colour running into violet, corner to corner.
+ *
+ * One definition, because a gradient that is diagonal on a button and vertical on a tab is
+ * two gradients and the app stops looking like it was drawn by one hand. Every primary
+ * action, the selected tab and the brand mark read this.
+ *
+ * No explicit start and end, so Compose resolves the sweep against whatever it is drawn into
+ * rather than against the screen - a 40dp pill and a full-width button each get the whole
+ * ramp instead of a slice of one big gradient.
+ *
+ * These are functions and not vals because they read [SheafColors], which is observable
+ * state: a val computed once would hold the dark palette forever. Each call is one small
+ * allocation during composition, which is what a Brush is.
+ */
+fun brandSweep(): Brush = Brush.linearGradient(listOf(SheafColors.Band, SheafColors.BandTo))
+
+/** A tool group's tile, as the gradient it is meant to be drawn with. */
+fun ToolAccent.sweep(): Brush = Brush.linearGradient(listOf(tile, tileTo))
+
+/**
+ * What the chrome is painted with - the top bar, the bottom bar.
+ *
+ * Vertical and shallow. The bars used to be a flat fill of exactly the colour behind them,
+ * which meant the only thing separating a title from the list under it was the gap. A lift
+ * that fades back into the background gives the bar an edge without drawing a line.
+ */
+fun chromeSweep(): Brush =
+    Brush.verticalGradient(listOf(SheafColors.SurfaceTint, SheafColors.Background))
 
 /** One palette. Two instances exist and nothing else may construct one. */
 internal data class Palette(
@@ -167,12 +235,14 @@ internal data class Palette(
     val background: Color,
     val surface: Color,
     val surfaceDim: Color,
+    val surfaceTint: Color,
     val border: Color,
     val borderStrong: Color,
     val text: Color,
     val muted: Color,
     val dim: Color,
     val band: Color,
+    val bandTo: Color,
     val bandBright: Color,
     val bandDim: Color,
     val onBand: Color,
@@ -186,49 +256,47 @@ internal data class Palette(
 
 internal val Dark = Palette(
     dark = true,
-    background = Color(0xFF101A2B),
-    surface = Color(0xFF17233A),
-    surfaceDim = Color(0xFF131E31),
-    border = Color(0xFF243349),
-    borderStrong = Color(0xFF31435E),
-    text = Color(0xFFF0F3F8),
-    muted = Color(0xFF9BAAC2),
-    // Raised from #64748B, which was 3.30:1 on Surface and so under AA for body text. Dim is
-    // the colour of nearly every explanatory line in the app - section headings, hints, tool
-    // summaries, "Page 7 of 212" - so the prose carrying the app's character was the hardest
-    // text in it to read. #8795A8 is 5.15:1 on Surface, 5.72:1 on Background, and still a
-    // clear step below Muted at 6.67:1, which is what keeps the three-level ink ramp legible
-    // as a ramp.
-    dim = Color(0xFF8795A8),
+    // Carries more blue than the near-neutral it replaced (#101A2B/#17233A). The old pair
+    // differed from plain charcoal by so little that the app read as grey before the accents
+    // were even examined, and a base with some hue in it is what the five tool colours sit
+    // against rather than float on.
+    background = Color(0xFF0B1324),
+    surface = Color(0xFF161F38),
+    surfaceDim = Color(0xFF111A2F),
+    // The lift under a top bar and a bottom bar, so the chrome is not the same flat field as
+    // the content scrolling behind it.
+    surfaceTint = Color(0xFF1C2746),
+    border = Color(0xFF273458),
+    borderStrong = Color(0xFF3A4C7A),
+    text = Color(0xFFF2F5FB),
+    muted = Color(0xFFA2B2CE),
+    // The AA floor for the ink ramp, which is where nearly every explanatory line in the app
+    // lands - section headings, hints, tool summaries, "Page 7 of 212". 5.60:1 on Surface and
+    // a clear step below Muted at 7.60:1, which is what keeps the three levels legible as a
+    // ramp rather than as three greys.
+    dim = Color(0xFF8A98B2),
     band = Color(0xFFE0257A),
+    // The second stop of the brand gradient. Magenta into violet, which is the band on
+    // Sheaf's own icon read as a sweep rather than a flat fill; it is what a primary button, a
+    // selected tab and the brand mark are painted with.
+    bandTo = Color(0xFF7C3AED),
     bandBright = Color(0xFFFF5C9E),
     bandDim = Color(0xFF3A0E22),
     onBand = Color(0xFFFFF2F7),
     paper = Color(0xFFF7F5EF),
     // Read, Pages, Mark up, Convert, Protect - in Group order, because that is how they are
     // indexed.
-    //
-    // THE TILES ARE LIFTED WELL CLEAR OF SURFACE, and that is the whole lesson of the first
-    // attempt. They were originally near-black washes sitting at 1.02 to 1.07:1 against the
-    // card they are drawn on - which is to say invisible as shapes. Four of them got away
-    // with it on hue alone, because rose, amber, jade and iris are nowhere near a blue-black
-    // ground. Azure was not so lucky: this app's base IS navy, so a navy chip on it had
-    // neither lightness nor hue to separate by, and the Pages group came out looking unfinished
-    // beside the others. These sit at 1.34 to 1.50:1, close enough together that no group
-    // shouts over its neighbours, and far enough from Surface to read as an object.
-    //
-    // Every ink still clears AA on its own tile and on Surface; the worst of the ten is 5.22:1.
     toolAccents = listOf(
-        ToolAccent(tile = Color(0xFF6E1C3E), ink = Color(0xFFFF8FBC)),
-        ToolAccent(tile = Color(0xFF14415F), ink = Color(0xFF7FCDFF)),
-        ToolAccent(tile = Color(0xFF533A10), ink = Color(0xFFFFCB63)),
-        ToolAccent(tile = Color(0xFF114835), ink = Color(0xFF6FE0AC)),
-        ToolAccent(tile = Color(0xFF3B2E6B), ink = Color(0xFFBCA6FF))
+        ToolAccent(Color(0xFFC2185B), Color(0xFF8E1668), Color(0xFFFFFFFF), Color(0xFFFF8FBC), Color(0xFF8E3461)),
+        ToolAccent(Color(0xFF0E6BA8), Color(0xFF0A4680), Color(0xFFFFFFFF), Color(0xFF7FCDFF), Color(0xFF2C5A86)),
+        ToolAccent(Color(0xFFA35C0A), Color(0xFF7E3A08), Color(0xFFFFFFFF), Color(0xFFFFCB63), Color(0xFF8A6224)),
+        ToolAccent(Color(0xFF0A7A54), Color(0xFF07614F), Color(0xFFFFFFFF), Color(0xFF6FE0AC), Color(0xFF2A6E55)),
+        ToolAccent(Color(0xFF5B36C4), Color(0xFF3A1E8C), Color(0xFFFFFFFF), Color(0xFFBCA6FF), Color(0xFF5B4D9E))
     ),
-    running = Color(0xFF5BA9E8),
-    done = Color(0xFF58C08C),
-    failed = Color(0xFFE0705F),
-    skipped = Color(0xFFE8A33D)
+    running = Color(0xFF4FB3FF),
+    done = Color(0xFF3ED598),
+    failed = Color(0xFFFF6B5B),
+    skipped = Color(0xFFFFB02E)
 )
 
 /**
@@ -238,39 +306,46 @@ internal val Dark = Palette(
  * accent on near-black reads as a highlighter pen on paper, and the two "bright" and "dim"
  * roles swap weight: on a light ground, emphasis is darker than the text around it, not
  * lighter. Paper stays white, because a page is a page.
+ *
+ * The tool tiles are the one thing that does NOT flip. They are saturated mid-darks in both
+ * palettes, carrying a white glyph in both, because a chip that is a pale tint on white is
+ * the same invisible chip the dark palette already had - and because a group should be the
+ * same colour whichever way the phone is set.
  */
 internal val Light = Palette(
     dark = false,
-    background = Color(0xFFF4F2EC),
+    // A hint of the base hue rather than the warm paper tone it replaced, so the white cards
+    // on it read as lifted. Still well short of a tint anyone would call blue.
+    background = Color(0xFFF2F1FB),
     surface = Color(0xFFFFFFFF),
-    surfaceDim = Color(0xFFEAE7DF),
-    border = Color(0xFFDCD7CB),
-    borderStrong = Color(0xFFBDB5A4),
+    surfaceDim = Color(0xFFE8E7F4),
+    surfaceTint = Color(0xFFFAFAFE),
+    border = Color(0xFFD9D7E8),
+    borderStrong = Color(0xFFB4B1CA),
     text = Color(0xFF121A26),
     muted = Color(0xFF4C5869),
-    // The same AA fix as the dark palette, in the other direction: on a light ground the
-    // under-contrast grey has to go darker, not lighter. 5.37:1 on Surface, 4.80:1 on
-    // Background.
+    // The same AA floor in the other direction: on a light ground the ramp goes darker.
+    // 5.37:1 on Surface.
     dim = Color(0xFF5F6B82),
     band = Color(0xFFC81E6C),
+    bandTo = Color(0xFF6D28D9),
     bandBright = Color(0xFF9E1453),
     bandDim = Color(0xFFFBE2EE),
     onBand = Color(0xFFFFF7FA),
     paper = Color(0xFFFFFFFF),
-    // The same five in daylight, and not an inversion of them: on a light ground the tile is
-    // the pale end and the ink is the dark end, which is the same swap the band makes above.
-    // Deepened for the same reason the dark ones were lifted - a tint a shade off white is a
-    // chip nobody can see. 1.26 to 1.41:1 against Surface, inks from 5.38:1 on their tile.
+    // The same five groups, a shade brighter where a white glyph still clears AA, and the
+    // edges are mid-tones rather than tints because a 1dp pastel line on white is not a
+    // border.
     toolAccents = listOf(
-        ToolAccent(tile = Color(0xFFF7CEE1), ink = Color(0xFF9E1453)),
-        ToolAccent(tile = Color(0xFFD2E6F6), ink = Color(0xFF11557F)),
-        ToolAccent(tile = Color(0xFFF5E4BC), ink = Color(0xFF7A5410)),
-        ToolAccent(tile = Color(0xFFCBEBDB), ink = Color(0xFF116244)),
-        ToolAccent(tile = Color(0xFFDED4F7), ink = Color(0xFF4B32A8))
+        ToolAccent(Color(0xFFD81B60), Color(0xFFA61A72), Color(0xFFFFFFFF), Color(0xFF9E1453), Color(0xFFE07CAC)),
+        ToolAccent(Color(0xFF1270B8), Color(0xFF0C4E8C), Color(0xFFFFFFFF), Color(0xFF11557F), Color(0xFF6FA9D8)),
+        ToolAccent(Color(0xFFA85E08), Color(0xFF8E4208), Color(0xFFFFFFFF), Color(0xFF7A5410), Color(0xFFD29B4A)),
+        ToolAccent(Color(0xFF0C7D55), Color(0xFF076B58), Color(0xFFFFFFFF), Color(0xFF116244), Color(0xFF5CB596)),
+        ToolAccent(Color(0xFF6940D6), Color(0xFF42239C), Color(0xFFFFFFFF), Color(0xFF4B32A8), Color(0xFF9B82E4))
     ),
-    running = Color(0xFF1C6FB8),
-    done = Color(0xFF17784E),
-    failed = Color(0xFFA83C27),
+    running = Color(0xFF0B63B5),
+    done = Color(0xFF0C7D55),
+    failed = Color(0xFFC0351E),
     skipped = Color(0xFF8A5C0B)
 )
 
@@ -347,6 +422,8 @@ fun SheafTheme(theme: ThemeChoice = ThemeChoice.DARK, content: @Composable () ->
     val scheme = if (dark) {
         darkColorScheme(
             primary = palette.band,
+            secondary = palette.bandTo,
+            onSecondary = palette.onBand,
             onPrimary = palette.onBand,
             background = palette.background,
             onBackground = palette.text,
@@ -368,6 +445,8 @@ fun SheafTheme(theme: ThemeChoice = ThemeChoice.DARK, content: @Composable () ->
     } else {
         lightColorScheme(
             primary = palette.band,
+            secondary = palette.bandTo,
+            onSecondary = palette.onBand,
             onPrimary = palette.onBand,
             background = palette.background,
             onBackground = palette.text,

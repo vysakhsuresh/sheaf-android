@@ -2,10 +2,9 @@ package com.layerbit.sheaf.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,12 +12,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.data.db.RecentEntity
+import com.layerbit.sheaf.ops.ToolId
+import com.layerbit.sheaf.ui.components.AccentTile
+import com.layerbit.sheaf.ui.components.EmptyState
 import com.layerbit.sheaf.ui.components.ListGap
 import com.layerbit.sheaf.ui.components.ListRhythm
 import com.layerbit.sheaf.ui.components.Panel
@@ -56,21 +60,13 @@ fun RecentScreen(
         )
 
         if (recents.isEmpty()) {
-            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                Spacer(Modifier.height(24.dp))
-                Text(
-                    "No documents yet.",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = SheafColors.Text
-                )
-                Text(
-                    "Anything you open with Read a PDF turns up here, so you can get back " +
-                        "to it without going through the picker again.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SheafColors.Muted,
-                    modifier = Modifier.padding(top = 6.dp)
-                )
-            }
+            EmptyState(
+                icon = R.drawable.ic_tool_read,
+                accent = SheafColors.ToolAccents[ToolId.Group.READ.ordinal],
+                heading = "No documents yet.",
+                detail = "Anything you open with Read a PDF turns up here, so you can get " +
+                    "back to it without going through the picker again."
+            )
             return@Column
         }
 
@@ -98,14 +94,22 @@ private fun RecentDocumentRow(
     onForget: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Panel(modifier = modifier.fillMaxWidth(), onClick = onOpen) {
-        Text(
-            text = recent.displayName,
-            style = MaterialTheme.typography.titleMedium,
-            color = SheafColors.Text,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+    // The Read group's colour, because that is what a recent document is for: these rows are
+    // the Read card's history, and tapping one opens the viewer. It is the same hue the Read
+    // tools wear on the board, which is the point - this list is not a sixth group.
+    val accent = SheafColors.ToolAccents[ToolId.Group.READ.ordinal]
+    Panel(modifier = modifier.fillMaxWidth(), onClick = onOpen, accent = accent) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            AccentTile(icon = R.drawable.ic_tool_read, accent = accent, size = 32.dp)
+            Text(
+                text = recent.displayName,
+                style = MaterialTheme.typography.titleMedium,
+                color = SheafColors.Text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(start = 12.dp)
+            )
+        }
         RowBetween(modifier = Modifier.padding(top = 4.dp)) {
             Text(
                 text = buildString {

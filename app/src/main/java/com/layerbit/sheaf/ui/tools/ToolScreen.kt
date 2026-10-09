@@ -68,6 +68,7 @@ import com.layerbit.sheaf.ops.OpOutcome
 import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.ui.components.ListRhythm
 import com.layerbit.sheaf.ui.components.Panel
+import com.layerbit.sheaf.ui.components.PrimaryButton
 import com.layerbit.sheaf.ui.components.ProblemRow
 import com.layerbit.sheaf.ui.components.RowBetween
 import com.layerbit.sheaf.ui.components.SectionHeading
@@ -508,19 +509,12 @@ fun ToolScreen(
 
                 item {
                     Spacer(Modifier.height(4.dp))
-                    Button(
+                    PrimaryButton(
+                        text = tool.action,
                         onClick = onRun,
                         enabled = state.canRun,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = SheafColors.Band,
-                            contentColor = SheafColors.OnBand,
-                            disabledContainerColor = SheafColors.SurfaceDim,
-                            disabledContentColor = SheafColors.Dim
-                        )
-                    ) {
-                        Text(tool.action, style = MaterialTheme.typography.titleMedium)
-                    }
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     // Saying why beats a grey button that looks broken.
                     state.blockedReason?.takeIf { state.documents.isNotEmpty() || !state.busy }
                         ?.let { reason ->

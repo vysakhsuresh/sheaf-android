@@ -2,10 +2,9 @@ package com.layerbit.sheaf.ui.library
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,6 +19,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.data.db.OutputEntity
 import com.layerbit.sheaf.ops.ToolId
+import androidx.compose.ui.Alignment
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.ui.components.AccentTile
+import com.layerbit.sheaf.ui.components.EmptyState
 import com.layerbit.sheaf.ui.components.ListGap
 import com.layerbit.sheaf.ui.components.ListRhythm
 import com.layerbit.sheaf.ui.components.Panel
@@ -27,6 +30,7 @@ import com.layerbit.sheaf.ui.components.RowBetween
 import com.layerbit.sheaf.ui.components.SheafTopBar
 import com.layerbit.sheaf.ui.components.formatBytes
 import com.layerbit.sheaf.ui.theme.SheafColors
+import com.layerbit.sheaf.ui.tools.iconFor
 
 /**
  * Everything Sheaf has made and the user has not thrown away.
@@ -98,27 +102,45 @@ private fun OutputRow(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Panel(modifier = modifier.fillMaxWidth(), onClick = onOpen) {
-        Text(
-            text = output.displayName,
-            style = MaterialTheme.typography.titleMedium,
-            color = SheafColors.Text,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            text = buildString {
-                append(toolTitle(output.toolId))
-                append(" · ")
-                append(formatBytes(output.sizeBytes))
-                // Said plainly, because it is the difference between "I can throw this away"
-                // and "this is the only copy". Nothing else on the row carries that.
-                append(if (output.savedAt != null) " · saved to your files" else " · only here")
-            },
-            style = MaterialTheme.typography.bodySmall,
-            color = SheafColors.Dim,
-            modifier = Modifier.padding(top = 2.dp)
-        )
+    val tool = ToolId.entries.firstOrNull { it.name == output.toolId }
+    val accent = SheafColors.ToolAccents[(tool?.group ?: ToolId.Group.CONVERT).ordinal]
+    Panel(modifier = modifier.fillMaxWidth(), onClick = onOpen, accent = accent) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // The result wears the colour of the tool that made it, which is the one piece of
+            // wayfinding this list was missing: a column of filenames in identical grey cards
+            // says nothing about which of them is the signed copy and which is the compressed
+            // one until you have read every second line.
+            AccentTile(
+                icon = tool?.let { iconFor(it) } ?: R.drawable.ic_tool_read,
+                accent = accent,
+                size = 32.dp
+            )
+            Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+                Text(
+                    text = output.displayName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = SheafColors.Text,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = buildString {
+                        append(toolTitle(output.toolId))
+                        append(" · ")
+                        append(formatBytes(output.sizeBytes))
+                        // Said plainly, because it is the difference between "I can throw this
+                        // away" and "this is the only copy". Nothing else on the row carries
+                        // that.
+                        append(
+                            if (output.savedAt != null) " · saved to your files" else " · only here"
+                        )
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SheafColors.Dim,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+        }
         RowBetween(modifier = Modifier.padding(top = 6.dp)) {
             TextButton(
                 onClick = onSave,
@@ -209,14 +231,12 @@ private fun toolTitle(toolId: String): String =
 
 @Composable
 private fun Empty(heading: String, detail: String) {
-    Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-        Spacer(Modifier.height(24.dp))
-        Text(heading, style = MaterialTheme.typography.titleMedium, color = SheafColors.Text)
-        Text(
-            detail,
-            style = MaterialTheme.typography.bodyMedium,
-            color = SheafColors.Muted,
-            modifier = Modifier.padding(top = 6.dp)
-        )
-    }
+    // Convert's jade, because the Library is where a converted, compressed or signed result
+    // lands. The bin reuses it: the bin is this same list one step further on.
+    EmptyState(
+        icon = R.drawable.ic_nav_library,
+        accent = SheafColors.ToolAccents[ToolId.Group.CONVERT.ordinal],
+        heading = heading,
+        detail = detail
+    )
 }
