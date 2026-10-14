@@ -285,7 +285,11 @@ fun RedactCanvas(
     onPage: (Int) -> Unit,
     onAdd: (PageArea) -> Unit,
     onClear: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Create a form draws its boxes see-through with a label; Remove areas draws them black. */
+    boxColour: Color = Color.Black,
+    labels: List<String> = emptyList(),
+    emptyHint: String = "Drag a box over anything that should go"
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -359,12 +363,24 @@ fun RedactCanvas(
                         )
                     }
             ) {
-                for (area in areas) {
-                    drawRect(
-                        color = Color.Black,
-                        topLeft = Offset(area.left * size.width, area.top * size.height),
-                        size = Size(area.width * size.width, area.height * size.height)
-                    )
+                for ((i, area) in areas.withIndex()) {
+                    val topLeft = Offset(area.left * size.width, area.top * size.height)
+                    val boxSize = Size(area.width * size.width, area.height * size.height)
+                    drawRect(color = boxColour, topLeft = topLeft, size = boxSize)
+                    if (boxColour != Color.Black) {
+                        drawRect(color = boxColour.copy(alpha = 1f), topLeft = topLeft, size = boxSize, style = Stroke(width = 2f))
+                    }
+                    labels.getOrNull(i)?.let { label ->
+                        val paint = AndroidPaint().apply {
+                            color = android.graphics.Color.argb(255, 30, 50, 110)
+                            textSize = (boxSize.height * 0.55f).coerceIn(10f, 26f)
+                            isAntiAlias = true
+                        }
+                        drawContext.canvas.nativeCanvas.save()
+                        drawContext.canvas.nativeCanvas.clipRect(topLeft.x, topLeft.y, topLeft.x + boxSize.width, topLeft.y + boxSize.height)
+                        drawContext.canvas.nativeCanvas.drawText(label, topLeft.x + 4f, topLeft.y + boxSize.height * 0.7f, paint)
+                        drawContext.canvas.nativeCanvas.restore()
+                    }
                 }
                 val from = dragStart
                 val to = dragNow
@@ -384,7 +400,7 @@ fun RedactCanvas(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                if (areas.isEmpty()) "Drag a box over anything that should go" else "${areas.size} on this page",
+                if (areas.isEmpty()) emptyHint else "${areas.size} on this page",
                 style = MaterialTheme.typography.bodySmall,
                 color = SheafColors.Dim,
                 modifier = Modifier.weight(1f)

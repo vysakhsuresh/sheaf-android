@@ -16,6 +16,9 @@ import com.layerbit.sheaf.ops.AttachmentsOp
 import com.layerbit.sheaf.ops.BackgroundOp
 import com.layerbit.sheaf.ops.BookmarksOp
 import com.layerbit.sheaf.ops.CleanOp
+import com.layerbit.sheaf.ops.CreateFormOp
+import com.layerbit.sheaf.ops.DigitalSignOp
+import com.layerbit.sheaf.ops.PdfAOp
 import com.layerbit.sheaf.ops.CompareOp
 import com.layerbit.sheaf.ops.RentReceipts
 import com.layerbit.sheaf.ops.RentReceiptsOp
@@ -53,7 +56,9 @@ import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.pdf.AttachmentInfo
 import com.layerbit.sheaf.pdf.CleanSpec
 import com.layerbit.sheaf.pdf.CompressionLevel
+import com.layerbit.sheaf.pdf.NewField
 import com.layerbit.sheaf.pdf.OcrScript
+import com.layerbit.sheaf.pdf.SignSpec
 import com.layerbit.sheaf.pdf.OutlineEntry
 import com.layerbit.sheaf.pdf.PageLabelSpec
 import com.layerbit.sheaf.pdf.CropSpec
@@ -175,7 +180,8 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     outlineRead = false,
                     attachments = emptyList(),
                     attachmentsRead = false,
-                    findReport = null
+                    findReport = null,
+                    newFields = emptyList()
                 )
             }
         }
@@ -222,7 +228,8 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     outlineRead = false,
                     attachments = emptyList(),
                     attachmentsRead = false,
-                    findReport = null
+                    findReport = null,
+                    newFields = emptyList()
                 )
             }
         }
@@ -250,7 +257,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         }
         if (!file.isPdf) {
             // Attachments takes any file at all after the PDF; it is never opened, only carried.
-            if (tool == ToolId.ATTACHMENTS) return@withContext SelectedDoc(file = file)
+            if (tool == ToolId.ATTACHMENTS || tool == ToolId.DIGITAL_SIGN) return@withContext SelectedDoc(file = file)
             if (tool == ToolId.OFFICE_TO_PDF) {
                 return@withContext SelectedDoc(
                     file = file,
@@ -405,7 +412,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         // Rendering the whole document at that size is hundreds of megabytes of bitmap and
         // was the one path in this app that could not survive a long scan, so these two
         // render on demand.
-        if (_state.value.tool == ToolId.REDACT || _state.value.tool == ToolId.ANNOTATE) {
+        if (_state.value.tool == ToolId.REDACT || _state.value.tool == ToolId.ANNOTATE || _state.value.tool == ToolId.CREATE_FORM) {
             loadPageCountOnly(doc)
             return
         }
@@ -614,6 +621,17 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         return when (tool) {
             ToolId.OCR -> OcrOp(script = config.ocrScript)
             ToolId.EDIT_TEXT -> ReplaceTextOp(config.findText, config.replaceText, config.matchCase)
+            ToolId.PDF_A -> PdfAOp()
+            ToolId.CREATE_FORM -> CreateFormOp(state.newFields)
+            ToolId.DIGITAL_SIGN -> DigitalSignOp(
+                password = config.certPassword,
+                spec = SignSpec(
+                    reason = config.signReason.trim(),
+                    location = config.signLocation.trim(),
+                    visible = config.signVisible,
+                    onFirstPage = config.signOnFirstPage
+                )
+            )
             ToolId.COMPARE -> CompareOp()
             ToolId.RENT_RECEIPTS -> RentReceiptsOp(
                 RentReceipts(
@@ -1324,6 +1342,43 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         return sum % 10 == 0
     }
 
+    // ---- creating a form ----
+
+    fun addNewField(page: Int, area: PageArea) {
+        _state.update { current ->
+            val kind = current.config.fieldKind
+            val n = current.newFields.count { it.kind == kind } + 1
+            val name = when (kind) {
+                NewField.Kind.TEXT -> "Text $n"
+                NewField.Kind.MULTILINE -> "Paragraph $n"
+                NewField.Kind.CHECK -> "Tick $n"
+                NewField.Kind.CHOICE -> "Choice $n"
+            }
+            current.copy(newFields = current.newFields + NewField(kind, name, page, area), error = null)
+        }
+    }
+
+    fun setNewField(index: Int, name: String? = null, kind: NewField.Kind? = null, options: String? = null) {
+        _state.update { current ->
+            val field = current.newFields.getOrNull(index) ?: return@update current
+            val list = current.newFields.toMutableList()
+            list[index] = field.copy(
+                name = name ?: field.name,
+                kind = kind ?: field.kind,
+                options = options?.split(',', '\n')?.map { it.trim() }?.filter { it.isNotEmpty() } ?: field.options
+            )
+            current.copy(newFields = list)
+        }
+    }
+
+    fun removeNewField(index: Int) {
+        _state.update { current -> current.copy(newFields = current.newFields.filterIndexed { i, _ -> i != index }) }
+    }
+
+    fun clearNewFields(page: Int) {
+        _state.update { current -> current.copy(newFields = current.newFields.filter { it.pageIndex != page }) }
+    }
+
     // ---- form answers kept for next time ----
 
     private val answersDir: java.io.File
@@ -1591,6 +1646,8 @@ data class ToolUiState(
     /** Bookmarks: the list being edited, seeded from the document once [outlineRead]. */
     val outline: List<OutlineEntry> = emptyList(),
     val outlineRead: Boolean = false,
+    /** Create a form: the fields drawn so far, on whichever pages. */
+    val newFields: List<NewField> = emptyList(),
     /** Remove areas: what the last Find and mark found, in words, or null before one ran. */
     val findReport: String? = null,
     val finding: Boolean = false,
@@ -1654,6 +1711,11 @@ data class ToolUiState(
                 "Add the PDF to insert, or choose how many blank pages to add."
             tool == ToolId.INSERT && config.replacePages && config.replaceSpec.isBlank() ->
                 "Type the pages to replace."
+            tool == ToolId.CREATE_FORM && newFields.isEmpty() -> "Drag a box on the page where a field should go."
+            tool == ToolId.CREATE_FORM && newFields.any { it.name.isBlank() } -> "Give every field a name."
+            tool == ToolId.DIGITAL_SIGN && documents.none { it.file.isPdf } -> "Choose the PDF first."
+            tool == ToolId.DIGITAL_SIGN && documents.none { !it.file.isPdf } -> "Add your certificate file (.pfx or .p12)."
+            tool == ToolId.DIGITAL_SIGN && documents.count { it.file.isPdf } > 1 -> "Sign one PDF at a time."
             tool == ToolId.ADD_IMAGE && documents.none { it.file.isPdf } -> "Choose the PDF first."
             tool == ToolId.ADD_IMAGE && documents.none { it.file.isImage } -> "Add the image to put on the page."
             tool == ToolId.ATTACHMENTS && !documents.first().file.isPdf ->
@@ -1748,6 +1810,16 @@ data class ToolConfig(
 
     /** Images to PDF: one file per image. */
     val separatePdfs: Boolean = false,
+
+    /** Digital signature. The password is held here for the run and nowhere else. */
+    val certPassword: String = "",
+    val signReason: String = "",
+    val signLocation: String = "",
+    val signVisible: Boolean = true,
+    val signOnFirstPage: Boolean = false,
+
+    /** Create a form: what the next dragged box becomes. */
+    val fieldKind: NewField.Kind = NewField.Kind.TEXT,
 
     /** Make searchable: which script's model reads the pages. */
     val ocrScript: OcrScript = OcrScript.LATIN,

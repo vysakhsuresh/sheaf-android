@@ -388,6 +388,26 @@ interface PdfSurgeon {
     @Throws(PdfException::class)
     fun layoutFlow(document: FlowDocument, output: File, onProgress: (Int, Int) -> Unit = { _, _ -> }): Int
 
+    /**
+     * Makes an archive copy in the PDF/A-2b manner: an sRGB profile, XMP that says so and
+     * mirrors the details, a file ID, printable annotations, no scripts, attachments or
+     * password. Reports what it took out and how many fonts are not inside the file.
+     */
+    @Throws(PdfException::class)
+    fun makeArchival(input: PdfInput, output: File): ArchivalReport
+
+    /** Puts fillable fields on the pages. Returns the names they were given. */
+    @Throws(PdfException::class)
+    fun addFormFields(input: PdfInput, fields: List<NewField>, output: File): List<String>
+
+    /**
+     * Signs a document with a .pfx or .p12 certificate, the way a reader's signature panel
+     * checks. A locked document is signed unlocked: a lock would have to be redone around
+     * the signature, which breaks it.
+     */
+    @Throws(PdfException::class)
+    fun signWithCertificate(input: PdfInput, certificate: File, password: String, spec: SignSpec, output: File): SignReport
+
     /** The comments and notes on the pages, in page order, as a reader lists them. */
     @Throws(PdfException::class)
     fun readComments(input: PdfInput): List<Comment>
@@ -448,6 +468,23 @@ data class PageLabelSpec(
 
 /** A file carried inside a document. */
 data class AttachmentInfo(val name: String, val sizeBytes: Long)
+
+/** A field to put on a page: what kind, what it is called, and where. */
+data class NewField(
+    val kind: Kind,
+    val name: String,
+    val pageIndex: Int,
+    val area: PageArea,
+    /** For a drop-down: what can be picked. */
+    val options: List<String> = emptyList()
+) {
+    enum class Kind(val label: String) {
+        TEXT("Text box"),
+        MULTILINE("Paragraph box"),
+        CHECK("Tick box"),
+        CHOICE("Drop-down list")
+    }
+}
 
 /** A word and where it sits on its page, as fractions of the page the reader sees. */
 data class PlacedWord(val text: String, val pageIndex: Int, val area: PageArea)

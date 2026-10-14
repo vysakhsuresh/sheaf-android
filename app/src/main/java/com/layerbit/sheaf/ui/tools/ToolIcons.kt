@@ -51,6 +51,9 @@ fun iconFor(tool: ToolId): Int = when (tool) {
     ToolId.REDACT -> R.drawable.ic_tool_redact
     ToolId.METADATA -> R.drawable.ic_tool_metadata
     ToolId.EDIT_TEXT -> R.drawable.ic_tool_edit_text
+    ToolId.CREATE_FORM -> R.drawable.ic_tool_create_form
+    ToolId.DIGITAL_SIGN -> R.drawable.ic_tool_digital_sign
+    ToolId.PDF_A -> R.drawable.ic_tool_archive
     ToolId.COMPARE -> R.drawable.ic_tool_compare
     ToolId.RENT_RECEIPTS -> R.drawable.ic_tool_receipt
     ToolId.SET_PASSWORD -> R.drawable.ic_tool_lock

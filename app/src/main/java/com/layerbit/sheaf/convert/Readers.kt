@@ -74,27 +74,27 @@ object Readers {
                     "pPr" -> inParaProps = true
                     "rPr" -> inRunProps = true
                     "pStyle" -> if (inParaProps) {
-                        val style = parser.getAttributeValue(null, "val").orEmpty()
+                        val style = attr(parser, "val").orEmpty()
                         Regex("(?i)heading\\s*(\\d)").find(style)?.let { heading = it.groupValues[1].toInt().coerceIn(1, 3) }
                         if (style.equals("Title", true)) heading = 1
                         if (style.contains("List", true)) list = Block.ListMark(ordered = false)
                     }
                     "numPr" -> if (inParaProps) { numbered += 1; list = Block.ListMark(ordered = false) }
-                    "ilvl" -> if (inParaProps && list != null) list = list!!.copy(level = parser.getAttributeValue(null, "val")?.toIntOrNull() ?: 0)
-                    "jc" -> if (inParaProps) align = when (parser.getAttributeValue(null, "val")) {
+                    "ilvl" -> if (inParaProps && list != null) list = list!!.copy(level = attr(parser, "val")?.toIntOrNull() ?: 0)
+                    "jc" -> if (inParaProps) align = when (attr(parser, "val")) {
                         "center" -> Block.Align.CENTRE
                         "right", "end" -> Block.Align.RIGHT
                         "both", "distribute" -> Block.Align.JUSTIFY
                         else -> Block.Align.LEFT
                     }
-                    "pageBreakBefore" -> if (inParaProps) pageBreakBefore = parser.getAttributeValue(null, "val") != "0"
+                    "pageBreakBefore" -> if (inParaProps) pageBreakBefore = attr(parser, "val") != "0"
                     "r" -> { runBold = false; runItalic = false; runSize = 0f; runText = StringBuilder() }
-                    "b" -> if (inRunProps) runBold = parser.getAttributeValue(null, "val") != "0"
-                    "i" -> if (inRunProps) runItalic = parser.getAttributeValue(null, "val") != "0"
-                    "sz" -> if (inRunProps) runSize = (parser.getAttributeValue(null, "val")?.toFloatOrNull() ?: 0f) / 2f
+                    "b" -> if (inRunProps) runBold = attr(parser, "val") != "0"
+                    "i" -> if (inRunProps) runItalic = attr(parser, "val") != "0"
+                    "sz" -> if (inRunProps) runSize = (attr(parser, "val")?.toFloatOrNull() ?: 0f) / 2f
                     "t" -> runText?.append(parser.nextText())
                     "tab" -> runText?.append('\t')
-                    "br" -> if (parser.getAttributeValue(null, "type") == "page") {
+                    "br" -> if (attr(parser, "type") == "page") {
                         endParagraph(); blocks += Block.PageBreak; paragraph = mutableListOf()
                     } else runText?.append('\n')
                     "tbl" -> table = mutableListOf()
@@ -306,6 +306,16 @@ object Readers {
         }
         out += sb.toString()
         return out
+    }
+
+    /**
+     * An attribute by its local name, whatever namespace it carries. With namespaces on,
+     * `w:val` is not found by asking for "val" in no namespace, which is how every heading
+     * and page break went unnoticed until this was written.
+     */
+    private fun attr(parser: XmlPullParser, name: String): String? {
+        for (i in 0 until parser.attributeCount) if (parser.getAttributeName(i) == name) return parser.getAttributeValue(i)
+        return null
     }
 
     private fun newParser(xml: ByteArray): XmlPullParser {

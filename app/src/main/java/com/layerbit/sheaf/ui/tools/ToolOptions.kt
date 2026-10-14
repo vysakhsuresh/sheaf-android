@@ -20,6 +20,7 @@ import com.layerbit.sheaf.pdf.ImageFormat
 import com.layerbit.sheaf.pdf.ImageStamp
 import com.layerbit.sheaf.ops.OfficeTarget
 import com.layerbit.sheaf.ops.RentReceiptsOp
+import com.layerbit.sheaf.pdf.NewField
 import com.layerbit.sheaf.pdf.OcrScript
 import com.layerbit.sheaf.pdf.PageLabelSpec
 import com.layerbit.sheaf.pdf.PageNumberSpec
@@ -379,6 +380,66 @@ fun ToolOptions(
                         "longer replacement is made smaller to fit. Works on text, not on scans."
                 )
             }
+
+            ToolId.CREATE_FORM -> {
+                SectionHeading("The next box you drag becomes a")
+                ChoiceRow(
+                    options = NewField.Kind.entries.map { it to it.label },
+                    selected = config.fieldKind,
+                    onSelect = { value -> onChange { it.copy(fieldKind = value) } }
+                )
+                Hint(
+                    "Drag a box on the page above where each field should go, then name it in " +
+                        "the list. The result is a real PDF form: anyone can fill it in, in any " +
+                        "reader, and Fill in a form here seals the answers."
+                )
+            }
+
+            ToolId.DIGITAL_SIGN -> {
+                PasswordField(
+                    value = config.certPassword,
+                    label = "Certificate password",
+                    onChange = { value -> onChange { it.copy(certPassword = value) } }
+                )
+                Field(
+                    value = config.signReason,
+                    label = "Reason (optional): \"I approve this document\"",
+                    keyboardType = KeyboardType.Text,
+                    onChange = { value -> onChange { it.copy(signReason = value) } }
+                )
+                Field(
+                    value = config.signLocation,
+                    label = "Place (optional)",
+                    keyboardType = KeyboardType.Text,
+                    onChange = { value -> onChange { it.copy(signLocation = value) } }
+                )
+                SectionHeading("On the page")
+                ChoiceRow(
+                    options = listOf(true to "Show a signature box", false to "Sign invisibly"),
+                    selected = config.signVisible,
+                    onSelect = { value -> onChange { it.copy(signVisible = value) } }
+                )
+                if (config.signVisible) {
+                    ChoiceRow(
+                        options = listOf(false to "On the last page", true to "On the first page"),
+                        selected = config.signOnFirstPage,
+                        onSelect = { value -> onChange { it.copy(signOnFirstPage = value) } }
+                    )
+                }
+                Hint(
+                    "Pick the PDF, then your certificate: a .pfx or .p12 from your bank, your " +
+                        "employer or a signing service. The signature is the kind every reader's " +
+                        "panel checks. The certificate and its password are used for this run and " +
+                        "kept nowhere. This is not the same as Sign, which draws a picture of a signature."
+                )
+            }
+
+            ToolId.PDF_A -> Hint(
+                "PDF/A-2b is what records offices, courts and auditors ask for: a file that will " +
+                    "open the same way in twenty years. The copy gets a colour profile, archive " +
+                    "details and no scripts, attachments or password. A font the file uses but does " +
+                    "not carry is the one thing that cannot be fixed here, and the result says if so."
+            )
 
             ToolId.COMPARE -> Hint(
                 "Add the older version first and the newer one second. The newer one comes " +

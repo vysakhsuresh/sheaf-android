@@ -104,6 +104,8 @@ the signature. Resist any pull towards a convenient `fun run(input: SheafFile): 
 | Word, Excel or text to PDF | A .docx, .xlsx, .txt, .md or .csv laid out on A4, in the phone's own fonts for Indian scripts |
 | Compress | Three levels, or a size to get under, and it tells you when there was nothing to gain |
 | Attachments | Put files inside a PDF, or take out the ones already there |
+| Digital signature | A PKCS#7 signature from your own .pfx or .p12, visible or not, the kind every reader's panel checks |
+| Archive copy (PDF/A) | A PDF/A-2b copy: sRGB profile built in, XMP, file ID, no scripts, attachments or password |
 | Add a password | AES-256, with the printing and copying flags as a stated request; or restrict only, with no password to open |
 | Remove a password | For a document whose password you know |
 | Watermark | DRAFT or a name, once or repeated, grey, red or blue, sized to the page, on the pages you choose |
@@ -112,6 +114,7 @@ the signature. Resist any pull towards a convenient `fun run(input: SheafFile): 
 | Mark up | Highlight a line or draw on a page with your finger |
 | Add text | Tap a page and write on it, covering what is there if you need to |
 | Add an image | A logo, a stamp or a photo on a page, drawn in so it cannot be dragged off |
+| Create a form | Drag text boxes, paragraph boxes, tick boxes and drop-downs onto a page; anyone can fill the result |
 | Fill in a form | Type into a real PDF form, keep the answers for next time, and seal them so they cannot be retyped |
 | Header and footer | A line along the top or bottom of every page, with {page}, {total}, {date}, {name} |
 | Crop pages | Millimetres off each edge, or the white margins found automatically, then A4, Letter, A5, Legal or A3 |
@@ -226,7 +229,8 @@ something the interface cannot express, widen the interface — never reach arou
 |---|---|---|
 | `android.graphics.pdf` | AOSP | The viewer's renderer — fastest, allocates least |
 | `com.tom-roush:pdfbox-android` | Apache-2.0 | Everything structural, behind `PdfSurgeon` |
-| `com.google.mlkit:text-recognition` | Proprietary, bundled model | OCR - the BUNDLED build |
+| `com.google.mlkit:text-recognition` | Proprietary, bundled model | OCR - the BUNDLED build, Latin and Devanagari |
+| `org.bouncycastle:bcpkix-jdk18on` | MIT-style | The PKCS#7 signature behind Digital signature |
 | `androidx.camera:*` | Apache-2.0 | The scanner's viewfinder |
 
 **Never add iText, MuPDF or Ghostscript.** All three are AGPL. Ghostscript is the obvious

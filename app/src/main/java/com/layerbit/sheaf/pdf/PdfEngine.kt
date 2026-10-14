@@ -125,4 +125,7 @@ sealed class PdfException(message: String, cause: Throwable? = null) : Exception
     /** Reading or writing the file itself failed. */
     class Io(detail: String, cause: Throwable? = null) :
         PdfException("Could not read or write the file: $detail", cause)
+
+    /** Nothing is broken; the request itself cannot be met, and the message says why in full. */
+    class Refused(message: String, cause: Throwable? = null) : PdfException(message, cause)
 }

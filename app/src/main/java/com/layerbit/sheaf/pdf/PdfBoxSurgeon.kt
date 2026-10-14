@@ -79,7 +79,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     }
 
     override fun merge(inputs: List<PdfInput>, output: File, onProgress: (Int, Int) -> Unit) {
-        if (inputs.isEmpty()) throw PdfException.Io("Nothing to merge.")
+        if (inputs.isEmpty()) throw PdfException.Refused("Nothing to merge.")
         try {
             val merger = PDFMergerUtility()
             merger.destinationFileName = output.absolutePath
@@ -117,12 +117,12 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         rotations: Map<Int, Int>,
         output: File
     ) = withDocument(input) { source ->
-        if (pages.isEmpty()) throw PdfException.Io("No pages were selected.")
+        if (pages.isEmpty()) throw PdfException.Refused("No pages were selected.")
 
         PDDocument(scratchMemory()).use { target ->
             for (index in pages) {
                 if (index !in 0 until source.numberOfPages) {
-                    throw PdfException.Io("Page ${index + 1} does not exist in this document.")
+                    throw PdfException.Refused("Page ${index + 1} does not exist in this document.")
                 }
                 val page = source.getPage(index)
                 rotations[index]?.let { delta ->
@@ -155,7 +155,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         output: File,
         onProgress: (Int, Int) -> Unit
     ) {
-        if (images.isEmpty()) throw PdfException.Io("No images were selected.")
+        if (images.isEmpty()) throw PdfException.Refused("No images were selected.")
         try {
             PDDocument(scratchMemory()).use { doc ->
                 images.forEachIndexed { index, imageFile ->
@@ -221,7 +221,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
 
         pages.forEachIndexed { position, index ->
             if (index !in 0 until doc.numberOfPages) {
-                throw PdfException.Io("Page ${index + 1} does not exist in this document.")
+                throw PdfException.Refused("Page ${index + 1} does not exist in this document.")
             }
 
             // PDFBox renders at a scale relative to 72 DPI, which is PDF's own unit, so the
@@ -329,10 +329,10 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     ) =
         withDocument(input) { doc ->
             if (!restrictOnly && userPassword.isBlank()) {
-                throw PdfException.Io("The password cannot be empty.")
+                throw PdfException.Refused("The password cannot be empty.")
             }
             if (restrictOnly && permissions.allowPrinting && permissions.allowCopying && permissions.allowChanges) {
-                throw PdfException.Io("Everything is allowed, so there is nothing to restrict.")
+                throw PdfException.Refused("Everything is allowed, so there is nothing to restrict.")
             }
 
             // The owner password is set to the same value deliberately. An owner password that
@@ -366,7 +366,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         }
 
     override fun removePassword(input: PdfInput, output: File) = withDocument(input) { doc ->
-        if (!doc.isEncrypted) throw PdfException.Io("This document is not password-protected.")
+        if (!doc.isEncrypted) throw PdfException.Refused("This document is not password-protected.")
         doc.isAllSecurityToBeRemoved = true
         doc.save(output)
     }
@@ -576,13 +576,13 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
             }
             onProgress(index + 1, doc.numberOfPages)
         }
-        if (changed == 0) throw PdfException.Io("Those words were not found. A scanned page has no text to find; run Make searchable first.")
+        if (changed == 0) throw PdfException.Refused("Those words were not found. A scanned page has no text to find; run Make searchable first.")
         doc.save(output)
         changed
     }
 
     override fun writeReceipts(receipts: List<ReceiptSpec>, output: File): Int {
-        if (receipts.isEmpty()) throw PdfException.Io("There is nothing to write.")
+        if (receipts.isEmpty()) throw PdfException.Refused("There is nothing to write.")
         val regular = PDType1Font.HELVETICA
         val bold = PDType1Font.HELVETICA_BOLD
         val italic = PDType1Font.HELVETICA_OBLIQUE
@@ -697,6 +697,96 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         }
     }
 
+    override fun makeArchival(input: PdfInput, output: File): ArchivalReport = withDocument(input) { doc ->
+        val report = doc.makeArchival()
+        doc.save(output)
+        report
+    }
+
+    override fun addFormFields(input: PdfInput, fields: List<NewField>, output: File): List<String> =
+        withDocument(input) { doc ->
+            if (fields.isEmpty()) throw PdfException.Refused("Draw a field on the page first.")
+            val names = doc.addFormFields(fields)
+            if (names.isEmpty()) throw PdfException.Refused("None of the fields landed on a page of this document.")
+            doc.save(output)
+            names
+        }
+
+    override fun signWithCertificate(
+        input: PdfInput,
+        certificate: File,
+        password: String,
+        spec: SignSpec,
+        output: File
+    ): SignReport {
+        val credentials = Signing.load(certificate, password)
+        val signer = Signing.commonName(credentials.certificate)
+        val issuer = Signing.commonName(credentials.certificate, issuer = true)
+
+        // The signature covers the file's bytes as saved, so everything else - the visible
+        // box, taking a lock off - is written to a plain copy first, and that copy is what
+        // is signed, incrementally, into the output.
+        val prepared = File.createTempFile("to-sign", ".pdf", output.parentFile)
+        try {
+            withDocument(input) { doc ->
+                doc.isAllSecurityToBeRemoved = true
+                if (spec.visible && doc.numberOfPages > 0) {
+                    val index = if (spec.onFirstPage) 0 else doc.numberOfPages - 1
+                    val page = doc.getPage(index)
+                    val shown = ShownPage(page)
+                    val font = PDType1Font.HELVETICA
+                    val bold = PDType1Font.HELVETICA_BOLD
+                    val date = java.text.SimpleDateFormat("d MMM yyyy, HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
+                    val lines = buildList {
+                        add("Digitally signed by $signer")
+                        add("Date: $date")
+                        if (spec.reason.isNotBlank()) add("Reason: ${spec.reason}")
+                        if (spec.location.isNotBlank()) add("Location: ${spec.location}")
+                    }.map { it.toWinAnsiSafe() }
+                    val size = 8f
+                    val pad = 6f
+                    val boxWidth = minOf(shown.width - MARGIN_POINTS * 2f, 240f)
+                    val boxHeight = lines.size * size * LINE_SPACING + pad * 2f
+                    val left = MARGIN_POINTS
+                    val bottom = MARGIN_POINTS * 0.6f
+                    PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { stream ->
+                        stream.saveGraphicsState()
+                        stream.transform(shown.viewMatrix())
+                        stream.setNonStrokingColor(0.96f, 0.97f, 1f)
+                        stream.setStrokingColor(0.35f, 0.45f, 0.7f)
+                        stream.setLineWidth(0.8f)
+                        stream.addRect(left, bottom, boxWidth, boxHeight)
+                        stream.fillAndStroke()
+                        stream.setNonStrokingColor(0.1f, 0.15f, 0.3f)
+                        stream.beginText()
+                        stream.setFont(bold, size)
+                        stream.newLineAtOffset(left + pad, bottom + boxHeight - pad - size * NOTE_ASCENT)
+                        lines.forEachIndexed { i, line ->
+                            if (i == 1) stream.setFont(font, size)
+                            if (i > 0) stream.newLineAtOffset(0f, -size * LINE_SPACING)
+                            stream.showText(line)
+                        }
+                        stream.endText()
+                        stream.restoreGraphicsState()
+                    }
+                }
+                doc.save(prepared)
+            }
+            try {
+                PDDocument.load(prepared, scratchMemory()).use { doc ->
+                    output.outputStream().use { out -> Signing.sign(doc, credentials, spec, out) }
+                }
+            } catch (e: PdfException) {
+                throw e
+            } catch (e: Exception) {
+                throw PdfException.Refused("The document could not be signed: ${e.message ?: "the signature could not be made"}", e)
+            }
+        } finally {
+            prepared.delete()
+        }
+        return SignReport(signer, issuer)
+    }
+
     override fun readComments(input: PdfInput): List<Comment> = withDocument(input) { doc ->
         buildList {
             for (index in 0 until doc.numberOfPages) {
@@ -793,12 +883,12 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         onProgress: (Int, Int) -> Unit
     ) = withDocument(input) { doc ->
         val text = spec.text.replace(Regex("[\\r\\n\\t]+"), " ").trim().toWinAnsiSafe()
-        if (text.isBlank()) throw PdfException.Io("Type the watermark text, such as DRAFT or COPY.")
+        if (text.isBlank()) throw PdfException.Refused("Type the watermark text, such as DRAFT or COPY.")
 
         val font = PDType1Font.HELVETICA_BOLD
         val total = doc.numberOfPages
         val chosen = spec.pages.ifEmpty { (0 until total).toList() }.filter { it in 0 until total }
-        if (chosen.isEmpty()) throw PdfException.Io("None of the pages typed are in this document.")
+        if (chosen.isEmpty()) throw PdfException.Refused("None of the pages typed are in this document.")
         val opacity = spec.opacity.coerceIn(0.02f, 1f)
         val capRatio = (font.fontDescriptor?.capHeight?.takeIf { it > 0f } ?: 718f) / 1000f
 
@@ -967,7 +1057,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     ) = withDocument(input) { doc ->
         val total = doc.numberOfPages
         val chosen = (spec.pages.ifEmpty { (0 until total).toList() }).filter { it in 0 until total }
-        if (chosen.isEmpty()) throw PdfException.Io("None of the pages typed are in this document.")
+        if (chosen.isEmpty()) throw PdfException.Refused("None of the pages typed are in this document.")
 
         val renderer = if (spec.auto) PDFRenderer(doc) else null
         var trimmed = 0
@@ -1013,8 +1103,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
 
             if (spec.auto || spec.trims) {
                 if ((right - left) * shown.width < SMALLEST_PAGE_POINTS || (bottom - top) * shown.height < SMALLEST_PAGE_POINTS) {
-                    throw PdfException.Io(
-                        "That much off the edges would leave almost nothing of page ${index + 1}. Use smaller margins."
+                    throw PdfException.Refused("That much off the edges would leave almost nothing of page ${index + 1}. Use smaller margins."
                     )
                 }
                 page.cropBox = shown.storedRect(left, top, right, bottom)
@@ -1024,8 +1113,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         }
 
         if (spec.auto && trimmed == 0 && spec.resizeTo == null) {
-            throw PdfException.Io(
-                "No white margins to remove: what is on the pages already runs to their edges, or they are blank."
+            throw PdfException.Refused("No white margins to remove: what is on the pages already runs to their edges, or they are blank."
             )
         }
 
@@ -1117,7 +1205,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         // stops being selectable and searchable, and the file gets bigger. Only the marked
         // pages are treated this way; the rest of the document keeps its text untouched.
         val marked = areas.filterValues { it.isNotEmpty() }
-        if (marked.isEmpty()) throw PdfException.Io("Nothing was marked for removal.")
+        if (marked.isEmpty()) throw PdfException.Refused("Nothing was marked for removal.")
 
         // One page at a time, rendered and replaced before the next one is touched. Rendering
         // every marked page first and replacing them afterwards kept one full-resolution
@@ -1190,7 +1278,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     override fun stampImage(input: PdfInput, stamp: ImageStamp, output: File) =
         withDocument(input) { doc ->
             if (stamp.pageIndex !in 0 until doc.numberOfPages) {
-                throw PdfException.Io("Page ${stamp.pageIndex + 1} does not exist in this document.")
+                throw PdfException.Refused("Page ${stamp.pageIndex + 1} does not exist in this document.")
             }
             val page = doc.getPage(stamp.pageIndex)
             // Placed on the page as the reader sees it: inside the crop box, the right way up.
@@ -1243,7 +1331,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         withDocument(input) { doc ->
             for (note in notes) {
                 if (note.pageIndex !in 0 until doc.numberOfPages) {
-                    throw PdfException.Io("Page ${note.pageIndex + 1} does not exist in this document.")
+                    throw PdfException.Refused("Page ${note.pageIndex + 1} does not exist in this document.")
                 }
 
                 val lines = note.text.lines().map { it.toWinAnsiSafe() }
@@ -1312,7 +1400,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         onProgress: (Int, Int) -> Unit
     ) = withDocument(input) { doc ->
         val marked = marks.filterValues { it.isNotEmpty() }
-        if (marked.isEmpty()) throw PdfException.Io("Nothing was marked on any page.")
+        if (marked.isEmpty()) throw PdfException.Refused("Nothing was marked on any page.")
 
         val total = marked.size
         var done = 0
@@ -1556,7 +1644,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         val header = spec.headerText.trim()
         val footer = spec.footerText.trim()
         if (header.isEmpty() && footer.isEmpty()) {
-            throw PdfException.Io("There is no header or footer text to add.")
+            throw PdfException.Refused("There is no header or footer text to add.")
         }
 
         val font = PDType1Font.HELVETICA
@@ -1741,7 +1829,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     ) = withDocument(input) { doc ->
         val replacing = replace.filter { it in 0 until doc.numberOfPages }.distinct().sorted()
         if (replacing.size == doc.numberOfPages && insert == null) {
-            throw PdfException.Io("That would replace every page with blank ones.")
+            throw PdfException.Refused("That would replace every page with blank ones.")
         }
         // Replacing: the new pages go where the first of the replaced ones was.
         val at = (if (replacing.isNotEmpty()) replacing.first() else atIndex).coerceIn(0, doc.numberOfPages)
@@ -1756,7 +1844,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
             // source stays open until this one has been written.
             withDocument(insert) { source ->
                 if (source.numberOfPages == 0) {
-                    throw PdfException.Io("The document to insert has no pages in it.")
+                    throw PdfException.Refused("The document to insert has no pages in it.")
                 }
                 for (page in source.pages) {
                     val imported = doc.importPage(page)
@@ -1797,7 +1885,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     ) = withDocument(input) { source ->
         val per = if (perSheet in GRIDS) perSheet else 2
         val total = source.numberOfPages
-        if (total == 0) throw PdfException.Io("This document has no pages.")
+        if (total == 0) throw PdfException.Refused("This document has no pages.")
 
         // The grid is chosen for the shape most of the pages have, as the reader sees them.
         val shapes = HashMap<String, Triple<Float, Float, Int>>()
@@ -2020,7 +2108,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     ) = withDocument(input) { doc ->
         val total = doc.numberOfPages
         val chosen = pages.ifEmpty { (0 until total).toList() }.filter { it in 0 until total }
-        if (chosen.isEmpty()) throw PdfException.Io("None of the pages typed are in this document.")
+        if (chosen.isEmpty()) throw PdfException.Refused("None of the pages typed are in this document.")
         for ((done, index) in chosen.withIndex()) {
             doc.paintBackground(doc.getPage(index), colour)
             onProgress(done + 1, chosen.size)
@@ -2040,7 +2128,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
 
     override fun attachFiles(input: PdfInput, files: List<Pair<String, File>>, output: File) =
         withDocument(input) { doc ->
-            if (files.isEmpty()) throw PdfException.Io("Pick at least one file to attach.")
+            if (files.isEmpty()) throw PdfException.Refused("Pick at least one file to attach.")
             doc.attach(files)
             doc.save(output)
         }
@@ -2048,7 +2136,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     override fun extractAttachments(input: PdfInput, outputDir: File): List<File> = withDocument(input) { doc ->
         outputDir.mkdirs()
         val all = doc.embeddedFiles().entries.map { (name, spec) -> name to spec } + doc.attachmentNotes()
-        if (all.isEmpty()) throw PdfException.Io("This document has no files attached to it.")
+        if (all.isEmpty()) throw PdfException.Refused("This document has no files attached to it.")
         val written = mutableListOf<File>()
         val taken = mutableSetOf<String>()
         for ((wanted, spec) in all) {
@@ -2067,7 +2155,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
             file.writeBytes(bytes)
             written += file
         }
-        if (written.isEmpty()) throw PdfException.Io("The attached files could not be read out of this document.")
+        if (written.isEmpty()) throw PdfException.Refused("The attached files could not be read out of this document.")
         written
     }
 

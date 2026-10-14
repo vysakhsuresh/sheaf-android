@@ -135,6 +135,12 @@ dependencies {
     // inside the APK, so OCR never needs a model download and works with no network at all.
     // That is the whole privacy position, and roughly 5 MB of install size is what it costs.
     // The same call Deja and Abhyas made.
+    // MIT-style licence. Only for Digital signature: it makes the PKCS#7 signature a
+    // reader's panel checks, from a .pfx the user already has. Nothing in it touches the
+    // network; the app still has no INTERNET permission.
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
+
     implementation("com.google.mlkit:text-recognition:16.0.1")
     // The second script, also bundled: Hindi, Marathi and Nepali pages. Same offline terms.
     implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")

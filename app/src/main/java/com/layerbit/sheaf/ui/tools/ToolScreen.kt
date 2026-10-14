@@ -129,6 +129,10 @@ fun ToolScreen(
     onUseAnswers: (java.io.File) -> Unit,
     onForgetAnswers: (java.io.File) -> Unit,
     onLoadStamp: () -> Unit,
+    onAddField: (Int, com.layerbit.sheaf.pdf.PageArea) -> Unit,
+    onSetField: (Int, String?, com.layerbit.sheaf.pdf.NewField.Kind?, String?) -> Unit,
+    onRemoveField: (Int) -> Unit,
+    onClearFields: (Int) -> Unit,
     /** Bundles every result into one ZIP and saves that. */
     onSaveZip: (List<SheafFile>) -> Unit,
     onCheckSize: () -> Unit,
@@ -143,7 +147,7 @@ fun ToolScreen(
         when (tool) {
             // These edit pages, so they need the pages themselves.
             // Extract shows them to be tapped rather than typed.
-            ToolId.ORGANISE, ToolId.REDACT, ToolId.EXTRACT, ToolId.ANNOTATE -> onLoadPages()
+            ToolId.ORGANISE, ToolId.REDACT, ToolId.EXTRACT, ToolId.ANNOTATE, ToolId.CREATE_FORM -> onLoadPages()
             // These change how a page looks, so one page is enough to show it.
             ToolId.CROP, ToolId.WATERMARK, ToolId.PAGE_NUMBERS,
             ToolId.ADD_TEXT, ToolId.BACKGROUND -> onLoadPreviewPage()
@@ -278,6 +282,8 @@ fun ToolScreen(
                         doc = doc,
                         canReorder = (tool == ToolId.MERGE || tool == ToolId.ATTACHMENTS || tool == ToolId.COMPARE) && state.documents.size > 1,
                         role = when {
+                            tool == ToolId.DIGITAL_SIGN && doc.file.isPdf -> "The PDF"
+                            tool == ToolId.DIGITAL_SIGN -> "Certificate"
                             tool == ToolId.COMPARE && index == 0 -> "Older version"
                             tool == ToolId.COMPARE && index == 1 -> "Newer version"
                             tool == ToolId.ADD_IMAGE && doc.file.isImage -> "The image"
@@ -515,6 +521,39 @@ fun ToolScreen(
                             onCheckSize = onCheckSize,
                             onChange = onConfigChange
                         )
+                    }
+                } else if (tool == ToolId.CREATE_FORM && state.pageOrder.isNotEmpty()) {
+                    val onThisPage = state.newFields.withIndex().filter { it.value.pageIndex == state.canvasPage }
+                    item {
+                        RedactCanvas(
+                            pageIndex = state.canvasPage,
+                            pageCount = state.pageOrder.size,
+                            page = state.thumbnails[state.canvasPage],
+                            areas = onThisPage.map { it.value.area },
+                            onPage = onRedactPage,
+                            onAdd = { area -> onAddField(state.canvasPage, area) },
+                            onClear = { onClearFields(state.canvasPage) },
+                            boxColour = SheafColors.Band.copy(alpha = 0.22f),
+                            labels = onThisPage.map { it.value.name },
+                            emptyHint = "Drag a box where a field should go"
+                        )
+                    }
+                    item {
+                        ToolOptions(
+                            tool = tool,
+                            config = state.config,
+                            pageCount = state.documents.firstOrNull()?.pageCount,
+                            onChange = onConfigChange
+                        )
+                    }
+                    if (state.newFields.isNotEmpty()) {
+                        item {
+                            NewFieldsList(
+                                fields = state.newFields,
+                                onSet = onSetField,
+                                onRemove = onRemoveField
+                            )
+                        }
                     }
                 } else if (tool == ToolId.REDACT && state.pageOrder.isNotEmpty()) {
                     item {
@@ -927,6 +966,47 @@ private fun FindSensitivePanel(
             )
             OutlinedButton(onClick = onFind, enabled = !finding) {
                 Text("Find and mark", color = SheafColors.Band)
+            }
+        }
+    }
+}
+
+/** The fields drawn so far: name, kind, and for a drop-down what it offers. */
+@Composable
+private fun NewFieldsList(
+    fields: List<com.layerbit.sheaf.pdf.NewField>,
+    onSet: (Int, String?, com.layerbit.sheaf.pdf.NewField.Kind?, String?) -> Unit,
+    onRemove: (Int) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SectionHeading(if (fields.size == 1) "1 field" else "${fields.size} fields")
+        fields.forEachIndexed { index, field ->
+            Panel(modifier = Modifier.fillMaxWidth()) {
+                Field(
+                    value = field.name,
+                    label = "Name · page ${field.pageIndex + 1}",
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
+                    onChange = { text -> onSet(index, text, null, null) }
+                )
+                Spacer(Modifier.height(6.dp))
+                com.layerbit.sheaf.ui.components.ChipRow(
+                    options = com.layerbit.sheaf.pdf.NewField.Kind.entries.map { it to it.label },
+                    selected = field.kind,
+                    onSelect = { kind -> onSet(index, null, kind, null) }
+                )
+                if (field.kind == com.layerbit.sheaf.pdf.NewField.Kind.CHOICE) {
+                    Spacer(Modifier.height(6.dp))
+                    Field(
+                        value = field.options.joinToString(", "),
+                        label = "Choices, separated by commas",
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
+                        onChange = { text -> onSet(index, null, null, text) }
+                    )
+                }
+                RowBetween(modifier = Modifier.padding(top = 2.dp)) {
+                    Spacer(Modifier.height(1.dp))
+                    TextButton(onClick = { onRemove(index) }) { Text("Remove", color = SheafColors.Dim) }
+                }
             }
         }
     }

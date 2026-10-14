@@ -227,6 +227,10 @@ fun ToolRoute(
             onUseAnswers = viewModel::useAnswers,
             onForgetAnswers = viewModel::forgetAnswers,
             onLoadStamp = viewModel::loadStampBitmap,
+            onAddField = viewModel::addNewField,
+            onSetField = viewModel::setNewField,
+            onRemoveField = viewModel::removeNewField,
+            onClearFields = viewModel::clearNewFields,
             onSaveZip = { files ->
                 viewModel.zipResults(files) { zip ->
                     if (zip == null) {

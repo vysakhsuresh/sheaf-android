@@ -222,6 +222,24 @@ enum class ToolId(
         Group.PROTECT
     ),
 
+    CREATE_FORM(
+        "Create a form",
+        "Draw text boxes, tick boxes and drop-downs on a page, for anyone to fill in",
+        InputKind.ONE_PDF,
+        Group.MARK
+    ),
+    DIGITAL_SIGN(
+        "Digital signature",
+        "Seal a PDF with your .pfx or .p12 certificate, the way Acrobat checks",
+        InputKind.PDF_AND_CERT,
+        Group.PROTECT
+    ),
+    PDF_A(
+        "Archive copy (PDF/A)",
+        "A PDF/A-2b copy for records offices, courts and auditors",
+        InputKind.SEVERAL_PDFS,
+        Group.PROTECT
+    ),
     EDIT_TEXT(
         "Find and replace text",
         "Change a date, a name or a number wherever it appears",
@@ -254,6 +272,9 @@ enum class ToolId(
 
         /** Word files, spreadsheets and text files, any number. */
         OFFICE,
+
+        /** One PDF and one certificate file. */
+        PDF_AND_CERT,
 
         /** Takes no file at all - it makes one with the camera. */
         CAMERA,
@@ -314,6 +335,9 @@ enum class ToolId(
             METADATA -> "Save the details"
             SET_PASSWORD -> "Protect it"
             REMOVE_PASSWORD -> "Unlock it"
+            CREATE_FORM -> "Add the fields"
+            DIGITAL_SIGN -> "Sign it"
+            PDF_A -> "Make the archive copy"
             EDIT_TEXT -> "Replace it"
             COMPARE -> "Compare them"
             RENT_RECEIPTS -> "Make the receipts"
@@ -321,13 +345,15 @@ enum class ToolId(
 
     val acceptsMultiple: Boolean
         get() = input == InputKind.SEVERAL_PDFS || input == InputKind.IMAGES ||
-            input == InputKind.PDF_AND_FILES || input == InputKind.PDF_AND_IMAGE || input == InputKind.OFFICE
+            input == InputKind.PDF_AND_FILES || input == InputKind.PDF_AND_IMAGE || input == InputKind.OFFICE ||
+            input == InputKind.PDF_AND_CERT
 
     val mimeFilter: Array<String>
         get() = when (input) {
             InputKind.IMAGES -> arrayOf("image/*")
             InputKind.PDF_AND_FILES -> arrayOf("*/*")
             InputKind.PDF_AND_IMAGE -> arrayOf("application/pdf", "image/*")
+            InputKind.PDF_AND_CERT -> arrayOf("*/*")
             InputKind.OFFICE -> arrayOf(
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
