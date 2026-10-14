@@ -1310,6 +1310,7 @@ internal fun Field(
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         visualTransformation = if (password) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
         textStyle = MaterialTheme.typography.bodyLarge,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = SheafColors.Band,
             unfocusedBorderColor = SheafColors.Border,
@@ -1317,7 +1318,9 @@ internal fun Field(
             unfocusedTextColor = SheafColors.Text,
             cursorColor = SheafColors.Band,
             focusedLabelColor = SheafColors.Band,
-            unfocusedLabelColor = SheafColors.Dim
+            unfocusedLabelColor = SheafColors.Dim,
+            focusedContainerColor = SheafColors.Surface,
+            unfocusedContainerColor = SheafColors.Surface
         ),
         modifier = Modifier.fillMaxWidth()
     )

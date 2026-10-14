@@ -30,6 +30,7 @@ import androidx.compose.foundation.lazy.itemsIndexed as itemsIndexedInColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -206,7 +207,6 @@ fun ToolScreen(
             running != null -> item { RunningPanel(running, onCancel) }
 
             finished != null -> {
-                item { SectionHeading("Result") }
                 item { ResultSummary(finished) }
                 items(finished.produced, key = { it.file.file.path }) { produced ->
                     ResultRow(
@@ -756,13 +756,35 @@ private fun RunningPanel(running: JobState.Running, onCancel: () -> Unit) {
 
 @Composable
 private fun ResultSummary(finished: JobState.Finished) {
+    val nothing = finished.produced.isEmpty() && finished.failed.isNotEmpty()
     val text = when {
-        finished.produced.isEmpty() && finished.failed.isNotEmpty() -> "Nothing was produced."
-        finished.allSucceeded && finished.produced.size == 1 -> "One file is ready."
-        finished.allSucceeded -> "${finished.produced.size} files are ready."
-        else -> "${finished.produced.size} of ${finished.outcomes.size} finished."
+        nothing -> "Nothing was produced"
+        finished.allSucceeded && finished.produced.size == 1 -> "Your file is ready"
+        finished.allSucceeded -> "${finished.produced.size} files are ready"
+        else -> "${finished.produced.size} of ${finished.outcomes.size} finished"
     }
-    Text(text, style = MaterialTheme.typography.bodyMedium, color = SheafColors.Muted)
+    val accent = if (nothing) SheafColors.Failed else SheafColors.Done
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+        Box(
+            modifier = Modifier.size(44.dp).background(accent.copy(alpha = 0.18f), RoundedCornerShape(14.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (nothing) Icons.Filled.Warning else Icons.Filled.Check,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+        Column(modifier = Modifier.padding(start = 12.dp)) {
+            Text(text, style = MaterialTheme.typography.headlineSmall, color = SheafColors.Text)
+            Text(
+                if (nothing) "What went wrong is listed below." else "Nothing was uploaded. The original is untouched.",
+                style = MaterialTheme.typography.bodySmall,
+                color = SheafColors.Dim
+            )
+        }
+    }
 }
 
 /**
