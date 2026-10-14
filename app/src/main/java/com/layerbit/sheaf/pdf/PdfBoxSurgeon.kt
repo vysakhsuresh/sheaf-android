@@ -34,6 +34,7 @@ import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import com.tom_roush.pdfbox.pdmodel.graphics.form.PDFormXObject
+import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAppearanceStream
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
 import com.tom_roush.pdfbox.rendering.PDFRenderer
@@ -800,7 +801,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                     // A comment is a remark, or a mark with no remark on it. Marks with
                     // nothing to say are listed too: a highlight is something somebody meant.
                     val text = annotation.contents?.trim().orEmpty()
-                    val replyOf = cos.getDictionaryObject(COSName.IRT)
+                    val replyOf = cos.getDictionaryObject(COSName.getPDFName("IRT"))
                     add(
                         Comment(
                             pageIndex = index,
@@ -944,7 +945,9 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                     if (tiled) {
                         val key = listOf(text, size, shown.width.toInt(), shown.height.toInt()).joinToString("|")
                         val form = tiles.getOrPut(key) {
-                            PDFormXObject(doc).also { form ->
+                            // An appearance stream is a form XObject with a content-stream
+                            // constructor; a plain form has none in this port.
+                            PDAppearanceStream(doc).also { form ->
                                 form.resources = PDResources()
                                 form.bBox = PDRectangle(0f, 0f, shown.width, shown.height)
                                 PDPageContentStream(doc, form).use { inner ->
@@ -2517,7 +2520,7 @@ private const val MAX_FIELD_DEPTH = 8
  * something at a spot a person pointed at needs both corrections, so they are written here
  * once instead of in each of them.
  */
-private class ShownPage(page: PDPage) {
+internal class ShownPage(page: PDPage) {
 
     val box: PDRectangle = page.cropBox ?: page.mediaBox ?: PDRectangle.A4
     val rotation: Int = normaliseRotation(page.rotation)

@@ -34,7 +34,7 @@ internal fun PDDocument.addFormFields(fields: List<NewField>): List<String> {
     resources.put(COSName.getPDFName("Helv"), PDType1Font.HELVETICA)
     resources.put(COSName.getPDFName("ZaDb"), PDType1Font.ZAPF_DINGBATS)
     form.defaultAppearance = "/Helv 0 Tf 0 g"
-    form.isNeedAppearances = false
+    form.setNeedAppearances(false)
 
     val taken = form.fields.mapNotNull { it.fullyQualifiedName }.toMutableSet()
     val names = mutableListOf<String>()
@@ -93,7 +93,7 @@ internal fun PDDocument.addFormFields(fields: List<NewField>): List<String> {
                 form.fields.add(choice)
                 val widget = choice.widgets.first()
                 place(widget, page, rect, look)
-                runCatching { if (options.isNotEmpty()) choice.value = options.first() }
+                runCatching { if (options.isNotEmpty()) choice.setValue(options.first()) }
             }
         }
         names += name

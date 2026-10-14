@@ -6,6 +6,7 @@ import com.layerbit.sheaf.pdf.PageLabelSpec
 import com.layerbit.sheaf.pdf.PageSelection
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
+import com.layerbit.sheaf.pdf.labelFor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
