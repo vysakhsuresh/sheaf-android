@@ -507,6 +507,169 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         return finder
     }
 
+    override fun placedWords(input: PdfInput, onProgress: (Int, Int) -> Unit): List<PlacedWord> =
+        withDocument(input) { doc ->
+            buildList {
+                for (index in 0 until doc.numberOfPages) {
+                    val page = doc.getPage(index)
+                    val box = page.cropBox ?: page.mediaBox ?: PDRectangle.A4
+                    val quarterTurned = normaliseRotation(page.rotation) % 180 == 90
+                    val stripper = if (quarterTurned) WordFinder(box.height, box.width) else WordFinder(box.width, box.height)
+                    stripper.startPage = index + 1
+                    stripper.endPage = index + 1
+                    runCatching { stripper.getText(doc) }
+                    for ((text, area) in stripper.words) add(PlacedWord(text, index, area))
+                    onProgress(index + 1, doc.numberOfPages)
+                }
+            }
+        }
+
+    override fun replaceText(
+        input: PdfInput,
+        pattern: Regex,
+        replacement: String,
+        output: File,
+        onProgress: (Int, Int) -> Unit
+    ): Int = withDocument(input) { doc ->
+        val font = PDType1Font.HELVETICA
+        val text = replacement.toWinAnsiSafe()
+        var changed = 0
+        for (index in 0 until doc.numberOfPages) {
+            val finder = finderFor(doc, index, pattern) { true }
+            runCatching { finder.getText(doc) }
+            val areas = finder.areas
+            if (areas.isEmpty()) {
+                onProgress(index + 1, doc.numberOfPages)
+                continue
+            }
+            val page = doc.getPage(index)
+            val shown = ShownPage(page)
+            PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { stream ->
+                stream.saveGraphicsState()
+                stream.transform(shown.viewMatrix())
+                for (area in areas) {
+                    val left = area.left * shown.width
+                    val width = area.width * shown.width
+                    val height = area.height * shown.height
+                    val bottom = shown.height - (area.top + area.height) * shown.height
+                    // The patch is a hair bigger than the glyph box: the box is the glyphs'
+                    // advance, and a descender or an italic overhang sits just outside it.
+                    stream.setNonStrokingColor(1f, 1f, 1f)
+                    stream.addRect(left - COVER_PADDING, bottom - height * 0.25f, width + COVER_PADDING * 2f, height * 1.3f)
+                    stream.fill()
+                    if (text.isNotEmpty()) {
+                        // Sized to the old words' height, then shrunk until it fits their width
+                        // too, so a longer replacement never runs into the next word.
+                        var size = (height / (NOTE_ASCENT + NOTE_DESCENT)).coerceIn(MIN_NOTE_POINTS, MAX_NOTE_POINTS)
+                        val needed = font.getStringWidth(text) / 1000f * size
+                        if (needed > width && needed > 0f) size = (size * width / needed).coerceAtLeast(MIN_NOTE_POINTS)
+                        stream.setNonStrokingColor(0f, 0f, 0f)
+                        stream.beginText()
+                        stream.setFont(font, size)
+                        stream.newLineAtOffset(left, bottom + height * 0.05f)
+                        stream.showText(text)
+                        stream.endText()
+                    }
+                    changed += 1
+                }
+                stream.restoreGraphicsState()
+            }
+            onProgress(index + 1, doc.numberOfPages)
+        }
+        if (changed == 0) throw PdfException.Io("Those words were not found. A scanned page has no text to find; run Make searchable first.")
+        doc.save(output)
+        changed
+    }
+
+    override fun writeReceipts(receipts: List<ReceiptSpec>, output: File): Int {
+        if (receipts.isEmpty()) throw PdfException.Io("There is nothing to write.")
+        val regular = PDType1Font.HELVETICA
+        val bold = PDType1Font.HELVETICA_BOLD
+        val italic = PDType1Font.HELVETICA_OBLIQUE
+        val margin = RECEIPT_MARGIN
+        val pageBox = PDRectangle.A4
+        val contentWidth = pageBox.width - margin * 2f
+        val labelWidth = RECEIPT_LABEL_WIDTH
+        val valueWidth = contentWidth - labelWidth
+        val body = 10.5f
+        val cellPad = 5f
+
+        try {
+            PDDocument(scratchMemory()).use { doc ->
+                var stream: PDPageContentStream? = null
+                var pages = 0
+                var cursor = 0f
+
+                fun newPage() {
+                    stream?.close()
+                    val fresh = PDPage(pageBox)
+                    doc.addPage(fresh)
+                    stream = PDPageContentStream(doc, fresh, PDPageContentStream.AppendMode.APPEND, true, true)
+                    pages += 1
+                    cursor = pageBox.height - margin
+                }
+
+                fun text(font: PDType1Font, size: Float, x: Float, y: Float, line: String) {
+                    val s = stream ?: return
+                    s.beginText()
+                    s.setFont(font, size)
+                    s.newLineAtOffset(x, y)
+                    s.showText(line.toWinAnsiSafe())
+                    s.endText()
+                }
+
+                fun centred(font: PDType1Font, size: Float, y: Float, line: String) {
+                    val width = font.getStringWidth(line.toWinAnsiSafe()) / 1000f * size
+                    text(font, size, (pageBox.width - width) / 2f, y, line)
+                }
+
+                for ((i, receipt) in receipts.withIndex()) {
+                    // Two to a page. The second starts at the half-way line, so the two can be
+                    // cut apart with one stroke.
+                    if (i % 2 == 0) newPage() else cursor = pageBox.height / 2f - 18f
+                    val s = stream!!
+                    cursor -= 16f
+                    centred(bold, 16f, cursor, receipt.title)
+                    cursor -= 15f
+                    centred(regular, 11f, cursor, receipt.subtitle)
+                    cursor -= 14f
+
+                    // The table: label in bold, value wrapped inside its column.
+                    val rowsLaidOut = receipt.rows.map { (label, value) ->
+                        val lines = wrapForWidth(value.toWinAnsiSafe(), regular, body, valueWidth - cellPad * 2f)
+                        Triple(label, lines, lines.size * body * LINE_SPACING + cellPad * 2f)
+                    }
+                    s.setLineWidth(0.6f)
+                    s.setStrokingColor(0.55f, 0.55f, 0.55f)
+                    for ((label, lines, rowHeight) in rowsLaidOut) {
+                        val top = cursor
+                        val bottom = cursor - rowHeight
+                        s.addRect(margin, bottom, contentWidth, rowHeight)
+                        s.stroke()
+                        s.moveTo(margin + labelWidth, top)
+                        s.lineTo(margin + labelWidth, bottom)
+                        s.stroke()
+                        text(bold, body, margin + cellPad, top - cellPad - body * NOTE_ASCENT, label)
+                        lines.forEachIndexed { k, line ->
+                            text(regular, body, margin + labelWidth + cellPad, top - cellPad - body * NOTE_ASCENT - k * body * LINE_SPACING, line)
+                        }
+                        cursor = bottom
+                    }
+                    cursor -= 18f
+                    for ((k, line) in receipt.footer.withIndex()) {
+                        text(if (k == 0) regular else italic, if (k == 0) body else 9f, margin, cursor, line)
+                        cursor -= 14f
+                    }
+                }
+                stream?.close()
+                doc.save(output)
+                return pages
+            }
+        } catch (e: IOException) {
+            throw e.asPdfException("writing the receipts")
+        }
+    }
+
     override fun readComments(input: PdfInput): List<Comment> = withDocument(input) { doc ->
         buildList {
             for (index in 0 until doc.numberOfPages) {
@@ -2143,6 +2306,10 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
 
         /** The value a tick box carries when the UI has ticked it. */
         const val TICKED = "true"
+
+        /** A receipt's page margin and the width of its label column, in points. */
+        const val RECEIPT_MARGIN = 56f
+        const val RECEIPT_LABEL_WIDTH = 150f
     }
 }
 
@@ -2351,23 +2518,57 @@ private class MatchFinder(
         super.writeString(text, textPositions)
     }
 
-    private fun areaFor(glyphs: List<TextPosition>): PageArea? {
-        if (glyphs.isEmpty() || pageWidth <= 0f || pageHeight <= 0f) return null
+    private fun areaFor(glyphs: List<TextPosition>): PageArea? = glyphArea(glyphs, pageWidth, pageHeight)
+}
 
-        val left = glyphs.minOf { it.xDirAdj }
-        val right = glyphs.maxOf { it.xDirAdj + it.widthDirAdj }
-        // yDirAdj is measured from the top of the page down to the baseline, which is the one
-        // place in this file where the vertical axis already points the way the screen does.
-        val baseline = glyphs.maxOf { it.yDirAdj }
-        val height = glyphs.maxOf { it.heightDir }.coerceAtLeast(1f)
+/**
+ * Every word on a page with its box, in the order the stripper reads them. A word is a run
+ * of glyphs with no space in it; punctuation stays attached, as it does on the page.
+ */
+private class WordFinder(
+    private val pageWidth: Float,
+    private val pageHeight: Float
+) : PDFTextStripper() {
 
-        return PageArea(
-            left = (left / pageWidth).coerceIn(0f, 1f),
-            top = ((baseline - height) / pageHeight).coerceIn(0f, 1f),
-            width = ((right - left) / pageWidth).coerceIn(0f, 1f),
-            height = (height / pageHeight).coerceIn(0f, 1f)
-        )
+    val words = mutableListOf<Pair<String, PageArea>>()
+
+    override fun writeString(text: String, textPositions: List<TextPosition>) {
+        var start = -1
+        val count = minOf(text.length, textPositions.size)
+        for (i in 0..count) {
+            val space = i == count || text[i].isWhitespace()
+            if (space) {
+                if (start >= 0) {
+                    glyphArea(textPositions.subList(start, i), pageWidth, pageHeight)?.let { area ->
+                        words += text.substring(start, i) to area
+                    }
+                    start = -1
+                }
+            } else if (start < 0) {
+                start = i
+            }
+        }
+        super.writeString(text, textPositions)
     }
+}
+
+/** The box round a run of glyphs, as fractions of the page, origin top-left. */
+private fun glyphArea(glyphs: List<TextPosition>, pageWidth: Float, pageHeight: Float): PageArea? {
+    if (glyphs.isEmpty() || pageWidth <= 0f || pageHeight <= 0f) return null
+
+    val left = glyphs.minOf { it.xDirAdj }
+    val right = glyphs.maxOf { it.xDirAdj + it.widthDirAdj }
+    // yDirAdj is measured from the top of the page down to the baseline, which is the one
+    // place in this file where the vertical axis already points the way the screen does.
+    val baseline = glyphs.maxOf { it.yDirAdj }
+    val height = glyphs.maxOf { it.heightDir }.coerceAtLeast(1f)
+
+    return PageArea(
+        left = (left / pageWidth).coerceIn(0f, 1f),
+        top = ((baseline - height) / pageHeight).coerceIn(0f, 1f),
+        width = ((right - left) / pageWidth).coerceIn(0f, 1f),
+        height = (height / pageHeight).coerceIn(0f, 1f)
+    )
 }
 
 /**

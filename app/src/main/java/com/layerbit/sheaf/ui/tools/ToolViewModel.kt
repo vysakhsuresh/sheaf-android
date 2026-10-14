@@ -16,6 +16,10 @@ import com.layerbit.sheaf.ops.AttachmentsOp
 import com.layerbit.sheaf.ops.BackgroundOp
 import com.layerbit.sheaf.ops.BookmarksOp
 import com.layerbit.sheaf.ops.CleanOp
+import com.layerbit.sheaf.ops.CompareOp
+import com.layerbit.sheaf.ops.RentReceipts
+import com.layerbit.sheaf.ops.RentReceiptsOp
+import com.layerbit.sheaf.ops.ReplaceTextOp
 import com.layerbit.sheaf.ops.PageLabelsOp
 import com.layerbit.sheaf.ops.AnnotateOp
 import com.layerbit.sheaf.ops.FillFormOp
@@ -46,6 +50,7 @@ import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.pdf.AttachmentInfo
 import com.layerbit.sheaf.pdf.CleanSpec
 import com.layerbit.sheaf.pdf.CompressionLevel
+import com.layerbit.sheaf.pdf.OcrScript
 import com.layerbit.sheaf.pdf.OutlineEntry
 import com.layerbit.sheaf.pdf.PageLabelSpec
 import com.layerbit.sheaf.pdf.CropSpec
@@ -581,7 +586,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         val current = _state.value
         val tool = current.tool ?: return
         val ready = current.documents.filter { it.isReady }
-        if (ready.isEmpty()) {
+        if (ready.isEmpty() && tool.input != ToolId.InputKind.NONE) {
             _state.update { it.copy(error = "Add a file first.") }
             return
         }
@@ -598,7 +603,22 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
     private fun buildOp(tool: ToolId, state: ToolUiState): Op? {
         val config = state.config
         return when (tool) {
-            ToolId.OCR -> OcrOp()
+            ToolId.OCR -> OcrOp(script = config.ocrScript)
+            ToolId.EDIT_TEXT -> ReplaceTextOp(config.findText, config.replaceText, config.matchCase)
+            ToolId.COMPARE -> CompareOp()
+            ToolId.RENT_RECEIPTS -> RentReceiptsOp(
+                RentReceipts(
+                    tenant = config.tenant,
+                    landlord = config.landlord,
+                    address = config.rentAddress,
+                    rent = config.rent,
+                    startYear = config.rentYear,
+                    startMonth = config.rentMonth,
+                    months = config.rentMonths,
+                    mode = config.rentMode,
+                    pan = config.landlordPan
+                )
+            )
             ToolId.EXTRACT_TEXT -> ExtractTextOp(config.pageSpec.takeIf { it.isNotBlank() })
             ToolId.SCAN -> {
                 // The scanner has its own screen; it never reaches the generic tool flow.
@@ -1589,6 +1609,13 @@ data class ToolUiState(
         get() = when {
             tool == null -> "No tool selected."
             busy -> null
+            tool == ToolId.RENT_RECEIPTS -> when {
+                config.tenant.isBlank() -> "Type the tenant's name."
+                config.landlord.isBlank() -> "Type the owner's name."
+                config.rentAddress.isBlank() -> "Type the address of the property."
+                config.rent <= 0 -> "Type the monthly rent."
+                else -> null
+            }
             documents.isEmpty() -> if (tool.input == ToolId.InputKind.IMAGES) {
                 "Choose at least one image."
             } else {
@@ -1598,6 +1625,9 @@ data class ToolUiState(
                 documents.firstNotNullOfOrNull { it.unreadableReason }
                     ?: "One file still needs its password."
             tool == ToolId.MERGE && documents.size < 2 -> "Merging needs at least two files."
+            tool == ToolId.COMPARE && documents.size != 2 ->
+                if (documents.size < 2) "Add the newer version as the second file." else "Compare takes exactly two files: the older, then the newer."
+            tool == ToolId.EDIT_TEXT && config.findText.isBlank() -> "Type the words to find."
             tool == ToolId.SIGN && signatureFile == null -> "Draw your signature above."
             tool == ToolId.ANNOTATE && marks.values.all { it.isEmpty() } ->
                 "Highlight a line or draw on the page."
@@ -1706,6 +1736,24 @@ data class ToolConfig(
     /** Images to PDF: one file per image. */
     val separatePdfs: Boolean = false,
 
+    /** Make searchable: which script's model reads the pages. */
+    val ocrScript: OcrScript = OcrScript.LATIN,
+
+    /** Find and replace text. [findText] is shared with Remove areas' Find and mark. */
+    val replaceText: String = "",
+    val matchCase: Boolean = false,
+
+    /** Rent receipts. */
+    val tenant: String = "",
+    val landlord: String = "",
+    val rentAddress: String = "",
+    val rent: Long = 0L,
+    val rentYear: Int = 2026,
+    val rentMonth: Int = 4,
+    val rentMonths: Int = 12,
+    val rentMode: String = "Bank transfer",
+    val landlordPan: String = "",
+
     /** Compress: get under a size rather than pick a level. */
     val compressToSize: Boolean = false,
     val compressTargetMb: Int = 2,
@@ -1801,6 +1849,10 @@ data class ToolConfig(
             // a copy of the whole document and look like the tool did nothing.
             ToolId.EXTRACT -> ToolConfig(pageSpec = "")
             ToolId.SPLIT -> ToolConfig(splitMode = SplitMode.EVERY_N, splitSize = 1)
+            // The financial year starts in April; receipts usually run from there.
+            ToolId.RENT_RECEIPTS -> RentReceiptsOp.thisMonth().let { (year, month) ->
+                ToolConfig(rentYear = if (month >= 4) year else year - 1, rentMonth = 4)
+            }
             else -> ToolConfig()
         }
     }

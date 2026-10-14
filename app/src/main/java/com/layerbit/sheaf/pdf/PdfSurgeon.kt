@@ -353,6 +353,27 @@ interface PdfSurgeon {
     @Throws(PdfException::class)
     fun findAreas(input: PdfInput, pattern: Regex, accept: (String) -> Boolean = { true }): Map<Int, List<PageArea>>
 
+    /** Every word on the pages with where it sits, in reading order, for comparing. */
+    @Throws(PdfException::class)
+    fun placedWords(input: PdfInput, onProgress: (Int, Int) -> Unit = { _, _ -> }): List<PlacedWord>
+
+    /**
+     * Covers each match of [pattern] and writes [replacement] in its place, in Helvetica
+     * sized to the old words. Returns how many were changed.
+     *
+     * The nearest thing to editing a PDF that a PDF honestly allows: a document holds glyphs
+     * at coordinates rather than paragraphs, so the line is patched, not reflowed.
+     */
+    @Throws(PdfException::class)
+    fun replaceText(input: PdfInput, pattern: Regex, replacement: String, output: File, onProgress: (Int, Int) -> Unit = { _, _ -> }): Int
+
+    /**
+     * Writes receipts from nothing: a title, a line under it, a table of labelled rows and
+     * some closing lines, two to an A4 page. Returns the page count.
+     */
+    @Throws(PdfException::class)
+    fun writeReceipts(receipts: List<ReceiptSpec>, output: File): Int
+
     /** The comments and notes on the pages, in page order, as a reader lists them. */
     @Throws(PdfException::class)
     fun readComments(input: PdfInput): List<Comment>
@@ -413,6 +434,19 @@ data class PageLabelSpec(
 
 /** A file carried inside a document. */
 data class AttachmentInfo(val name: String, val sizeBytes: Long)
+
+/** A word and where it sits on its page, as fractions of the page the reader sees. */
+data class PlacedWord(val text: String, val pageIndex: Int, val area: PageArea)
+
+/** One receipt to lay out. Generic on purpose: the words are the op's, the layout is here. */
+data class ReceiptSpec(
+    val title: String,
+    val subtitle: String,
+    /** Label and value, one row each. */
+    val rows: List<Pair<String, String>>,
+    /** Lines under the table: a signature line, a note. */
+    val footer: List<String>
+)
 
 /** A comment somebody left on a page: a sticky note, a highlight with a remark, a stamp. */
 data class Comment(

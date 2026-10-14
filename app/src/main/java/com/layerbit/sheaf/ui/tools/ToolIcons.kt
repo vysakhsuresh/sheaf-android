@@ -48,6 +48,9 @@ fun iconFor(tool: ToolId): Int = when (tool) {
     ToolId.EXTRACT_IMAGES -> R.drawable.ic_tool_extract_images
     ToolId.REDACT -> R.drawable.ic_tool_redact
     ToolId.METADATA -> R.drawable.ic_tool_metadata
+    ToolId.EDIT_TEXT -> R.drawable.ic_tool_edit_text
+    ToolId.COMPARE -> R.drawable.ic_tool_compare
+    ToolId.RENT_RECEIPTS -> R.drawable.ic_tool_receipt
     ToolId.SET_PASSWORD -> R.drawable.ic_tool_lock
     ToolId.REMOVE_PASSWORD -> R.drawable.ic_tool_unlock
 }

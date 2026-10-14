@@ -208,6 +208,25 @@ enum class ToolId(
         "Save an unlocked copy of a PDF you can open",
         InputKind.SEVERAL_PDFS,
         Group.PROTECT
+    ),
+
+    EDIT_TEXT(
+        "Find and replace text",
+        "Change a date, a name or a number wherever it appears",
+        InputKind.ONE_PDF,
+        Group.MARK
+    ),
+    COMPARE(
+        "Compare two versions",
+        "See what changed: new words in green, a note where words went",
+        InputKind.SEVERAL_PDFS,
+        Group.READ
+    ),
+    RENT_RECEIPTS(
+        "Rent receipts",
+        "A year of receipts for an HRA claim, ready to sign",
+        InputKind.NONE,
+        Group.MAKE
     );
 
     enum class InputKind {
@@ -222,7 +241,10 @@ enum class ToolId(
         PDF_AND_IMAGE,
 
         /** Takes no file at all - it makes one with the camera. */
-        CAMERA
+        CAMERA,
+
+        /** Takes no file at all - it makes one from what is typed. */
+        NONE
     }
 
     /** How the home screen groups the tools. Order here is the order on screen. */
@@ -231,7 +253,8 @@ enum class ToolId(
         PAGES("Pages"),
         MARK("Mark up"),
         CONVERT("Convert and print"),
-        PROTECT("Protect")
+        PROTECT("Protect"),
+        MAKE("Make from scratch")
     }
 
     /**
@@ -274,6 +297,9 @@ enum class ToolId(
             METADATA -> "Save the details"
             SET_PASSWORD -> "Protect it"
             REMOVE_PASSWORD -> "Unlock it"
+            EDIT_TEXT -> "Replace it"
+            COMPARE -> "Compare them"
+            RENT_RECEIPTS -> "Make the receipts"
         }
 
     val acceptsMultiple: Boolean

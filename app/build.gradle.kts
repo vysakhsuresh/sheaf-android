@@ -136,6 +136,8 @@ dependencies {
     // That is the whole privacy position, and roughly 5 MB of install size is what it costs.
     // The same call Deja and Abhyas made.
     implementation("com.google.mlkit:text-recognition:16.0.1")
+    // The second script, also bundled: Hindi, Marathi and Nepali pages. Same offline terms.
+    implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")
 
     // CameraX drives the scanner. Photographing a page is a first-class way documents get into
     // Sheaf, so it gets a purpose-built viewfinder with corner adjustment rather than an

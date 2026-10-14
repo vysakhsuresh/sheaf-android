@@ -18,6 +18,8 @@ import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.pdf.CompressionLevel
 import com.layerbit.sheaf.pdf.ImageFormat
 import com.layerbit.sheaf.pdf.ImageStamp
+import com.layerbit.sheaf.ops.RentReceiptsOp
+import com.layerbit.sheaf.pdf.OcrScript
 import com.layerbit.sheaf.pdf.PageLabelSpec
 import com.layerbit.sheaf.pdf.PageNumberSpec
 import com.layerbit.sheaf.pdf.WatermarkSpec
@@ -302,12 +304,117 @@ fun ToolOptions(
                 onChange = { spec -> onChange { it.copy(pageSpec = spec) } }
             )
 
-            ToolId.OCR -> Hint(
-                "Sheaf reads the words in a scan and lays them invisibly over the page, so the " +
-                    "document looks exactly the same but you can search, select and copy it. " +
-                    "This is the slowest tool here - expect around a second a page - and it " +
-                    "keeps running if you switch to another app."
+            ToolId.OCR -> {
+                SectionHeading("Language of the pages")
+                ChoiceRow(
+                    options = OcrScript.entries.map { it to it.label },
+                    selected = config.ocrScript,
+                    onSelect = { value -> onChange { it.copy(ocrScript = value) } }
+                )
+                Hint(
+                    "Sheaf reads the words in a scan and lays them invisibly over the page, so the " +
+                        "document looks exactly the same but you can search, select and copy it. " +
+                        "Both models are inside the app; nothing is downloaded. This is the slowest " +
+                        "tool here - expect around a second a page - and it keeps running if you " +
+                        "switch to another app."
+                )
+            }
+
+            ToolId.EDIT_TEXT -> {
+                Field(
+                    value = config.findText,
+                    label = "Find",
+                    keyboardType = KeyboardType.Text,
+                    onChange = { value -> onChange { it.copy(findText = value) } }
+                )
+                Field(
+                    value = config.replaceText,
+                    label = "Replace with (leave empty to remove)",
+                    keyboardType = KeyboardType.Text,
+                    onChange = { value -> onChange { it.copy(replaceText = value) } }
+                )
+                ToggleRow(
+                    title = "Match capitals exactly",
+                    checked = config.matchCase,
+                    onChange = { on -> onChange { it.copy(matchCase = on) } }
+                )
+                Hint(
+                    "Every place the words appear is changed. The old words are covered and " +
+                        "the new ones written over them in Helvetica, sized to fit the same " +
+                        "space - so the font will differ from the document's own, and a much " +
+                        "longer replacement is made smaller to fit. Works on text, not on scans."
+                )
+            }
+
+            ToolId.COMPARE -> Hint(
+                "Add the older version first and the newer one second. The newer one comes " +
+                    "back marked: new words highlighted in green, and a note wherever words " +
+                    "were taken out saying what they were. Words only - a changed picture or " +
+                    "layout is not seen."
             )
+
+            ToolId.RENT_RECEIPTS -> {
+                Field(
+                    value = config.tenant,
+                    label = "Tenant's name (you)",
+                    keyboardType = KeyboardType.Text,
+                    onChange = { value -> onChange { it.copy(tenant = value) } }
+                )
+                Field(
+                    value = config.landlord,
+                    label = "Owner's name",
+                    keyboardType = KeyboardType.Text,
+                    onChange = { value -> onChange { it.copy(landlord = value) } }
+                )
+                Field(
+                    value = config.rentAddress,
+                    label = "Address of the property",
+                    keyboardType = KeyboardType.Text,
+                    onChange = { value -> onChange { it.copy(rentAddress = value) } }
+                )
+                Field(
+                    value = if (config.rent > 0) config.rent.toString() else "",
+                    label = "Monthly rent, in rupees",
+                    keyboardType = KeyboardType.Number,
+                    onChange = { value -> onChange { it.copy(rent = value.filter { c -> c.isDigit() }.take(9).toLongOrNull() ?: 0L) } }
+                )
+                SectionHeading("First month")
+                ChoiceRow(
+                    options = (1..12).map { it to RentReceiptsOp.monthName(2000, it, 0).substringBefore(' ').take(3) },
+                    selected = config.rentMonth,
+                    onSelect = { value -> onChange { it.copy(rentMonth = value) } }
+                )
+                NumberField(
+                    value = config.rentYear,
+                    label = "Year",
+                    min = 2000,
+                    max = 2100,
+                    onChange = { value -> onChange { it.copy(rentYear = value) } }
+                )
+                SectionHeading("How many months")
+                ChoiceRow(
+                    options = listOf(1 to "1", 3 to "3", 6 to "6", 12 to "12"),
+                    selected = config.rentMonths,
+                    onSelect = { value -> onChange { it.copy(rentMonths = value) } }
+                )
+                SectionHeading("Paid by")
+                ChoiceRow(
+                    options = listOf("Bank transfer", "UPI", "Cash", "Cheque").map { it to it },
+                    selected = config.rentMode,
+                    onSelect = { value -> onChange { it.copy(rentMode = value) } }
+                )
+                Field(
+                    value = config.landlordPan,
+                    label = "Owner's PAN (needed over Rs. 1 lakh a year)",
+                    keyboardType = KeyboardType.Text,
+                    onChange = { value -> onChange { it.copy(landlordPan = value.uppercase().take(10)) } }
+                )
+                Hint(
+                    "One receipt a month, two to a page, with the amount in words as a receipt " +
+                        "writes it. Print, get them signed by the owner, and hand them in with " +
+                        "your HRA claim. Nothing typed here is kept or sent anywhere."
+                )
+            }
 
             ToolId.WATERMARK -> {
                 Field(

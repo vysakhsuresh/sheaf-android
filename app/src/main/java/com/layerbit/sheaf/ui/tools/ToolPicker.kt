@@ -60,7 +60,12 @@ fun ToolPickerSheet(
                 modifier = Modifier.padding(top = 4.dp, bottom = 10.dp)
             )
             ToolId.entries
-                .filter { it != ToolId.IMAGES_TO_PDF && it != ToolId.SCAN && it !in exclude }
+                .filter {
+                    // Only the tools that take a PDF: not the camera, not images, not the
+                    // ones that make a document from nothing.
+                    it.input != ToolId.InputKind.IMAGES && it.input != ToolId.InputKind.CAMERA &&
+                        it.input != ToolId.InputKind.NONE && it !in exclude
+                }
                 .forEach { tool ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

@@ -232,14 +232,54 @@ fun ToolScreen(
                 }
             }
 
+            tool.input == ToolId.InputKind.NONE -> {
+                item {
+                    ToolOptions(
+                        tool = tool,
+                        config = state.config,
+                        pageCount = null,
+                        onChange = onConfigChange
+                    )
+                }
+                state.error?.let { message ->
+                    item { ProblemRow(null, message, isError = true) }
+                }
+                item {
+                    Spacer(Modifier.height(4.dp))
+                    Button(
+                        onClick = onRun,
+                        enabled = state.canRun,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = SheafColors.Band,
+                            contentColor = SheafColors.OnBand,
+                            disabledContainerColor = SheafColors.SurfaceDim,
+                            disabledContentColor = SheafColors.Dim
+                        )
+                    ) {
+                        Text(tool.action, style = MaterialTheme.typography.titleMedium)
+                    }
+                    state.blockedReason?.let { reason ->
+                        Text(
+                            reason,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SheafColors.Dim,
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
+                    }
+                }
+            }
+
             else -> {
                 item { SectionHeading(if (tool.acceptsMultiple) "Files" else "File") }
 
                 itemsIndexedInColumn(state.documents) { index, doc ->
                     DocumentRow(
                         doc = doc,
-                        canReorder = (tool == ToolId.MERGE || tool == ToolId.ATTACHMENTS) && state.documents.size > 1,
+                        canReorder = (tool == ToolId.MERGE || tool == ToolId.ATTACHMENTS || tool == ToolId.COMPARE) && state.documents.size > 1,
                         role = when {
+                            tool == ToolId.COMPARE && index == 0 -> "Older version"
+                            tool == ToolId.COMPARE && index == 1 -> "Newer version"
                             tool == ToolId.ADD_IMAGE && doc.file.isImage -> "The image"
                             tool == ToolId.ADD_IMAGE && doc.file.isPdf -> "The PDF"
                             tool == ToolId.ATTACHMENTS && index == 0 -> "The PDF"
