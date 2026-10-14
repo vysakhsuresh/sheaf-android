@@ -31,6 +31,8 @@ import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.prefs.Settings
 import com.layerbit.sheaf.ui.about.AboutScreen
 import com.layerbit.sheaf.ui.components.SheafTopBar
+import com.layerbit.sheaf.ui.theme.GroupAccents
+import com.layerbit.sheaf.ui.tools.iconFor
 import com.layerbit.sheaf.ui.home.HomeScreen
 import com.layerbit.sheaf.ui.scan.ScanRoute
 import com.layerbit.sheaf.ui.settings.SettingsScreen
@@ -148,18 +150,8 @@ fun SheafApp(
         NavHost(navController = navController, startDestination = Routes.HOME) {
             composable(Routes.HOME) {
                 Column {
-                    SheafTopBar(
-                        title = "Sheaf",
-                        actions = {
-                            TextButton(onClick = { navController.navigate(Routes.SETTINGS) }) {
-                                Text("Settings", color = SheafColors.Muted)
-                            }
-                            TextButton(onClick = { navController.navigate(Routes.ABOUT) }) {
-                                Text("About", color = SheafColors.Muted)
-                            }
-                        }
-                    )
                     HomeScreen(
+                        onSettings = { navController.navigate(Routes.SETTINGS) },
                         recents = recents,
                         favourites = settings.favouriteTools,
                         onOpenDocument = onPickDocument,
@@ -234,7 +226,9 @@ fun SheafApp(
                         SheafTopBar(
                             title = ToolId.SCAN.title,
                             subtitle = ToolId.SCAN.summary,
-                            onBack = { navController.popBackStack() }
+                            onBack = { navController.popBackStack() },
+                            iconRes = iconFor(ToolId.SCAN),
+                            accent = GroupAccents.of(ToolId.Group.READ)
                         )
                         ScanRoute(onFinished = { navController.popBackStack() })
                     }
@@ -243,7 +237,9 @@ fun SheafApp(
                         SheafTopBar(
                             title = tool.title,
                             subtitle = tool.summary,
-                            onBack = { navController.popBackStack() }
+                            onBack = { navController.popBackStack() },
+                            iconRes = iconFor(tool),
+                            accent = GroupAccents.of(tool.group)
                         )
                         ToolRoute(
                             tool = tool,

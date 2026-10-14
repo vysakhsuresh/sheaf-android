@@ -136,23 +136,23 @@ internal data class Palette(
 
 internal val Dark = Palette(
     dark = true,
-    background = Color(0xFF101A2B),
-    surface = Color(0xFF17233A),
-    surfaceDim = Color(0xFF131E31),
-    border = Color(0xFF243349),
-    borderStrong = Color(0xFF31435E),
-    text = Color(0xFFF0F3F8),
-    muted = Color(0xFF9BAAC2),
-    dim = Color(0xFF64748B),
-    band = Color(0xFFE0257A),
-    bandBright = Color(0xFFFF5C9E),
-    bandDim = Color(0xFF3A0E22),
-    onBand = Color(0xFFFFF2F7),
+    background = Color(0xFF0B1220),
+    surface = Color(0xFF141E33),
+    surfaceDim = Color(0xFF0F182A),
+    border = Color(0xFF223049),
+    borderStrong = Color(0xFF34476A),
+    text = Color(0xFFF3F6FB),
+    muted = Color(0xFFA3B1C8),
+    dim = Color(0xFF6B7A93),
+    band = Color(0xFFE62E80),
+    bandBright = Color(0xFFFF6BA8),
+    bandDim = Color(0xFF3B1029),
+    onBand = Color(0xFFFFF4F8),
     paper = Color(0xFFF7F5EF),
     running = Color(0xFF5BA9E8),
-    done = Color(0xFF58C08C),
-    failed = Color(0xFFE0705F),
-    skipped = Color(0xFFE8A33D)
+    done = Color(0xFF4CCB8F),
+    failed = Color(0xFFE8705F),
+    skipped = Color(0xFFF0A93D)
 )
 
 /**
@@ -165,11 +165,11 @@ internal val Dark = Palette(
  */
 internal val Light = Palette(
     dark = false,
-    background = Color(0xFFF4F2EC),
+    background = Color(0xFFF5F4EF),
     surface = Color(0xFFFFFFFF),
-    surfaceDim = Color(0xFFEAE7DF),
-    border = Color(0xFFDCD7CB),
-    borderStrong = Color(0xFFBDB5A4),
+    surfaceDim = Color(0xFFECEAE3),
+    border = Color(0xFFE2DED4),
+    borderStrong = Color(0xFFC4BDAE),
     text = Color(0xFF121A26),
     muted = Color(0xFF4C5869),
     dim = Color(0xFF78849B),
@@ -195,6 +195,8 @@ val SpaceGrotesk = FontFamily(
 private val SheafTypography = Typography(
     displayLarge = TextStyle(fontFamily = SpaceGrotesk, fontSize = 46.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.8).sp),
     displayMedium = TextStyle(fontFamily = SpaceGrotesk, fontSize = 38.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.4).sp),
+    headlineMedium = TextStyle(fontFamily = SpaceGrotesk, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.0).sp),
+    headlineSmall = TextStyle(fontFamily = SpaceGrotesk, fontSize = 24.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.7).sp),
     titleLarge = TextStyle(fontFamily = SpaceGrotesk, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.6).sp),
     titleMedium = TextStyle(fontFamily = SpaceGrotesk, fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
     bodyLarge = TextStyle(fontFamily = SpaceGrotesk, fontSize = 15.sp, fontWeight = FontWeight.Normal),
@@ -248,5 +250,36 @@ fun SheafTheme(theme: ThemeChoice = ThemeChoice.DARK, content: @Composable () ->
             LocalTextStyle provides SheafTypography.bodyLarge,
             content = content
         )
+    }
+}
+
+
+/**
+ * One colour per family of tools.
+ *
+ * The band stays the app's one action colour; these are quieter, and live only in the icon
+ * tiles and the little dots beside the group headings. They are what lets a page of forty
+ * tools be scanned by eye - "the blue ones are about pages, the amber ones write on them" -
+ * without the chrome shouting over the document.
+ */
+object GroupAccents {
+    fun of(group: com.layerbit.sheaf.ops.ToolId.Group): Color = if (SheafColors.isDark) dark(group) else light(group)
+
+    private fun dark(group: com.layerbit.sheaf.ops.ToolId.Group): Color = when (group) {
+        com.layerbit.sheaf.ops.ToolId.Group.READ -> Color(0xFFFF6BA8)
+        com.layerbit.sheaf.ops.ToolId.Group.PAGES -> Color(0xFF5B9DFF)
+        com.layerbit.sheaf.ops.ToolId.Group.MARK -> Color(0xFFF7B349)
+        com.layerbit.sheaf.ops.ToolId.Group.CONVERT -> Color(0xFF3ED3C0)
+        com.layerbit.sheaf.ops.ToolId.Group.PROTECT -> Color(0xFF5DD48F)
+        com.layerbit.sheaf.ops.ToolId.Group.MAKE -> Color(0xFFB08CFF)
+    }
+
+    private fun light(group: com.layerbit.sheaf.ops.ToolId.Group): Color = when (group) {
+        com.layerbit.sheaf.ops.ToolId.Group.READ -> Color(0xFFC81E6C)
+        com.layerbit.sheaf.ops.ToolId.Group.PAGES -> Color(0xFF2360C8)
+        com.layerbit.sheaf.ops.ToolId.Group.MARK -> Color(0xFFB4700A)
+        com.layerbit.sheaf.ops.ToolId.Group.CONVERT -> Color(0xFF0E8C7D)
+        com.layerbit.sheaf.ops.ToolId.Group.PROTECT -> Color(0xFF1E8A4D)
+        com.layerbit.sheaf.ops.ToolId.Group.MAKE -> Color(0xFF6B45D6)
     }
 }

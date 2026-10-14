@@ -74,11 +74,10 @@ fun ToolPickerSheet(
                             .clickable { onPick(tool) }
                             .padding(vertical = 12.dp)
                     ) {
-                        Icon(
-                            painter = painterResource(iconFor(tool)),
-                            contentDescription = null,
-                            tint = SheafColors.Muted,
-                            modifier = Modifier.size(22.dp)
+                        com.layerbit.sheaf.ui.components.IconTile(
+                            iconRes = iconFor(tool),
+                            accent = com.layerbit.sheaf.ui.theme.GroupAccents.of(tool.group),
+                            size = 38.dp
                         )
                         Column(modifier = Modifier.padding(start = 14.dp)) {
                             Text(

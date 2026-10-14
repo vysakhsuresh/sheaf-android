@@ -10,6 +10,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -78,6 +79,13 @@ import com.layerbit.sheaf.pdf.Comment
 import com.layerbit.sheaf.pdf.OutlineEntry
 import com.layerbit.sheaf.pdf.PageArea
 import com.layerbit.sheaf.pdf.PageSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
+import com.layerbit.sheaf.ui.components.PrimaryButton
+import com.layerbit.sheaf.ui.components.RoundIconButton
 import com.layerbit.sheaf.ui.components.RowBetween
 import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.theme.SheafColors
@@ -344,10 +352,8 @@ private fun ViewerHeader(
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         RowBetween {
-            TextButton(onClick = onBack, modifier = Modifier.padding(end = 2.dp)) {
-                Text("‹", style = MaterialTheme.typography.titleLarge, color = SheafColors.Muted)
-            }
-            Column(modifier = Modifier.weight(1f)) {
+            RoundIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", onClick = onBack)
+            Column(modifier = Modifier.weight(1f).padding(start = 10.dp)) {
                 Text(
                     text = state.displayName,
                     style = MaterialTheme.typography.titleMedium,
@@ -361,23 +367,18 @@ private fun ViewerHeader(
                     color = SheafColors.Dim
                 )
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (canMark) {
-                    TextButton(onClick = onToggleBookmark) {
-                        Text(
-                            if (marked) "★" else "☆",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = if (marked) SheafColors.BandBright else SheafColors.Muted
-                        )
-                    }
+                    RoundIconButton(
+                        icon = Icons.Filled.Star,
+                        contentDescription = if (marked) "Remove this mark" else "Mark this page",
+                        onClick = onToggleBookmark,
+                        tint = if (marked) SheafColors.BandBright else SheafColors.Dim
+                    )
                 }
-                TextButton(onClick = onSearchToggle) {
-                    Text("Find", color = SheafColors.Muted)
-                }
+                RoundIconButton(icon = Icons.Filled.Search, contentDescription = "Find", onClick = onSearchToggle)
                 Box {
-                    TextButton(onClick = { menuOpen = true }) {
-                        Text("⋯", style = MaterialTheme.typography.titleLarge, color = SheafColors.Muted)
-                    }
+                    RoundIconButton(icon = Icons.Filled.MoreVert, contentDescription = "More", onClick = { menuOpen = true })
                     DropdownMenu(
                         expanded = menuOpen,
                         onDismissRequest = { menuOpen = false }
@@ -429,13 +430,12 @@ private fun ViewerHeader(
         // A document opened from a tool's result list has no source Uri to hand on, so the
         // tool sheet is offered only for documents that came in from outside.
         if (state.sourceUri.isNotEmpty()) {
-            TextButton(onClick = onTools, modifier = Modifier.padding(top = 2.dp)) {
-                Text(
-                    "Use a tool on this",
-                    color = SheafColors.Band,
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
+            PrimaryButton(
+                text = "Use a tool on this",
+                onClick = onTools,
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                tall = false
+            )
         }
     }
 }
