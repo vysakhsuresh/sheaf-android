@@ -79,7 +79,7 @@ enum class ToolId(
         Group.CONVERT
     ),
     PDF_TO_OFFICE(
-        "PDF to Word, Excel, EPUB or web page",
+        "PDF to Word, Excel, PowerPoint, EPUB or web page",
         "Paragraphs, headings, tables and pictures, as a file you can edit or read",
         InputKind.SEVERAL_PDFS,
         Group.CONVERT

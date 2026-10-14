@@ -100,7 +100,7 @@ the signature. Resist any pull towards a convenient `fun run(input: SheafFile): 
 | Bookmarks | Edit the table of contents a reader shows: titles, pages, nesting |
 | Images to PDF | A4, Letter, A5 or fit-to-image, with margins; one PDF or one per image |
 | PDF to images | PNG or JPEG at 96, 200 or 300 DPI |
-| PDF to Word, Excel, EPUB or web page | Paragraphs, headings, lists, tables and pictures rebuilt from the pages, as .docx, .xlsx, .epub or .html |
+| PDF to Word, Excel, PowerPoint, EPUB or web page | Paragraphs, headings, lists, tables and pictures rebuilt from the pages, as .docx, .xlsx, .epub or .html; a .pptx with a slide per page, as pictures or editable text |
 | Word, Excel or text to PDF | A .docx, .xlsx, .txt, .md or .csv laid out on A4, in the phone's own fonts for Indian scripts |
 | Compress | Three levels, or a size to get under, and it tells you when there was nothing to gain |
 | Attachments | Put files inside a PDF, or take out the ones already there |

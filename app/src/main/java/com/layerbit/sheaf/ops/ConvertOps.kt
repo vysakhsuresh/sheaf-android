@@ -1,6 +1,8 @@
 package com.layerbit.sheaf.ops
 
 import com.layerbit.sheaf.convert.FlowFromPages
+import com.layerbit.sheaf.convert.PptxWriter
+import com.layerbit.sheaf.convert.SlideSpec
 import com.layerbit.sheaf.convert.Readers
 import com.layerbit.sheaf.convert.Writers
 import com.layerbit.sheaf.files.SheafFile
@@ -19,7 +21,8 @@ enum class OfficeTarget(val label: String, val extension: String, val mimeType: 
     WORD("Word (.docx)", "docx", Writers.MIME_DOCX, "word"),
     EXCEL("Excel (.xlsx)", "xlsx", Writers.MIME_XLSX, "excel"),
     EPUB("EPUB book", "epub", Writers.MIME_EPUB, "epub"),
-    HTML("Web page (.html)", "html", Writers.MIME_HTML, "html")
+    HTML("Web page (.html)", "html", Writers.MIME_HTML, "html"),
+    POWERPOINT("PowerPoint (.pptx)", "pptx", PptxWriter.MIME_PPTX, "powerpoint")
 }
 
 /**
@@ -47,6 +50,10 @@ class PdfToOfficeOp(private val target: OfficeTarget, private val withPictures: 
             onProgress(Progress(index, inputs.size, "Reading ${input.displayName}"))
             val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
             val output = context.workspace.newOutput(input.baseName, target.step, target.extension)
+            if (target == OfficeTarget.POWERPOINT) {
+                outcomes += slides(input, pdfInput, context, output) { label -> onProgress(Progress(index, inputs.size, label)) }
+                return@forEachIndexed
+            }
             outcomes += try {
                 val pages = context.surgeon.pageLines(pdfInput) { done, total ->
                     context.checkCancelled()
@@ -90,6 +97,7 @@ class PdfToOfficeOp(private val target: OfficeTarget, private val withPictures: 
                         OfficeTarget.EXCEL -> Writers.xlsx(flow, output)
                         OfficeTarget.EPUB -> Writers.epub(flow, output)
                         OfficeTarget.HTML -> Writers.html(flow, output)
+                        OfficeTarget.POWERPOINT -> Unit
                     }
                     val paragraphs = flow.blocks.count { it is Block.Paragraph }
                     val tables = flow.blocks.count { it is Block.Table }
@@ -116,7 +124,66 @@ class PdfToOfficeOp(private val target: OfficeTarget, private val withPictures: 
         outcomes
     }
 
+    /**
+     * One slide per page: a picture of it, or its lines as text boxes where they sat.
+     * The deck takes the first page's shape.
+     */
+    private fun slides(input: SheafFile, pdfInput: PdfInput, context: OpContext, output: File, step: (String) -> Unit): OpOutcome {
+        var dir: File? = null
+        return try {
+            val info = context.surgeon.inspect(pdfInput)
+            if (info.pageCount == 0) throw PdfException.Refused("This document has no pages.")
+            val sizes = info.pageSizes
+            val specs = if (withPictures) {
+                step("Drawing the pages")
+                val folder = File(context.workspace.newOutput(input.baseName, "slides", "dir").path).also { it.mkdirs() }
+                dir = folder
+                val files = context.surgeon.pdfToImages(pdfInput, (0 until info.pageCount).toList(), SLIDE_DPI, ImageFormat.JPEG, folder, "page") { done, total ->
+                    context.checkCancelled()
+                    step("Drawing page $done of $total")
+                }
+                files.mapIndexed { i, file ->
+                    val size = sizes.getOrNull(i) ?: sizes.first()
+                    SlideSpec(size.widthPoints, size.heightPoints, file, emptyList())
+                }
+            } else {
+                val pages = context.surgeon.pageLines(pdfInput) { done, total ->
+                    context.checkCancelled()
+                    step("Reading page $done of $total")
+                }
+                if (pages.all { lines -> lines.all { it.text.isBlank() } }) {
+                    throw PdfException.Refused("This file has no words in it, only pictures of them. Choose pictures of the pages, or run Make searchable first.")
+                }
+                pages.mapIndexed { i, lines ->
+                    val size = sizes.getOrNull(i) ?: sizes.first()
+                    SlideSpec(size.widthPoints, size.heightPoints, null, lines)
+                }
+            }
+            step("Writing the deck")
+            PptxWriter.write(input.baseName, specs, output)
+            OpOutcome.Produced(
+                SheafFile(output, "${input.baseName}.pptx", SheafFile.Origin.Derived("powerpoint"), PptxWriter.MIME_PPTX),
+                "${specs.size} ${if (specs.size == 1) "slide" else "slides"}, " +
+                    if (withPictures) "each a picture of its page" else "each the page's lines as text you can edit"
+            )
+        } catch (e: PdfException) {
+            output.delete()
+            OpOutcome.Failed(input.displayName, e.message ?: "The deck could not be made.")
+        } catch (e: Exception) {
+            output.delete()
+            OpOutcome.Failed(input.displayName, e.message ?: "The deck could not be written.")
+        } finally {
+            dir?.listFiles()?.forEach { it.delete() }
+            dir?.delete()
+        }
+    }
+
     /** The page number Extract images writes into a name like "scan-p3-1.jpg", zero-based. */
+    private companion object {
+        /** Sharp on a projector, and a 40-page deck stays under a few megabytes. */
+        const val SLIDE_DPI = 110
+    }
+
     private fun pageOf(name: String): Int =
         Regex("-p(\\d+)-").find(name)?.groupValues?.get(1)?.toIntOrNull()?.minus(1) ?: 0
 

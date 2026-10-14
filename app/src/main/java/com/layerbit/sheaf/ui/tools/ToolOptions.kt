@@ -173,7 +173,13 @@ fun ToolOptions(
                     selected = config.officeTarget,
                     onSelect = { value -> onChange { it.copy(officeTarget = value) } }
                 )
-                if (config.officeTarget != OfficeTarget.EXCEL) {
+                if (config.officeTarget == OfficeTarget.POWERPOINT) {
+                    ChoiceRow(
+                        options = listOf(true to "Pictures of the pages", false to "Editable text"),
+                        selected = config.convertPictures,
+                        onSelect = { value -> onChange { it.copy(convertPictures = value) } }
+                    )
+                } else if (config.officeTarget != OfficeTarget.EXCEL) {
                     ToggleRow(
                         title = "Bring the pictures along",
                         checked = config.convertPictures,
@@ -189,6 +195,8 @@ fun ToolOptions(
                             "number stays a number so sums work. Best on statements and tables."
                         OfficeTarget.EPUB -> "A reflowing book for e-readers, cut into chapters at the headings."
                         OfficeTarget.HTML -> "One self-contained web page, pictures included, that opens in any browser."
+                        OfficeTarget.POWERPOINT -> "One slide per page, in the page's own shape: a picture of each page, " +
+                            "exactly as it looks, or its lines as text boxes you can edit."
                     } + " Scanned pages have no words until Make searchable has read them."
                 )
             }
