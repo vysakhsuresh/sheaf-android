@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -112,6 +113,16 @@ fun ToolScreen(
     onLoadPreviewPage: () -> Unit,
     onLoadForm: () -> Unit,
     onFormValue: (String, String) -> Unit,
+    onLoadOutline: () -> Unit,
+    onAddBookmark: (Int) -> Unit,
+    onSetBookmark: (Int, String?, Int?) -> Unit,
+    onRemoveBookmark: (Int) -> Unit,
+    onMoveBookmark: (Int, Int) -> Unit,
+    onIndentBookmark: (Int, Boolean) -> Unit,
+    onClearBookmarks: () -> Unit,
+    onLoadAttachments: () -> Unit,
+    /** Bundles every result into one ZIP and saves that. */
+    onSaveZip: (List<SheafFile>) -> Unit,
     onCheckSize: () -> Unit,
     onCopy: (String) -> Unit,
     onDone: () -> Unit,
@@ -127,9 +138,13 @@ fun ToolScreen(
             ToolId.ORGANISE, ToolId.REDACT, ToolId.EXTRACT, ToolId.ANNOTATE -> onLoadPages()
             // These change how a page looks, so one page is enough to show it.
             ToolId.CROP, ToolId.WATERMARK, ToolId.PAGE_NUMBERS,
-            ToolId.ADD_TEXT -> onLoadPreviewPage()
+            ToolId.ADD_TEXT, ToolId.BACKGROUND -> onLoadPreviewPage()
             // Filling a form needs to know whether there is one.
             ToolId.FORMS -> onLoadForm()
+            // The bookmark editor starts from what the document already has.
+            ToolId.BOOKMARKS -> onLoadOutline()
+            // Attachments shows what is already inside before offering to add or take out.
+            ToolId.ATTACHMENTS -> onLoadAttachments()
             // Signing offers the ones kept earlier before offering the pad.
             ToolId.SIGN -> {
                 onLoadPreviewPage()
@@ -191,6 +206,13 @@ fun ToolScreen(
                         }
                         OutlinedButton(onClick = onDone) { Text("Done", color = SheafColors.Muted) }
                     }
+                    // One file to send on, for the cases where a folder of forty is not what
+                    // the other end wants: an upload box, an email, a chat.
+                    if (finished.produced.size > 1) {
+                        TextButton(onClick = { onSaveZip(finished.produced.map { it.file }) }) {
+                            Text("Save all as one ZIP", color = SheafColors.Muted)
+                        }
+                    }
                 }
             }
 
@@ -200,7 +222,14 @@ fun ToolScreen(
                 itemsIndexedInColumn(state.documents) { index, doc ->
                     DocumentRow(
                         doc = doc,
-                        canReorder = tool == ToolId.MERGE && state.documents.size > 1,
+                        canReorder = (tool == ToolId.MERGE || tool == ToolId.ATTACHMENTS) && state.documents.size > 1,
+                        role = when {
+                            tool == ToolId.ATTACHMENTS && index == 0 -> "The PDF"
+                            tool == ToolId.ATTACHMENTS -> "To attach"
+                            tool == ToolId.INSERT && index == 0 -> "Being added to"
+                            tool == ToolId.INSERT -> "Goes in"
+                            else -> null
+                        },
                         isFirst = index == 0,
                         isLast = index == state.documents.lastIndex,
                         onRemove = { onRemoveFile(index) },
@@ -321,6 +350,47 @@ fun ToolScreen(
                             )
                         }
                     }
+                } else if (tool == ToolId.BOOKMARKS && state.documents.isNotEmpty()) {
+                    if (!state.outlineRead) {
+                        item { Hint("Reading the bookmarks…") }
+                    } else {
+                        item {
+                            BookmarksEditor(
+                                entries = state.outline,
+                                pageCount = state.documents.firstOrNull()?.pageCount,
+                                onAdd = onAddBookmark,
+                                onSet = onSetBookmark,
+                                onRemove = onRemoveBookmark,
+                                onMove = onMoveBookmark,
+                                onIndent = onIndentBookmark,
+                                onClear = onClearBookmarks
+                            )
+                        }
+                        item {
+                            ToolOptions(
+                                tool = tool,
+                                config = state.config,
+                                pageCount = state.documents.firstOrNull()?.pageCount,
+                                onChange = onConfigChange
+                            )
+                        }
+                    }
+                } else if (tool == ToolId.ATTACHMENTS && state.documents.isNotEmpty()) {
+                    item {
+                        AttachmentsPanel(
+                            read = state.attachmentsRead,
+                            attachments = state.attachments,
+                            extras = state.documents.drop(1).map { it.file.displayName }
+                        )
+                    }
+                    item {
+                        ToolOptions(
+                            tool = tool,
+                            config = state.config,
+                            pageCount = state.documents.firstOrNull()?.pageCount,
+                            onChange = onConfigChange
+                        )
+                    }
                 } else if (tool == ToolId.ANNOTATE && state.pageOrder.isNotEmpty()) {
                     item {
                         MarkupCanvas(
@@ -381,13 +451,15 @@ fun ToolScreen(
                         )
                     }
                     if (tool == ToolId.CROP || tool == ToolId.WATERMARK ||
-                        tool == ToolId.PAGE_NUMBERS || tool == ToolId.ADD_TEXT
+                        tool == ToolId.PAGE_NUMBERS || tool == ToolId.ADD_TEXT ||
+                        tool == ToolId.BACKGROUND
                     ) {
                         item {
                             EffectPreview(
                                 tool = tool,
                                 config = state.config,
                                 page = state.previewPage,
+                                pageSize = state.previewPageSize,
                                 signature = null,
                                 // Only Add text is placed by hand; the others sit where their
                                 // own settings put them, and a stray tap should not move them.
@@ -629,6 +701,7 @@ private fun ProblemRow(name: String?, reason: String, isError: Boolean) {
 private fun DocumentRow(
     doc: SelectedDoc,
     canReorder: Boolean,
+    role: String? = null,
     isFirst: Boolean,
     isLast: Boolean,
     onRemove: () -> Unit,
@@ -647,6 +720,7 @@ private fun DocumentRow(
         )
 
         val detail = buildString {
+            role?.let { append(it).append(" · ") }
             doc.pageCount?.let { append(formatPageCount(it)).append(" · ") }
             append(formatBytes(doc.file.sizeBytes))
             if (doc.encrypted && !doc.needsPassword) append(" · protected")
@@ -679,6 +753,46 @@ private fun DocumentRow(
                 }
             }
             TextButton(onClick = onRemove) { Text("Remove", color = SheafColors.Dim) }
+        }
+    }
+}
+
+/** What the document already carries inside it, and what is about to go in. */
+@Composable
+private fun AttachmentsPanel(
+    read: Boolean,
+    attachments: List<com.layerbit.sheaf.pdf.AttachmentInfo>,
+    extras: List<String>
+) {
+    Panel(modifier = Modifier.fillMaxWidth()) {
+        SectionHeading(
+            when {
+                !read -> "Looking inside…"
+                attachments.isEmpty() -> "Nothing attached yet"
+                attachments.size == 1 -> "1 file inside"
+                else -> "${attachments.size} files inside"
+            }
+        )
+        attachments.forEach { attachment ->
+            RowBetween(modifier = Modifier.padding(top = 4.dp)) {
+                Text(
+                    attachment.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SheafColors.Text,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(formatBytes(attachment.sizeBytes), style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
+            }
+        }
+        if (extras.isNotEmpty()) {
+            Text(
+                "To add: " + extras.joinToString(", "),
+                style = MaterialTheme.typography.bodySmall,
+                color = SheafColors.Done,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
     }
 }

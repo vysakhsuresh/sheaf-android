@@ -11,6 +11,11 @@ import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.jobs.JobState
 import com.layerbit.sheaf.jobs.belongsTo
 import com.layerbit.sheaf.ops.AddTextOp
+import com.layerbit.sheaf.ops.AttachmentsOp
+import com.layerbit.sheaf.ops.BackgroundOp
+import com.layerbit.sheaf.ops.BookmarksOp
+import com.layerbit.sheaf.ops.CleanOp
+import com.layerbit.sheaf.ops.PageLabelsOp
 import com.layerbit.sheaf.ops.AnnotateOp
 import com.layerbit.sheaf.ops.FillFormOp
 import com.layerbit.sheaf.ops.HeaderFooterOp
@@ -37,7 +42,11 @@ import com.layerbit.sheaf.ops.RemovePasswordOp
 import com.layerbit.sheaf.ops.SetPasswordOp
 import com.layerbit.sheaf.ops.SplitOp
 import com.layerbit.sheaf.ops.ToolId
+import com.layerbit.sheaf.pdf.AttachmentInfo
+import com.layerbit.sheaf.pdf.CleanSpec
 import com.layerbit.sheaf.pdf.CompressionLevel
+import com.layerbit.sheaf.pdf.OutlineEntry
+import com.layerbit.sheaf.pdf.PageLabelSpec
 import com.layerbit.sheaf.pdf.CropSpec
 import com.layerbit.sheaf.pdf.DocumentMetadata
 import com.layerbit.sheaf.pdf.DocumentPermissions
@@ -48,6 +57,7 @@ import com.layerbit.sheaf.pdf.PageArea
 import com.layerbit.sheaf.pdf.PageMark
 import com.layerbit.sheaf.pdf.PagePoint
 import com.layerbit.sheaf.pdf.PageSelection
+import com.layerbit.sheaf.pdf.PageSize
 import com.layerbit.sheaf.pdf.PageNumberSpec
 import com.layerbit.sheaf.pdf.WatermarkSpec
 import com.layerbit.sheaf.pdf.ImageFormat
@@ -151,7 +161,11 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     busy = false,
                     formFields = emptyList(),
                     formValues = emptyMap(),
-                    formRead = false
+                    formRead = false,
+                    outline = emptyList(),
+                    outlineRead = false,
+                    attachments = emptyList(),
+                    attachmentsRead = false
                 )
             }
         }
@@ -193,7 +207,11 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     // last one has to go rather than be shown against this one.
                     formFields = emptyList(),
                     formValues = emptyMap(),
-                    formRead = false
+                    formRead = false,
+                    outline = emptyList(),
+                    outlineRead = false,
+                    attachments = emptyList(),
+                    attachmentsRead = false
                 )
             }
         }
@@ -212,13 +230,15 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         // This used to run for everything, which is how a .webp came back as "Header doesn't
         // contain versioninfo".
         if (file.isImage) {
-            val wanted = tool?.input == ToolId.InputKind.IMAGES
+            val wanted = tool?.input == ToolId.InputKind.IMAGES || tool == ToolId.ATTACHMENTS
             return@withContext SelectedDoc(
                 file = file,
                 unreadableReason = if (wanted) null else "This is an image, and this tool needs a PDF."
             )
         }
         if (!file.isPdf) {
+            // Attachments takes any file at all after the PDF; it is never opened, only carried.
+            if (tool == ToolId.ATTACHMENTS) return@withContext SelectedDoc(file = file)
             return@withContext SelectedDoc(
                 file = file,
                 unreadableReason = if (tool?.input == ToolId.InputKind.IMAGES) {
@@ -239,7 +259,8 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                         config = current.config.copy(
                             metaTitle = info.title.orEmpty(),
                             metaAuthor = info.author.orEmpty(),
-                            metaSubject = info.subject.orEmpty()
+                            metaSubject = info.subject.orEmpty(),
+                            metaKeywords = info.keywords.orEmpty()
                         )
                     )
                 }
@@ -582,11 +603,12 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             }
             ToolId.WATERMARK -> WatermarkOp(
                 WatermarkSpec(
-                    text = config.watermarkText,
+                    text = config.watermarkText.trim(),
                     opacity = config.watermarkOpacity,
-                    degrees = if (config.watermarkDiagonal) 45f else 0f,
-                    tiled = config.watermarkTiled
-                )
+                    layout = config.watermarkLayout,
+                    colour = config.watermarkColour
+                ),
+                pageSpec = config.pageSpec
             )
             ToolId.PAGE_NUMBERS -> PageNumberOp(
                 PageNumberSpec(
@@ -594,15 +616,39 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     format = config.numberFormat,
                     startAt = config.numberStartAt,
                     skipFirst = config.numberSkipFirst,
-                    padTo = if (config.bates) BATES_WIDTH else 0
-                )
+                    padTo = if (config.bates) config.batesDigits else 0,
+                    prefix = if (config.bates) config.batesPrefix else ""
+                ),
+                continueAcrossFiles = config.bates
             )
             ToolId.CROP -> CropOp(
                 CropSpec(
-                    left = config.trim, top = config.trim, right = config.trim, bottom = config.trim,
-                    resizeTo = config.resizeTo
-                )
+                    topMm = if (config.cropAuto) 0f else config.cropTopMm,
+                    rightMm = if (config.cropAuto) 0f else config.cropRightMm,
+                    bottomMm = if (config.cropAuto) 0f else config.cropBottomMm,
+                    leftMm = if (config.cropAuto) 0f else config.cropLeftMm,
+                    auto = config.cropAuto,
+                    resizeTo = config.resizeTo,
+                    enlarge = config.cropEnlarge
+                ),
+                pageSpec = config.pageSpec
             )
+            ToolId.BACKGROUND -> BackgroundOp(config.backgroundColour, config.pageSpec)
+            ToolId.PAGE_LABELS -> PageLabelsOp(
+                if (config.removeLabels) {
+                    null
+                } else {
+                    PageLabelSpec(
+                        frontPages = config.labelFrontPages,
+                        frontStyle = config.labelFrontStyle,
+                        style = config.labelStyle,
+                        startAt = config.labelStartAt,
+                        prefix = config.labelPrefix.trim()
+                    )
+                }
+            )
+            ToolId.BOOKMARKS -> BookmarksOp(state.outline)
+            ToolId.ATTACHMENTS -> AttachmentsOp(extract = config.extractAttachments)
             ToolId.SIGN -> {
                 val signature = state.signatureFile
                 if (signature == null) {
@@ -640,7 +686,8 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             )
             ToolId.INSERT -> InsertPagesOp(
                 atPage = config.insertAt,
-                blankPages = if (state.documents.size > 1) 0 else config.blankPages
+                blankPages = if (state.documents.size > 1) 0 else config.blankPages,
+                replaceSpec = if (config.replacePages) config.replaceSpec else ""
             )
             ToolId.FORMS -> FillFormOp(
                 // Only what was actually typed. Sending every field back would rewrite the
@@ -651,22 +698,30 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             )
             ToolId.ANNOTATE -> AnnotateOp(state.marks)
             ToolId.REDACT -> RedactOp(state.redactions)
-            ToolId.N_UP -> NUpOp(config.perSheet)
-            ToolId.SPLIT_BY_SIZE -> SplitBySizeOp(config.maxPartBytes)
+            ToolId.N_UP -> NUpOp(config.perSheet, config.nUpPaper)
+            ToolId.SPLIT_BY_SIZE -> SplitBySizeOp(config.partMb.toLong() * 1024 * 1024)
             ToolId.EXTRACT_IMAGES -> ExtractImagesOp()
-            ToolId.METADATA -> MetadataOp(
-                if (config.stripMetadata) {
-                    DocumentMetadata(stripAll = true)
-                } else {
+            ToolId.METADATA -> when (config.metaMode) {
+                ToolConfig.MetaMode.EDIT -> MetadataOp(
                     DocumentMetadata(
                         title = config.metaTitle,
                         author = config.metaAuthor,
-                        subject = config.metaSubject
+                        subject = config.metaSubject,
+                        keywords = config.metaKeywords
                     )
-                }
-            )
+                )
+                ToolConfig.MetaMode.STRIP -> MetadataOp(DocumentMetadata(stripAll = true))
+                ToolConfig.MetaMode.CLEAN -> CleanOp(
+                    CleanSpec(
+                        metadata = true,
+                        scripts = config.cleanScripts,
+                        attachments = config.cleanAttachments,
+                        comments = config.cleanComments
+                    )
+                )
+            }
             ToolId.MERGE -> MergeOp()
-            ToolId.EXTRACT -> ExtractPagesOp(config.pageSpec)
+            ToolId.EXTRACT -> ExtractPagesOp(config.pageSpec, remove = config.removePages)
             ToolId.SPLIT -> SplitOp(
                 when (config.splitMode) {
                     ToolConfig.SplitMode.EVERY_N -> SplitOp.Mode.EveryNPages(config.splitSize)
@@ -677,7 +732,8 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             )
             ToolId.ORGANISE -> OrganiseOp(state.pageOrder, state.rotations.filterValues { it != 0 })
             ToolId.IMAGES_TO_PDF -> ImagesToPdfOp(
-                PageSpec(size = config.pageSize, marginPoints = config.marginPoints)
+                PageSpec(size = config.pageSize, marginPoints = config.marginPoints),
+                separate = config.separatePdfs
             )
             ToolId.PDF_TO_IMAGES -> PdfToImagesOp(
                 dpi = config.dpi,
@@ -686,11 +742,11 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             )
             ToolId.COMPRESS -> CompressOp(config.compression)
             ToolId.SET_PASSWORD -> {
-                if (config.newPassword.isBlank()) {
+                if (!config.restrictOnly && config.newPassword.isBlank()) {
                     _state.update { it.copy(error = "Choose a password first.") }
                     return null
                 }
-                if (config.newPassword != config.confirmPassword) {
+                if (!config.restrictOnly && config.newPassword != config.confirmPassword) {
                     _state.update { it.copy(error = "The two passwords do not match.") }
                     return null
                 }
@@ -700,7 +756,8 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                         allowPrinting = config.allowPrinting,
                         allowCopying = config.allowCopying,
                         allowChanges = config.allowChanges
-                    )
+                    ),
+                    restrictOnly = config.restrictOnly
                 )
             }
             ToolId.REMOVE_PASSWORD -> RemovePasswordOp()
@@ -765,6 +822,41 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         sheaf.exporter.createDocumentIntent(file.displayName, file.mimeType)
 
     fun shareIntent(files: List<SheafFile>) = sheaf.exporter.shareIntent(files)
+
+    /**
+     * Bundles results into one ZIP, named after the first of them.
+     *
+     * Stored, not compressed: PDFs and JPEGs are already compressed and deflating them again
+     * costs time for nothing. The point of the ZIP is one file to hand over, not a smaller one.
+     */
+    fun zipResults(files: List<SheafFile>, onReady: (SheafFile?) -> Unit) {
+        viewModelScope.launch {
+            val zip = withContext(Dispatchers.IO) {
+                runCatching {
+                    val base = files.firstOrNull()?.baseName ?: "sheaf"
+                    val output = sheaf.workspace.newOutput(base, "bundle", "zip")
+                    java.util.zip.ZipOutputStream(output.outputStream().buffered()).use { out ->
+                        out.setLevel(java.util.zip.Deflater.NO_COMPRESSION)
+                        val taken = mutableSetOf<String>()
+                        for (file in files) {
+                            var name = file.displayName.replace('/', '_').replace('\\', '_')
+                            var n = 2
+                            while (!taken.add(name.lowercase())) {
+                                val dot = file.displayName.lastIndexOf('.')
+                                name = if (dot > 0) "${file.displayName.substring(0, dot)} ($n)${file.displayName.substring(dot)}" else "${file.displayName} ($n)"
+                                n += 1
+                            }
+                            out.putNextEntry(java.util.zip.ZipEntry(name))
+                            file.file.inputStream().use { it.copyTo(out) }
+                            out.closeEntry()
+                        }
+                    }
+                    SheafFile(output, "$base.zip", SheafFile.Origin.Derived("bundle"), mimeType = "application/zip")
+                }.getOrNull()
+            }
+            onReady(zip)
+        }
+    }
 
     fun writeTo(destination: Uri, file: SheafFile, onDone: (String?) -> Unit) {
         viewModelScope.launch {
@@ -845,11 +937,11 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     engine.open(doc.file.file, doc.password).use { opened ->
                         val index = (_state.value.config.markPage - 1)
                             .coerceIn(0, (opened.pageCount - 1).coerceAtLeast(0))
-                        opened.renderPage(index, PREVIEW_PAGE_WIDTH_PX)
+                        opened.renderPage(index, PREVIEW_PAGE_WIDTH_PX) to opened.pageSize(index)
                     }
                 }.getOrNull()
             }
-            _state.update { it.copy(previewPage = bitmap) }
+            _state.update { it.copy(previewPage = bitmap?.first, previewPageSize = bitmap?.second) }
         }
     }
 
@@ -1000,6 +1092,98 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(formValues = it.formValues + (name to value), error = null) }
     }
 
+    /**
+     * Reads the bookmarks the document already has, so the editor starts from them rather
+     * than from nothing. A document with none starts the list empty, and the screen says so.
+     */
+    fun loadOutline() {
+        val doc = _state.value.documents.firstOrNull() ?: return
+        if (_state.value.outlineRead) return
+        viewModelScope.launch {
+            val entries = withContext(Dispatchers.IO) {
+                runCatching { sheaf.surgeon.readOutline(PdfInput(doc.file.file, doc.password)) }
+                    .getOrDefault(emptyList())
+            }
+            _state.update { it.copy(outline = entries, outlineRead = true) }
+        }
+    }
+
+    fun addBookmark(afterIndex: Int = -1) {
+        _state.update { current ->
+            val list = current.outline.toMutableList()
+            val at = (afterIndex + 1).coerceIn(0, list.size)
+            // A new entry sits beside the one above it: same depth, next page along.
+            val above = list.getOrNull(at - 1)
+            val pageCount = current.documents.firstOrNull()?.pageCount ?: 1
+            val page = ((above?.pageIndex ?: -1) + 1).coerceIn(0, (pageCount - 1).coerceAtLeast(0))
+            list.add(at, OutlineEntry(title = "", pageIndex = page, depth = above?.depth ?: 0))
+            current.copy(outline = list, error = null)
+        }
+    }
+
+    fun setBookmark(index: Int, title: String? = null, page: Int? = null) {
+        _state.update { current ->
+            val entry = current.outline.getOrNull(index) ?: return@update current
+            val pageCount = current.documents.firstOrNull()?.pageCount ?: Int.MAX_VALUE
+            val list = current.outline.toMutableList()
+            list[index] = entry.copy(
+                title = title ?: entry.title,
+                pageIndex = page?.coerceIn(0, (pageCount - 1).coerceAtLeast(0)) ?: entry.pageIndex
+            )
+            current.copy(outline = list)
+        }
+    }
+
+    fun removeBookmark(index: Int) {
+        _state.update { current ->
+            if (index !in current.outline.indices) return@update current
+            current.copy(outline = current.outline.filterIndexed { i, _ -> i != index })
+        }
+    }
+
+    fun moveBookmark(from: Int, to: Int) {
+        _state.update { current ->
+            if (from !in current.outline.indices || to !in current.outline.indices) return@update current
+            val list = current.outline.toMutableList()
+            list.add(to, list.removeAt(from))
+            current.copy(outline = list)
+        }
+    }
+
+    /** Nests an entry one level deeper under the one above, or brings it back out. */
+    fun indentBookmark(index: Int, deeper: Boolean) {
+        _state.update { current ->
+            val entry = current.outline.getOrNull(index) ?: return@update current
+            val above = current.outline.getOrNull(index - 1)
+            val depth = if (deeper) {
+                minOf(entry.depth + 1, (above?.depth ?: -1) + 1)
+            } else {
+                (entry.depth - 1).coerceAtLeast(0)
+            }
+            if (depth == entry.depth) return@update current
+            val list = current.outline.toMutableList()
+            list[index] = entry.copy(depth = depth)
+            current.copy(outline = list)
+        }
+    }
+
+    fun clearBookmarks() {
+        _state.update { it.copy(outline = emptyList()) }
+    }
+
+    /** Lists the files already inside the first document, so the screen can show them. */
+    fun loadAttachments() {
+        val doc = _state.value.documents.firstOrNull { it.file.isPdf } ?: return
+        if (_state.value.attachmentsRead) return
+        viewModelScope.launch {
+            val found = withContext(Dispatchers.IO) {
+                runCatching { sheaf.surgeon.readAttachments(PdfInput(doc.file.file, doc.password)) }
+                    .getOrDefault(emptyList())
+            }
+            _state.update { it.copy(attachments = found, attachmentsRead = true) }
+        }
+    }
+
     fun setRedactPage(index: Int) {
         _state.update { it.copy(canvasPage = index) }
         renderBigPage(index)
@@ -1067,7 +1251,6 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         const val MAX_THUMBNAILS = 120
 
         /** Bates numbers are conventionally six digits wide. */
-        const val BATES_WIDTH = 6
 
         /** Readable enough to aim a redaction box at, small enough to hold a few of. */
         const val REDACT_PAGE_WIDTH_PX = 900
@@ -1140,6 +1323,8 @@ data class ToolUiState(
     val previews: Map<String, ResultPreview> = emptyMap(),
     /** Page one, for the tools whose effect can be shown before running. */
     val previewPage: Bitmap? = null,
+    /** The preview page's size in points, so millimetres can be drawn on it to scale. */
+    val previewPageSize: PageSize? = null,
     /** The drawn signature, for the placement preview. */
     val signatureBitmap: Bitmap? = null,
     /** What compressing this document would actually produce. */
@@ -1155,6 +1340,12 @@ data class ToolUiState(
     /** Fill in a form only: the fields the document declares, and what has been typed. */
     val formFields: List<FormField> = emptyList(),
     val formValues: Map<String, String> = emptyMap(),
+    /** Bookmarks: the list being edited, seeded from the document once [outlineRead]. */
+    val outline: List<OutlineEntry> = emptyList(),
+    val outlineRead: Boolean = false,
+    /** Attachments: what the first document already carries, once [attachmentsRead]. */
+    val attachments: List<AttachmentInfo> = emptyList(),
+    val attachmentsRead: Boolean = false,
     /** True once the form has been looked for, which is how "none" differs from "not yet". */
     val formRead: Boolean = false
 ) {
@@ -1194,6 +1385,17 @@ data class ToolUiState(
                 "Type a header or a footer."
             tool == ToolId.INSERT && documents.size < 2 && config.blankPages <= 0 ->
                 "Add the PDF to insert, or choose how many blank pages to add."
+            tool == ToolId.INSERT && config.replacePages && config.replaceSpec.isBlank() ->
+                "Type the pages to replace."
+            tool == ToolId.ATTACHMENTS && !documents.first().file.isPdf ->
+                "The first file has to be the PDF. Remove the others and pick it first."
+            tool == ToolId.ATTACHMENTS && !config.extractAttachments && documents.size < 2 ->
+                "Add the files to put inside it."
+            tool == ToolId.ATTACHMENTS && config.extractAttachments && attachmentsRead && attachments.isEmpty() ->
+                "This document has no files attached to it."
+            tool == ToolId.BOOKMARKS && !outlineRead -> "Reading the bookmarks…"
+            tool == ToolId.BOOKMARKS && outline.isNotEmpty() && outline.all { it.title.isBlank() } ->
+                "Give the bookmarks a title."
             tool == ToolId.FORMS && !formRead -> "Reading the form…"
             tool == ToolId.FORMS && formFields.isEmpty() ->
                 "This document has no form fields. Use Add text to write on it instead."
@@ -1201,13 +1403,17 @@ data class ToolUiState(
                 "Fill in at least one field."
             tool == ToolId.WATERMARK && config.watermarkText.isBlank() ->
                 "Type the watermark text."
-            tool == ToolId.SET_PASSWORD && config.newPassword.isBlank() ->
+            tool == ToolId.SET_PASSWORD && config.restrictOnly &&
+                config.allowPrinting && config.allowCopying && config.allowChanges ->
+                "Choose at least one thing to restrict."
+            tool == ToolId.SET_PASSWORD && !config.restrictOnly && config.newPassword.isBlank() ->
                 "Choose a password."
-            tool == ToolId.SET_PASSWORD && config.newPassword != config.confirmPassword ->
+            tool == ToolId.SET_PASSWORD && !config.restrictOnly && config.newPassword != config.confirmPassword ->
                 "The two passwords do not match."
             tool == ToolId.EXTRACT && config.pageSpec.isBlank() ->
-                "Tap the pages to keep, or type them."
-            tool == ToolId.CROP && config.trim == 0f && config.resizeTo == null ->
+                if (config.removePages) "Tap the pages to remove, or type them." else "Tap the pages to keep, or type them."
+            tool == ToolId.CROP && !config.cropAuto && config.resizeTo == null &&
+                config.cropTopMm == 0f && config.cropRightMm == 0f && config.cropBottomMm == 0f && config.cropLeftMm == 0f ->
                 "Choose how much to trim, or a page size."
             else -> null
         }
@@ -1229,18 +1435,50 @@ data class ToolConfig(
     val confirmPassword: String = "",
 
     val watermarkText: String = "",
-    val watermarkOpacity: Float = 0.18f,
-    val watermarkDiagonal: Boolean = true,
-    val watermarkTiled: Boolean = true,
+    val watermarkOpacity: Float = 0.22f,
+    val watermarkLayout: WatermarkSpec.Layout = WatermarkSpec.Layout.ONCE_DIAGONAL,
+    val watermarkColour: Int = WATERMARK_GREY,
 
     val numberPosition: PageNumberSpec.Position = PageNumberSpec.Position.BOTTOM_CENTRE,
     val numberFormat: String = "{n}",
     val numberStartAt: Int = 1,
     val numberSkipFirst: Int = 0,
     val bates: Boolean = false,
+    val batesPrefix: String = "",
+    val batesDigits: Int = 6,
 
-    val trim: Float = 0f,
+    /** Crop: millimetres off each edge as the reader sees the page, or the white found. */
+    val cropTopMm: Float = 0f,
+    val cropRightMm: Float = 0f,
+    val cropBottomMm: Float = 0f,
+    val cropLeftMm: Float = 0f,
+    val cropAuto: Boolean = false,
     val resizeTo: PageSpec.Size? = null,
+    val cropEnlarge: Boolean = true,
+
+    /** Page background: packed ARGB. */
+    val backgroundColour: Int = BACKGROUND_CREAM,
+
+    /** Page labels. */
+    val labelFrontPages: Int = 0,
+    val labelFrontStyle: PageLabelSpec.Style = PageLabelSpec.Style.ROMAN_LOWER,
+    val labelStyle: PageLabelSpec.Style = PageLabelSpec.Style.DECIMAL,
+    val labelStartAt: Int = 1,
+    val labelPrefix: String = "",
+    val removeLabels: Boolean = false,
+
+    /** Attachments: take them out rather than put them in. */
+    val extractAttachments: Boolean = false,
+
+    /** Extract: take the named pages out instead of keeping only them. */
+    val removePages: Boolean = false,
+
+    /** Insert: put the new pages in place of these rather than beside them. */
+    val replacePages: Boolean = false,
+    val replaceSpec: String = "",
+
+    /** Images to PDF: one file per image. */
+    val separatePdfs: Boolean = false,
 
     /** The page a signature or a note lands on, and the page the preview shows. */
     val markPage: Int = 1,
@@ -1277,16 +1515,27 @@ data class ToolConfig(
     val allowPrinting: Boolean = true,
     val allowCopying: Boolean = true,
     val allowChanges: Boolean = true,
+    /** Opens freely, but restricted; no password to type. */
+    val restrictOnly: Boolean = false,
 
     val perSheet: Int = 2,
-    val maxPartBytes: Long = 10L * 1024 * 1024,
+    val nUpPaper: PageSpec.Size = PageSpec.Size.A4,
+    /** Split by size: the limit each part stays under, in whole megabytes. */
+    val partMb: Int = 10,
 
-    val stripMetadata: Boolean = false,
+    val metaMode: MetaMode = MetaMode.EDIT,
     val metaTitle: String = "",
     val metaAuthor: String = "",
-    val metaSubject: String = ""
+    val metaSubject: String = "",
+    val metaKeywords: String = "",
+    val cleanScripts: Boolean = true,
+    val cleanAttachments: Boolean = true,
+    val cleanComments: Boolean = true
 ) {
     enum class SplitMode { EVERY_N, EACH_PAGE, RANGES, AT_BOOKMARKS }
+
+    /** What Document details does: edit the fields, blank them, or clean everything hidden. */
+    enum class MetaMode { EDIT, STRIP, CLEAN }
 
     companion object {
         fun defaultFor(tool: ToolId): ToolConfig = when (tool) {
@@ -1309,6 +1558,24 @@ data class ToolConfig(
  * true black beside scanned type looks harder than the page it is written on.
  */
 val NOTE_BLACK: Int = 0xFF111111.toInt()
+
+/** Watermark inks: grey unless asked, red for VOID or COPY, blue for a company name. */
+val WATERMARK_GREY: Int = 0xFF6B6B75.toInt()
+val WATERMARK_RED: Int = 0xFFCC1F1F.toInt()
+val WATERMARK_BLUE: Int = 0xFF1A45B8.toInt()
+
+/**
+ * Page backgrounds. Pale on purpose: a background has to let black type through, and the
+ * usual reasons for one - easier on the eyes, a draft, a section - all want something soft.
+ */
+val BACKGROUND_CREAM: Int = 0xFFFFF8E7.toInt()
+val BACKGROUND_GREY: Int = 0xFFEFEFEF.toInt()
+val BACKGROUND_BLUE: Int = 0xFFE8F0FB.toInt()
+val BACKGROUND_GREEN: Int = 0xFFE9F5E9.toInt()
+val BACKGROUND_PINK: Int = 0xFFFBE9EE.toInt()
+val BACKGROUND_YELLOW: Int = 0xFFFFF5B8.toInt()
+val BACKGROUND_SEPIA: Int = 0xFFF4ECD8.toInt()
+val BACKGROUND_DARK: Int = 0xFF1E1E22.toInt()
 val NOTE_RED: Int = 0xFFC62828.toInt()
 val NOTE_BLUE: Int = 0xFF1A4FA0.toInt()
 

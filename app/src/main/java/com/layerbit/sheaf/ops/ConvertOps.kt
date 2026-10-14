@@ -13,7 +13,9 @@ import java.io.File
 /** Builds a document from photos and scans, one image per page. */
 class ImagesToPdfOp(
     private val spec: PageSpec,
-    private val outputName: String? = null
+    private val outputName: String? = null,
+    /** One PDF per image rather than one for the lot. */
+    private val separate: Boolean = false
 ) : Op {
 
     override val tool = ToolId.IMAGES_TO_PDF
@@ -27,6 +29,27 @@ class ImagesToPdfOp(
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         if (inputs.isEmpty()) {
             return@withContext listOf(OpOutcome.Failed("", "No images were selected."))
+        }
+
+        if (separate && inputs.size > 1) {
+            val outcomes = mutableListOf<OpOutcome>()
+            inputs.forEachIndexed { index, image ->
+                context.checkCancelled()
+                onProgress(Progress(index, inputs.size, image.displayName))
+                val output = context.workspace.newOutput(image.baseName, "from-images")
+                outcomes += try {
+                    context.surgeon.imagesToPdf(listOf(image.file), spec, output)
+                    OpOutcome.Produced(
+                        SheafFile(output, "${image.baseName}.pdf", SheafFile.Origin.Derived("from-images")),
+                        "One page, from ${image.displayName}"
+                    )
+                } catch (e: PdfException) {
+                    output.delete()
+                    OpOutcome.Failed(image.displayName, e.message ?: "Could not build the PDF.")
+                }
+            }
+            onProgress(Progress(inputs.size, inputs.size, "Done"))
+            return@withContext outcomes
         }
 
         val name = outputName ?: inputs.first().baseName

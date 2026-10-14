@@ -105,11 +105,17 @@ class CompressOp(private val level: CompressionLevel) : Op {
  */
 class SetPasswordOp(
     private val password: String,
-    private val permissions: DocumentPermissions = DocumentPermissions()
+    private val permissions: DocumentPermissions = DocumentPermissions(),
+    /**
+     * Opens without a password but asks readers to withhold what [permissions] withholds.
+     * The owner password is random and thrown away, so the restrictions cannot be lifted
+     * by typing it - and [password] is ignored.
+     */
+    private val restrictOnly: Boolean = false
 ) : Op {
 
     override val tool = ToolId.SET_PASSWORD
-    override val title = "Add a password"
+    override val title = if (restrictOnly) "Restrict a PDF" else "Add a password"
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -117,39 +123,45 @@ class SetPasswordOp(
         context: OpContext,
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
-        if (password.isBlank()) {
+        val withheld = buildList {
+            if (!permissions.allowPrinting) add("printing")
+            if (!permissions.allowCopying) add("copying text")
+            if (!permissions.allowChanges) add("changes")
+        }
+        if (!restrictOnly && password.isBlank()) {
             return@withContext listOf(OpOutcome.Failed("", "Enter a password first."))
         }
+        if (restrictOnly && withheld.isEmpty()) {
+            return@withContext listOf(OpOutcome.Failed("", "Choose at least one thing to restrict."))
+        }
 
+        val step = if (restrictOnly) "restricted" else "protected"
         val outcomes = mutableListOf<OpOutcome>()
         inputs.forEachIndexed { index, input ->
             context.checkCancelled()
             onProgress(Progress(index, inputs.size, input.displayName))
 
-            val output = context.workspace.newOutput(input.baseName, "protected")
+            val output = context.workspace.newOutput(input.baseName, step)
             outcomes += try {
                 context.surgeon.setPassword(
                     input = PdfInput(input.file, context.passwords[input.file.path]),
-                    userPassword = password,
+                    userPassword = if (restrictOnly) "" else password,
                     output = output,
-                    permissions = permissions
+                    permissions = permissions,
+                    restrictOnly = restrictOnly
                 )
-                val withheld = buildList {
-                    if (!permissions.allowPrinting) add("printing")
-                    if (!permissions.allowCopying) add("copying text")
-                    if (!permissions.allowChanges) add("changes")
-                }
                 OpOutcome.Produced(
                     SheafFile(
                         output,
-                        "${input.baseName} protected.pdf",
-                        SheafFile.Origin.Derived("protected")
+                        "${input.baseName} $step.pdf",
+                        SheafFile.Origin.Derived(step)
                     ),
-                    if (withheld.isEmpty()) {
-                        "Encrypted with AES-256"
-                    } else {
-                        "Encrypted with AES-256, asking readers not to allow " +
-                            withheld.joinToString(" or ")
+                    when {
+                        restrictOnly ->
+                            "Opens without a password; asks readers not to allow " + withheld.joinToString(" or ")
+                        withheld.isEmpty() -> "Encrypted with AES-256"
+                        else ->
+                            "Encrypted with AES-256, asking readers not to allow " + withheld.joinToString(" or ")
                     }
                 )
             } catch (e: PdfException) {

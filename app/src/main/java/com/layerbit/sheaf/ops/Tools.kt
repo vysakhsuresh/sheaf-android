@@ -48,14 +48,14 @@ enum class ToolId(
         Group.PAGES
     ),
     EXTRACT(
-        "Extract pages",
-        "Keep only the pages you pick",
+        "Extract or remove pages",
+        "Keep only the pages you pick, or take them out",
         InputKind.ONE_PDF,
         Group.PAGES
     ),
     INSERT(
-        "Insert pages",
-        "Put another PDF, or blank pages, in at a chosen page",
+        "Insert or replace pages",
+        "Put another PDF, or blank pages, in at a chosen page, or in place of some",
         InputKind.SEVERAL_PDFS,
         Group.PAGES
     ),
@@ -129,14 +129,20 @@ enum class ToolId(
     ),
     CROP(
         "Crop pages",
-        "Trim the margins or change the page size",
+        "Trim the margins in millimetres, remove white edges, or change the page size",
+        InputKind.SEVERAL_PDFS,
+        Group.MARK
+    ),
+    BACKGROUND(
+        "Page background",
+        "Put a colour behind the pages",
         InputKind.SEVERAL_PDFS,
         Group.MARK
     ),
 
     N_UP(
         "Pages per sheet",
-        "Put two or four pages on each sheet for printing",
+        "Put 2, 4, 6, 8, 9 or 16 pages on each sheet for printing",
         InputKind.SEVERAL_PDFS,
         Group.CONVERT
     ),
@@ -153,6 +159,25 @@ enum class ToolId(
         Group.CONVERT
     ),
 
+    PAGE_LABELS(
+        "Page labels",
+        "Name the pages the way a reader shows them: i, ii, iii, then 1, 2, 3",
+        InputKind.SEVERAL_PDFS,
+        Group.PAGES
+    ),
+    BOOKMARKS(
+        "Bookmarks",
+        "Write a table of contents into the document's side panel",
+        InputKind.ONE_PDF,
+        Group.PAGES
+    ),
+    ATTACHMENTS(
+        "Attachments",
+        "Put files inside a PDF, or take them out",
+        InputKind.PDF_AND_FILES,
+        Group.CONVERT
+    ),
+
     REDACT(
         "Remove areas",
         "Take something out of a page permanently",
@@ -161,14 +186,14 @@ enum class ToolId(
     ),
     METADATA(
         "Document details",
-        "Edit or strip the title, author and hidden details",
+        "Edit the details, or clean out everything a file gives away",
         InputKind.SEVERAL_PDFS,
         Group.PROTECT
     ),
 
     SET_PASSWORD(
         "Add a password",
-        "Encrypt a PDF so it needs a password to open",
+        "Encrypt a PDF so it needs a password to open, or just restrict it",
         InputKind.SEVERAL_PDFS,
         Group.PROTECT
     ),
@@ -183,6 +208,9 @@ enum class ToolId(
         ONE_PDF,
         SEVERAL_PDFS,
         IMAGES,
+
+        /** One PDF first, then any files at all. */
+        PDF_AND_FILES,
 
         /** Takes no file at all - it makes one with the camera. */
         CAMERA
@@ -223,8 +251,12 @@ enum class ToolId(
             ANNOTATE -> "Save the marks"
             FORMS -> "Fill it in"
             HEADER_FOOTER -> "Add them"
-            INSERT -> "Insert them"
+            INSERT -> "Put them in"
             CROP -> "Crop it"
+            BACKGROUND -> "Colour the pages"
+            PAGE_LABELS -> "Label the pages"
+            BOOKMARKS -> "Write the bookmarks"
+            ATTACHMENTS -> "Do it"
             N_UP -> "Lay it out"
             SPLIT_BY_SIZE -> "Split by size"
             EXTRACT_IMAGES -> "Pull the images out"
@@ -235,11 +267,12 @@ enum class ToolId(
         }
 
     val acceptsMultiple: Boolean
-        get() = input == InputKind.SEVERAL_PDFS || input == InputKind.IMAGES
+        get() = input == InputKind.SEVERAL_PDFS || input == InputKind.IMAGES || input == InputKind.PDF_AND_FILES
 
     val mimeFilter: Array<String>
         get() = when (input) {
             InputKind.IMAGES -> arrayOf("image/*")
+            InputKind.PDF_AND_FILES -> arrayOf("*/*")
             else -> arrayOf("application/pdf")
         }
 }

@@ -90,27 +90,31 @@ the signature. Resist any pull towards a convenient `fun run(input: SheafFile): 
 | Extract text | Pull the words out as plain text |
 | Merge | Join several PDFs, reorderable |
 | Split | Every N pages, single pages, by ranges, or at the document's own bookmarks |
-| Extract pages | Keep only the pages you name |
-| Insert pages | Put another PDF, or blank pages, in at a chosen page |
+| Extract or remove pages | Keep only the pages you name, or take those pages out |
+| Insert or replace pages | Put another PDF, or blank pages, in at a chosen page, or in place of pages you name |
 | Organise pages | Thumbnail grid: reorder, rotate, delete |
-| Images to PDF | A4, Letter or fit-to-image, with margins |
+| Page labels | What a reader calls each page: i, ii, iii for the front matter, then 1, 2, 3, with a prefix if you want |
+| Bookmarks | Edit the table of contents a reader shows: titles, pages, nesting |
+| Images to PDF | A4, Letter, A5 or fit-to-image, with margins; one PDF or one per image |
 | PDF to images | PNG or JPEG at 96, 200 or 300 DPI |
 | Compress | Three levels, and it tells you when there was nothing to gain |
-| Add a password | AES-256, with the printing and copying flags as a stated request |
+| Attachments | Put files inside a PDF, or take out the ones already there |
+| Add a password | AES-256, with the printing and copying flags as a stated request; or restrict only, with no password to open |
 | Remove a password | For a document whose password you know |
-| Watermark | DRAFT or a name, tiled or once, at three strengths |
-| Page numbers | Position, format, skip a cover, Bates padding |
+| Watermark | DRAFT or a name, once or repeated, grey, red or blue, sized to the page, on the pages you choose |
+| Page numbers | Six positions, five formats, skip a cover; Bates numbers with a prefix that run on across files |
 | Sign | Draw a signature and flatten it into a page |
 | Mark up | Highlight a line or draw on a page with your finger |
 | Add text | Tap a page and write on it, covering what is there if you need to |
 | Fill in a form | Type into a real PDF form, and seal the answers so they cannot be retyped |
 | Header and footer | A line along the top or bottom of every page, with {page}, {total}, {date}, {name} |
-| Crop pages | Trim the margins, or put every page on A4 or Letter |
-| Pages per sheet | 2-up or 4-up for printing |
-| Split by size | Parts that fit a 5, 10 or 25 MB email limit |
+| Crop pages | Millimetres off each edge, or the white margins found automatically, then A4, Letter, A5, Legal or A3 |
+| Page background | A colour behind the pages, under the text |
+| Pages per sheet | 2, 4, 6, 8, 9 or 16 pages on A4, Letter, A3 or Legal, turned whichever way shows them biggest |
+| Split by size | Parts that fit a 2, 5, 10 or 25 MB limit, or any size you type, each measured by saving it |
 | Extract images | The embedded originals, not re-rendered pages |
 | Remove areas | Genuine removal - see below |
-| Document details | Edit or strip title, author and hidden metadata |
+| Document details | Edit the title, author, subject and keywords; blank them; or clean out everything hidden - XMP, scripts, attachments, comments, thumbnails, private data - and say what was found |
 
 ### The viewer is a reader, not a preview
 
@@ -232,6 +236,7 @@ answer for compression and is the one most likely to be reached for by accident.
 | **P3** | 0.3.0 | ✅ Watermark, page numbers, sign, crop, redact. |
 | **P4** | 0.4.0+ | ✅ N-up, split by size, extract images, metadata. |
 | **P5** | 0.5.0 | ✅ Reader-grade viewer, forms, insert, header/footer, settings, light theme. |
+| **P6** | 0.6.0 | ✅ The Foolscap set: page labels, bookmarks, attachments, background, clean hidden data, restrict-only, replace pages, measured split by size, millimetre and automatic crop, n-up grids, Bates across files, ZIP export. |
 
 Each phase has an exit gate. P0's was: open a 500-page document, scroll it end to end at 60 fps,
 close it, and return to a flat heap. P1's is: every tool produces a file that opens correctly in

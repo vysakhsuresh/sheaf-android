@@ -5,6 +5,7 @@ import com.layerbit.sheaf.pdf.CropSpec
 import com.layerbit.sheaf.pdf.ImageStamp
 import com.layerbit.sheaf.pdf.PageArea
 import com.layerbit.sheaf.pdf.PageMark
+import com.layerbit.sheaf.pdf.PageSelection
 import com.layerbit.sheaf.pdf.PageNumberSpec
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
@@ -15,11 +16,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
-/** Lays repeating text across every page - DRAFT, CONFIDENTIAL, a name. */
-class WatermarkOp(private val spec: WatermarkSpec) : Op {
+/** Lays text across the pages - DRAFT, CONFIDENTIAL, a name - once or all over. */
+class WatermarkOp(private val spec: WatermarkSpec, private val pageSpec: String = "") : Op {
 
     override val tool = ToolId.WATERMARK
-    override val title = "Watermark"
+    override val title = "Watermark \"${spec.text}\""
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -28,23 +29,40 @@ class WatermarkOp(private val spec: WatermarkSpec) : Op {
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         if (spec.text.isBlank()) {
-            return@withContext listOf(OpOutcome.Failed("", "Type the watermark text first."))
+            return@withContext listOf(OpOutcome.Failed("", "Type the watermark text, such as DRAFT or COPY."))
         }
         eachFile(inputs, context, onProgress, "watermarked", "Watermark") { input, pdfInput, output ->
-            var pages = 0
-            context.surgeon.watermark(pdfInput, spec, output) { _, total ->
-                context.checkCancelled(); pages = total
+            val total = context.surgeon.inspect(pdfInput).pageCount
+            val pages = if (pageSpec.isBlank()) emptyList() else PageSelection.parse(pageSpec, total)
+            if (pageSpec.isNotBlank() && pages.isEmpty()) {
+                throw PdfException.Io("This file has $total pages; none of the pages typed are in it.")
             }
-            "${input.baseName} watermarked.pdf" to "\"${spec.text}\" on $pages pages"
+            var done = 0
+            context.surgeon.watermark(pdfInput, spec.copy(pages = pages), output) { _, count ->
+                context.checkCancelled(); done = count
+            }
+            val which = if (pages.isEmpty() || pages.size == total) {
+                "$total ${if (total == 1) "page" else "pages"}"
+            } else {
+                "${if (pages.size == 1) "page" else "pages"} ${PageSelection.describe(pages)}"
+            }
+            val how = if (spec.layout == WatermarkSpec.Layout.TILED) "repeated across" else "across"
+            "${input.baseName} watermarked.pdf" to "\"${spec.text}\" $how $which"
         }
     }
 }
 
-/** Numbers the pages, including Bates-style zero padding for legal bundles. */
-class PageNumberOp(private val spec: PageNumberSpec) : Op {
+/**
+ * Numbers the pages, including Bates numbering for legal bundles.
+ *
+ * A Bates run continues across the files given: a bundle of three exhibits numbered
+ * ACME-000001 onwards has to come out as one unbroken sequence, which is the point of it.
+ * Plain page numbers start again in each file, because each file is its own document.
+ */
+class PageNumberOp(private val spec: PageNumberSpec, private val continueAcrossFiles: Boolean = false) : Op {
 
     override val tool = ToolId.PAGE_NUMBERS
-    override val title = "Page numbers"
+    override val title = if (spec.padTo > 0) "Bates numbers" else "Page numbers"
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -52,14 +70,19 @@ class PageNumberOp(private val spec: PageNumberSpec) : Op {
         context: OpContext,
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
+        var next = spec.startAt
         eachFile(inputs, context, onProgress, "numbered", "Numbering") { input, pdfInput, output ->
+            val from = if (continueAcrossFiles) next else spec.startAt
             var pages = 0
-            context.surgeon.addPageNumbers(pdfInput, spec, output) { _, total ->
+            context.surgeon.addPageNumbers(pdfInput, spec.copy(startAt = from), output) { _, total ->
                 context.checkCancelled(); pages = total
             }
-            val from = spec.startAt
+            val numbered = (pages - spec.skipFirst).coerceAtLeast(0)
+            next = from + numbered
+            val first = spec.prefix + (if (spec.padTo > 0) from.toString().padStart(spec.padTo, '0') else from.toString())
+            val last = spec.prefix + (if (spec.padTo > 0) (from + numbered - 1).toString().padStart(spec.padTo, '0') else (from + numbered - 1).toString())
             "${input.baseName} numbered.pdf" to
-                "Numbered from $from, ${pages - spec.skipFirst} pages"
+                if (numbered <= 0) "No pages were numbered" else "$first to $last on $numbered of $pages pages"
         }
     }
 }
@@ -71,10 +94,10 @@ class PageNumberOp(private val spec: PageNumberSpec) : Op {
  * comes back if someone crops it the other way. That is how PDF cropping works everywhere, and
  * it is why this is not a way to take something out of a document - [RedactOp] is.
  */
-class CropOp(private val spec: CropSpec) : Op {
+class CropOp(private val spec: CropSpec, private val pageSpec: String = "") : Op {
 
     override val tool = ToolId.CROP
-    override val title = "Crop pages"
+    override val title = if (spec.auto) "Remove white margins" else "Crop pages"
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -82,28 +105,52 @@ class CropOp(private val spec: CropSpec) : Op {
         context: OpContext,
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
-        val nothingToDo = spec.left == 0f && spec.top == 0f && spec.right == 0f &&
-            spec.bottom == 0f && spec.resizeTo == null
-        if (nothingToDo) {
-            return@withContext listOf(OpOutcome.Failed("", "Choose how much to trim first."))
+        if (!spec.doesAnything) {
+            return@withContext listOf(OpOutcome.Failed("", "Choose how much to trim, or a page size, first."))
         }
         eachFile(inputs, context, onProgress, "cropped", "Cropping") { input, pdfInput, output ->
-            var pages = 0
-            context.surgeon.cropPages(pdfInput, spec, output) { _, total ->
-                context.checkCancelled(); pages = total
+            val total = context.surgeon.inspect(pdfInput).pageCount
+            val pages = if (pageSpec.isBlank()) emptyList() else PageSelection.parse(pageSpec, total)
+            if (pageSpec.isNotBlank() && pages.isEmpty()) {
+                throw PdfException.Io("This file has $total pages; none of the pages typed are in it.")
             }
-            val trimmed = (spec.left * 100).toInt()
-            val size = spec.resizeTo?.name?.lowercase()?.replaceFirstChar { it.uppercase() }
-            "${input.baseName} cropped.pdf" to buildString {
-                if (trimmed > 0) append("Trimmed $trimmed% from each edge")
-                if (size != null) {
-                    if (isNotEmpty()) append(", ")
-                    append("resized to $size")
+            context.surgeon.cropPages(pdfInput, spec.copy(pages = pages), output) { _, _ ->
+                context.checkCancelled()
+            }
+            val which = if (pages.isEmpty() || pages.size == total) {
+                "$total ${if (total == 1) "page" else "pages"}"
+            } else {
+                "${if (pages.size == 1) "page" else "pages"} ${PageSelection.describe(pages)}"
+            }
+            val paper = spec.resizeTo?.label
+            val detail = buildString {
+                when {
+                    spec.auto -> append("White margins removed from $which")
+                    spec.trims -> append("Trimmed ${spec.describeTrims()} off $which")
+                    else -> append(which.replaceFirstChar { it.uppercase() })
                 }
-                if (isEmpty()) append("$pages pages")
+                if (paper != null) {
+                    append(if (spec.auto || spec.trims) ", then put on $paper" else " put on $paper")
+                    if (!spec.enlarge) append(", smaller pages at their real size")
+                }
             }
+            val name = if (paper != null && !spec.auto && !spec.trims) {
+                "${input.baseName} on $paper.pdf"
+            } else {
+                "${input.baseName} cropped.pdf"
+            }
+            name to detail
         }
     }
+
+    /** "5 mm all round", or "top 10 mm, left 5 mm" when the edges differ. */
+    private fun CropSpec.describeTrims(): String {
+        val edges = listOf("top" to topMm, "right" to rightMm, "bottom" to bottomMm, "left" to leftMm)
+        if (edges.all { it.second == topMm }) return "${topMm.mm()} all round"
+        return edges.filter { it.second > 0f }.joinToString(", ") { (edge, mm) -> "$edge ${mm.mm()}" }
+    }
+
+    private fun Float.mm(): String = if (this == this.toInt().toFloat()) "${toInt()} mm" else "%.1f mm".format(this)
 }
 
 /**

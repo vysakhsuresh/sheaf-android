@@ -38,6 +38,10 @@ fun iconFor(tool: ToolId): Int = when (tool) {
     ToolId.HEADER_FOOTER -> R.drawable.ic_tool_header_footer
     ToolId.INSERT -> R.drawable.ic_tool_insert
     ToolId.CROP -> R.drawable.ic_tool_crop
+    ToolId.BACKGROUND -> R.drawable.ic_tool_background
+    ToolId.PAGE_LABELS -> R.drawable.ic_tool_page_labels
+    ToolId.BOOKMARKS -> R.drawable.ic_tool_bookmarks
+    ToolId.ATTACHMENTS -> R.drawable.ic_tool_attachments
     ToolId.N_UP -> R.drawable.ic_tool_n_up
     ToolId.SPLIT_BY_SIZE -> R.drawable.ic_tool_split_size
     ToolId.EXTRACT_IMAGES -> R.drawable.ic_tool_extract_images

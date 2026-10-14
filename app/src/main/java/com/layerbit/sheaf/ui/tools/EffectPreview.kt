@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.sp
 import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.pdf.ImageStamp
 import com.layerbit.sheaf.pdf.PageNumberSpec
+import com.layerbit.sheaf.pdf.PageSize
+import com.layerbit.sheaf.pdf.WatermarkSpec
 import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.theme.SheafColors
 
@@ -58,6 +60,8 @@ fun EffectPreview(
     page: Bitmap?,
     signature: Bitmap?,
     modifier: Modifier = Modifier,
+    /** The page's size in points, when known, so millimetres can be drawn to scale. */
+    pageSize: PageSize? = null,
     /**
      * Where the user tapped, as a fraction of the page. Only tools that place something at a
      * point pass this; for the rest the preview is something to look at rather than to touch.
@@ -104,7 +108,8 @@ fun EffectPreview(
                 )
 
                 when (tool) {
-                    ToolId.CROP -> CropOverlay(config)
+                    ToolId.CROP -> CropOverlay(config, pageSize)
+                    ToolId.BACKGROUND -> BackgroundOverlay(config)
                     ToolId.WATERMARK -> WatermarkOverlay(config)
                     ToolId.PAGE_NUMBERS -> PageNumberOverlay(config)
                     ToolId.SIGN -> SignatureOverlay(config, signature)
@@ -116,7 +121,12 @@ fun EffectPreview(
 
         Text(
             text = when (tool) {
-                ToolId.CROP -> "The shaded edges are what gets trimmed away."
+                ToolId.CROP -> if (config.cropAuto) {
+                    "White margins are found page by page when it runs; the preview cannot show them."
+                } else {
+                    "The shaded edges are what gets trimmed away, to scale."
+                }
+                ToolId.BACKGROUND -> "Close to how it will look. Scanned pages are solid pictures and will not tint."
                 ToolId.WATERMARK -> "Close to how it will look. The document uses Helvetica."
                 ToolId.PAGE_NUMBERS -> "Shown on the first page that gets a number."
                 ToolId.SIGN -> "Where your signature will sit on the page you chose."
@@ -132,79 +142,109 @@ fun EffectPreview(
 
 /** Shades the margins that cropping will hide, so the kept area is the bright part. */
 @Composable
-private fun CropOverlay(config: ToolConfig) {
-    val trim = config.trim
-    if (trim <= 0f) return
+private fun CropOverlay(config: ToolConfig, pageSize: PageSize?) {
+    if (config.cropAuto) return
+    val widthPoints = pageSize?.widthPoints?.takeIf { it > 0f } ?: A4_WIDTH_POINTS
+    val heightPoints = pageSize?.heightPoints?.takeIf { it > 0f } ?: A4_HEIGHT_POINTS
+    val top = (config.cropTopMm * MM_POINTS / heightPoints).coerceIn(0f, 0.49f)
+    val bottom = (config.cropBottomMm * MM_POINTS / heightPoints).coerceIn(0f, 0.49f)
+    val left = (config.cropLeftMm * MM_POINTS / widthPoints).coerceIn(0f, 0.49f)
+    val right = (config.cropRightMm * MM_POINTS / widthPoints).coerceIn(0f, 0.49f)
+    if (top == 0f && bottom == 0f && left == 0f && right == 0f) return
     val shade = Color.Black.copy(alpha = 0.55f)
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val width = maxWidth
         val height = maxHeight
-        Box(Modifier.fillMaxWidth().height(height * trim).background(shade))
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(height * trim)
-                .align(Alignment.BottomStart)
-                .background(shade)
-        )
-        Box(
-            Modifier
-                .width(width * trim)
-                .fillMaxHeight()
-                .align(Alignment.CenterStart)
-                .background(shade)
-        )
-        Box(
-            Modifier
-                .width(width * trim)
-                .fillMaxHeight()
-                .align(Alignment.CenterEnd)
-                .background(shade)
-        )
+        if (top > 0f) Box(Modifier.fillMaxWidth().height(height * top).background(shade))
+        if (bottom > 0f) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(height * bottom)
+                    .align(Alignment.BottomStart)
+                    .background(shade)
+            )
+        }
+        if (left > 0f) {
+            Box(
+                Modifier
+                    .width(width * left)
+                    .fillMaxHeight()
+                    .align(Alignment.CenterStart)
+                    .background(shade)
+            )
+        }
+        if (right > 0f) {
+            Box(
+                Modifier
+                    .width(width * right)
+                    .fillMaxHeight()
+                    .align(Alignment.CenterEnd)
+                    .background(shade)
+            )
+        }
     }
+}
+
+/** Tints the page the chosen colour, under the page image's own ink. */
+@Composable
+private fun BackgroundOverlay(config: ToolConfig) {
+    // Multiply would be exact; a translucent wash over a rendered page is close enough to
+    // judge the colour by, and white paper takes it the same way.
+    Box(Modifier.fillMaxSize().background(Color(config.backgroundColour).copy(alpha = 0.55f)))
 }
 
 @Composable
 private fun WatermarkOverlay(config: ToolConfig) {
     if (config.watermarkText.isBlank()) return
-    val ink = Color(0xFF595959).copy(alpha = config.watermarkOpacity.coerceIn(0.05f, 1f))
-    val rotation = if (config.watermarkDiagonal) -45f else 0f
+    val ink = Color(config.watermarkColour).copy(alpha = config.watermarkOpacity.coerceIn(0.05f, 1f))
 
-    if (config.watermarkTiled) {
-        // Three rows is enough to show what tiling looks like without pretending to be the
-        // exact spacing the engine uses, which depends on the real font metrics.
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceEvenly
-        ) {
-            repeat(3) {
-                Text(
-                    text = "${config.watermarkText}    ${config.watermarkText}",
-                    color = ink,
-                    fontSize = 15.sp,
-                    maxLines = 1,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().rotate(rotation)
-                )
+    when (config.watermarkLayout) {
+        WatermarkSpec.Layout.TILED -> {
+            // Three rows is enough to show what tiling looks like without pretending to be
+            // the exact spacing the engine uses, which depends on the real font metrics.
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceEvenly
+            ) {
+                repeat(4) { row ->
+                    Text(
+                        text = if (row % 2 == 0) "${config.watermarkText}    ${config.watermarkText}" else "  ${config.watermarkText}    ${config.watermarkText}  ",
+                        color = ink,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().rotate(-30f)
+                    )
+                }
             }
         }
-    } else {
-        Text(
-            text = config.watermarkText,
-            color = ink,
-            fontSize = 22.sp,
-            maxLines = 1,
-            modifier = Modifier.rotate(rotation)
-        )
+        else -> BoxWithConstraints(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            // The engine sizes the words to cross the page; the preview does the same from
+            // the box's own width, so DRAFT is big and a sentence is small.
+            val size = (maxWidth.value * 0.7f / maxOf(4f, config.watermarkText.length * 0.6f))
+                .coerceAtMost(maxHeight.value * 0.2f)
+            Text(
+                text = config.watermarkText,
+                color = ink,
+                fontSize = size.sp,
+                maxLines = 1,
+                modifier = Modifier.rotate(if (config.watermarkLayout == WatermarkSpec.Layout.ONCE_DIAGONAL) -45f else 0f)
+            )
+        }
     }
 }
 
 @Composable
 private fun PageNumberOverlay(config: ToolConfig) {
-    val label = config.numberFormat
-        .replace("{n}", if (config.bates) config.numberStartAt.toString().padStart(6, '0') else config.numberStartAt.toString())
-        .replace("{total}", "9")
+    val label = if (config.bates) {
+        config.batesPrefix + config.numberStartAt.toString().padStart(config.batesDigits, '0')
+    } else {
+        config.numberFormat
+            .replace("{n}", config.numberStartAt.toString())
+            .replace("{total}", "9")
+    }
 
     val alignment = when (config.numberPosition) {
         PageNumberSpec.Position.TOP_LEFT -> Alignment.TopStart
@@ -284,3 +324,7 @@ private fun NoteOverlay(config: ToolConfig) {
 
 /** The page the preview's type size is reckoned against when the real one is not known. */
 private const val A4_HEIGHT_POINTS = 841.89f
+private const val A4_WIDTH_POINTS = 595.28f
+
+/** A millimetre, in points. */
+private const val MM_POINTS = 72f / 25.4f

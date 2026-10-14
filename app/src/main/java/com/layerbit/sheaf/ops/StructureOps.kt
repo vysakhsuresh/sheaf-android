@@ -64,10 +64,10 @@ class MergeOp(private val outputName: String? = null) : Op {
  * no separate delete. One path through the page tree instead of two, and half as many ways to
  * produce a document that opens everywhere except in Acrobat.
  */
-class ExtractPagesOp(private val spec: String) : Op {
+class ExtractPagesOp(private val spec: String, private val remove: Boolean = false) : Op {
 
     override val tool = ToolId.EXTRACT
-    override val title = "Extract pages"
+    override val title = if (remove) "Remove pages" else "Extract pages"
     override val arity = Op.Arity.ExactlyOne
 
     override suspend fun run(
@@ -85,13 +85,20 @@ class ExtractPagesOp(private val spec: String) : Op {
             return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Unreadable."))
         }
 
-        val pages = PageSelection.parse(spec, info.pageCount)
-        if (pages.isEmpty()) {
+        val named = PageSelection.parse(spec, info.pageCount)
+        if (named.isEmpty()) {
             return@withContext listOf(
                 OpOutcome.Failed(
                     input.displayName,
                     "No pages matched \"$spec\". This document has ${info.pageCount} pages."
                 )
+            )
+        }
+        // Removing is keeping the others, in their own order.
+        val pages = if (remove) PageSelection.invert(named, info.pageCount) else named
+        if (pages.isEmpty()) {
+            return@withContext listOf(
+                OpOutcome.Failed(input.displayName, "That would remove every page. Leave at least one.")
             )
         }
 
@@ -110,10 +117,15 @@ class ExtractPagesOp(private val spec: String) : Op {
             OpOutcome.Produced(
                 SheafFile(
                     output,
-                    "${input.baseName} p${PageSelection.describe(pages)}.pdf",
+                    if (remove) "${input.baseName} without p${PageSelection.describe(named)}.pdf"
+                    else "${input.baseName} p${PageSelection.describe(pages)}.pdf",
                     SheafFile.Origin.Derived("pages")
                 ),
-                "Kept pages ${PageSelection.describe(pages)} of ${info.pageCount}"
+                if (remove) {
+                    "Removed ${if (named.size == 1) "page" else "pages"} ${PageSelection.describe(named)}; ${pages.size} of ${info.pageCount} kept"
+                } else {
+                    "Kept pages ${PageSelection.describe(pages)} of ${info.pageCount}"
+                }
             )
         )
     }
@@ -262,7 +274,9 @@ class SplitOp(private val mode: Mode) : Op {
  */
 class InsertPagesOp(
     private val atPage: Int,
-    private val blankPages: Int
+    private val blankPages: Int,
+    /** Pages of the first document to take out, the new ones going in where they were. */
+    private val replaceSpec: String = ""
 ) : Op {
 
     override val tool = ToolId.INSERT
@@ -291,15 +305,39 @@ class InsertPagesOp(
         }
 
         onProgress(Progress(0, 1, "Inserting into ${base.displayName}"))
-        val output = context.workspace.newOutput(base.baseName, "inserted")
+        val replacing = replaceSpec.isNotBlank()
+        val step = if (replacing) "replaced" else "inserted"
+        val output = context.workspace.newOutput(base.baseName, step)
+        val baseInput = PdfInput(base.file, context.passwords[base.file.path])
+
+        val replace = if (replacing) {
+            val total = try {
+                context.surgeon.inspect(baseInput).pageCount
+            } catch (e: PdfException) {
+                return@withContext listOf(OpOutcome.Failed(base.displayName, e.message ?: "Unreadable."))
+            }
+            val pages = PageSelection.parse(replaceSpec, total)
+            if (pages.isEmpty()) {
+                return@withContext listOf(
+                    OpOutcome.Failed(base.displayName, "This file has $total pages; none of the pages typed are in it.")
+                )
+            }
+            if (pages.size >= total && insert == null && blankPages <= 0) {
+                return@withContext listOf(OpOutcome.Failed(base.displayName, "That would replace every page with nothing."))
+            }
+            pages
+        } else {
+            emptyList()
+        }
 
         try {
             context.surgeon.insertPages(
-                input = PdfInput(base.file, context.passwords[base.file.path]),
+                input = baseInput,
                 insert = insert?.let { PdfInput(it.file, context.passwords[it.file.path]) },
                 blankPages = blankPages,
-                atIndex = (atPage - 1).coerceAtLeast(0),
-                output = output
+                atIndex = if (replacing) replace.first() else (atPage - 1).coerceAtLeast(0),
+                output = output,
+                replace = replace
             )
         } catch (e: PdfException) {
             output.delete()
@@ -314,10 +352,14 @@ class InsertPagesOp(
             OpOutcome.Produced(
                 SheafFile(
                     output,
-                    "${base.baseName} inserted.pdf",
-                    SheafFile.Origin.Derived("inserted")
+                    "${base.baseName} $step.pdf",
+                    SheafFile.Origin.Derived(step)
                 ),
-                "Put $what in at page $atPage"
+                if (replacing) {
+                    "Replaced ${if (replace.size == 1) "page" else "pages"} ${PageSelection.describe(replace)} with $what"
+                } else {
+                    "Put $what in at page $atPage"
+                }
             )
         )
     }

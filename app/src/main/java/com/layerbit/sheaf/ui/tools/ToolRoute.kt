@@ -208,6 +208,26 @@ fun ToolRoute(
             onLoadPreviewPage = viewModel::loadPreviewPage,
             onLoadForm = viewModel::loadFormFields,
             onFormValue = viewModel::setFormValue,
+            onLoadOutline = viewModel::loadOutline,
+            onAddBookmark = viewModel::addBookmark,
+            onSetBookmark = viewModel::setBookmark,
+            onRemoveBookmark = viewModel::removeBookmark,
+            onMoveBookmark = viewModel::moveBookmark,
+            onIndentBookmark = viewModel::indentBookmark,
+            onClearBookmarks = viewModel::clearBookmarks,
+            onLoadAttachments = viewModel::loadAttachments,
+            onSaveZip = { files ->
+                viewModel.zipResults(files) { zip ->
+                    if (zip == null) {
+                        message = "The ZIP could not be written."
+                    } else if (viewModel.askWhereToSave) {
+                        pendingSave = zip
+                        saveFile.launch(viewModel.exportIntent(zip))
+                    } else {
+                        saveInto(listOf(zip))
+                    }
+                }
+            },
             onCheckSize = viewModel::checkCompressedSize,
             onCopy = { text ->
                 viewModel.copyToClipboard(text)
