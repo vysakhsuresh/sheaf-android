@@ -10,6 +10,7 @@ import com.layerbit.sheaf.SheafApplication
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.jobs.JobState
 import com.layerbit.sheaf.jobs.belongsTo
+import com.layerbit.sheaf.ops.AddImageOp
 import com.layerbit.sheaf.ops.AddTextOp
 import com.layerbit.sheaf.ops.AttachmentsOp
 import com.layerbit.sheaf.ops.BackgroundOp
@@ -165,7 +166,8 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     outline = emptyList(),
                     outlineRead = false,
                     attachments = emptyList(),
-                    attachmentsRead = false
+                    attachmentsRead = false,
+                    findReport = null
                 )
             }
         }
@@ -211,7 +213,8 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     outline = emptyList(),
                     outlineRead = false,
                     attachments = emptyList(),
-                    attachmentsRead = false
+                    attachmentsRead = false,
+                    findReport = null
                 )
             }
         }
@@ -230,7 +233,8 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         // This used to run for everything, which is how a .webp came back as "Header doesn't
         // contain versioninfo".
         if (file.isImage) {
-            val wanted = tool?.input == ToolId.InputKind.IMAGES || tool == ToolId.ATTACHMENTS
+            val wanted = tool?.input == ToolId.InputKind.IMAGES || tool == ToolId.ATTACHMENTS ||
+                tool == ToolId.ADD_IMAGE
             return@withContext SelectedDoc(
                 file = file,
                 unreadableReason = if (wanted) null else "This is an image, and this tool needs a PDF."
@@ -740,7 +744,15 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 format = config.imageFormat,
                 pageSpec = config.pageSpec.takeIf { it.isNotBlank() }
             )
-            ToolId.COMPRESS -> CompressOp(config.compression)
+            ToolId.COMPRESS -> CompressOp(
+                config.compression,
+                targetBytes = if (config.compressToSize) config.compressTargetMb.toLong() * 1024 * 1024 else null
+            )
+            ToolId.ADD_IMAGE -> AddImageOp(
+                anchor = config.signAnchor,
+                widthFraction = config.signWidth,
+                page = config.markPage
+            )
             ToolId.SET_PASSWORD -> {
                 if (!config.restrictOnly && config.newPassword.isBlank()) {
                     _state.update { it.copy(error = "Choose a password first.") }
@@ -927,7 +939,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
      * and rendering a whole document to show a margin would be wasteful.
      */
     fun loadPreviewPage() {
-        val doc = _state.value.documents.firstOrNull() ?: return
+        val doc = _state.value.documents.firstOrNull { it.file.isPdf } ?: return
         if (_state.value.previewPage != null) return
 
         viewModelScope.launch {
@@ -1200,6 +1212,163 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(redactions = it.redactions - page) }
     }
 
+    /**
+     * Finds the things people most need taken out of a document before sharing it - Aadhaar
+     * and PAN numbers, phone numbers, email addresses, card numbers, or any text typed - and
+     * marks each one for removal, exactly as if a box had been drawn over it.
+     *
+     * The boxes land in [ToolUiState.redactions] like drawn ones, so they can be seen on the
+     * page, cleared per page, and go out through the same genuine removal.
+     */
+    fun findSensitive() {
+        val doc = _state.value.documents.firstOrNull() ?: return
+        val config = _state.value.config
+        val patterns = buildList {
+            if (config.findAadhaar) add(Triple("Aadhaar numbers", AADHAAR, { s: String -> true }))
+            if (config.findPan) add(Triple("PAN numbers", PAN, { s: String -> true }))
+            if (config.findPhone) add(Triple("phone numbers", PHONE, { s: String -> s.count { it.isDigit() } in 10..13 }))
+            if (config.findEmail) add(Triple("email addresses", EMAIL, { s: String -> true }))
+            if (config.findCard) add(Triple("card numbers", CARD, { s: String -> luhn(s) }))
+            val typed = config.findText.trim()
+            if (typed.isNotEmpty()) add(Triple("\"$typed\"", Regex(Regex.escape(typed), RegexOption.IGNORE_CASE), { s: String -> true }))
+        }
+        if (patterns.isEmpty()) {
+            _state.update { it.copy(findReport = "Choose what to look for first.") }
+            return
+        }
+        _state.update { it.copy(finding = true, findReport = null) }
+        viewModelScope.launch {
+            val found = withContext(Dispatchers.IO) {
+                val input = PdfInput(doc.file.file, doc.password)
+                patterns.map { (label, pattern, accept) ->
+                    label to runCatching { sheaf.surgeon.findAreas(input, pattern, accept) }.getOrDefault(emptyMap())
+                }
+            }
+            _state.update { current ->
+                var redactions = current.redactions
+                val counts = mutableListOf<String>()
+                val pages = mutableSetOf<Int>()
+                for ((label, byPage) in found) {
+                    val n = byPage.values.sumOf { it.size }
+                    if (n == 0) continue
+                    counts += "$n $label"
+                    for ((page, areas) in byPage) {
+                        val existing = redactions[page].orEmpty()
+                        // The same area found twice - a number that matches two patterns - is
+                        // one box, not two.
+                        val fresh = areas.filter { area -> existing.none { it == area } }
+                        if (fresh.isNotEmpty()) redactions = redactions + (page to existing + fresh)
+                        pages += page
+                    }
+                }
+                current.copy(
+                    redactions = redactions,
+                    finding = false,
+                    findReport = if (counts.isEmpty()) {
+                        "Nothing found. A scanned page has no text to search; run Make searchable first."
+                    } else {
+                        "Marked " + counts.joinToString(", ") + " on " +
+                            (if (pages.size == 1) "1 page" else "${pages.size} pages") + ". Tap Remove to take them out."
+                    }
+                )
+            }
+        }
+    }
+
+    /** The check digit test every real card number passes. Keeps a phone number from being one. */
+    private fun luhn(text: String): Boolean {
+        val digits = text.filter { it.isDigit() }
+        if (digits.length !in 13..19) return false
+        var sum = 0
+        var double = false
+        for (i in digits.indices.reversed()) {
+            var d = digits[i] - '0'
+            if (double) {
+                d *= 2
+                if (d > 9) d -= 9
+            }
+            sum += d
+            double = !double
+        }
+        return sum % 10 == 0
+    }
+
+    // ---- form answers kept for next time ----
+
+    private val answersDir: java.io.File
+        get() = java.io.File(getApplication<Application>().filesDir, "answers").apply { mkdirs() }
+
+    fun loadSavedAnswers() {
+        val files = answersDir.listFiles()
+            ?.filter { it.isFile && it.name.endsWith(".json") }
+            ?.sortedByDescending { it.lastModified() }
+            .orEmpty()
+        _state.update { it.copy(savedAnswers = files) }
+    }
+
+    /**
+     * Keeps what was typed, by the form's own field names, so the same form next month
+     * starts filled in. Kept on the phone, in the app's own files, like a signature.
+     */
+    fun keepAnswers() {
+        val current = _state.value
+        val values = current.formValues.filterValues { it.isNotBlank() }
+        if (values.isEmpty()) return
+        val doc = current.documents.firstOrNull() ?: return
+        val json = org.json.JSONObject().apply {
+            put("form", doc.file.displayName)
+            put("kept", System.currentTimeMillis())
+            put("values", org.json.JSONObject(values))
+        }
+        val stamp = java.text.SimpleDateFormat("yyyy-MM-dd HH.mm", java.util.Locale.US).format(java.util.Date())
+        val file = java.io.File(answersDir, "${doc.file.baseName} $stamp.json")
+        runCatching { file.writeText(json.toString()) }
+        loadSavedAnswers()
+    }
+
+    fun useAnswers(file: java.io.File) {
+        val values = runCatching {
+            val json = org.json.JSONObject(file.readText()).getJSONObject("values")
+            json.keys().asSequence().associateWith { json.getString(it) }
+        }.getOrNull() ?: return
+        _state.update { current ->
+            // Only the fields this form has. Answers kept from another form, or from an older
+            // version of this one, are not forced into fields that do not exist.
+            val names = current.formFields.map { it.name }.toSet()
+            val matching = values.filterKeys { it in names }
+            current.copy(
+                formValues = current.formValues + matching,
+                error = if (matching.isEmpty()) "None of those answers fit this form's fields." else null
+            )
+        }
+    }
+
+    fun forgetAnswers(file: java.io.File) {
+        if (file.parentFile?.absolutePath == answersDir.absolutePath) file.delete()
+        loadSavedAnswers()
+    }
+
+    /** Decodes the picture Add an image will place, small, for the preview. */
+    fun loadStampBitmap() {
+        val image = _state.value.documents.firstOrNull { it.file.isImage } ?: run {
+            _state.update { it.copy(stampBitmap = null) }
+            return
+        }
+        viewModelScope.launch {
+            val bitmap = withContext(Dispatchers.IO) {
+                runCatching {
+                    val options = android.graphics.BitmapFactory.Options()
+                    options.inJustDecodeBounds = true
+                    android.graphics.BitmapFactory.decodeFile(image.file.file.path, options)
+                    options.inSampleSize = (maxOf(options.outWidth, options.outHeight) / PREVIEW_PX).coerceAtLeast(1)
+                    options.inJustDecodeBounds = false
+                    android.graphics.BitmapFactory.decodeFile(image.file.file.path, options)
+                }.getOrNull()
+            }
+            _state.update { it.copy(stampBitmap = bitmap) }
+        }
+    }
+
     // ---- marking up ----
 
     fun setMarkupPage(index: Int) {
@@ -1343,6 +1512,13 @@ data class ToolUiState(
     /** Bookmarks: the list being edited, seeded from the document once [outlineRead]. */
     val outline: List<OutlineEntry> = emptyList(),
     val outlineRead: Boolean = false,
+    /** Remove areas: what the last Find and mark found, in words, or null before one ran. */
+    val findReport: String? = null,
+    val finding: Boolean = false,
+    /** Fill in a form: the answer sets kept from earlier, newest first. */
+    val savedAnswers: List<java.io.File> = emptyList(),
+    /** Add an image: the picture, decoded small, for the placement preview. */
+    val stampBitmap: Bitmap? = null,
     /** Attachments: what the first document already carries, once [attachmentsRead]. */
     val attachments: List<AttachmentInfo> = emptyList(),
     val attachmentsRead: Boolean = false,
@@ -1387,6 +1563,8 @@ data class ToolUiState(
                 "Add the PDF to insert, or choose how many blank pages to add."
             tool == ToolId.INSERT && config.replacePages && config.replaceSpec.isBlank() ->
                 "Type the pages to replace."
+            tool == ToolId.ADD_IMAGE && documents.none { it.file.isPdf } -> "Choose the PDF first."
+            tool == ToolId.ADD_IMAGE && documents.none { it.file.isImage } -> "Add the image to put on the page."
             tool == ToolId.ATTACHMENTS && !documents.first().file.isPdf ->
                 "The first file has to be the PDF. Remove the others and pick it first."
             tool == ToolId.ATTACHMENTS && !config.extractAttachments && documents.size < 2 ->
@@ -1480,6 +1658,18 @@ data class ToolConfig(
     /** Images to PDF: one file per image. */
     val separatePdfs: Boolean = false,
 
+    /** Compress: get under a size rather than pick a level. */
+    val compressToSize: Boolean = false,
+    val compressTargetMb: Int = 2,
+
+    /** Remove areas: what Find and mark looks for. */
+    val findAadhaar: Boolean = true,
+    val findPan: Boolean = true,
+    val findPhone: Boolean = false,
+    val findEmail: Boolean = false,
+    val findCard: Boolean = false,
+    val findText: String = "",
+
     /** The page a signature or a note lands on, and the page the preview shows. */
     val markPage: Int = 1,
     val signAnchor: ImageStamp.Anchor = ImageStamp.Anchor.BOTTOM_RIGHT,
@@ -1558,6 +1748,16 @@ data class ToolConfig(
  * true black beside scanned type looks harder than the page it is written on.
  */
 val NOTE_BLACK: Int = 0xFF111111.toInt()
+
+/**
+ * What Find and mark looks for. The Indian identifiers first, because they are what people
+ * here most often need out of a document before it goes anywhere.
+ */
+val AADHAAR = Regex("\\b[2-9]\\d{3}[\\s-]?\\d{4}[\\s-]?\\d{4}\\b")
+val PAN = Regex("\\b[A-Z]{5}\\d{4}[A-Z]\\b")
+val PHONE = Regex("(?:\\+\\d{1,3}[\\s-]?)?(?:\\(?\\d{2,5}\\)?[\\s-]?)?\\d{3,5}[\\s-]?\\d{4,5}\\b")
+val EMAIL = Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}")
+val CARD = Regex("\\b(?:\\d[ -]?){12,18}\\d\\b")
 
 /** Watermark inks: grey unless asked, red for VOID or COPY, blue for a company name. */
 val WATERMARK_GREY: Int = 0xFF6B6B75.toInt()

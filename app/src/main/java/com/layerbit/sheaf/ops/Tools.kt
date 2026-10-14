@@ -80,7 +80,7 @@ enum class ToolId(
     ),
     COMPRESS(
         "Compress",
-        "Make a PDF smaller for email or upload",
+        "Make a PDF smaller for email or upload, or get it under a size",
         InputKind.SEVERAL_PDFS,
         Group.CONVERT
     ),
@@ -125,6 +125,12 @@ enum class ToolId(
         "Add text",
         "Type onto a page, and cover what is there if you need to",
         InputKind.ONE_PDF,
+        Group.MARK
+    ),
+    ADD_IMAGE(
+        "Add an image",
+        "Put a logo, a stamp or a photo on a page",
+        InputKind.PDF_AND_IMAGE,
         Group.MARK
     ),
     CROP(
@@ -180,7 +186,7 @@ enum class ToolId(
 
     REDACT(
         "Remove areas",
-        "Take something out of a page permanently",
+        "Take something out of a page permanently, or find and remove ID and card numbers",
         InputKind.ONE_PDF,
         Group.PROTECT
     ),
@@ -211,6 +217,9 @@ enum class ToolId(
 
         /** One PDF first, then any files at all. */
         PDF_AND_FILES,
+
+        /** One PDF and one image. */
+        PDF_AND_IMAGE,
 
         /** Takes no file at all - it makes one with the camera. */
         CAMERA
@@ -248,6 +257,7 @@ enum class ToolId(
             PAGE_NUMBERS -> "Add the numbers"
             SIGN -> "Place the signature"
             ADD_TEXT -> "Write it on"
+            ADD_IMAGE -> "Place the image"
             ANNOTATE -> "Save the marks"
             FORMS -> "Fill it in"
             HEADER_FOOTER -> "Add them"
@@ -267,12 +277,14 @@ enum class ToolId(
         }
 
     val acceptsMultiple: Boolean
-        get() = input == InputKind.SEVERAL_PDFS || input == InputKind.IMAGES || input == InputKind.PDF_AND_FILES
+        get() = input == InputKind.SEVERAL_PDFS || input == InputKind.IMAGES ||
+            input == InputKind.PDF_AND_FILES || input == InputKind.PDF_AND_IMAGE
 
     val mimeFilter: Array<String>
         get() = when (input) {
             InputKind.IMAGES -> arrayOf("image/*")
             InputKind.PDF_AND_FILES -> arrayOf("*/*")
+            InputKind.PDF_AND_IMAGE -> arrayOf("application/pdf", "image/*")
             else -> arrayOf("application/pdf")
         }
 }

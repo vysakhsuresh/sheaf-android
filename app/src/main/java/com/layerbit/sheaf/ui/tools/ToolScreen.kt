@@ -121,6 +121,12 @@ fun ToolScreen(
     onIndentBookmark: (Int, Boolean) -> Unit,
     onClearBookmarks: () -> Unit,
     onLoadAttachments: () -> Unit,
+    onFindSensitive: () -> Unit,
+    onLoadAnswers: () -> Unit,
+    onKeepAnswers: () -> Unit,
+    onUseAnswers: (java.io.File) -> Unit,
+    onForgetAnswers: (java.io.File) -> Unit,
+    onLoadStamp: () -> Unit,
     /** Bundles every result into one ZIP and saves that. */
     onSaveZip: (List<SheafFile>) -> Unit,
     onCheckSize: () -> Unit,
@@ -130,7 +136,7 @@ fun ToolScreen(
 ) {
     // Organise and Remove areas both draw on rendered pages, and only once a document is
     // actually present.
-    LaunchedEffect(tool, state.documents.firstOrNull()?.file?.file?.path, state.config.markPage) {
+    LaunchedEffect(tool, state.documents.firstOrNull()?.file?.file?.path, state.documents.size, state.config.markPage) {
         if (state.documents.isEmpty()) return@LaunchedEffect
         when (tool) {
             // These edit pages, so they need the pages themselves.
@@ -139,8 +145,16 @@ fun ToolScreen(
             // These change how a page looks, so one page is enough to show it.
             ToolId.CROP, ToolId.WATERMARK, ToolId.PAGE_NUMBERS,
             ToolId.ADD_TEXT, ToolId.BACKGROUND -> onLoadPreviewPage()
-            // Filling a form needs to know whether there is one.
-            ToolId.FORMS -> onLoadForm()
+            // Filling a form needs to know whether there is one, and what was kept before.
+            ToolId.FORMS -> {
+                onLoadForm()
+                onLoadAnswers()
+            }
+            // The picture and the page it goes on, for the placement preview.
+            ToolId.ADD_IMAGE -> {
+                onLoadPreviewPage()
+                onLoadStamp()
+            }
             // The bookmark editor starts from what the document already has.
             ToolId.BOOKMARKS -> onLoadOutline()
             // Attachments shows what is already inside before offering to add or take out.
@@ -224,6 +238,8 @@ fun ToolScreen(
                         doc = doc,
                         canReorder = (tool == ToolId.MERGE || tool == ToolId.ATTACHMENTS) && state.documents.size > 1,
                         role = when {
+                            tool == ToolId.ADD_IMAGE && doc.file.isImage -> "The image"
+                            tool == ToolId.ADD_IMAGE && doc.file.isPdf -> "The PDF"
                             tool == ToolId.ATTACHMENTS && index == 0 -> "The PDF"
                             tool == ToolId.ATTACHMENTS -> "To attach"
                             tool == ToolId.INSERT && index == 0 -> "Being added to"
@@ -332,12 +348,32 @@ fun ToolScreen(
                     } else if (state.formFields.isEmpty()) {
                         item { NoFormFields() }
                     } else {
+                        if (state.savedAnswers.isNotEmpty()) {
+                            item {
+                                SavedAnswers(
+                                    files = state.savedAnswers,
+                                    onUse = onUseAnswers,
+                                    onForget = onForgetAnswers
+                                )
+                            }
+                        }
                         item {
                             FormEditor(
                                 fields = state.formFields,
                                 values = state.formValues,
                                 onValue = onFormValue
                             )
+                        }
+                        if (state.formValues.values.any { it.isNotBlank() }) {
+                            item {
+                                TextButton(onClick = onKeepAnswers) {
+                                    Text(
+                                        "Keep these answers for next time",
+                                        color = SheafColors.Band,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
                         }
                         item {
                             ToolOptions(
@@ -347,6 +383,25 @@ fun ToolScreen(
                                 sizeCheck = state.sizeCheck,
                                 onCheckSize = onCheckSize,
                                 onChange = onConfigChange
+                            )
+                        }
+                    }
+                } else if (tool == ToolId.ADD_IMAGE && state.documents.isNotEmpty()) {
+                    item {
+                        ToolOptions(
+                            tool = tool,
+                            config = state.config,
+                            pageCount = state.documents.firstOrNull { it.file.isPdf }?.pageCount,
+                            onChange = onConfigChange
+                        )
+                    }
+                    if (state.stampBitmap != null) {
+                        item {
+                            EffectPreview(
+                                tool = tool,
+                                config = state.config,
+                                page = state.previewPage,
+                                signature = state.stampBitmap
                             )
                         }
                     }
@@ -418,6 +473,15 @@ fun ToolScreen(
                         )
                     }
                 } else if (tool == ToolId.REDACT && state.pageOrder.isNotEmpty()) {
+                    item {
+                        FindSensitivePanel(
+                            config = state.config,
+                            finding = state.finding,
+                            report = state.findReport,
+                            onChange = onConfigChange,
+                            onFind = onFindSensitive
+                        )
+                    }
                     item {
                         RedactCanvas(
                             pageIndex = state.canvasPage,
@@ -753,6 +817,99 @@ private fun DocumentRow(
                 }
             }
             TextButton(onClick = onRemove) { Text("Remove", color = SheafColors.Dim) }
+        }
+    }
+}
+
+/**
+ * What to look for and a button to look. The boxes it draws join the drawn ones on the canvas
+ * below, where they can be checked page by page before anything is removed.
+ */
+@Composable
+private fun FindSensitivePanel(
+    config: ToolConfig,
+    finding: Boolean,
+    report: String?,
+    onChange: (((ToolConfig) -> ToolConfig)) -> Unit,
+    onFind: () -> Unit
+) {
+    Panel(modifier = Modifier.fillMaxWidth()) {
+        SectionHeading("Find and mark")
+        Text(
+            "Finds these in the text and marks each one for removal, so an ID scan or a " +
+                "statement can be shared without the numbers on it.",
+            style = MaterialTheme.typography.bodySmall,
+            color = SheafColors.Dim,
+            modifier = Modifier.padding(top = 2.dp, bottom = 6.dp)
+        )
+        com.layerbit.sheaf.ui.components.ToggleRow(
+            title = "Aadhaar numbers",
+            checked = config.findAadhaar,
+            onChange = { on -> onChange { it.copy(findAadhaar = on) } }
+        )
+        com.layerbit.sheaf.ui.components.ToggleRow(
+            title = "PAN numbers",
+            checked = config.findPan,
+            onChange = { on -> onChange { it.copy(findPan = on) } }
+        )
+        com.layerbit.sheaf.ui.components.ToggleRow(
+            title = "Phone numbers",
+            checked = config.findPhone,
+            onChange = { on -> onChange { it.copy(findPhone = on) } }
+        )
+        com.layerbit.sheaf.ui.components.ToggleRow(
+            title = "Email addresses",
+            checked = config.findEmail,
+            onChange = { on -> onChange { it.copy(findEmail = on) } }
+        )
+        com.layerbit.sheaf.ui.components.ToggleRow(
+            title = "Card numbers",
+            checked = config.findCard,
+            onChange = { on -> onChange { it.copy(findCard = on) } }
+        )
+        Spacer(Modifier.height(6.dp))
+        Field(
+            value = config.findText,
+            label = "Or any words or number",
+            keyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
+            onChange = { text -> onChange { it.copy(findText = text) } }
+        )
+        RowBetween(modifier = Modifier.padding(top = 6.dp)) {
+            Text(
+                report ?: if (finding) "Looking…" else "",
+                style = MaterialTheme.typography.bodySmall,
+                color = SheafColors.Done,
+                modifier = Modifier.weight(1f).padding(end = 8.dp)
+            )
+            OutlinedButton(onClick = onFind, enabled = !finding) {
+                Text("Find and mark", color = SheafColors.Band)
+            }
+        }
+    }
+}
+
+/** Answer sets kept from earlier runs, to fill the same form again. */
+@Composable
+private fun SavedAnswers(
+    files: List<java.io.File>,
+    onUse: (java.io.File) -> Unit,
+    onForget: (java.io.File) -> Unit
+) {
+    Panel(modifier = Modifier.fillMaxWidth()) {
+        SectionHeading("Answers you kept")
+        files.forEach { file ->
+            RowBetween(modifier = Modifier.padding(top = 4.dp)) {
+                Text(
+                    file.nameWithoutExtension,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SheafColors.Text,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = { onUse(file) }) { Text("Use", color = SheafColors.Band) }
+                TextButton(onClick = { onForget(file) }) { Text("Forget", color = SheafColors.Dim) }
+            }
         }
     }
 }

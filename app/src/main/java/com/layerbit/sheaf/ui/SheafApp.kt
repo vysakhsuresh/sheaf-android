@@ -204,6 +204,8 @@ fun SheafApp(
                             runCatching { context.startActivity(sheaf.exporter.shareIntent(file)) }
                         }
                     },
+                    onReadAloud = viewerViewModel::readAloud,
+                    onStopReading = viewerViewModel::stopReading,
                     keepScreenOn = settings.keepScreenOn,
                     showPageBadge = settings.showPageBadge
                 )

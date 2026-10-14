@@ -163,12 +163,38 @@ fun ToolOptions(
             }
 
             ToolId.COMPRESS -> {
-                SectionHeading("How hard to squeeze")
                 ChoiceRow(
-                    options = CompressionLevel.entries.map { it to it.label },
-                    selected = config.compression,
-                    onSelect = { level -> onChange { it.copy(compression = level) } }
+                    options = listOf(false to "Pick a level", true to "Get under a size"),
+                    selected = config.compressToSize,
+                    onSelect = { value -> onChange { it.copy(compressToSize = value) } }
                 )
+                if (config.compressToSize) {
+                    SectionHeading("Under")
+                    ChoiceRow(
+                        options = listOf(1 to "1 MB", 2 to "2 MB", 5 to "5 MB", 10 to "10 MB", 25 to "25 MB"),
+                        selected = config.compressTargetMb,
+                        onSelect = { value -> onChange { it.copy(compressTargetMb = value) } }
+                    )
+                    NumberField(
+                        value = config.compressTargetMb,
+                        label = "Or any size, in MB",
+                        min = 1,
+                        max = 2000,
+                        onChange = { value -> onChange { it.copy(compressTargetMb = value) } }
+                    )
+                    Hint(
+                        "The levels are tried lightest first and the first that fits is kept. " +
+                            "If none fits, you get the smallest and are told; Split by size can " +
+                            "then cut it into parts that do."
+                    )
+                } else {
+                    SectionHeading("How hard to squeeze")
+                    ChoiceRow(
+                        options = CompressionLevel.entries.map { it to it.label },
+                        selected = config.compression,
+                        onSelect = { level -> onChange { it.copy(compression = level) } }
+                    )
+                }
                 Hint(
                     "Sheaf shrinks the images inside a document and leaves text untouched, so " +
                         "text stays sharp and selectable. A document with no scanned pages will " +
@@ -582,6 +608,42 @@ fun ToolOptions(
                 Hint(
                     "This draws your signature into the page, the same as printing, signing " +
                         "and scanning it back. It is not a cryptographic digital signature."
+                )
+            }
+
+            ToolId.ADD_IMAGE -> {
+                SectionHeading("Where on the page")
+                ChoiceRow(
+                    options = listOf(
+                        ImageStamp.Anchor.TOP_LEFT to "Top left",
+                        ImageStamp.Anchor.TOP_CENTRE to "Top",
+                        ImageStamp.Anchor.TOP_RIGHT to "Top right",
+                        ImageStamp.Anchor.MIDDLE_LEFT to "Left",
+                        ImageStamp.Anchor.MIDDLE_CENTRE to "Middle",
+                        ImageStamp.Anchor.MIDDLE_RIGHT to "Right",
+                        ImageStamp.Anchor.BOTTOM_LEFT to "Bottom left",
+                        ImageStamp.Anchor.BOTTOM_CENTRE to "Bottom",
+                        ImageStamp.Anchor.BOTTOM_RIGHT to "Bottom right"
+                    ),
+                    selected = config.signAnchor,
+                    onSelect = { value -> onChange { it.copy(signAnchor = value) } }
+                )
+                SectionHeading("Width, as a share of the page")
+                ChoiceRow(
+                    options = listOf(0.15f to "Small", 0.3f to "Medium", 0.5f to "Large", 0.9f to "Full width"),
+                    selected = config.signWidth,
+                    onSelect = { value -> onChange { it.copy(signWidth = value) } }
+                )
+                NumberField(
+                    value = config.markPage,
+                    label = "Page",
+                    min = 1,
+                    max = pageCount ?: 9999,
+                    onChange = { value -> onChange { it.copy(markPage = value) } }
+                )
+                Hint(
+                    "Pick the PDF, then the image: PNG, JPEG or WebP. It is drawn into the " +
+                        "page, so the next reader cannot drag it off."
                 )
             }
 

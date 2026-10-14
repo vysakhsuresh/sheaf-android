@@ -74,6 +74,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.data.db.BookmarkEntity
 import com.layerbit.sheaf.ops.ToolId
+import com.layerbit.sheaf.pdf.Comment
 import com.layerbit.sheaf.pdf.OutlineEntry
 import com.layerbit.sheaf.pdf.PageArea
 import com.layerbit.sheaf.pdf.PageSize
@@ -113,12 +114,15 @@ fun ViewerScreen(
     onPageChanged: (Int) -> Unit,
     onPrint: () -> Unit,
     onShare: () -> Unit,
+    onReadAloud: (Int) -> Unit,
+    onStopReading: () -> Unit,
     modifier: Modifier = Modifier,
     keepScreenOn: Boolean = true,
     showPageBadge: Boolean = true
 ) {
     var showTools by remember { mutableStateOf(false) }
     var showContents by remember { mutableStateOf(false) }
+    var showComments by remember { mutableStateOf(false) }
     var showGoToPage by remember { mutableStateOf(false) }
     var searching by remember { mutableStateOf(false) }
     // The result list folds away once a result is chosen, while the search itself stays on.
@@ -176,7 +180,10 @@ fun ViewerScreen(
                 onBack = onBack,
                 onTools = { showTools = true },
                 onContents = { showContents = true },
+                onComments = { showComments = true },
                 onGoToPage = { showGoToPage = true },
+                onReadAloud = { onReadAloud(currentPage) },
+                onStopReading = onStopReading,
                 onToggleNight = onToggleNight,
                 onToggleBookmark = { onToggleBookmark(currentPage) },
                 onPrint = onPrint,
@@ -187,6 +194,9 @@ fun ViewerScreen(
                     if (!searching) onClearSearch()
                 }
             )
+            if (reading.readAloud.speaking || reading.readAloud.note != null) {
+                ReadAloudBar(reading.readAloud, onStop = onStopReading)
+            }
             if (searching) {
                 SearchBar(
                     reading = reading,
@@ -259,6 +269,17 @@ fun ViewerScreen(
         )
     }
 
+    if (showComments && state is ViewerState.Ready) {
+        CommentsSheet(
+            comments = reading.comments,
+            onDismiss = { showComments = false },
+            onJump = { page ->
+                showComments = false
+                onJump(page)
+            }
+        )
+    }
+
     if (showGoToPage && state is ViewerState.Ready) {
         GoToPageSheet(
             pageCount = state.pageCount,
@@ -303,7 +324,10 @@ private fun ViewerHeader(
     onBack: () -> Unit,
     onTools: () -> Unit,
     onContents: () -> Unit,
+    onComments: () -> Unit,
     onGoToPage: () -> Unit,
+    onReadAloud: () -> Unit,
+    onStopReading: () -> Unit,
     onToggleNight: () -> Unit,
     onToggleBookmark: () -> Unit,
     onPrint: () -> Unit,
@@ -364,9 +388,21 @@ private fun ViewerHeader(
                                 onContents()
                             }
                         }
+                        if (reading.comments.isNotEmpty()) {
+                            MenuRow("Comments (${reading.comments.size})") {
+                                menuOpen = false
+                                onComments()
+                            }
+                        }
                         MenuRow("Go to page…") {
                             menuOpen = false
                             onGoToPage()
+                        }
+                        if (reading.readAloud.available) {
+                            MenuRow(if (reading.readAloud.speaking) "Stop reading aloud" else "Read aloud from this page") {
+                                menuOpen = false
+                                if (reading.readAloud.speaking) onStopReading() else onReadAloud()
+                            }
                         }
                         if (canMark) {
                             MenuRow(if (marked) "Remove this mark" else "Mark this page") {
@@ -399,6 +435,76 @@ private fun ViewerHeader(
                     color = SheafColors.Band,
                     style = MaterialTheme.typography.titleMedium
                 )
+            }
+        }
+    }
+}
+
+/** What is being read out, and the one button that matters while it is. */
+@Composable
+private fun ReadAloudBar(readAloud: ReadAloud, onStop: () -> Unit) {
+    RowBetween(
+        modifier = Modifier
+            .background(SheafColors.Surface)
+            .padding(horizontal = 20.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = when {
+                readAloud.starting -> "Starting the voice…"
+                readAloud.speaking -> "Reading page ${readAloud.page + 1} aloud"
+                else -> readAloud.note.orEmpty()
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = SheafColors.Muted,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        if (readAloud.speaking) {
+            TextButton(onClick = onStop) { Text("Stop", color = SheafColors.Band) }
+        }
+    }
+}
+
+/** The comments on the pages: who said what, where. Tap one to go to its page. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CommentsSheet(
+    comments: List<Comment>,
+    onDismiss: () -> Unit,
+    onJump: (Int) -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = SheafColors.Surface) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+            SectionHeading(if (comments.size == 1) "1 comment" else "${comments.size} comments")
+            Spacer(Modifier.height(6.dp))
+            comments.forEach { comment ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onJump(comment.pageIndex) }
+                        .padding(vertical = 10.dp)
+                ) {
+                    Text(
+                        buildString {
+                            append(comment.kind)
+                            comment.author?.let { append(" · ").append(it) }
+                            append(" · page ${comment.pageIndex + 1}")
+                            comment.date?.let { append(" · ").append(it) }
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SheafColors.Dim
+                    )
+                    if (comment.text.isNotBlank()) {
+                        Text(
+                            comment.text,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = SheafColors.Text,
+                            maxLines = 6,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
         }
     }

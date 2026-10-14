@@ -345,6 +345,18 @@ interface PdfSurgeon {
     @Throws(PdfException::class)
     fun attachFiles(input: PdfInput, files: List<Pair<String, File>>, output: File)
 
+    /**
+     * Where [pattern] matches in the text, by page index, as fractions of the page the reader
+     * sees. [accept] can turn a match down after the fact - a run of digits that is not a card
+     * number by its check digit, say - which a regular expression cannot do on its own.
+     */
+    @Throws(PdfException::class)
+    fun findAreas(input: PdfInput, pattern: Regex, accept: (String) -> Boolean = { true }): Map<Int, List<PageArea>>
+
+    /** The comments and notes on the pages, in page order, as a reader lists them. */
+    @Throws(PdfException::class)
+    fun readComments(input: PdfInput): List<Comment>
+
     /** Writes every attached file out into [outputDir], as it was. */
     @Throws(PdfException::class)
     fun extractAttachments(input: PdfInput, outputDir: File): List<File>
@@ -401,6 +413,17 @@ data class PageLabelSpec(
 
 /** A file carried inside a document. */
 data class AttachmentInfo(val name: String, val sizeBytes: Long)
+
+/** A comment somebody left on a page: a sticky note, a highlight with a remark, a stamp. */
+data class Comment(
+    val pageIndex: Int,
+    /** What kind, in words: "Note", "Highlight", "Stamp". */
+    val kind: String,
+    val author: String?,
+    val text: String,
+    /** When, as the file wrote it, tidied to "2024-03-05 14:20" where it can be. */
+    val date: String?
+)
 
 /**
  * Text laid across a page.

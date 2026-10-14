@@ -33,6 +33,7 @@ fun iconFor(tool: ToolId): Int = when (tool) {
     ToolId.PAGE_NUMBERS -> R.drawable.ic_tool_page_numbers
     ToolId.SIGN -> R.drawable.ic_tool_sign
     ToolId.ADD_TEXT -> R.drawable.ic_tool_add_text
+    ToolId.ADD_IMAGE -> R.drawable.ic_tool_add_image
     ToolId.ANNOTATE -> R.drawable.ic_tool_annotate
     ToolId.FORMS -> R.drawable.ic_tool_forms
     ToolId.HEADER_FOOTER -> R.drawable.ic_tool_header_footer

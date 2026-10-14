@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.util.Log
 import com.layerbit.sheaf.ops.OpCancelled
+import com.tom_roush.pdfbox.cos.COSName
 import com.tom_roush.pdfbox.io.MemoryUsageSetting
 import com.tom_roush.pdfbox.multipdf.LayerUtility
 import com.tom_roush.pdfbox.multipdf.PDFMergerUtility
@@ -447,30 +448,14 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     override fun search(input: PdfInput, query: String): List<SearchHit> = withDocument(input) { doc ->
         val needle = query.trim()
         if (needle.isEmpty()) return@withDocument emptyList()
+        val pattern = Regex(Regex.escape(needle), RegexOption.IGNORE_CASE)
 
         buildList {
             for (index in 0 until doc.numberOfPages) {
-                val page = doc.getPage(index)
-                val box = page.cropBox ?: page.mediaBox ?: PDRectangle.A4
-
-                // A stripper that keeps the glyph positions, not just the words. Page numbers
-                // alone told the reader which page to go to and then left them to find the
-                // phrase again by eye; these are what let the viewer draw a box round it.
-                //
-                // A quarter-turned page is stripped in reading order, so the rectangles come
-                // back against a page whose width and height have swapped. The viewer renders
-                // it turned too, so they have to be normalised against the same swap.
-                val quarterTurned = normaliseRotation(page.rotation) % 180 == 90
-                val finder = if (quarterTurned) {
-                    MatchFinder(needle, box.height, box.width)
-                } else {
-                    MatchFinder(needle, box.width, box.height)
-                }
-                finder.startPage = index + 1
-                finder.endPage = index + 1
+                val finder = finderFor(doc, index, pattern) { true }
                 val text = runCatching { finder.getText(doc) }.getOrNull() ?: continue
 
-                val matches = Regex(Regex.escape(needle), RegexOption.IGNORE_CASE).findAll(text).toList()
+                val matches = pattern.findAll(text).toList()
                 if (matches.isEmpty()) continue
 
                 val first = matches.first().range.first
@@ -482,6 +467,104 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
 
                 add(SearchHit(index, snippet, matches.size, finder.areas.toList()))
             }
+        }
+    }
+
+    override fun findAreas(
+        input: PdfInput,
+        pattern: Regex,
+        accept: (String) -> Boolean
+    ): Map<Int, List<PageArea>> = withDocument(input) { doc ->
+        buildMap {
+            for (index in 0 until doc.numberOfPages) {
+                val finder = finderFor(doc, index, pattern, accept)
+                runCatching { finder.getText(doc) }.getOrNull() ?: continue
+                if (finder.areas.isNotEmpty()) put(index, finder.areas.toList())
+            }
+        }
+    }
+
+    /**
+     * A stripper that keeps the glyph positions, not just the words. Page numbers alone told
+     * the reader which page to go to and then left them to find the phrase again by eye; these
+     * are what let the viewer draw a box round it, and what Remove areas blacks out.
+     *
+     * A quarter-turned page is stripped in reading order, so the rectangles come back against
+     * a page whose width and height have swapped. The viewer renders it turned too, so they
+     * have to be normalised against the same swap.
+     */
+    private fun finderFor(doc: PDDocument, index: Int, pattern: Regex, accept: (String) -> Boolean): MatchFinder {
+        val page = doc.getPage(index)
+        val box = page.cropBox ?: page.mediaBox ?: PDRectangle.A4
+        val quarterTurned = normaliseRotation(page.rotation) % 180 == 90
+        val finder = if (quarterTurned) {
+            MatchFinder(pattern, accept, box.height, box.width)
+        } else {
+            MatchFinder(pattern, accept, box.width, box.height)
+        }
+        finder.startPage = index + 1
+        finder.endPage = index + 1
+        return finder
+    }
+
+    override fun readComments(input: PdfInput): List<Comment> = withDocument(input) { doc ->
+        buildList {
+            for (index in 0 until doc.numberOfPages) {
+                val annotations = runCatching { doc.getPage(index).annotations }.getOrNull() ?: continue
+                for (annotation in annotations) {
+                    val subtype = annotation.subtype ?: continue
+                    // Links and form fields are not comments, and a popup is the window a note
+                    // opens in rather than a note of its own.
+                    if (subtype == "Link" || subtype == "Widget" || subtype == "Popup") continue
+                    val cos = annotation.cosObject
+                    // A comment is a remark, or a mark with no remark on it. Marks with
+                    // nothing to say are listed too: a highlight is something somebody meant.
+                    val text = annotation.contents?.trim().orEmpty()
+                    val replyOf = cos.getDictionaryObject(COSName.IRT)
+                    add(
+                        Comment(
+                            pageIndex = index,
+                            kind = (if (replyOf != null) "Reply" else commentKind(subtype)),
+                            author = cos.getString(COSName.T)?.trim()?.takeIf { it.isNotEmpty() },
+                            text = text,
+                            date = tidyPdfDate(cos.getString(COSName.M))
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    private fun commentKind(subtype: String): String = when (subtype) {
+        "Text" -> "Note"
+        "FreeText" -> "Text box"
+        "Highlight" -> "Highlight"
+        "Underline" -> "Underline"
+        "StrikeOut" -> "Strikethrough"
+        "Squiggly" -> "Squiggle"
+        "Ink" -> "Drawing"
+        "Square" -> "Box"
+        "Circle" -> "Circle"
+        "Line" -> "Line"
+        "Polygon", "PolyLine" -> "Shape"
+        "Stamp" -> "Stamp"
+        "Caret" -> "Insertion"
+        "FileAttachment" -> "Attached file"
+        "Sound" -> "Sound"
+        "Movie", "Screen", "RichMedia" -> "Media"
+        "Redact" -> "Redaction mark"
+        else -> subtype
+    }
+
+    /** "D:20240305142000+05'30'" becomes "2024-03-05 14:20"; anything else is left alone. */
+    private fun tidyPdfDate(raw: String?): String? {
+        val s = raw?.trim()?.removePrefix("D:") ?: return null
+        if (s.length < 8 || !s.take(8).all { it.isDigit() }) return raw.takeIf { it.isNotBlank() }
+        val date = "${s.substring(0, 4)}-${s.substring(4, 6)}-${s.substring(6, 8)}"
+        return if (s.length >= 12 && s.substring(8, 12).all { it.isDigit() }) {
+            "$date ${s.substring(8, 10)}:${s.substring(10, 12)}"
+        } else {
+            date
         }
     }
 
@@ -920,29 +1003,35 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                 throw PdfException.Io("Page ${stamp.pageIndex + 1} does not exist in this document.")
             }
             val page = doc.getPage(stamp.pageIndex)
-            val box = page.mediaBox ?: PDRectangle.A4
+            // Placed on the page as the reader sees it: inside the crop box, the right way up.
+            val shown = ShownPage(page)
 
             val image = try {
                 PDImageXObject.createFromFile(stamp.image.absolutePath, doc)
             } catch (e: Exception) {
-                throw PdfException.Corrupt("the signature image could not be read", e)
+                throw PdfException.Corrupt("the image could not be read", e)
             }
 
-            val width = box.width * stamp.widthFraction.coerceIn(0.05f, 1f)
-            val height = width * image.height / image.width.coerceAtLeast(1)
-            val margin = box.width * stamp.marginFraction
+            var width = shown.width * stamp.widthFraction.coerceIn(0.05f, 1f)
+            var height = width * image.height / image.width.coerceAtLeast(1)
+            // A tall picture at a wide setting would run off the page; it is held inside it.
+            if (height > shown.height * 0.9f) {
+                height = shown.height * 0.9f
+                width = height * image.width / image.height.coerceAtLeast(1)
+            }
+            val margin = shown.width * stamp.marginFraction
 
             val x = when (stamp.anchor) {
                 ImageStamp.Anchor.TOP_LEFT, ImageStamp.Anchor.MIDDLE_LEFT, ImageStamp.Anchor.BOTTOM_LEFT -> margin
                 ImageStamp.Anchor.TOP_CENTRE, ImageStamp.Anchor.MIDDLE_CENTRE, ImageStamp.Anchor.BOTTOM_CENTRE ->
-                    (box.width - width) / 2f
-                else -> box.width - width - margin
+                    (shown.width - width) / 2f
+                else -> shown.width - width - margin
             }
             val y = when (stamp.anchor) {
                 ImageStamp.Anchor.TOP_LEFT, ImageStamp.Anchor.TOP_CENTRE, ImageStamp.Anchor.TOP_RIGHT ->
-                    box.height - height - margin
+                    shown.height - height - margin
                 ImageStamp.Anchor.MIDDLE_LEFT, ImageStamp.Anchor.MIDDLE_CENTRE, ImageStamp.Anchor.MIDDLE_RIGHT ->
-                    (box.height - height) / 2f
+                    (shown.height - height) / 2f
                 else -> margin
             }
 
@@ -950,7 +1039,12 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
             // the document. An annotation can be moved or deleted by the next reader, which is
             // not what anyone means by signing something.
             PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true)
-                .use { stream -> stream.drawImage(image, x, y, width, height) }
+                .use { stream ->
+                    stream.saveGraphicsState()
+                    stream.transform(shown.viewMatrix())
+                    stream.drawImage(image, x, y, width, height)
+                    stream.restoreGraphicsState()
+                }
 
             doc.save(output)
         }
@@ -2089,7 +2183,8 @@ private fun placedBounds(form: PDFormXObject, fallback: PDRectangle): PDRectangl
  * exactly right and one that is a few points wide either way, which nobody reading notices.
  */
 private class MatchFinder(
-    private val needle: String,
+    private val pattern: Regex,
+    private val accept: (String) -> Boolean,
     private val pageWidth: Float,
     private val pageHeight: Float
 ) : PDFTextStripper() {
@@ -2097,13 +2192,13 @@ private class MatchFinder(
     val areas = mutableListOf<PageArea>()
 
     override fun writeString(text: String, textPositions: List<TextPosition>) {
-        var index = text.indexOf(needle, 0, ignoreCase = true)
-        while (index >= 0) {
-            val end = (index + needle.length).coerceAtMost(textPositions.size)
-            if (index < textPositions.size && end > index) {
-                areaFor(textPositions.subList(index, end))?.let { areas += it }
+        for (match in pattern.findAll(text)) {
+            if (!accept(match.value)) continue
+            val start = match.range.first
+            val end = (match.range.last + 1).coerceAtMost(textPositions.size)
+            if (start < textPositions.size && end > start) {
+                areaFor(textPositions.subList(start, end))?.let { areas += it }
             }
-            index = text.indexOf(needle, index + 1, ignoreCase = true)
         }
         super.writeString(text, textPositions)
     }

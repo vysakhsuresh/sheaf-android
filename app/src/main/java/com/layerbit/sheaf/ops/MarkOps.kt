@@ -265,6 +265,59 @@ class SignOp(private val stamp: ImageStamp) : Op {
 }
 
 /**
+ * Puts a picture on a page: a logo, a stamp, a photo, a scanned signature.
+ *
+ * The same mechanism as [SignOp], flattened into the page for the same reason, offered as its
+ * own tool because "Sign" is not where anyone looks to put a company logo on a letterhead.
+ * The first file is the PDF and the second is the image.
+ */
+class AddImageOp(private val anchor: ImageStamp.Anchor, private val widthFraction: Float, private val page: Int) : Op {
+
+    override val tool = ToolId.ADD_IMAGE
+    override val title = "Add an image"
+    override val arity = Op.Arity.Together(min = 2)
+
+    override suspend fun run(
+        inputs: List<SheafFile>,
+        context: OpContext,
+        onProgress: (Progress) -> Unit
+    ): List<OpOutcome> = withContext(Dispatchers.IO) {
+        val document = inputs.firstOrNull { it.isPdf }
+            ?: return@withContext listOf(OpOutcome.Failed("", "Pick the PDF first."))
+        val image = inputs.firstOrNull { it.isImage }
+            ?: return@withContext listOf(OpOutcome.Failed(document.displayName, "Add the image to put on the page."))
+
+        onProgress(Progress(0, 1, "Placing ${image.displayName}"))
+        val pdfInput = PdfInput(document.file, context.passwords[document.file.path])
+        val output = context.workspace.newOutput(document.baseName, "with-image")
+
+        try {
+            context.surgeon.stampImage(
+                pdfInput,
+                ImageStamp(
+                    image = image.file,
+                    pageIndex = (page - 1).coerceAtLeast(0),
+                    anchor = anchor,
+                    widthFraction = widthFraction
+                ),
+                output
+            )
+        } catch (e: PdfException) {
+            output.delete()
+            return@withContext listOf(OpOutcome.Failed(document.displayName, e.message ?: "Failed."))
+        }
+
+        onProgress(Progress(1, 1, "Done"))
+        listOf(
+            OpOutcome.Produced(
+                SheafFile(output, "${document.baseName} with image.pdf", SheafFile.Origin.Derived("with-image")),
+                "${image.displayName} placed on page $page"
+            )
+        )
+    }
+}
+
+/**
  * Draws the reader's highlights and pen strokes into the pages.
  *
  * Into the content, not as annotation objects. An annotation is something the next reader's

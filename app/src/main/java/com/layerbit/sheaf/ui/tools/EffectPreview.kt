@@ -112,7 +112,7 @@ fun EffectPreview(
                     ToolId.BACKGROUND -> BackgroundOverlay(config)
                     ToolId.WATERMARK -> WatermarkOverlay(config)
                     ToolId.PAGE_NUMBERS -> PageNumberOverlay(config)
-                    ToolId.SIGN -> SignatureOverlay(config, signature)
+                    ToolId.SIGN, ToolId.ADD_IMAGE -> SignatureOverlay(config, signature)
                     ToolId.ADD_TEXT -> NoteOverlay(config)
                     else -> Unit
                 }
@@ -130,6 +130,7 @@ fun EffectPreview(
                 ToolId.WATERMARK -> "Close to how it will look. The document uses Helvetica."
                 ToolId.PAGE_NUMBERS -> "Shown on the first page that gets a number."
                 ToolId.SIGN -> "Where your signature will sit on the page you chose."
+                ToolId.ADD_IMAGE -> "Where the image will sit on the page you chose."
                 ToolId.ADD_TEXT -> "Tap the page to move the text. Helvetica, as the document uses."
                 else -> ""
             },

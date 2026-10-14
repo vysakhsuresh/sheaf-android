@@ -3,6 +3,10 @@ package com.layerbit.sheaf.ui.viewer
 import android.app.Application
 import android.graphics.Bitmap
 import android.net.Uri
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
+import com.layerbit.sheaf.pdf.Comment
+import java.util.Locale
 import android.util.LruCache
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,6 +22,7 @@ import com.layerbit.sheaf.pdf.PdfInput
 import com.layerbit.sheaf.pdf.SearchHit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
@@ -199,6 +204,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                         .getOrDefault(emptyList())
                 }
                 _reading.value = _reading.value.copy(outline = outline)
+                loadComments()
             } catch (_: PdfException.PasswordRequired) {
                 _state.value = ViewerState.NeedsPassword
             } catch (e: PdfException) {
@@ -311,6 +317,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                         .getOrDefault(emptyList())
                 }
                 _reading.value = _reading.value.copy(outline = outline)
+                loadComments()
             } catch (e: Exception) {
                 _state.value = ViewerState.Failed(e.message ?: "This document could not be opened.")
             }
@@ -319,6 +326,165 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
 
     /** The file currently open, for printing and sharing. Null when nothing is open. */
     fun currentFile(): SheafFile? = source
+
+    /**
+     * The comments on the pages, read once per document. Most documents have none, and the
+     * menu only offers the list when there is something in it.
+     */
+    private fun loadComments() {
+        val file = source ?: return
+        val forGeneration = generation
+        viewModelScope.launch {
+            val comments = withContext(Dispatchers.IO) {
+                runCatching { sheaf.surgeon.readComments(PdfInput(file.file)) }.getOrDefault(emptyList())
+            }
+            if (generation == forGeneration) _reading.value = _reading.value.copy(comments = comments)
+        }
+    }
+
+    // ---- read aloud ----
+
+    private var tts: TextToSpeech? = null
+    private var ttsReady = false
+    private var readJob: Job? = null
+    /** The page asked for while the engine was still starting. */
+    private var pendingReadPage = -1
+
+    /**
+     * Reads the document out from [fromPage], page after page, with the phone's own
+     * text-to-speech engine.
+     *
+     * Only a voice that works without the network is used: Sheaf has no INTERNET permission,
+     * so an online voice would fail anyway, and the promise that nothing leaves the phone
+     * covers what is read out as much as what is written. A scanned page has no text to read;
+     * Make searchable gives it some.
+     */
+    fun readAloud(fromPage: Int) {
+        val engine = tts
+        if (engine == null) {
+            pendingReadPage = fromPage
+            _reading.value = _reading.value.copy(readAloud = ReadAloud(speaking = true, page = fromPage, starting = true))
+            tts = TextToSpeech(getApplication<Application>()) { status ->
+                ttsReady = status == TextToSpeech.SUCCESS
+                if (ttsReady) {
+                    chooseLocalVoice()
+                    tts?.setOnUtteranceProgressListener(progress)
+                    val page = pendingReadPage
+                    pendingReadPage = -1
+                    if (page >= 0) speakPage(page)
+                } else {
+                    _reading.value = _reading.value.copy(
+                        readAloud = ReadAloud(available = false, note = "This phone has no text-to-speech engine.")
+                    )
+                }
+            }
+            return
+        }
+        if (!ttsReady) {
+            pendingReadPage = fromPage
+            return
+        }
+        speakPage(fromPage)
+    }
+
+    fun stopReading() {
+        readJob?.cancel()
+        pendingReadPage = -1
+        runCatching { tts?.stop() }
+        _reading.value = _reading.value.copy(readAloud = _reading.value.readAloud.copy(speaking = false, starting = false, page = -1))
+    }
+
+    private fun chooseLocalVoice() {
+        val engine = tts ?: return
+        runCatching {
+            val wanted = Locale.getDefault()
+            engine.setLanguage(wanted)
+            val local = engine.voices.orEmpty().filter {
+                !it.isNetworkConnectionRequired && !it.features.contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED)
+            }
+            val voice = local.firstOrNull { it.locale == wanted }
+                ?: local.firstOrNull { it.locale.language == wanted.language }
+                ?: local.firstOrNull { it.locale.language == "en" }
+                ?: local.firstOrNull()
+            if (voice != null) engine.voice = voice
+        }
+    }
+
+    private val progress = object : UtteranceProgressListener() {
+        override fun onStart(utteranceId: String?) = Unit
+        override fun onError(utteranceId: String?) {
+            _reading.value = _reading.value.copy(
+                readAloud = ReadAloud(available = true, speaking = false, note = "The voice stopped. Try again.")
+            )
+        }
+        override fun onDone(utteranceId: String?) {
+            // The last piece of a page is the signal to move to the next one.
+            val id = utteranceId ?: return
+            if (!id.endsWith("-last")) return
+            val page = id.removeSuffix("-last").removePrefix("page-").toIntOrNull() ?: return
+            val total = (_state.value as? ViewerState.Ready)?.pageCount ?: return
+            if (_reading.value.readAloud.speaking && page + 1 < total) {
+                speakPage(page + 1)
+            } else {
+                _reading.value = _reading.value.copy(readAloud = ReadAloud(speaking = false, note = "Reached the end."))
+            }
+        }
+    }
+
+    private fun speakPage(page: Int) {
+        val file = source ?: return
+        val engine = tts ?: return
+        val total = (_state.value as? ViewerState.Ready)?.pageCount ?: return
+        if (page !in 0 until total) return
+        readJob?.cancel()
+        readJob = viewModelScope.launch {
+            _reading.value = _reading.value.copy(readAloud = ReadAloud(speaking = true, page = page))
+            val text = withContext(Dispatchers.IO) {
+                runCatching { sheaf.surgeon.extractText(PdfInput(file.file), listOf(page))[page] }.getOrNull()
+            }.orEmpty().replace(Regex("\\s+"), " ").trim()
+            if (text.isEmpty()) {
+                // Nothing to say on this page: go on to the next, up to the end.
+                if (page + 1 < total) {
+                    jumpTo(page + 1)
+                    speakPage(page + 1)
+                } else {
+                    _reading.value = _reading.value.copy(
+                        readAloud = ReadAloud(speaking = false, note = "No text to read. A scanned page needs Make searchable first.")
+                    )
+                }
+                return@launch
+            }
+            jumpTo(page)
+            val limit = runCatching { TextToSpeech.getMaxSpeechInputLength() }.getOrDefault(3900).coerceAtMost(3900)
+            val pieces = splitForSpeech(text, limit)
+            pieces.forEachIndexed { index, piece ->
+                val id = if (index == pieces.lastIndex) "page-$page-last" else "page-$page-$index"
+                engine.speak(piece, if (index == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, id)
+            }
+        }
+    }
+
+    /** Sentences, grouped under the engine's input limit, so no sentence is cut mid-word. */
+    private fun splitForSpeech(text: String, limit: Int): List<String> {
+        val sentences = text.split(Regex("(?<=[.!?।])\\s+"))
+        val out = mutableListOf<String>()
+        val current = StringBuilder()
+        for (sentence in sentences) {
+            if (sentence.length > limit) {
+                if (current.isNotEmpty()) { out += current.toString(); current.clear() }
+                sentence.chunked(limit).forEach { out += it }
+                continue
+            }
+            if (current.length + sentence.length + 1 > limit) {
+                out += current.toString()
+                current.clear()
+            }
+            if (current.isNotEmpty()) current.append(' ')
+            current.append(sentence)
+        }
+        if (current.isNotEmpty()) out += current.toString()
+        return out.ifEmpty { listOf(text.take(limit)) }
+    }
 
     /** Inverts the page rendering, for reading in the dark without a white rectangle. */
     fun toggleNightMode() {
@@ -480,6 +646,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
      * document can show Loading at once rather than after the page on screen finishes drawing.
      */
     private fun closeCurrent() {
+        stopReading()
         searchJob?.cancel()
         bookmarkJob?.cancel()
         positionJob?.cancel()
@@ -526,6 +693,8 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
     override fun onCleared() {
         super.onCleared()
         closeCurrent()
+        runCatching { tts?.shutdown() }
+        tts = null
         // Nothing more will be handed over, so the scope goes - but not until every teardown
         // still outstanding has run, because cancelling it now would cancel a close that is
         // waiting on [renderLock] and leave its descriptor open for as long as the process
@@ -571,7 +740,21 @@ data class ReadingState(
     /** Which match the reader has stepped to, or -1 before they have stepped anywhere. */
     val hitIndex: Int = -1,
     val searching: Boolean = false,
-    val jump: Jump? = null
+    val jump: Jump? = null,
+    /** The comments on the pages, for the list in the menu. */
+    val comments: List<Comment> = emptyList(),
+    val readAloud: ReadAloud = ReadAloud()
+)
+
+/** Whether the document is being read out, and from where. */
+data class ReadAloud(
+    val available: Boolean = true,
+    val speaking: Boolean = false,
+    /** True while the engine is starting up, before the first word. */
+    val starting: Boolean = false,
+    val page: Int = -1,
+    /** Something to tell the reader: why it stopped, or that there was nothing to read. */
+    val note: String? = null
 )
 
 sealed interface ViewerState {

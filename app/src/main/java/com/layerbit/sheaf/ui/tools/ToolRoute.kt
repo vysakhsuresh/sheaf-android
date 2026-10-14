@@ -216,6 +216,15 @@ fun ToolRoute(
             onIndentBookmark = viewModel::indentBookmark,
             onClearBookmarks = viewModel::clearBookmarks,
             onLoadAttachments = viewModel::loadAttachments,
+            onFindSensitive = viewModel::findSensitive,
+            onLoadAnswers = viewModel::loadSavedAnswers,
+            onKeepAnswers = {
+                viewModel.keepAnswers()
+                message = "Kept. They will be offered the next time you fill a form."
+            },
+            onUseAnswers = viewModel::useAnswers,
+            onForgetAnswers = viewModel::forgetAnswers,
+            onLoadStamp = viewModel::loadStampBitmap,
             onSaveZip = { files ->
                 viewModel.zipResults(files) { zip ->
                     if (zip == null) {

@@ -7,6 +7,7 @@ import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * Makes a PDF smaller by re-encoding the images inside it.
@@ -19,10 +20,17 @@ import kotlinx.coroutines.withContext
  * The honest consequence is that a text-only document will barely shrink. The result says so
  * in words rather than presenting a 2% saving as a success.
  */
-class CompressOp(private val level: CompressionLevel) : Op {
+class CompressOp(
+    private val level: CompressionLevel,
+    /**
+     * A size to get under, in bytes. The levels are tried lightest first and the first that
+     * fits is kept; when none does, the smallest is kept and the result says so.
+     */
+    private val targetBytes: Long? = null
+) : Op {
 
     override val tool = ToolId.COMPRESS
-    override val title = "Compress (${level.label})"
+    override val title = if (targetBytes != null) "Compress to under ${describeBytes(targetBytes)}" else "Compress (${level.label})"
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -35,6 +43,13 @@ class CompressOp(private val level: CompressionLevel) : Op {
         inputs.forEachIndexed { index, input ->
             context.checkCancelled()
             onProgress(Progress(index, inputs.size, input.displayName))
+
+            if (targetBytes != null) {
+                outcomes += toSize(input, context, targetBytes) { label ->
+                    onProgress(Progress(index, inputs.size, "${input.displayName}: $label"))
+                }
+                return@forEachIndexed
+            }
 
             val output = context.workspace.newOutput(input.baseName, "compressed")
             try {
@@ -86,6 +101,62 @@ class CompressOp(private val level: CompressionLevel) : Op {
 
         onProgress(Progress(inputs.size, inputs.size, "Done"))
         outcomes
+    }
+
+    /** Lightest level first, stopping at the first that fits under [target]. */
+    private fun toSize(input: SheafFile, context: OpContext, target: Long, step: (String) -> Unit): OpOutcome {
+        if (input.sizeBytes <= target) {
+            return OpOutcome.Skipped(input.displayName, "Already under ${describeBytes(target)}, so it was left alone.")
+        }
+        val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
+        var smallest: Pair<File, CompressionLevel>? = null
+        try {
+            for (candidate in CompressionLevel.entries) {
+                context.checkCancelled()
+                step("trying ${candidate.label.lowercase()}")
+                val output = context.workspace.newOutput(input.baseName, "compressed")
+                val result = context.surgeon.compress(pdfInput, candidate, output) { _, _ -> context.checkCancelled() }
+                val size = result.compressedBytes
+                if (size <= target) {
+                    smallest?.first?.delete()
+                    return OpOutcome.Produced(
+                        SheafFile(output, "${input.baseName} compressed.pdf", SheafFile.Origin.Derived("compressed")),
+                        "Under ${describeBytes(target)} at ${describeBytes(size)}, with ${candidate.label.lowercase()} compression"
+                    )
+                }
+                val best = smallest
+                if (best == null || size < best.first.length()) {
+                    best?.first?.delete()
+                    smallest = output to candidate
+                } else {
+                    output.delete()
+                }
+            }
+        } catch (e: PdfException) {
+            smallest?.first?.delete()
+            return OpOutcome.Failed(input.displayName, e.message ?: "Compression failed.")
+        }
+        val (file, level) = smallest ?: return OpOutcome.Failed(input.displayName, "Compression failed.")
+        if (file.length() >= input.sizeBytes) {
+            file.delete()
+            return OpOutcome.Skipped(
+                input.displayName,
+                "Cannot get under ${describeBytes(target)}: the pictures are already as small as they go, and " +
+                    "re-encoding them made the file larger. Split by size can cut it into parts that fit."
+            )
+        }
+        return OpOutcome.Produced(
+            SheafFile(file, "${input.baseName} compressed.pdf", SheafFile.Origin.Derived("compressed")),
+            "Still over ${describeBytes(target)}: the smallest it goes is ${describeBytes(file.length())}, " +
+                "with ${level.label.lowercase()} compression. Split by size can cut it into parts that fit."
+        )
+    }
+
+    companion object {
+        fun describeBytes(bytes: Long): String {
+            val mb = bytes / (1024f * 1024f)
+            return if (mb == mb.toInt().toFloat()) "${mb.toInt()} MB" else "%.1f MB".format(mb)
+        }
     }
 }
 
