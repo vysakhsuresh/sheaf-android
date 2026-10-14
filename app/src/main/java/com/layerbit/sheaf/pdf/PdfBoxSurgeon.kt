@@ -670,6 +670,33 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         }
     }
 
+    override fun pageLines(input: PdfInput, onProgress: (Int, Int) -> Unit): List<List<TextLine>> =
+        withDocument(input) { doc ->
+            List(doc.numberOfPages) { index ->
+                val page = doc.getPage(index)
+                val box = page.cropBox ?: page.mediaBox ?: PDRectangle.A4
+                val quarterTurned = normaliseRotation(page.rotation) % 180 == 90
+                val stripper = if (quarterTurned) LineFinder(box.height, box.width) else LineFinder(box.width, box.height)
+                stripper.startPage = index + 1
+                stripper.endPage = index + 1
+                runCatching { stripper.getText(doc) }
+                onProgress(index + 1, doc.numberOfPages)
+                stripper.lines.toList()
+            }
+        }
+
+    override fun layoutFlow(document: FlowDocument, output: File, onProgress: (Int, Int) -> Unit): Int {
+        try {
+            PDDocument(scratchMemory()).use { doc ->
+                val pages = FlowLayout(doc, onProgress).layout(document)
+                doc.save(output)
+                return pages
+            }
+        } catch (e: IOException) {
+            throw e.asPdfException("laying out the document")
+        }
+    }
+
     override fun readComments(input: PdfInput): List<Comment> = withDocument(input) { doc ->
         buildList {
             for (index in 0 until doc.numberOfPages) {
@@ -1926,7 +1953,9 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                     // bitmap". PDFBox frees it when the document closes.
                     val bitmap = runCatching { xObject.image }.getOrNull() ?: continue
                     found++
-                    val file = File(outputDir, "$baseName-${found.toString().padStart(3, '0')}.png")
+                    // The page is in the name, so a converter can put each picture back on
+                    // the page it came from.
+                    val file = File(outputDir, "$baseName-p${index + 1}-${found.toString().padStart(3, '0')}.png")
                     try {
                         FileOutputStream(file).use { out ->
                             bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
@@ -2549,6 +2578,84 @@ private class WordFinder(
             }
         }
         super.writeString(text, textPositions)
+    }
+}
+
+/**
+ * Every line on a page with its size, weight and box, cut into cells at its wide gaps.
+ *
+ * The stripper hands over text a run at a time and says where lines end; this keeps the
+ * runs of the current line with their glyphs, and at the line's end works out the box, the
+ * commonest size and whether the run of a table's columns shows in the gaps.
+ */
+private class LineFinder(
+    private val pageWidth: Float,
+    private val pageHeight: Float
+) : PDFTextStripper() {
+
+    val lines = mutableListOf<TextLine>()
+    private val runs = mutableListOf<Pair<String, List<TextPosition>>>()
+
+    override fun writeString(text: String, textPositions: List<TextPosition>) {
+        if (text.isNotEmpty() && textPositions.isNotEmpty()) runs += text to textPositions
+    }
+
+    override fun writeWordSeparator() = Unit
+
+    override fun writeLineSeparator() = endLine()
+
+    override fun writeParagraphSeparator() = endLine()
+
+    override fun endPage(page: PDPage) {
+        endLine()
+        super.endPage(page)
+    }
+
+    private fun endLine() {
+        if (runs.isEmpty()) return
+        val glyphs = runs.flatMap { it.second }
+        val area = glyphArea(glyphs, pageWidth, pageHeight)
+        if (area == null) { runs.clear(); return }
+        val size = glyphs.groupingBy { Math.round(it.fontSizeInPt * 2f) / 2f }.eachCount().maxByOrNull { it.value }?.key ?: 11f
+        val names = glyphs.mapNotNull { runCatching { it.font?.name }.getOrNull() }
+        val bold = names.isNotEmpty() && names.count { it.contains("Bold", true) || it.contains("Black", true) || it.contains("Heavy", true) } * 2 >= names.size
+        val italic = names.isNotEmpty() && names.count { it.contains("Italic", true) || it.contains("Oblique", true) } * 2 >= names.size
+
+        // Cells: a gap wider than a couple of spaces splits the line, which is how a table's
+        // columns show. Runs come in reading order, so only the gap to the one before counts.
+        val cells = mutableListOf<String>()
+        val current = StringBuilder()
+        var lastEnd = Float.NaN
+        for ((text, positions) in runs) {
+            val first = positions.first()
+            val start = first.xDirAdj
+            val end = positions.last().let { it.xDirAdj + it.widthDirAdj }
+            if (!lastEnd.isNaN()) {
+                val gap = start - lastEnd
+                val wide = gap > maxOf(first.fontSizeInPt * 1.6f, first.widthOfSpace * 3f)
+                if (wide) {
+                    if (current.isNotBlank()) cells += current.toString().trim()
+                    current.clear()
+                } else if (gap > first.widthOfSpace * 0.3f && current.isNotEmpty() && !current.endsWith(' ')) {
+                    current.append(' ')
+                }
+            }
+            current.append(text)
+            lastEnd = end
+        }
+        if (current.isNotBlank()) cells += current.toString().trim()
+        runs.clear()
+        if (cells.isEmpty()) return
+        lines += TextLine(
+            cells = cells,
+            sizePoints = size,
+            bold = bold,
+            italic = italic,
+            left = area.left,
+            top = area.top,
+            width = area.width,
+            height = area.height
+        )
     }
 }
 

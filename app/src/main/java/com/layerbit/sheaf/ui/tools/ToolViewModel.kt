@@ -38,6 +38,9 @@ import com.layerbit.sheaf.ops.SplitBySizeOp
 import com.layerbit.sheaf.ops.WatermarkOp
 import com.layerbit.sheaf.ops.ExtractTextOp
 import com.layerbit.sheaf.ops.OcrOp
+import com.layerbit.sheaf.ops.OfficeTarget
+import com.layerbit.sheaf.ops.OfficeToPdfOp
+import com.layerbit.sheaf.ops.PdfToOfficeOp
 import com.layerbit.sheaf.ops.ImagesToPdfOp
 import com.layerbit.sheaf.ops.MergeOp
 import com.layerbit.sheaf.ops.Op
@@ -248,6 +251,12 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         if (!file.isPdf) {
             // Attachments takes any file at all after the PDF; it is never opened, only carried.
             if (tool == ToolId.ATTACHMENTS) return@withContext SelectedDoc(file = file)
+            if (tool == ToolId.OFFICE_TO_PDF) {
+                return@withContext SelectedDoc(
+                    file = file,
+                    unreadableReason = if (file.isOffice) null else "Sheaf can turn .docx, .xlsx, .txt, .md and .csv files into PDFs; this is something else."
+                )
+            }
             return@withContext SelectedDoc(
                 file = file,
                 unreadableReason = if (tool?.input == ToolId.InputKind.IMAGES) {
@@ -764,6 +773,8 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 format = config.imageFormat,
                 pageSpec = config.pageSpec.takeIf { it.isNotBlank() }
             )
+            ToolId.PDF_TO_OFFICE -> PdfToOfficeOp(config.officeTarget, config.convertPictures)
+            ToolId.OFFICE_TO_PDF -> OfficeToPdfOp()
             ToolId.COMPRESS -> CompressOp(
                 config.compression,
                 targetBytes = if (config.compressToSize) config.compressTargetMb.toLong() * 1024 * 1024 else null
@@ -1616,6 +1627,8 @@ data class ToolUiState(
                 config.rent <= 0 -> "Type the monthly rent."
                 else -> null
             }
+            tool == ToolId.OFFICE_TO_PDF && documents.any { it.file.isPdf } ->
+                "This one is already a PDF. Pick a Word, Excel or text file."
             documents.isEmpty() -> if (tool.input == ToolId.InputKind.IMAGES) {
                 "Choose at least one image."
             } else {
@@ -1753,6 +1766,10 @@ data class ToolConfig(
     val rentMonths: Int = 12,
     val rentMode: String = "Bank transfer",
     val landlordPan: String = "",
+
+    /** PDF to Office: which file to make, and whether the pictures come along. */
+    val officeTarget: OfficeTarget = OfficeTarget.WORD,
+    val convertPictures: Boolean = true,
 
     /** Compress: get under a size rather than pick a level. */
     val compressToSize: Boolean = false,

@@ -374,6 +374,20 @@ interface PdfSurgeon {
     @Throws(PdfException::class)
     fun writeReceipts(receipts: List<ReceiptSpec>, output: File): Int
 
+    /**
+     * The lines of text on every page, with their size, weight and place, for turning a
+     * document back into paragraphs. A scanned page gives an empty list.
+     */
+    @Throws(PdfException::class)
+    fun pageLines(input: PdfInput, onProgress: (Int, Int) -> Unit = { _, _ -> }): List<List<TextLine>>
+
+    /**
+     * Lays a [FlowDocument] out on A4 pages: headings, paragraphs, lists, tables, pictures,
+     * in the phone's own fonts where Helvetica cannot set the text. Returns the page count.
+     */
+    @Throws(PdfException::class)
+    fun layoutFlow(document: FlowDocument, output: File, onProgress: (Int, Int) -> Unit = { _, _ -> }): Int
+
     /** The comments and notes on the pages, in page order, as a reader lists them. */
     @Throws(PdfException::class)
     fun readComments(input: PdfInput): List<Comment>

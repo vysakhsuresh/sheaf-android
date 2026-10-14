@@ -78,6 +78,18 @@ enum class ToolId(
         InputKind.ONE_PDF,
         Group.CONVERT
     ),
+    PDF_TO_OFFICE(
+        "PDF to Word, Excel, EPUB or web page",
+        "Paragraphs, headings, tables and pictures, as a file you can edit or read",
+        InputKind.SEVERAL_PDFS,
+        Group.CONVERT
+    ),
+    OFFICE_TO_PDF(
+        "Word, Excel or text to PDF",
+        "A .docx, .xlsx, .txt, .md or .csv as a PDF, laid out on A4",
+        InputKind.OFFICE,
+        Group.CONVERT
+    ),
     COMPRESS(
         "Compress",
         "Make a PDF smaller for email or upload, or get it under a size",
@@ -240,6 +252,9 @@ enum class ToolId(
         /** One PDF and one image. */
         PDF_AND_IMAGE,
 
+        /** Word files, spreadsheets and text files, any number. */
+        OFFICE,
+
         /** Takes no file at all - it makes one with the camera. */
         CAMERA,
 
@@ -276,6 +291,8 @@ enum class ToolId(
             IMAGES_TO_PDF -> "Make a PDF"
             PDF_TO_IMAGES -> "Save as images"
             COMPRESS -> "Compress it"
+            PDF_TO_OFFICE -> "Convert it"
+            OFFICE_TO_PDF -> "Make the PDF"
             WATERMARK -> "Add the watermark"
             PAGE_NUMBERS -> "Add the numbers"
             SIGN -> "Place the signature"
@@ -304,13 +321,22 @@ enum class ToolId(
 
     val acceptsMultiple: Boolean
         get() = input == InputKind.SEVERAL_PDFS || input == InputKind.IMAGES ||
-            input == InputKind.PDF_AND_FILES || input == InputKind.PDF_AND_IMAGE
+            input == InputKind.PDF_AND_FILES || input == InputKind.PDF_AND_IMAGE || input == InputKind.OFFICE
 
     val mimeFilter: Array<String>
         get() = when (input) {
             InputKind.IMAGES -> arrayOf("image/*")
             InputKind.PDF_AND_FILES -> arrayOf("*/*")
             InputKind.PDF_AND_IMAGE -> arrayOf("application/pdf", "image/*")
+            InputKind.OFFICE -> arrayOf(
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "text/plain",
+                "text/markdown",
+                "text/csv",
+                "text/comma-separated-values",
+                "application/octet-stream"
+            )
             else -> arrayOf("application/pdf")
         }
 }

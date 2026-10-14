@@ -29,6 +29,8 @@ fun iconFor(tool: ToolId): Int = when (tool) {
     ToolId.IMAGES_TO_PDF -> R.drawable.ic_tool_images_to_pdf
     ToolId.PDF_TO_IMAGES -> R.drawable.ic_tool_pdf_to_images
     ToolId.COMPRESS -> R.drawable.ic_tool_compress
+    ToolId.PDF_TO_OFFICE -> R.drawable.ic_tool_pdf_to_office
+    ToolId.OFFICE_TO_PDF -> R.drawable.ic_tool_office_to_pdf
     ToolId.WATERMARK -> R.drawable.ic_tool_watermark
     ToolId.PAGE_NUMBERS -> R.drawable.ic_tool_page_numbers
     ToolId.SIGN -> R.drawable.ic_tool_sign

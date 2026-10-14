@@ -103,7 +103,10 @@ class DocumentStore(private val context: Context) {
             "heic", "heif" -> "image/heif"
             "gif" -> "image/gif"
             "bmp" -> "image/bmp"
-            "txt" -> SheafFile.MIME_TEXT
+            "txt", "md" -> SheafFile.MIME_TEXT
+            "csv" -> "text/csv"
+            "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             // Unknown rather than assumed. A tool that needs a PDF will say so plainly; a tool
             // that guessed would fail somewhere deeper and less usefully.
             else -> GENERIC_BINARY

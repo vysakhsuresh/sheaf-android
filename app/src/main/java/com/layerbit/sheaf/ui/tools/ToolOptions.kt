@@ -18,6 +18,7 @@ import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.pdf.CompressionLevel
 import com.layerbit.sheaf.pdf.ImageFormat
 import com.layerbit.sheaf.pdf.ImageStamp
+import com.layerbit.sheaf.ops.OfficeTarget
 import com.layerbit.sheaf.ops.RentReceiptsOp
 import com.layerbit.sheaf.pdf.OcrScript
 import com.layerbit.sheaf.pdf.PageLabelSpec
@@ -163,6 +164,39 @@ fun ToolOptions(
                     )
                 }
             }
+
+            ToolId.PDF_TO_OFFICE -> {
+                SectionHeading("Make a")
+                ChoiceRow(
+                    options = OfficeTarget.entries.map { it to it.label },
+                    selected = config.officeTarget,
+                    onSelect = { value -> onChange { it.copy(officeTarget = value) } }
+                )
+                if (config.officeTarget != OfficeTarget.EXCEL) {
+                    ToggleRow(
+                        title = "Bring the pictures along",
+                        checked = config.convertPictures,
+                        onChange = { on -> onChange { it.copy(convertPictures = on) } }
+                    )
+                }
+                Hint(
+                    when (config.officeTarget) {
+                        OfficeTarget.WORD -> "Paragraphs, headings, lists and tables, with Word's own styles, so the " +
+                            "navigation pane works and the text reflows when edited. A PDF holds lines, not " +
+                            "paragraphs, so this is reconstruction: check a long document after."
+                        OfficeTarget.EXCEL -> "One sheet per page. Lines that line up in columns become cells; a " +
+                            "number stays a number so sums work. Best on statements and tables."
+                        OfficeTarget.EPUB -> "A reflowing book for e-readers, cut into chapters at the headings."
+                        OfficeTarget.HTML -> "One self-contained web page, pictures included, that opens in any browser."
+                    } + " Scanned pages have no words until Make searchable has read them."
+                )
+            }
+
+            ToolId.OFFICE_TO_PDF -> Hint(
+                "Paragraphs, headings, lists and tables come through, laid out on A4 in the " +
+                    "phone's own fonts - Hindi, Tamil, Malayalam and the rest included, where " +
+                    "the phone has the font. Shapes, text boxes and tracked changes do not."
+            )
 
             ToolId.COMPRESS -> {
                 ChoiceRow(

@@ -86,7 +86,10 @@ the signature. Resist any pull towards a convenient `fun run(input: SheafFile): 
 |---|---|
 | Read | Open a document, search it, read it aloud with the phone's own voice, see its comments, then hand it to any tool |
 | Scan a document | Camera capture, corner adjustment, document filter |
-| Make searchable | OCR a scan into an invisible, selectable text layer |
+| Make searchable | OCR a scan into an invisible, selectable text layer, in Latin or Devanagari script |
+| Compare two versions | Older and newer: new words in green on the newer file, a note where words went |
+| Find and replace text | Change a date, a name or a number wherever it appears |
+| Rent receipts | A year of HRA receipts from what you type, amount in words, two to a page |
 | Extract text | Pull the words out as plain text |
 | Merge | Join several PDFs, reorderable |
 | Split | Every N pages, single pages, by ranges, or at the document's own bookmarks |
@@ -97,6 +100,8 @@ the signature. Resist any pull towards a convenient `fun run(input: SheafFile): 
 | Bookmarks | Edit the table of contents a reader shows: titles, pages, nesting |
 | Images to PDF | A4, Letter, A5 or fit-to-image, with margins; one PDF or one per image |
 | PDF to images | PNG or JPEG at 96, 200 or 300 DPI |
+| PDF to Word, Excel, EPUB or web page | Paragraphs, headings, lists, tables and pictures rebuilt from the pages, as .docx, .xlsx, .epub or .html |
+| Word, Excel or text to PDF | A .docx, .xlsx, .txt, .md or .csv laid out on A4, in the phone's own fonts for Indian scripts |
 | Compress | Three levels, or a size to get under, and it tells you when there was nothing to gain |
 | Attachments | Put files inside a PDF, or take out the ones already there |
 | Add a password | AES-256, with the printing and copying flags as a stated request; or restrict only, with no password to open |
