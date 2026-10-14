@@ -9,6 +9,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -42,7 +43,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -411,11 +415,13 @@ fun MarkupCanvas(
     pageCount: Int,
     page: Bitmap?,
     marks: List<PageMark>,
-    pen: Boolean,
+    tool: ToolConfig.MarkupTool,
     colour: Int,
     onPage: (Int) -> Unit,
     onHighlight: (PageArea) -> Unit,
     onInk: (List<PagePoint>) -> Unit,
+    onLine: (PagePoint, PagePoint) -> Unit,
+    onTap: (PagePoint) -> Unit,
     onUndo: () -> Unit,
     onClear: () -> Unit,
     modifier: Modifier = Modifier
@@ -439,16 +445,19 @@ fun MarkupCanvas(
             ) { Text("Next", color = SheafColors.Muted) }
         }
 
+        val pen = tool == ToolConfig.MarkupTool.PEN
+        val lineTool = tool == ToolConfig.MarkupTool.LINE || tool == ToolConfig.MarkupTool.ARROW
+
         // The in-progress gestures. Neither is snapshot state that Compose walks: the stroke
         // is a Path appended to as points arrive, and one counter read inside the draw lambda
         // is what invalidates it.
-        val stroke = remember(pageIndex, pen) { mutableStateOf<SignatureStroke?>(null) }
-        var version by remember(pageIndex, pen) { mutableIntStateOf(0) }
-        var boxFrom by remember(pageIndex, pen) { mutableStateOf<Offset?>(null) }
-        var boxTo by remember(pageIndex, pen) { mutableStateOf<Offset?>(null) }
+        val stroke = remember(pageIndex, tool) { mutableStateOf<SignatureStroke?>(null) }
+        var version by remember(pageIndex, tool) { mutableIntStateOf(0) }
+        var boxFrom by remember(pageIndex, tool) { mutableStateOf<Offset?>(null) }
+        var boxTo by remember(pageIndex, tool) { mutableStateOf<Offset?>(null) }
 
-        val gestures = if (pen) {
-            Modifier.pointerInput(pageIndex, pen) {
+        val gestures = when {
+            pen -> Modifier.pointerInput(pageIndex, tool) {
                 awaitPointerEventScope {
                     while (true) {
                         val down = awaitPointerEvent().changes.firstOrNull { it.pressed }
@@ -484,22 +493,40 @@ fun MarkupCanvas(
                     }
                 }
             }
-        } else {
-            Modifier.pointerInput(pageIndex, pen) {
+
+            tool.taps -> Modifier.pointerInput(pageIndex, tool) {
+                detectTapGestures { offset ->
+                    if (size.width > 0 && size.height > 0) {
+                        onTap(PagePoint((offset.x / size.width).coerceIn(0f, 1f), (offset.y / size.height).coerceIn(0f, 1f)))
+                    }
+                }
+            }
+
+            else -> Modifier.pointerInput(pageIndex, tool) {
                 detectDragGestures(
                     onDragStart = { start -> boxFrom = start; boxTo = start },
                     onDragEnd = {
                         val from = boxFrom
                         val to = boxTo
-                        if (from != null && to != null) {
-                            val left = minOf(from.x, to.x) / size.width
-                            val top = minOf(from.y, to.y) / size.height
-                            val width = kotlin.math.abs(to.x - from.x) / size.width
-                            val height = kotlin.math.abs(to.y - from.y) / size.height
-                            // A highlight is usually wide and short - one line of text - so
-                            // only the long side has to clear the tap threshold.
-                            if (width > MIN_BOX && height > MIN_BOX / 2f) {
-                                onHighlight(PageArea(left, top, width, height))
+                        if (from != null && to != null && size.width > 0 && size.height > 0) {
+                            if (lineTool) {
+                                val length = kotlin.math.hypot(to.x - from.x, to.y - from.y)
+                                if (length / size.width > MIN_BOX) {
+                                    onLine(
+                                        PagePoint(from.x / size.width, from.y / size.height),
+                                        PagePoint(to.x / size.width, to.y / size.height)
+                                    )
+                                }
+                            } else {
+                                val left = minOf(from.x, to.x) / size.width
+                                val top = minOf(from.y, to.y) / size.height
+                                val width = kotlin.math.abs(to.x - from.x) / size.width
+                                val height = kotlin.math.abs(to.y - from.y) / size.height
+                                // A highlight is usually wide and short - one line of text -
+                                // so only the long side has to clear the tap threshold.
+                                if (width > MIN_BOX && height > MIN_BOX / 2f) {
+                                    onHighlight(PageArea(left, top, width, height))
+                                }
                             }
                         }
                         boxFrom = null
@@ -539,39 +566,11 @@ fun MarkupCanvas(
                 // invisible to Compose on purpose.
                 @Suppress("UNUSED_EXPRESSION") version
 
-                for (mark in marks) {
-                    when (mark) {
-                        is PageMark.Highlight -> drawRect(
-                            color = Color(mark.colour).copy(alpha = HIGHLIGHT_PREVIEW_ALPHA),
-                            topLeft = Offset(
-                                mark.area.left * size.width,
-                                mark.area.top * size.height
-                            ),
-                            size = Size(
-                                mark.area.width * size.width,
-                                mark.area.height * size.height
-                            )
-                        )
+                // The preview is as many pixels wide as the page is points, near enough, so
+                // this is the one ratio that turns a width in the document into one on screen.
+                val pxPerPoint = size.width / A4_WIDTH_POINTS
 
-                        is PageMark.Ink -> {
-                            val path = Path()
-                            mark.points.forEachIndexed { index, point ->
-                                val x = point.x * size.width
-                                val y = point.y * size.height
-                                if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
-                            }
-                            drawPath(
-                                path = path,
-                                color = Color(mark.colour),
-                                style = Stroke(
-                                    width = INK_WIDTH_PX,
-                                    cap = StrokeCap.Round,
-                                    join = StrokeJoin.Round
-                                )
-                            )
-                        }
-                    }
-                }
+                for (mark in marks) drawMark(mark, pxPerPoint)
 
                 stroke.value?.let { drawing ->
                     drawPath(
@@ -588,14 +587,24 @@ fun MarkupCanvas(
                 val from = boxFrom
                 val to = boxTo
                 if (from != null && to != null) {
-                    drawRect(
-                        color = Color(colour).copy(alpha = HIGHLIGHT_PREVIEW_ALPHA),
-                        topLeft = Offset(minOf(from.x, to.x), minOf(from.y, to.y)),
-                        size = Size(
-                            kotlin.math.abs(to.x - from.x),
-                            kotlin.math.abs(to.y - from.y)
+                    if (lineTool) {
+                        drawLine(
+                            color = Color(colour),
+                            start = from,
+                            end = to,
+                            strokeWidth = INK_WIDTH_PX / 2f,
+                            cap = StrokeCap.Round
                         )
-                    )
+                    } else {
+                        drawRect(
+                            color = Color(colour).copy(alpha = HIGHLIGHT_PREVIEW_ALPHA),
+                            topLeft = Offset(minOf(from.x, to.x), minOf(from.y, to.y)),
+                            size = Size(
+                                kotlin.math.abs(to.x - from.x),
+                                kotlin.math.abs(to.y - from.y)
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -607,9 +616,11 @@ fun MarkupCanvas(
         ) {
             Text(
                 when {
-                    marks.isEmpty() && pen -> "Draw on the page with your finger"
-                    marks.isEmpty() -> "Drag across a line to highlight it"
-                    else -> "${marks.size} on this page"
+                    marks.isNotEmpty() -> "${marks.size} on this page"
+                    pen -> "Draw on the page with your finger"
+                    tool.taps -> "Tap the page where the ${tool.label.lowercase()} should go"
+                    lineTool -> "Drag from where the ${tool.label.lowercase()} starts to where it ends"
+                    else -> "Drag across a line to ${tool.label.lowercase()} it"
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = SheafColors.Dim,
@@ -618,6 +629,130 @@ fun MarkupCanvas(
             if (marks.isNotEmpty()) {
                 OutlinedButton(onClick = onUndo) { Text("Undo", color = SheafColors.Muted) }
                 OutlinedButton(onClick = onClear) { Text("Clear page", color = SheafColors.Muted) }
+            }
+        }
+    }
+}
+
+/** One mark, drawn the way the engine will draw it, near enough to judge by. */
+private fun DrawScope.drawMark(mark: PageMark, pxPerPoint: Float) {
+    val ink = Color(mark.colour)
+    when (mark) {
+        is PageMark.Highlight -> drawRect(
+            color = ink.copy(alpha = HIGHLIGHT_PREVIEW_ALPHA),
+            topLeft = Offset(mark.area.left * size.width, mark.area.top * size.height),
+            size = Size(mark.area.width * size.width, mark.area.height * size.height)
+        )
+
+        is PageMark.Ink -> {
+            val path = Path()
+            mark.points.forEachIndexed { index, point ->
+                val x = point.x * size.width
+                val y = point.y * size.height
+                if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            }
+            drawPath(
+                path = path,
+                color = ink,
+                style = Stroke(width = INK_WIDTH_PX, cap = StrokeCap.Round, join = StrokeJoin.Round)
+            )
+        }
+
+        is PageMark.Shape -> {
+            val left = mark.area.left * size.width
+            val top = mark.area.top * size.height
+            val right = left + mark.area.width * size.width
+            val bottom = top + mark.area.height * size.height
+            val width = (mark.widthPoints * pxPerPoint).coerceAtLeast(1.5f)
+            when (mark.kind) {
+                PageMark.Shape.Kind.UNDERLINE -> drawLine(ink, Offset(left, bottom), Offset(right, bottom), width, StrokeCap.Round)
+                PageMark.Shape.Kind.STRIKETHROUGH -> {
+                    val middle = (top + bottom) / 2f
+                    drawLine(ink, Offset(left, middle), Offset(right, middle), width, StrokeCap.Round)
+                }
+                PageMark.Shape.Kind.BOX -> drawRect(
+                    color = ink,
+                    topLeft = Offset(left, top),
+                    size = Size(right - left, bottom - top),
+                    style = Stroke(width = width)
+                )
+                PageMark.Shape.Kind.CIRCLE -> drawOval(
+                    color = ink,
+                    topLeft = Offset(left, top),
+                    size = Size(right - left, bottom - top),
+                    style = Stroke(width = width)
+                )
+            }
+        }
+
+        is PageMark.Line -> {
+            val from = Offset(mark.from.x * size.width, mark.from.y * size.height)
+            val to = Offset(mark.to.x * size.width, mark.to.y * size.height)
+            val width = (mark.widthPoints * pxPerPoint).coerceAtLeast(1.5f)
+            drawLine(ink, from, to, width, StrokeCap.Round)
+            if (mark.arrow) {
+                val head = (width * 5f).coerceIn(10f, 40f)
+                val angle = kotlin.math.atan2(to.y - from.y, to.x - from.x)
+                val spread = Math.toRadians(26.0).toFloat()
+                val path = Path().apply {
+                    moveTo(to.x, to.y)
+                    lineTo(to.x - head * kotlin.math.cos(angle - spread), to.y - head * kotlin.math.sin(angle - spread))
+                    lineTo(to.x - head * kotlin.math.cos(angle + spread), to.y - head * kotlin.math.sin(angle + spread))
+                    close()
+                }
+                drawPath(path, ink)
+            }
+        }
+
+        is PageMark.Note -> {
+            val textPx = mark.sizePoints * pxPerPoint
+            val paint = AndroidPaint().apply {
+                color = mark.colour or (0xFF shl 24)
+                textSize = textPx
+                isAntiAlias = true
+            }
+            val lines = mark.text.split('\n')
+            val widest = lines.maxOf { paint.measureText(it) }
+            val pad = textPx * 0.5f
+            val cardWidth = (widest + pad * 2f).coerceAtMost(size.width * 0.5f)
+            val cardHeight = lines.size * textPx * 1.25f + pad * 2f
+            val left = (mark.at.x * size.width).coerceIn(0f, (size.width - cardWidth).coerceAtLeast(0f))
+            val top = (mark.at.y * size.height).coerceIn(0f, (size.height - cardHeight).coerceAtLeast(0f))
+            drawRect(Color(0xFFFFF8C6), Offset(left, top), Size(cardWidth, cardHeight))
+            drawRect(Color(0xFFD9BF59), Offset(left, top), Size(cardWidth, cardHeight), style = Stroke(1f))
+            drawContext.canvas.nativeCanvas.apply {
+                save()
+                clipRect(left, top, left + cardWidth, top + cardHeight)
+                lines.forEachIndexed { i, line ->
+                    drawText(line, left + pad, top + pad + textPx * 0.9f + i * textPx * 1.25f, paint)
+                }
+                restore()
+            }
+        }
+
+        is PageMark.Stamp -> {
+            val textPx = (minOf(size.width, size.height) * 0.045f).coerceIn(10f * pxPerPoint, 28f * pxPerPoint)
+            val paint = AndroidPaint().apply {
+                color = mark.colour or (0xFF shl 24)
+                textSize = textPx
+                isAntiAlias = true
+                isFakeBoldText = true
+            }
+            val text = mark.text.uppercase()
+            val textWidth = paint.measureText(text)
+            val pad = textPx * 0.45f
+            val boxWidth = textWidth + pad * 2f
+            val boxHeight = textPx * 1.5f
+            val cx = mark.at.x * size.width
+            val cy = mark.at.y * size.height
+            rotate(degrees = -8f, pivot = Offset(cx, cy)) {
+                drawRect(
+                    color = ink.copy(alpha = 0.85f),
+                    topLeft = Offset(cx - boxWidth / 2f, cy - boxHeight / 2f),
+                    size = Size(boxWidth, boxHeight),
+                    style = Stroke(width = textPx * 0.12f)
+                )
+                drawContext.canvas.nativeCanvas.drawText(text, cx - textWidth / 2f, cy + textPx * 0.36f, paint)
             }
         }
     }
@@ -635,3 +770,6 @@ private const val SIGNATURE_HEIGHT_PX = 480
 
 /** Below this a drag is a tap, and a zero-size box would sit invisibly in the list. */
 private const val MIN_BOX = 0.01f
+
+/** The page the preview's stroke widths are reckoned against. */
+private const val A4_WIDTH_POINTS = 595.28f

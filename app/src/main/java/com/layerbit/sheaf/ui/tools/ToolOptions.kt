@@ -777,37 +777,77 @@ fun ToolOptions(
             ToolId.ANNOTATE -> {
                 SectionHeading("What your finger does")
                 ChoiceRow(
-                    options = listOf(false to "Highlight", true to "Draw"),
-                    selected = config.markupPen,
-                    onSelect = { usePen ->
+                    options = ToolConfig.MarkupTool.entries.map { it to it.label },
+                    selected = config.markupTool,
+                    onSelect = { tool ->
                         onChange {
                             // The two sets of colours are not interchangeable - a yellow pen
                             // is invisible and a black highlight is a redaction - so
-                            // switching tool picks that tool's first colour.
+                            // switching between them picks that set's first colour.
+                            val inkNow = tool.usesInk
+                            val inkBefore = it.markupTool.usesInk
                             it.copy(
-                                markupPen = usePen,
-                                markupColour = if (usePen) NOTE_BLACK else HIGHLIGHT_YELLOW
+                                markupTool = tool,
+                                markupColour = when {
+                                    inkNow == inkBefore -> it.markupColour
+                                    inkNow -> if (tool == ToolConfig.MarkupTool.STAMP) NOTE_RED else NOTE_BLACK
+                                    else -> HIGHLIGHT_YELLOW
+                                }
                             )
                         }
                     }
                 )
+                when (config.markupTool) {
+                    ToolConfig.MarkupTool.NOTE -> {
+                        Field(
+                            value = config.markupText,
+                            label = "What the note says",
+                            keyboardType = KeyboardType.Text,
+                            onChange = { value -> onChange { it.copy(markupText = value) } }
+                        )
+                        SectionHeading("Size")
+                        ChoiceRow(
+                            options = listOf(8f to "Small", 10f to "Normal", 14f to "Large"),
+                            selected = config.noteSize,
+                            onSelect = { value -> onChange { it.copy(noteSize = value) } }
+                        )
+                    }
+                    ToolConfig.MarkupTool.STAMP -> {
+                        SectionHeading("What it says")
+                        ChoiceRow(
+                            options = STAMP_WORDS.map { it to it },
+                            selected = config.stampText,
+                            onSelect = { value -> onChange { it.copy(stampText = value) } }
+                        )
+                        Field(
+                            value = config.stampText,
+                            label = "Or your own word",
+                            keyboardType = KeyboardType.Text,
+                            onChange = { value -> onChange { it.copy(stampText = value) } }
+                        )
+                    }
+                    else -> Unit
+                }
                 SectionHeading("Colour")
-                if (config.markupPen) {
+                if (config.markupTool.usesInk) {
                     ChoiceRow(
                         options = listOf(
                             NOTE_BLACK to "Black",
                             NOTE_BLUE to "Blue",
-                            NOTE_RED to "Red"
+                            NOTE_RED to "Red",
+                            INK_GREEN to "Green"
                         ),
                         selected = config.markupColour,
                         onSelect = { value -> onChange { it.copy(markupColour = value) } }
                     )
-                    SectionHeading("Thickness")
-                    ChoiceRow(
-                        options = listOf(1.2f to "Thin", 2.5f to "Medium", 5f to "Thick"),
-                        selected = config.penWidth,
-                        onSelect = { value -> onChange { it.copy(penWidth = value) } }
-                    )
+                    if (config.markupTool != ToolConfig.MarkupTool.NOTE && config.markupTool != ToolConfig.MarkupTool.STAMP) {
+                        SectionHeading("Thickness")
+                        ChoiceRow(
+                            options = listOf(1.2f to "Thin", 2.5f to "Medium", 5f to "Thick"),
+                            selected = config.penWidth,
+                            onSelect = { value -> onChange { it.copy(penWidth = value) } }
+                        )
+                    }
                 } else {
                     ChoiceRow(
                         options = listOf(
@@ -821,7 +861,11 @@ fun ToolOptions(
                     )
                 }
                 Hint(
-                    "Marks are drawn into the page rather than added as notes, so they are " +
+                    when {
+                        config.markupTool.taps -> "Tap the page where it should go. "
+                        config.markupTool.drags -> "Drag across the page. "
+                        else -> "Draw with your finger. "
+                    } + "Marks are drawn into the page rather than added as notes, so they are " +
                         "still there in any other reader - and cannot be peeled off again. " +
                         "The document you chose is never changed either way."
                 )

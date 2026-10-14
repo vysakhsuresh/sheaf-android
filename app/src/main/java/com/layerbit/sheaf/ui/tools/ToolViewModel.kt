@@ -1386,6 +1386,54 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         addMark(page, PageMark.Ink(points, config.markupColour, config.penWidth))
     }
 
+    /** A dragged-out area, made into whichever mark the current tool draws from one. */
+    fun addArea(page: Int, area: PageArea) {
+        val config = _state.value.config
+        val mark = when (config.markupTool) {
+            ToolConfig.MarkupTool.HIGHLIGHT -> PageMark.Highlight(area, config.markupColour)
+            ToolConfig.MarkupTool.UNDERLINE -> PageMark.Shape(PageMark.Shape.Kind.UNDERLINE, area, config.markupColour, config.penWidth)
+            ToolConfig.MarkupTool.STRIKETHROUGH -> PageMark.Shape(PageMark.Shape.Kind.STRIKETHROUGH, area, config.markupColour, config.penWidth)
+            ToolConfig.MarkupTool.BOX -> PageMark.Shape(PageMark.Shape.Kind.BOX, area, config.markupColour, config.penWidth)
+            ToolConfig.MarkupTool.CIRCLE -> PageMark.Shape(PageMark.Shape.Kind.CIRCLE, area, config.markupColour, config.penWidth)
+            else -> return
+        }
+        addMark(page, mark)
+    }
+
+    /** A drag from one point to another: a line, or an arrow pointing where it ended. */
+    fun addLine(page: Int, from: PagePoint, to: PagePoint) {
+        val config = _state.value.config
+        val arrow = when (config.markupTool) {
+            ToolConfig.MarkupTool.LINE -> false
+            ToolConfig.MarkupTool.ARROW -> true
+            else -> return
+        }
+        addMark(page, PageMark.Line(from, to, config.markupColour, config.penWidth, arrow))
+    }
+
+    /** A tap: a note or a stamp lands there, saying what the options say. */
+    fun addAt(page: Int, at: PagePoint) {
+        val config = _state.value.config
+        val mark = when (config.markupTool) {
+            ToolConfig.MarkupTool.NOTE -> {
+                if (config.markupText.isBlank()) {
+                    _state.update { it.copy(error = "Type what the note should say first.") }
+                    return
+                }
+                PageMark.Note(at, config.markupText.trim(), config.markupColour, config.noteSize)
+            }
+            ToolConfig.MarkupTool.STAMP -> {
+                if (config.stampText.isBlank()) {
+                    _state.update { it.copy(error = "Type what the stamp should say first.") }
+                    return
+                }
+                PageMark.Stamp(at, config.stampText.trim(), config.markupColour)
+            }
+            else -> return
+        }
+        addMark(page, mark)
+    }
+
     private fun addMark(page: Int, mark: PageMark) {
         _state.update { current ->
             val existing = current.marks[page].orEmpty()
@@ -1697,9 +1745,12 @@ data class ToolConfig(
     val flattenForm: Boolean = false,
 
     /** Mark up only: which kind of mark the finger makes, in what colour and how thick. */
-    val markupPen: Boolean = false,
+    val markupTool: MarkupTool = MarkupTool.HIGHLIGHT,
     val markupColour: Int = HIGHLIGHT_YELLOW,
     val penWidth: Float = 2.5f,
+    /** What a note says, and what a stamp says, before they are placed by a tap. */
+    val markupText: String = "",
+    val stampText: String = "APPROVED",
 
     /** Add a password only: what the document asks readers to allow. */
     val allowPrinting: Boolean = true,
@@ -1726,6 +1777,23 @@ data class ToolConfig(
 
     /** What Document details does: edit the fields, blank them, or clean everything hidden. */
     enum class MetaMode { EDIT, STRIP, CLEAN }
+
+    /** The mark-up kit. [drags] marks are dragged out; [taps] marks are put down with a tap. */
+    enum class MarkupTool(val label: String, val drags: Boolean, val taps: Boolean) {
+        HIGHLIGHT("Highlight", true, false),
+        PEN("Draw", false, false),
+        UNDERLINE("Underline", true, false),
+        STRIKETHROUGH("Strike through", true, false),
+        BOX("Box", true, false),
+        CIRCLE("Circle", true, false),
+        LINE("Line", true, false),
+        ARROW("Arrow", true, false),
+        NOTE("Note", false, true),
+        STAMP("Stamp", false, true);
+
+        /** Highlight has its own pale palette; everything else is drawn in ink. */
+        val usesInk: Boolean get() = this != HIGHLIGHT
+    }
 
     companion object {
         fun defaultFor(tool: ToolId): ToolConfig = when (tool) {
@@ -1758,6 +1826,12 @@ val PAN = Regex("\\b[A-Z]{5}\\d{4}[A-Z]\\b")
 val PHONE = Regex("(?:\\+\\d{1,3}[\\s-]?)?(?:\\(?\\d{2,5}\\)?[\\s-]?)?\\d{3,5}[\\s-]?\\d{4,5}\\b")
 val EMAIL = Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}")
 val CARD = Regex("\\b(?:\\d[ -]?){12,18}\\d\\b")
+
+/** A pen green, dark enough to read on paper. */
+val INK_GREEN: Int = 0xFF1E7B34.toInt()
+
+/** The words a stamp usually says. Any other can be typed. */
+val STAMP_WORDS = listOf("APPROVED", "PAID", "RECEIVED", "DRAFT", "COPY", "CONFIDENTIAL", "VOID", "FINAL")
 
 /** Watermark inks: grey unless asked, red for VOID or COPY, blue for a company name. */
 val WATERMARK_GREY: Int = 0xFF6B6B75.toInt()

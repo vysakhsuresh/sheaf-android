@@ -97,6 +97,8 @@ fun ToolScreen(
     onMarkupPage: (Int) -> Unit,
     onHighlight: (Int, com.layerbit.sheaf.pdf.PageArea) -> Unit,
     onInk: (Int, List<com.layerbit.sheaf.pdf.PagePoint>) -> Unit,
+    onLine: (Int, com.layerbit.sheaf.pdf.PagePoint, com.layerbit.sheaf.pdf.PagePoint) -> Unit,
+    onTap: (Int, com.layerbit.sheaf.pdf.PagePoint) -> Unit,
     onUndoMark: (Int) -> Unit,
     onClearMarks: (Int) -> Unit,
     onAddRedaction: (Int, com.layerbit.sheaf.pdf.PageArea) -> Unit,
@@ -453,11 +455,13 @@ fun ToolScreen(
                             pageCount = state.pageOrder.size,
                             page = state.thumbnails[state.canvasPage],
                             marks = state.marks[state.canvasPage].orEmpty(),
-                            pen = state.config.markupPen,
+                            tool = state.config.markupTool,
                             colour = state.config.markupColour,
                             onPage = onMarkupPage,
                             onHighlight = { area -> onHighlight(state.canvasPage, area) },
                             onInk = { points -> onInk(state.canvasPage, points) },
+                            onLine = { from, to -> onLine(state.canvasPage, from, to) },
+                            onTap = { at -> onTap(state.canvasPage, at) },
                             onUndo = { onUndoMark(state.canvasPage) },
                             onClear = { onClearMarks(state.canvasPage) }
                         )

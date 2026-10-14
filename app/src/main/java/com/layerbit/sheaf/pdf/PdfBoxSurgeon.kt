@@ -1126,14 +1126,23 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
 
         val total = marked.size
         var done = 0
+        val font = PDType1Font.HELVETICA
+        val bold = PDType1Font.HELVETICA_BOLD
 
         for ((index, list) in marked) {
             if (index !in 0 until doc.numberOfPages) continue
             val page = doc.getPage(index)
             val shown = ShownPage(page)
+            // Every mark is worked out in the space the reader sees, with the page's own turn
+            // and crop origin applied once, which is what makes a mark land correctly on a
+            // page that is stored sideways.
+            fun x(fraction: Float) = fraction * shown.width
+            fun y(fraction: Float) = shown.height - fraction * shown.height
 
             PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true)
                 .use { stream ->
+                    stream.saveGraphicsState()
+                    stream.transform(shown.viewMatrix())
                     for (mark in list) {
                         val red = ((mark.colour shr 16) and 0xFF) / 255f
                         val green = ((mark.colour shr 8) and 0xFF) / 255f
@@ -1145,29 +1154,13 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                                 // Transparency lives in a graphics state, not on the fill, so
                                 // a highlight needs one of these - an opaque block of yellow
                                 // would hide the words it is pointing at.
-                                stream.setGraphicsStateParameters(
-                                    PDExtendedGraphicsState().apply {
-                                        nonStrokingAlphaConstant = HIGHLIGHT_ALPHA
-                                    }
-                                )
+                                stream.setGraphicsStateParameters(alphaState(HIGHLIGHT_ALPHA))
                                 stream.setNonStrokingColor(red, green, blue)
-
-                                // Both corners are turned into page space and the rectangle
-                                // rebuilt from them, which is what makes a highlight land
-                                // correctly on a page that is stored sideways.
-                                val (x1, y1) = shown.pointAt(
-                                    mark.area.left * shown.width,
-                                    mark.area.top * shown.height
-                                )
-                                val (x2, y2) = shown.pointAt(
-                                    (mark.area.left + mark.area.width) * shown.width,
-                                    (mark.area.top + mark.area.height) * shown.height
-                                )
                                 stream.addRect(
-                                    minOf(x1, x2),
-                                    minOf(y1, y2),
-                                    kotlin.math.abs(x2 - x1),
-                                    kotlin.math.abs(y2 - y1)
+                                    x(mark.area.left),
+                                    y(mark.area.top + mark.area.height),
+                                    mark.area.width * shown.width,
+                                    mark.area.height * shown.height
                                 )
                                 stream.fill()
                                 stream.restoreGraphicsState()
@@ -1182,24 +1175,144 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                                 // reads as a series of tiles rather than one stroke.
                                 stream.setLineCapStyle(1)
                                 stream.setLineJoinStyle(1)
-
-                                val first = shown.pointAt(
-                                    mark.points.first().x * shown.width,
-                                    mark.points.first().y * shown.height
-                                )
-                                stream.moveTo(first.first, first.second)
-                                for (point in mark.points.drop(1)) {
-                                    val (x, y) = shown.pointAt(
-                                        point.x * shown.width,
-                                        point.y * shown.height
-                                    )
-                                    stream.lineTo(x, y)
-                                }
+                                stream.moveTo(x(mark.points.first().x), y(mark.points.first().y))
+                                for (point in mark.points.drop(1)) stream.lineTo(x(point.x), y(point.y))
                                 stream.stroke()
+                                stream.restoreGraphicsState()
+                            }
+
+                            is PageMark.Shape -> {
+                                val left = x(mark.area.left)
+                                val right = x(mark.area.left + mark.area.width)
+                                val top = y(mark.area.top)
+                                val bottom = y(mark.area.top + mark.area.height)
+                                stream.saveGraphicsState()
+                                stream.setStrokingColor(red, green, blue)
+                                stream.setLineWidth(mark.widthPoints.coerceIn(0.3f, 12f))
+                                stream.setLineCapStyle(1)
+                                stream.setLineJoinStyle(1)
+                                when (mark.kind) {
+                                    PageMark.Shape.Kind.UNDERLINE -> {
+                                        // Just under the dragged area: the drag is across the
+                                        // words, and the rule belongs beneath them.
+                                        stream.moveTo(left, bottom)
+                                        stream.lineTo(right, bottom)
+                                        stream.stroke()
+                                    }
+                                    PageMark.Shape.Kind.STRIKETHROUGH -> {
+                                        val middle = (top + bottom) / 2f
+                                        stream.moveTo(left, middle)
+                                        stream.lineTo(right, middle)
+                                        stream.stroke()
+                                    }
+                                    PageMark.Shape.Kind.BOX -> {
+                                        stream.addRect(left, bottom, right - left, top - bottom)
+                                        stream.stroke()
+                                    }
+                                    PageMark.Shape.Kind.CIRCLE -> {
+                                        ellipse(stream, left, bottom, right - left, top - bottom)
+                                        stream.stroke()
+                                    }
+                                }
+                                stream.restoreGraphicsState()
+                            }
+
+                            is PageMark.Line -> {
+                                val x1 = x(mark.from.x)
+                                val y1 = y(mark.from.y)
+                                val x2 = x(mark.to.x)
+                                val y2 = y(mark.to.y)
+                                val width = mark.widthPoints.coerceIn(0.3f, 12f)
+                                stream.saveGraphicsState()
+                                stream.setStrokingColor(red, green, blue)
+                                stream.setNonStrokingColor(red, green, blue)
+                                stream.setLineWidth(width)
+                                stream.setLineCapStyle(1)
+                                stream.setLineJoinStyle(1)
+                                stream.moveTo(x1, y1)
+                                stream.lineTo(x2, y2)
+                                stream.stroke()
+                                if (mark.arrow) {
+                                    // A head sized to the line, so a thick arrow has a head
+                                    // one can see and a hairline one does not get a barn door.
+                                    val head = (width * 5f).coerceIn(7f, 24f)
+                                    val angle = Math.atan2((y2 - y1).toDouble(), (x2 - x1).toDouble())
+                                    val spread = Math.toRadians(26.0)
+                                    val ax = (x2 - head * Math.cos(angle - spread)).toFloat()
+                                    val ay = (y2 - head * Math.sin(angle - spread)).toFloat()
+                                    val bx = (x2 - head * Math.cos(angle + spread)).toFloat()
+                                    val by = (y2 - head * Math.sin(angle + spread)).toFloat()
+                                    stream.moveTo(x2, y2)
+                                    stream.lineTo(ax, ay)
+                                    stream.lineTo(bx, by)
+                                    stream.closePath()
+                                    stream.fill()
+                                }
+                                stream.restoreGraphicsState()
+                            }
+
+                            is PageMark.Note -> {
+                                val text = mark.text.toWinAnsiSafe().trim()
+                                if (text.isEmpty()) continue
+                                val size = mark.sizePoints.coerceIn(MIN_NOTE_POINTS, MAX_NOTE_POINTS)
+                                val lines = wrapForWidth(text, font, size, shown.width * 0.45f)
+                                val widest = lines.maxOf { font.getStringWidth(it) / 1000f * size }
+                                val pad = size * 0.5f
+                                val cardWidth = widest + pad * 2f
+                                val cardHeight = lines.size * size * LINE_SPACING + pad * 2f
+                                // The card stays on the page: a note tapped near the right
+                                // edge is pulled back in rather than cut off.
+                                val cardLeft = x(mark.at.x).coerceIn(0f, (shown.width - cardWidth).coerceAtLeast(0f))
+                                val cardTop = y(mark.at.y).coerceIn(cardHeight.coerceAtMost(shown.height), shown.height)
+                                stream.saveGraphicsState()
+                                stream.setNonStrokingColor(1f, 0.97f, 0.78f)
+                                stream.setStrokingColor(0.85f, 0.75f, 0.35f)
+                                stream.setLineWidth(0.6f)
+                                stream.addRect(cardLeft, cardTop - cardHeight, cardWidth, cardHeight)
+                                stream.fillAndStroke()
+                                stream.setNonStrokingColor(red, green, blue)
+                                stream.beginText()
+                                stream.setFont(font, size)
+                                stream.newLineAtOffset(cardLeft + pad, cardTop - pad - size * NOTE_ASCENT)
+                                lines.forEachIndexed { i, line ->
+                                    if (i > 0) stream.newLineAtOffset(0f, -size * LINE_SPACING)
+                                    stream.showText(line)
+                                }
+                                stream.endText()
+                                stream.restoreGraphicsState()
+                            }
+
+                            is PageMark.Stamp -> {
+                                val text = mark.text.toWinAnsiSafe().trim().uppercase()
+                                if (text.isEmpty()) continue
+                                // Sized to the page, like a watermark: a stamp on a receipt
+                                // is not the size of one on a poster.
+                                val size = (minOf(shown.width, shown.height) * 0.045f).coerceIn(10f, 28f)
+                                val textWidth = bold.getStringWidth(text) / 1000f * size
+                                val pad = size * 0.45f
+                                val boxWidth = textWidth + pad * 2f
+                                val boxHeight = size * 1.5f
+                                val cx = x(mark.at.x)
+                                val cy = y(mark.at.y)
+                                stream.saveGraphicsState()
+                                stream.setGraphicsStateParameters(alphaState(0.85f))
+                                // Turned a few degrees, the way a hand-stamped one lands.
+                                stream.transform(Matrix.getRotateInstance(Math.toRadians(-8.0), cx, cy))
+                                stream.setStrokingColor(red, green, blue)
+                                stream.setNonStrokingColor(red, green, blue)
+                                stream.setLineWidth(size * 0.12f)
+                                stream.addRect(-boxWidth / 2f, -boxHeight / 2f, boxWidth, boxHeight)
+                                stream.stroke()
+                                stream.beginText()
+                                stream.setFont(bold, size)
+                                stream.newLineAtOffset(-textWidth / 2f, -size * 0.36f)
+                                stream.showText(text)
+                                stream.endText()
                                 stream.restoreGraphicsState()
                             }
                         }
                     }
+                    stream.restoreGraphicsState()
                 }
 
             done += 1
@@ -1207,6 +1320,41 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         }
 
         doc.save(output)
+    }
+
+    /** An ellipse inside the box, as four Bezier curves; PDF has no circle operator. */
+    private fun ellipse(stream: PDPageContentStream, left: Float, bottom: Float, width: Float, height: Float) {
+        val k = 0.5523f
+        val cx = left + width / 2f
+        val cy = bottom + height / 2f
+        val rx = width / 2f
+        val ry = height / 2f
+        stream.moveTo(cx + rx, cy)
+        stream.curveTo(cx + rx, cy + ry * k, cx + rx * k, cy + ry, cx, cy + ry)
+        stream.curveTo(cx - rx * k, cy + ry, cx - rx, cy + ry * k, cx - rx, cy)
+        stream.curveTo(cx - rx, cy - ry * k, cx - rx * k, cy - ry, cx, cy - ry)
+        stream.curveTo(cx + rx * k, cy - ry, cx + rx, cy - ry * k, cx + rx, cy)
+        stream.closePath()
+    }
+
+    /** Breaks text into lines no wider than [maxWidth], at spaces where it can. */
+    private fun wrapForWidth(text: String, font: PDType1Font, size: Float, maxWidth: Float): List<String> {
+        val out = mutableListOf<String>()
+        for (paragraph in text.split('\n')) {
+            var line = StringBuilder()
+            for (word in paragraph.split(' ')) {
+                val candidate = if (line.isEmpty()) word else "$line $word"
+                val width = runCatching { font.getStringWidth(candidate) / 1000f * size }.getOrDefault(candidate.length * size * 0.5f)
+                if (width <= maxWidth || line.isEmpty()) {
+                    line = StringBuilder(candidate)
+                } else {
+                    out += line.toString()
+                    line = StringBuilder(word)
+                }
+            }
+            out += line.toString()
+        }
+        return out.ifEmpty { listOf(text) }
     }
 
     override fun stampHeaderFooter(

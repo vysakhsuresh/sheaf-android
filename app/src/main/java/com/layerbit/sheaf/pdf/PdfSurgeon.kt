@@ -639,6 +639,40 @@ sealed interface PageMark {
         /** Line width in PDF points, so it is the same thickness on A4 as on a photo. */
         val widthPoints: Float = 2f
     ) : PageMark
+
+    /** A mark on a dragged-out area: a rule under it, a line through it, a frame round it. */
+    data class Shape(
+        val kind: Kind,
+        val area: PageArea,
+        override val colour: Int,
+        val widthPoints: Float = 1.5f
+    ) : PageMark {
+        enum class Kind { UNDERLINE, STRIKETHROUGH, BOX, CIRCLE }
+    }
+
+    /** A straight line between two points, with an arrowhead at the end if asked. */
+    data class Line(
+        val from: PagePoint,
+        val to: PagePoint,
+        override val colour: Int,
+        val widthPoints: Float = 1.5f,
+        val arrow: Boolean = false
+    ) : PageMark
+
+    /** Words at a point: a note on a pale yellow card, in the size given. */
+    data class Note(
+        val at: PagePoint,
+        val text: String,
+        override val colour: Int,
+        val sizePoints: Float = 10f
+    ) : PageMark
+
+    /** A word in a frame, turned a little, the way a rubber stamp lands: APPROVED, PAID. */
+    data class Stamp(
+        val at: PagePoint,
+        val text: String,
+        override val colour: Int
+    ) : PageMark
 }
 
 /** A point on a page, normalised, origin top-left. */
