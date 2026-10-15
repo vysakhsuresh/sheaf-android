@@ -1,15 +1,18 @@
 package com.layerbit.sheaf.ops
 
 import com.layerbit.sheaf.files.SheafFile
+import com.layerbit.sheaf.pdf.CleanReport
+import com.layerbit.sheaf.pdf.CleanSpec
 import com.layerbit.sheaf.pdf.DocumentMetadata
+import com.layerbit.sheaf.pdf.PageSpec
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
-/** Puts two or four pages on each sheet, for printing. */
-class NUpOp(private val perSheet: Int) : Op {
+/** Puts two, four, six, eight, nine or sixteen pages on each sheet, for printing. */
+class NUpOp(private val perSheet: Int, private val paper: PageSpec.Size = PageSpec.Size.A4) : Op {
 
     override val tool = ToolId.N_UP
     override val title = "$perSheet pages per sheet"
@@ -22,11 +25,12 @@ class NUpOp(private val perSheet: Int) : Op {
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         eachFile(inputs, context, onProgress, "n-up", "Laying out") { input, pdfInput, output ->
             var pages = 0
-            context.surgeon.nUp(pdfInput, perSheet, output) { _, total ->
+            context.surgeon.nUp(pdfInput, perSheet, paper, output) { _, total ->
                 context.checkCancelled(); pages = total
             }
             val sheets = (pages + perSheet - 1) / perSheet
-            "${input.baseName} $perSheet-up.pdf" to "$pages pages onto $sheets sheets"
+            "${input.baseName} $perSheet-up.pdf" to
+                "$pages ${if (pages == 1) "page" else "pages"} on $sheets ${if (sheets == 1) "sheet" else "sheets"} of ${paper.label}"
         }
     }
 }
@@ -34,18 +38,17 @@ class NUpOp(private val perSheet: Int) : Op {
 /**
  * Cuts a document into parts that each fit under a size limit.
  *
- * The limit people actually have is an email attachment cap, so the sizes offered are the ones
- * that matter: 5, 10 and 25 MB.
+ * The limit people actually have is an email attachment cap, so the sizes offered are the
+ * ones that matter - 2, 5, 10 and 25 MB - and any other number can be typed.
  *
- * The split is planned from the average page size rather than measured part by part. Measuring
- * means writing every candidate to disk, which on a 300-page scan is minutes of work for a
- * number that can only ever be a guide - shared objects mean the parts never add up exactly.
- * So the result screen shows what each part actually came out at.
+ * Each part is measured by saving it, not estimated from the average page: shared fonts and
+ * images are copied into every part, so pages never add up, and an estimate that runs a part
+ * one page over the limit is a part that bounces. The result screen shows the real sizes.
  */
 class SplitBySizeOp(private val maxBytes: Long) : Op {
 
     override val tool = ToolId.SPLIT_BY_SIZE
-    override val title = "Split under ${maxBytes / (1024 * 1024)} MB"
+    override val title = "Split under ${describeLimit(maxBytes)}"
     override val arity = Op.Arity.ExactlyOne
 
     override suspend fun run(
@@ -55,6 +58,9 @@ class SplitBySizeOp(private val maxBytes: Long) : Op {
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val input = inputs.firstOrNull()
             ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+        if (maxBytes < SMALLEST_LIMIT) {
+            return@withContext listOf(OpOutcome.Failed(input.displayName, "The limit has to be at least 1 MB."))
+        }
 
         val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
 
@@ -62,38 +68,43 @@ class SplitBySizeOp(private val maxBytes: Long) : Op {
             return@withContext listOf(
                 OpOutcome.Skipped(
                     input.displayName,
-                    "This document is already under that size, so it was left alone."
+                    "This document is already under ${describeLimit(maxBytes)}, so it was left alone."
                 )
             )
         }
 
+        onProgress(Progress(0, 1, "Measuring where to cut"))
         val groups = try {
-            context.surgeon.planSizeSplit(pdfInput, maxBytes) { _, _ -> context.checkCancelled() }
+            context.surgeon.measureSizeSplit(pdfInput, maxBytes) { done, total ->
+                context.checkCancelled()
+                onProgress(Progress(done, total, "Measuring: $done of $total pages placed"))
+            }
         } catch (e: PdfException) {
             return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Failed."))
         }
 
-        if (groups.size <= 1) {
-            return@withContext listOf(
-                OpOutcome.Failed(
-                    input.displayName,
-                    "A single page of this document is already larger than that limit."
-                )
-            )
+        if (groups.isEmpty()) {
+            return@withContext listOf(OpOutcome.Failed(input.displayName, "This document has no pages."))
         }
 
         val outcomes = mutableListOf<OpOutcome>()
         groups.forEachIndexed { index, pages ->
             context.checkCancelled()
-            onProgress(Progress(index, groups.size, "Part ${index + 1} of ${groups.size}"))
+            onProgress(Progress(index, groups.size, "Writing part ${index + 1} of ${groups.size}"))
 
             val partName = "${input.baseName} part ${index + 1}"
             val output = context.workspace.newOutput(partName, "size-split")
             outcomes += try {
                 context.surgeon.extractPages(pdfInput, pages, emptyMap(), output)
+                val over = output.length() > maxBytes
                 OpOutcome.Produced(
                     SheafFile(output, "$partName.pdf", SheafFile.Origin.Derived("size-split")),
-                    "Pages ${pages.first() + 1}-${pages.last() + 1}"
+                    buildString {
+                        append(if (pages.size == 1) "Page ${pages.first() + 1}" else "Pages ${pages.first() + 1}-${pages.last() + 1}")
+                        // A single page bigger than the limit on its own cannot be cut any
+                        // further; it is written as its own part and said so, not hidden.
+                        if (over) append(" - this page is bigger than ${describeLimit(maxBytes)} on its own")
+                    }
                 )
             } catch (e: PdfException) {
                 output.delete()
@@ -105,9 +116,16 @@ class SplitBySizeOp(private val maxBytes: Long) : Op {
     }
 
     companion object {
+        const val TWO_MB = 2L * 1024 * 1024
         const val FIVE_MB = 5L * 1024 * 1024
         const val TEN_MB = 10L * 1024 * 1024
         const val TWENTY_FIVE_MB = 25L * 1024 * 1024
+        const val SMALLEST_LIMIT = 1L * 1024 * 1024
+
+        fun describeLimit(bytes: Long): String {
+            val mb = bytes / (1024f * 1024f)
+            return if (mb == mb.toInt().toFloat()) "${mb.toInt()} MB" else "%.1f MB".format(mb)
+        }
     }
 }
 
@@ -195,4 +213,46 @@ class MetadataOp(private val metadata: DocumentMetadata) : Op {
                 if (metadata.stripAll) "Title, author, dates and producer cleared" else "Details updated"
         }
     }
+}
+
+/**
+ * Takes out what a file gives away before it is sent: the details and their hidden XMP copy,
+ * scripts and open actions, attached files, comments, page thumbnails and the private data
+ * that editing programs leave behind.
+ *
+ * Each kind is counted, so the result says what was found - "2 scripts, 1 attachment" -
+ * rather than "cleaned", which on a file that had nothing in it reads as nothing happening.
+ */
+class CleanOp(private val spec: CleanSpec) : Op {
+
+    override val tool = ToolId.METADATA
+    override val title = "Clean hidden data"
+    override val arity = Op.Arity.EachIndependently
+
+    override suspend fun run(
+        inputs: List<SheafFile>,
+        context: OpContext,
+        onProgress: (Progress) -> Unit
+    ): List<OpOutcome> = withContext(Dispatchers.IO) {
+        eachFile(inputs, context, onProgress, "cleaned", "Cleaning") { input, pdfInput, output ->
+            val report = context.surgeon.cleanDocument(pdfInput, spec, output)
+            "${input.baseName} cleaned.pdf" to describe(report)
+        }
+    }
+
+    private fun describe(report: CleanReport): String {
+        if (report.total == 0) return "Nothing hidden was found; the copy is the same document"
+        val parts = buildList {
+            if (report.details > 0) add("the details")
+            if (report.xmp > 0) add("a hidden XMP copy of them")
+            if (report.scripts > 0) add(count(report.scripts, "script"))
+            if (report.attachments > 0) add(count(report.attachments, "attached file"))
+            if (report.comments > 0) add(count(report.comments, "comment"))
+            if (report.thumbnails > 0) add(count(report.thumbnails, "page thumbnail"))
+            if (report.privateData > 0) add("private editing data")
+        }
+        return "Removed " + parts.joinToString(", ")
+    }
+
+    private fun count(n: Int, noun: String) = if (n == 1) "1 $noun" else "$n ${noun}s"
 }

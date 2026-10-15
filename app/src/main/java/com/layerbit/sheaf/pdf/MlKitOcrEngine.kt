@@ -3,6 +3,8 @@ package com.layerbit.sheaf.pdf
 import android.graphics.Bitmap
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.TextRecognizer
+import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
@@ -22,14 +24,25 @@ import kotlin.coroutines.resumeWithException
  */
 class MlKitOcrEngine : OcrEngine {
 
-    private val recogniser by lazy {
+    private val latin: TextRecognizer by lazy {
         TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    }
+
+    // Devanagari is a second bundled model, a few megabytes more in the APK, for the scripts
+    // most of this app's users read: Hindi, Marathi, Nepali. It reads Latin letters on the
+    // same page too, which is what a bilingual form needs.
+    private val devanagari: TextRecognizer by lazy {
+        TextRecognition.getClient(DevanagariTextRecognizerOptions.Builder().build())
     }
 
     override val available: Boolean = true
 
-    override suspend fun read(bitmap: Bitmap): OcrResult {
+    override suspend fun read(bitmap: Bitmap, script: OcrScript): OcrResult {
         if (bitmap.width <= 0 || bitmap.height <= 0) return OcrResult(emptyList())
+        val recogniser = when (script) {
+            OcrScript.LATIN -> latin
+            OcrScript.DEVANAGARI -> devanagari
+        }
 
         // Rotation is zero because the bitmap arrives already upright: it was either rendered
         // from a PDF page, which has no orientation of its own, or straightened by the scanner.

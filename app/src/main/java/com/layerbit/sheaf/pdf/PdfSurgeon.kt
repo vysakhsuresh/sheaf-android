@@ -82,13 +82,20 @@ interface PdfSurgeon {
         onProgress: (Int, Int) -> Unit = { _, _ -> }
     ): CompressionResult
 
-    /** Writes an AES-256 encrypted copy. [userPassword] is the one needed to open it. */
+    /**
+     * Writes an AES-256 encrypted copy. [userPassword] is the one needed to open it.
+     *
+     * With [restrictOnly] the copy opens for anyone and only the permission flags apply: the
+     * user password is empty and the owner password is random and thrown away, which is what
+     * "restrict printing and copying" has always meant in PDF.
+     */
     @Throws(PdfException::class)
     fun setPassword(
         input: PdfInput,
         userPassword: String,
         output: File,
-        permissions: DocumentPermissions = DocumentPermissions()
+        permissions: DocumentPermissions = DocumentPermissions(),
+        restrictOnly: Boolean = false
     )
 
     /** Writes an unencrypted copy. [input] must carry the correct password. */
@@ -243,22 +250,44 @@ interface PdfSurgeon {
         insert: PdfInput?,
         blankPages: Int,
         atIndex: Int,
-        output: File
+        output: File,
+        /** Pages to take out, with the new ones going where the first of them was. */
+        replace: List<Int> = emptyList()
     )
 
     // ---- P4: power tools ----
 
-    /** Places several source pages onto each output sheet. */
+    /**
+     * Places several source pages onto each output sheet.
+     *
+     * The sheet is turned whichever way shows the pages biggest: upright pages go side by
+     * side on a sideways sheet, wide slides one above the other. Pages run across, then down.
+     */
     @Throws(PdfException::class)
-    fun nUp(input: PdfInput, perSheet: Int, output: File, onProgress: (Int, Int) -> Unit = { _, _ -> })
+    fun nUp(
+        input: PdfInput,
+        perSheet: Int,
+        paper: PageSpec.Size,
+        output: File,
+        onProgress: (Int, Int) -> Unit = { _, _ -> }
+    )
 
     /**
-     * Splits so each part stays under [maxBytes].
+     * Splits so each part stays under [maxBytes], by measuring.
+     *
+     * Saving is the only honest way to know a part's size: shared fonts and images are
+     * copied into each part, so pages do not add up. Each part is found by doubling its
+     * length until it is too big, then halving back, so a 300-page file needs a few dozen
+     * trial saves rather than 300.
      *
      * @return the page groups. Writing them is the caller's job, through [extractPages].
      */
     @Throws(PdfException::class)
-    fun planSizeSplit(input: PdfInput, maxBytes: Long, onProgress: (Int, Int) -> Unit = { _, _ -> }): List<List<Int>>
+    fun measureSizeSplit(
+        input: PdfInput,
+        maxBytes: Long,
+        onProgress: (Int, Int) -> Unit = { _, _ -> }
+    ): List<List<Int>>
 
     /** Pulls out the embedded images at their original resolution. */
     @Throws(PdfException::class)
@@ -267,18 +296,242 @@ interface PdfSurgeon {
     /** Rewrites the document information dictionary. */
     @Throws(PdfException::class)
     fun writeMetadata(input: PdfInput, metadata: DocumentMetadata, output: File)
+
+    // ---- P5: the Foolscap set ----
+
+    /**
+     * Takes out what a file gives away: the details, hidden XMP copies of them, scripts and
+     * the actions that run when it opens, attached files and comments - each only when
+     * [spec] asks. Reports what was found so the result can say so.
+     */
+    @Throws(PdfException::class)
+    fun cleanDocument(input: PdfInput, spec: CleanSpec, output: File): CleanReport
+
+    /**
+     * Sets what a reader calls each page: i, ii, iii for the front matter, then 1, 2, 3.
+     *
+     * Labels change what a reader shows in its page box, not what is printed on the page. A
+     * null spec removes them, so readers go back to plain numbers from the cover.
+     */
+    @Throws(PdfException::class)
+    fun setPageLabels(input: PdfInput, spec: PageLabelSpec?, output: File)
+
+    /**
+     * Gives pages a background colour, behind everything already on them.
+     *
+     * Drawn under the existing content rather than over it, so text and drawings stay on
+     * top. A scanned page is one solid picture, so the colour will not show through it; the
+     * UI says so.
+     */
+    @Throws(PdfException::class)
+    fun setBackground(
+        input: PdfInput,
+        colour: Int,
+        pages: List<Int>,
+        output: File,
+        onProgress: (Int, Int) -> Unit = { _, _ -> }
+    )
+
+    /** The files a document carries inside it, by name. */
+    @Throws(PdfException::class)
+    fun readAttachments(input: PdfInput): List<AttachmentInfo>
+
+    /**
+     * Puts files inside a PDF, where they travel with it.
+     *
+     * Carried byte for byte and never opened. A name already in use gets a number, so a
+     * reader's attachment list can show both.
+     */
+    @Throws(PdfException::class)
+    fun attachFiles(input: PdfInput, files: List<Pair<String, File>>, output: File)
+
+    /**
+     * Where [pattern] matches in the text, by page index, as fractions of the page the reader
+     * sees. [accept] can turn a match down after the fact - a run of digits that is not a card
+     * number by its check digit, say - which a regular expression cannot do on its own.
+     */
+    @Throws(PdfException::class)
+    fun findAreas(input: PdfInput, pattern: Regex, accept: (String) -> Boolean = { true }): Map<Int, List<PageArea>>
+
+    /** Every word on the pages with where it sits, in reading order, for comparing. */
+    @Throws(PdfException::class)
+    fun placedWords(input: PdfInput, onProgress: (Int, Int) -> Unit = { _, _ -> }): List<PlacedWord>
+
+    /**
+     * Covers each match of [pattern] and writes [replacement] in its place, in Helvetica
+     * sized to the old words. Returns how many were changed.
+     *
+     * The nearest thing to editing a PDF that a PDF honestly allows: a document holds glyphs
+     * at coordinates rather than paragraphs, so the line is patched, not reflowed.
+     */
+    @Throws(PdfException::class)
+    fun replaceText(input: PdfInput, pattern: Regex, replacement: String, output: File, onProgress: (Int, Int) -> Unit = { _, _ -> }): Int
+
+    /**
+     * Writes receipts from nothing: a title, a line under it, a table of labelled rows and
+     * some closing lines, two to an A4 page. Returns the page count.
+     */
+    @Throws(PdfException::class)
+    fun writeReceipts(receipts: List<ReceiptSpec>, output: File): Int
+
+    /**
+     * The lines of text on every page, with their size, weight and place, for turning a
+     * document back into paragraphs. A scanned page gives an empty list.
+     */
+    @Throws(PdfException::class)
+    fun pageLines(input: PdfInput, onProgress: (Int, Int) -> Unit = { _, _ -> }): List<List<TextLine>>
+
+    /**
+     * Lays a [FlowDocument] out on A4 pages: headings, paragraphs, lists, tables, pictures,
+     * in the phone's own fonts where Helvetica cannot set the text. Returns the page count.
+     */
+    @Throws(PdfException::class)
+    fun layoutFlow(document: FlowDocument, output: File, onProgress: (Int, Int) -> Unit = { _, _ -> }): Int
+
+    /**
+     * Makes an archive copy in the PDF/A-2b manner: an sRGB profile, XMP that says so and
+     * mirrors the details, a file ID, printable annotations, no scripts, attachments or
+     * password. Reports what it took out and how many fonts are not inside the file.
+     */
+    @Throws(PdfException::class)
+    fun makeArchival(input: PdfInput, output: File): ArchivalReport
+
+    /** Puts fillable fields on the pages. Returns the names they were given. */
+    @Throws(PdfException::class)
+    fun addFormFields(input: PdfInput, fields: List<NewField>, output: File): List<String>
+
+    /**
+     * Signs a document with a .pfx or .p12 certificate, the way a reader's signature panel
+     * checks. A locked document is signed unlocked: a lock would have to be redone around
+     * the signature, which breaks it.
+     */
+    @Throws(PdfException::class)
+    fun signWithCertificate(input: PdfInput, certificate: File, password: String, spec: SignSpec, output: File): SignReport
+
+    /** The comments and notes on the pages, in page order, as a reader lists them. */
+    @Throws(PdfException::class)
+    fun readComments(input: PdfInput): List<Comment>
+
+    /** Writes every attached file out into [outputDir], as it was. */
+    @Throws(PdfException::class)
+    fun extractAttachments(input: PdfInput, outputDir: File): List<File>
+
+    /**
+     * Replaces the document's own bookmarks (its outline) with [entries].
+     *
+     * Nesting follows [OutlineEntry.depth]. An empty list takes every bookmark out.
+     */
+    @Throws(PdfException::class)
+    fun writeOutline(input: PdfInput, entries: List<OutlineEntry>, output: File)
 }
 
-/** Repeating text laid across a page. */
+/** What [PdfSurgeon.cleanDocument] takes out. Everything on by default. */
+data class CleanSpec(
+    val metadata: Boolean = true,
+    val scripts: Boolean = true,
+    val attachments: Boolean = true,
+    val comments: Boolean = true
+)
+
+/** What a clean found and removed, so the result can list it. */
+data class CleanReport(
+    val details: Int = 0,
+    val xmp: Int = 0,
+    val scripts: Int = 0,
+    val attachments: Int = 0,
+    val comments: Int = 0,
+    val thumbnails: Int = 0,
+    val privateData: Int = 0
+) {
+    val total: Int get() = details + xmp + scripts + attachments + comments + thumbnails + privateData
+}
+
+/** How pages are labelled: a run of front pages in one style, then the rest in another. */
+data class PageLabelSpec(
+    /** How many pages at the front are numbered i, ii, iii (a cover, contents). 0 for none. */
+    val frontPages: Int = 0,
+    val frontStyle: Style = Style.ROMAN_LOWER,
+    val style: Style = Style.DECIMAL,
+    /** What the main numbers start at. */
+    val startAt: Int = 1,
+    /** What comes before each main number: "A-". */
+    val prefix: String = ""
+) {
+    enum class Style(val label: String) {
+        DECIMAL("1, 2, 3"),
+        ROMAN_UPPER("I, II, III"),
+        ROMAN_LOWER("i, ii, iii"),
+        ALPHA_UPPER("A, B, C"),
+        ALPHA_LOWER("a, b, c")
+    }
+}
+
+/** A file carried inside a document. */
+data class AttachmentInfo(val name: String, val sizeBytes: Long)
+
+/** A field to put on a page: what kind, what it is called, and where. */
+data class NewField(
+    val kind: Kind,
+    val name: String,
+    val pageIndex: Int,
+    val area: PageArea,
+    /** For a drop-down: what can be picked. */
+    val options: List<String> = emptyList()
+) {
+    enum class Kind(val label: String) {
+        TEXT("Text box"),
+        MULTILINE("Paragraph box"),
+        CHECK("Tick box"),
+        CHOICE("Drop-down list")
+    }
+}
+
+/** A word and where it sits on its page, as fractions of the page the reader sees. */
+data class PlacedWord(val text: String, val pageIndex: Int, val area: PageArea)
+
+/** One receipt to lay out. Generic on purpose: the words are the op's, the layout is here. */
+data class ReceiptSpec(
+    val title: String,
+    val subtitle: String,
+    /** Label and value, one row each. */
+    val rows: List<Pair<String, String>>,
+    /** Lines under the table: a signature line, a note. */
+    val footer: List<String>
+)
+
+/** A comment somebody left on a page: a sticky note, a highlight with a remark, a stamp. */
+data class Comment(
+    val pageIndex: Int,
+    /** What kind, in words: "Note", "Highlight", "Stamp". */
+    val kind: String,
+    val author: String?,
+    val text: String,
+    /** When, as the file wrote it, tidied to "2024-03-05 14:20" where it can be. */
+    val date: String?
+)
+
+/**
+ * Text laid across a page.
+ *
+ * The size is worked out per page rather than given: DRAFT and CONFIDENTIAL should both cross
+ * the page, and the same point size on an ID card and on a poster would be wrong on both.
+ */
 data class WatermarkSpec(
     val text: String,
     /** 0 to 1. Below about 0.5 stays readable underneath. */
-    val opacity: Float = 0.18f,
-    val degrees: Float = 45f,
-    val fontSize: Float = 48f,
-    /** Tiled across the whole page, or one mark in the middle. */
-    val tiled: Boolean = true
-)
+    val opacity: Float = 0.22f,
+    val layout: Layout = Layout.ONCE_DIAGONAL,
+    /** Packed ARGB. Grey unless asked: red for VOID or COPY, blue for a company name. */
+    val colour: Int = 0xFF6B6B75.toInt(),
+    /** Zero-based page indices; empty means every page. */
+    val pages: List<Int> = emptyList()
+) {
+    enum class Layout(val label: String) {
+        ONCE_DIAGONAL("Once, diagonally"),
+        STRAIGHT("Once, straight across"),
+        TILED("Repeated all over")
+    }
+}
 
 data class PageNumberSpec(
     val position: Position = Position.BOTTOM_CENTRE,
@@ -290,20 +543,37 @@ data class PageNumberSpec(
     val skipFirst: Int = 0,
     val fontSize: Float = 10f,
     /** Zero-pads to this width, for Bates numbering. Zero means no padding. */
-    val padTo: Int = 0
+    val padTo: Int = 0,
+    /** What comes before a Bates number: "ACME-". */
+    val prefix: String = ""
 ) {
     enum class Position { TOP_LEFT, TOP_CENTRE, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_CENTRE, BOTTOM_RIGHT }
 }
 
+/**
+ * How to crop.
+ *
+ * Millimetres off each edge AS THE READER SEES THE PAGE, whatever way round it is stored; or
+ * [auto], which trims each page to just outside its words and pictures; and optionally every
+ * page put on one paper size afterwards.
+ */
 data class CropSpec(
-    /** Fraction of the page trimmed from each edge, 0 to 0.45. */
-    val left: Float = 0f,
-    val top: Float = 0f,
-    val right: Float = 0f,
-    val bottom: Float = 0f,
+    val topMm: Float = 0f,
+    val rightMm: Float = 0f,
+    val bottomMm: Float = 0f,
+    val leftMm: Float = 0f,
+    /** Trim to the ink: the white margins go, with two millimetres of room left round it. */
+    val auto: Boolean = false,
     /** Put every page on this size afterwards, scaling to fit. Null leaves sizes alone. */
-    val resizeTo: PageSpec.Size? = null
-)
+    val resizeTo: PageSpec.Size? = null,
+    /** With [resizeTo]: false leaves a page smaller than the paper at its real size. */
+    val enlarge: Boolean = true,
+    /** Zero-based page indices; empty means every page. */
+    val pages: List<Int> = emptyList()
+) {
+    val trims: Boolean get() = topMm > 0f || rightMm > 0f || bottomMm > 0f || leftMm > 0f
+    val doesAnything: Boolean get() = trims || auto || resizeTo != null
+}
 
 /** A rectangle on a page, normalised to the page box, origin top-left, 0 to 1. */
 data class PageArea(val left: Float, val top: Float, val width: Float, val height: Float)
@@ -454,6 +724,40 @@ sealed interface PageMark {
         /** Line width in PDF points, so it is the same thickness on A4 as on a photo. */
         val widthPoints: Float = 2f
     ) : PageMark
+
+    /** A mark on a dragged-out area: a rule under it, a line through it, a frame round it. */
+    data class Shape(
+        val kind: Kind,
+        val area: PageArea,
+        override val colour: Int,
+        val widthPoints: Float = 1.5f
+    ) : PageMark {
+        enum class Kind { UNDERLINE, STRIKETHROUGH, BOX, CIRCLE }
+    }
+
+    /** A straight line between two points, with an arrowhead at the end if asked. */
+    data class Line(
+        val from: PagePoint,
+        val to: PagePoint,
+        override val colour: Int,
+        val widthPoints: Float = 1.5f,
+        val arrow: Boolean = false
+    ) : PageMark
+
+    /** Words at a point: a note on a pale yellow card, in the size given. */
+    data class Note(
+        val at: PagePoint,
+        val text: String,
+        override val colour: Int,
+        val sizePoints: Float = 10f
+    ) : PageMark
+
+    /** A word in a frame, turned a little, the way a rubber stamp lands: APPROVED, PAID. */
+    data class Stamp(
+        val at: PagePoint,
+        val text: String,
+        override val colour: Int
+    ) : PageMark
 }
 
 /** A point on a page, normalised, origin top-left. */
@@ -499,15 +803,24 @@ data class PageSpec(
     /** When true, a landscape image gets a landscape page rather than being shrunk to fit. */
     val matchImageOrientation: Boolean = true
 ) {
-    enum class Size(val widthPoints: Float, val heightPoints: Float) {
+    enum class Size(val widthPoints: Float, val heightPoints: Float, val label: String) {
         /** 210 x 297 mm. */
-        A4(595.28f, 841.89f),
+        A4(595.28f, 841.89f, "A4"),
 
         /** 8.5 x 11 in. */
-        LETTER(612f, 792f),
+        LETTER(612f, 792f, "Letter"),
+
+        /** 8.5 x 14 in. */
+        LEGAL(612f, 1008f, "Legal"),
+
+        /** 297 x 420 mm. */
+        A3(841.89f, 1190.55f, "A3"),
+
+        /** 148 x 210 mm. */
+        A5(419.53f, 595.28f, "A5"),
 
         /** The page takes the image's own proportions - no borders, nothing cropped. */
-        FIT_IMAGE(0f, 0f)
+        FIT_IMAGE(0f, 0f, "Fit the image")
     }
 }
 

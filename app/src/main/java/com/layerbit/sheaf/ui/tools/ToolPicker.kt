@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -15,15 +13,12 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.ops.ToolId
-import com.layerbit.sheaf.ui.components.AccentTile
 import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.theme.SheafColors
 
@@ -38,16 +33,6 @@ import com.layerbit.sheaf.ui.theme.SheafColors
  * Scan and Images to PDF are left out wherever this is shown, because both make a document
  * rather than take one; offering them here would be offering something that cannot accept
  * what is being handed over.
- *
- * The rows scroll and the heading does not. ModalBottomSheet adds no scrolling of its own, so
- * for a long while this sheet simply drew two dozen rows into whatever height it had and
- * clipped the rest off the bottom with no way to reach them. Keeping the heading and the
- * document name outside the scrolling column also keeps the answer to "what is this sheet
- * about to do, and to what" on screen while you hunt down it.
- *
- * It is grouped and starred for the same reason the home screen is: Tools.kt says a flat list
- * of a dozen tools stops being a menu and becomes a wall, and this sheet is that same wall
- * with less room. A heading is also how you can tell there is more below it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,21 +41,15 @@ fun ToolPickerSheet(
     documentName: String,
     onDismiss: () -> Unit,
     onPick: (ToolId) -> Unit,
-    exclude: Set<ToolId> = emptySet(),
-    favourites: Set<String> = emptySet()
+    exclude: Set<ToolId> = emptySet()
 ) {
     val sheetState = rememberModalBottomSheetState()
-    val offered = remember(exclude) {
-        ToolId.entries.filter { it != ToolId.IMAGES_TO_PDF && it != ToolId.SCAN && it !in exclude }
-    }
-    val starred = remember(offered, favourites) { offered.filter { it.name in favourites } }
-
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = SheafColors.Surface
     ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
             SectionHeading(heading)
             Text(
                 text = documentName,
@@ -78,70 +57,42 @@ fun ToolPickerSheet(
                 color = SheafColors.Text,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 10.dp)
             )
-        }
-        Column(
-            modifier = Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 28.dp)
-        ) {
-            if (starred.isNotEmpty()) {
-                ToolGroup("Yours", starred, onPick)
-            }
-            ToolId.Group.entries.forEach { group ->
-                val inGroup = offered.filter { it.group == group }
-                if (inGroup.isNotEmpty()) {
-                    ToolGroup(group.title, inGroup, onPick)
+            ToolId.entries
+                .filter {
+                    // Only the tools that take a PDF: not the camera, not images, not the
+                    // ones that make a document from nothing.
+                    it.input != ToolId.InputKind.IMAGES && it.input != ToolId.InputKind.CAMERA &&
+                        it.input != ToolId.InputKind.NONE && it.input != ToolId.InputKind.OFFICE && it !in exclude
                 }
-            }
-        }
-    }
-}
-
-/**
- * A heading and the rows under it. Emitted into the caller's column rather than wrapping them
- * in one of its own, so the rows all share a single scrolling parent.
- */
-@Composable
-private fun ToolGroup(title: String, tools: List<ToolId>, onPick: (ToolId) -> Unit) {
-    SectionHeading(
-        title,
-        modifier = Modifier.padding(top = 14.dp, bottom = 2.dp),
-        color = tools.firstOrNull()?.let { SheafColors.ToolAccents[it.group.ordinal].ink }
-            ?: SheafColors.Dim
-    )
-    tools.forEach { tool ->
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                // Clipped before the gesture, so the press washes a rounded shape rather than
-                // a full-width rectangle across the sheet.
-                .clip(MaterialTheme.shapes.small)
-                .clickable { onPick(tool) }
-                .padding(vertical = 12.dp, horizontal = 4.dp)
-        ) {
-            // The same hue the tool wears on the board, so moving between the two screens is
-            // recognising a colour rather than re-reading a list.
-            AccentTile(
-                icon = iconFor(tool),
-                accent = SheafColors.ToolAccents[tool.group.ordinal],
-                size = 28.dp
-            )
-            Column(modifier = Modifier.padding(start = 14.dp)) {
-                Text(
-                    tool.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = SheafColors.Text
-                )
-                Text(
-                    tool.summary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = SheafColors.Dim
-                )
-            }
+                .forEach { tool ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPick(tool) }
+                            .padding(vertical = 12.dp)
+                    ) {
+                        com.layerbit.sheaf.ui.components.IconTile(
+                            iconRes = iconFor(tool),
+                            accent = com.layerbit.sheaf.ui.theme.GroupAccents.of(tool.group),
+                            size = 38.dp
+                        )
+                        Column(modifier = Modifier.padding(start = 14.dp)) {
+                            Text(
+                                tool.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = SheafColors.Text
+                            )
+                            Text(
+                                tool.summary,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SheafColors.Dim
+                            )
+                        }
+                    }
+                }
         }
     }
 }

@@ -29,20 +29,33 @@ fun iconFor(tool: ToolId): Int = when (tool) {
     ToolId.IMAGES_TO_PDF -> R.drawable.ic_tool_images_to_pdf
     ToolId.PDF_TO_IMAGES -> R.drawable.ic_tool_pdf_to_images
     ToolId.COMPRESS -> R.drawable.ic_tool_compress
+    ToolId.PDF_TO_OFFICE -> R.drawable.ic_tool_pdf_to_office
+    ToolId.OFFICE_TO_PDF -> R.drawable.ic_tool_office_to_pdf
     ToolId.WATERMARK -> R.drawable.ic_tool_watermark
     ToolId.PAGE_NUMBERS -> R.drawable.ic_tool_page_numbers
     ToolId.SIGN -> R.drawable.ic_tool_sign
     ToolId.ADD_TEXT -> R.drawable.ic_tool_add_text
+    ToolId.ADD_IMAGE -> R.drawable.ic_tool_add_image
     ToolId.ANNOTATE -> R.drawable.ic_tool_annotate
     ToolId.FORMS -> R.drawable.ic_tool_forms
     ToolId.HEADER_FOOTER -> R.drawable.ic_tool_header_footer
     ToolId.INSERT -> R.drawable.ic_tool_insert
     ToolId.CROP -> R.drawable.ic_tool_crop
+    ToolId.BACKGROUND -> R.drawable.ic_tool_background
+    ToolId.PAGE_LABELS -> R.drawable.ic_tool_page_labels
+    ToolId.BOOKMARKS -> R.drawable.ic_tool_bookmarks
+    ToolId.ATTACHMENTS -> R.drawable.ic_tool_attachments
     ToolId.N_UP -> R.drawable.ic_tool_n_up
     ToolId.SPLIT_BY_SIZE -> R.drawable.ic_tool_split_size
     ToolId.EXTRACT_IMAGES -> R.drawable.ic_tool_extract_images
     ToolId.REDACT -> R.drawable.ic_tool_redact
     ToolId.METADATA -> R.drawable.ic_tool_metadata
+    ToolId.EDIT_TEXT -> R.drawable.ic_tool_edit_text
+    ToolId.CREATE_FORM -> R.drawable.ic_tool_create_form
+    ToolId.DIGITAL_SIGN -> R.drawable.ic_tool_digital_sign
+    ToolId.PDF_A -> R.drawable.ic_tool_archive
+    ToolId.COMPARE -> R.drawable.ic_tool_compare
+    ToolId.RENT_RECEIPTS -> R.drawable.ic_tool_receipt
     ToolId.SET_PASSWORD -> R.drawable.ic_tool_lock
     ToolId.REMOVE_PASSWORD -> R.drawable.ic_tool_unlock
 }

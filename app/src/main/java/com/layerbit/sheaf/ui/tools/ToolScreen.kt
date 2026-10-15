@@ -1,10 +1,5 @@
 package com.layerbit.sheaf.ui.tools
 
-import android.graphics.Bitmap
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -25,18 +20,27 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed as itemsIndexedInColumn
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -54,22 +58,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.layerbit.sheaf.R
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.jobs.JobState
 import com.layerbit.sheaf.ops.OpOutcome
 import com.layerbit.sheaf.ops.ToolId
-import com.layerbit.sheaf.ui.components.ListRhythm
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.ui.components.IconTile
 import com.layerbit.sheaf.ui.components.Panel
+import com.layerbit.sheaf.ui.components.Pill
 import com.layerbit.sheaf.ui.components.PrimaryButton
-import com.layerbit.sheaf.ui.components.ProblemRow
+import com.layerbit.sheaf.ui.components.RoundIconButton
+import com.layerbit.sheaf.ui.components.SecondaryButton
+import com.layerbit.sheaf.ui.theme.GroupAccents
 import com.layerbit.sheaf.ui.components.RowBetween
 import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.components.formatBytes
@@ -88,8 +90,6 @@ fun ToolScreen(
     tool: ToolId,
     state: ToolUiState,
     jobState: JobState,
-    /** Starred tools, so the chain sheet offers them first. */
-    favourites: Set<String> = emptySet(),
     onAddFiles: () -> Unit,
     onRemoveFile: (Int) -> Unit,
     onMoveFile: (Int, Int) -> Unit,
@@ -114,11 +114,12 @@ fun ToolScreen(
     onMarkupPage: (Int) -> Unit,
     onHighlight: (Int, com.layerbit.sheaf.pdf.PageArea) -> Unit,
     onInk: (Int, List<com.layerbit.sheaf.pdf.PagePoint>) -> Unit,
+    onLine: (Int, com.layerbit.sheaf.pdf.PagePoint, com.layerbit.sheaf.pdf.PagePoint) -> Unit,
+    onTap: (Int, com.layerbit.sheaf.pdf.PagePoint) -> Unit,
     onUndoMark: (Int) -> Unit,
     onClearMarks: (Int) -> Unit,
     onAddRedaction: (Int, com.layerbit.sheaf.pdf.PageArea) -> Unit,
     onClearRedactions: (Int) -> Unit,
-    onUndoRedaction: (Int) -> Unit,
     onRun: () -> Unit,
     onCancel: () -> Unit,
     onSave: (SheafFile) -> Unit,
@@ -131,6 +132,26 @@ fun ToolScreen(
     onLoadPreviewPage: () -> Unit,
     onLoadForm: () -> Unit,
     onFormValue: (String, String) -> Unit,
+    onLoadOutline: () -> Unit,
+    onAddBookmark: (Int) -> Unit,
+    onSetBookmark: (Int, String?, Int?) -> Unit,
+    onRemoveBookmark: (Int) -> Unit,
+    onMoveBookmark: (Int, Int) -> Unit,
+    onIndentBookmark: (Int, Boolean) -> Unit,
+    onClearBookmarks: () -> Unit,
+    onLoadAttachments: () -> Unit,
+    onFindSensitive: () -> Unit,
+    onLoadAnswers: () -> Unit,
+    onKeepAnswers: () -> Unit,
+    onUseAnswers: (java.io.File) -> Unit,
+    onForgetAnswers: (java.io.File) -> Unit,
+    onLoadStamp: () -> Unit,
+    onAddField: (Int, com.layerbit.sheaf.pdf.PageArea) -> Unit,
+    onSetField: (Int, String?, com.layerbit.sheaf.pdf.NewField.Kind?, String?) -> Unit,
+    onRemoveField: (Int) -> Unit,
+    onClearFields: (Int) -> Unit,
+    /** Bundles every result into one ZIP and saves that. */
+    onSaveZip: (List<SheafFile>) -> Unit,
     onCheckSize: () -> Unit,
     onCopy: (String) -> Unit,
     onDone: () -> Unit,
@@ -138,28 +159,29 @@ fun ToolScreen(
 ) {
     // Organise and Remove areas both draw on rendered pages, and only once a document is
     // actually present.
-    //
-    // The password is a key as well. Unlocking a protected document throws away the page
-    // order it could not read, and this effect is the only thing that ever asks for a new
-    // one - so without it the prompt disappears, the Run button goes live, and the grid that
-    // is the entire point of the screen never arrives. Both loaders return early when their
-    // work is already done, so re-running this costs nothing where nothing changed.
-    LaunchedEffect(
-        tool,
-        state.documents.firstOrNull()?.file?.file?.path,
-        state.documents.firstOrNull()?.needsPassword,
-        state.config.markPage
-    ) {
+    LaunchedEffect(tool, state.documents.firstOrNull()?.file?.file?.path, state.documents.size, state.config.markPage) {
         if (state.documents.isEmpty()) return@LaunchedEffect
         when (tool) {
             // These edit pages, so they need the pages themselves.
             // Extract shows them to be tapped rather than typed.
-            ToolId.ORGANISE, ToolId.REDACT, ToolId.EXTRACT, ToolId.ANNOTATE -> onLoadPages()
+            ToolId.ORGANISE, ToolId.REDACT, ToolId.EXTRACT, ToolId.ANNOTATE, ToolId.CREATE_FORM -> onLoadPages()
             // These change how a page looks, so one page is enough to show it.
             ToolId.CROP, ToolId.WATERMARK, ToolId.PAGE_NUMBERS,
-            ToolId.ADD_TEXT -> onLoadPreviewPage()
-            // Filling a form needs to know whether there is one.
-            ToolId.FORMS -> onLoadForm()
+            ToolId.ADD_TEXT, ToolId.BACKGROUND -> onLoadPreviewPage()
+            // Filling a form needs to know whether there is one, and what was kept before.
+            ToolId.FORMS -> {
+                onLoadForm()
+                onLoadAnswers()
+            }
+            // The picture and the page it goes on, for the placement preview.
+            ToolId.ADD_IMAGE -> {
+                onLoadPreviewPage()
+                onLoadStamp()
+            }
+            // The bookmark editor starts from what the document already has.
+            ToolId.BOOKMARKS -> onLoadOutline()
+            // Attachments shows what is already inside before offering to add or take out.
+            ToolId.ATTACHMENTS -> onLoadAttachments()
             // Signing offers the ones kept earlier before offering the pad.
             ToolId.SIGN -> {
                 onLoadPreviewPage()
@@ -171,27 +193,25 @@ fun ToolScreen(
 
     val finished = jobState as? JobState.Finished
     val running = jobState as? JobState.Running
-    val crashed = jobState as? JobState.Crashed
 
     /** The finished file waiting for the user to pick the next tool for it. */
     var chaining by remember { mutableStateOf<SheafFile?>(null) }
 
+    Column(modifier = modifier.fillMaxSize()) {
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = ListRhythm,
+        modifier = Modifier.weight(1f).fillMaxWidth(),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         when {
             running != null -> item { RunningPanel(running, onCancel) }
 
             finished != null -> {
-                item { SectionHeading("Result") }
-                item { ResultSummary(finished, state.saved) }
+                item { ResultSummary(finished) }
                 items(finished.produced, key = { it.file.file.path }) { produced ->
                     ResultRow(
                         outcome = produced,
                         preview = state.previews[produced.file.file.path],
-                        saved = produced.file.file.path in state.saved,
                         onSave = { onSave(produced.file) },
                         onOpen = { onOpenResult(produced.file) },
                         onChain = { chaining = produced.file },
@@ -202,122 +222,143 @@ fun ToolScreen(
                 items(finished.failed) { failure -> ProblemRow(failure.inputName, failure.reason, isError = true) }
                 items(finished.skipped) { skip -> ProblemRow(skip.inputName, skip.reason, isError = false) }
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        if (finished.produced.isNotEmpty()) {
-                            Button(
-                                onClick = { onShare(finished.produced.map { it.file }) },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = SheafColors.Band,
-                                    contentColor = SheafColors.OnBand
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 4.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                            if (finished.produced.isNotEmpty()) {
+                                PrimaryButton(
+                                    text = if (finished.produced.size > 1) "Share all" else "Share",
+                                    icon = Icons.Filled.Share,
+                                    onClick = { onShare(finished.produced.map { it.file }) },
+                                    modifier = Modifier.weight(1f)
                                 )
-                            ) { Text(if (finished.produced.size > 1) "Share all" else "Share") }
-                        }
-                        // One folder for the whole batch. Forty files through the system
-                        // picker one at a time is the thing that makes an export tool useless.
-                        if (finished.produced.size > 1) {
-                            OutlinedButton(
-                                onClick = { onSaveAll(finished.produced.map { it.file }) }
-                            ) {
-                                Text("Save all", color = SheafColors.Muted)
+                            }
+                            // One folder for the whole batch. Forty files through the system
+                            // picker one at a time is the thing that makes an export tool useless.
+                            if (finished.produced.size > 1) {
+                                SecondaryButton(
+                                    text = "Save all",
+                                    onClick = { onSaveAll(finished.produced.map { it.file }) },
+                                    modifier = Modifier.weight(1f)
+                                )
                             }
                         }
-                        OutlinedButton(onClick = onDone) { Text("Done", color = SheafColors.Muted) }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                            // One file to send on, for the cases where a folder of forty is not
+                            // what the other end wants: an upload box, an email, a chat.
+                            if (finished.produced.size > 1) {
+                                SecondaryButton(
+                                    text = "Save as one ZIP",
+                                    onClick = { onSaveZip(finished.produced.map { it.file }) },
+                                    modifier = Modifier.weight(1f),
+                                    tall = false
+                                )
+                            }
+                            SecondaryButton(text = "Done", onClick = onDone, modifier = Modifier.weight(1f), tall = false)
+                        }
                     }
                 }
             }
 
-            // The job could not run at all - out of memory, or the system refusing to start
-            // the foreground service. Four places publish this and nothing used to read it,
-            // so the screen fell through to the ordinary setup form and a compress killed
-            // while the app was in the background returned the user to a live Run button
-            // with nothing said. Cancelled is deliberately left out: the runner reports only
-            // a cancel the user asked for, and returning someone who pressed Stop to their
-            // untouched form is the right answer.
-            crashed != null -> {
-                item { SectionHeading("It did not run") }
-                item { ProblemRow(null, crashed.reason, isError = true) }
+            tool.input == ToolId.InputKind.NONE -> {
                 item {
-                    // onRun clears the crashed state before it submits, which is what gets
-                    // the screen out of here even when the run cannot start a second time.
-                    Button(
-                        onClick = onRun,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = SheafColors.Band,
-                            contentColor = SheafColors.OnBand
-                        )
-                    ) { Text("Try again") }
+                    ToolOptions(
+                        tool = tool,
+                        config = state.config,
+                        pageCount = null,
+                        onChange = onConfigChange
+                    )
+                }
+                state.error?.let { message ->
+                    item { ProblemRow(null, message, isError = true) }
                 }
             }
 
             else -> {
                 item { SectionHeading(if (tool.acceptsMultiple) "Files" else "File") }
 
-                // Keyed by the file, which is what makes the reorder legible: without a key
-                // these rows are identified by position, so moving one up swapped two sets
-                // of contents in place and animated nothing. Merge order is the whole point
-                // of this list, so seeing which row moved is the feature.
-                itemsIndexedInColumn(
-                    state.documents,
-                    key = { _, doc -> doc.file.file.path }
-                ) { index, doc ->
+                itemsIndexedInColumn(state.documents) { index, doc ->
                     DocumentRow(
                         doc = doc,
-                        canReorder = tool == ToolId.MERGE && state.documents.size > 1,
+                        canReorder = (tool == ToolId.MERGE || tool == ToolId.ATTACHMENTS || tool == ToolId.COMPARE) && state.documents.size > 1,
+                        role = when {
+                            tool == ToolId.DIGITAL_SIGN && doc.file.isPdf -> "The PDF"
+                            tool == ToolId.DIGITAL_SIGN -> "Certificate"
+                            tool == ToolId.COMPARE && index == 0 -> "Older version"
+                            tool == ToolId.COMPARE && index == 1 -> "Newer version"
+                            tool == ToolId.ADD_IMAGE && doc.file.isImage -> "The image"
+                            tool == ToolId.ADD_IMAGE && doc.file.isPdf -> "The PDF"
+                            tool == ToolId.ATTACHMENTS && index == 0 -> "The PDF"
+                            tool == ToolId.ATTACHMENTS -> "To attach"
+                            tool == ToolId.INSERT && index == 0 -> "Being added to"
+                            tool == ToolId.INSERT -> "Goes in"
+                            else -> null
+                        },
                         isFirst = index == 0,
                         isLast = index == state.documents.lastIndex,
                         onRemove = { onRemoveFile(index) },
                         onUp = { onMoveFile(index, index - 1) },
                         onDown = { onMoveFile(index, index + 1) },
                         onPasswordChange = { onSetPassword(index, it) },
-                        onPasswordDone = { onVerifyPassword(index) },
-                        modifier = Modifier.animateItem(placementSpec = tween(220))
+                        onPasswordDone = { onVerifyPassword(index) }
                     )
                 }
 
                 item {
-                    OutlinedButton(onClick = onAddFiles, modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            when {
-                                state.documents.isEmpty() && tool.input == ToolId.InputKind.IMAGES -> "Choose images"
-                                state.documents.isEmpty() -> "Choose a file"
-                                tool.acceptsMultiple -> "Add another"
-                                else -> "Choose a different file"
-                            },
-                            color = SheafColors.Text
-                        )
+                    val empty = state.documents.isEmpty()
+                    val label = when {
+                        empty && tool.input == ToolId.InputKind.IMAGES -> "Choose images"
+                        empty -> "Choose a file"
+                        tool.acceptsMultiple -> "Add another"
+                        else -> "Choose a different file"
                     }
-                    // The wait belongs to the file that was just added, so it is said here
-                    // rather than under the Run button - which is greyed and, because
-                    // blockedReason returns null while busy, silent for as long as it lasts.
-                    state.busyLabel?.let { label ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.padding(top = 10.dp)
+                    if (empty) {
+                        // An empty tool screen's whole job is this one tap, so it is drawn as
+                        // a drop zone rather than a button lost under a heading.
+                        Panel(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = onAddFiles,
+                            tint = GroupAccents.of(tool.group),
+                            inset = 22.dp
                         ) {
-                            CircularProgressIndicator(
-                                color = SheafColors.Band,
-                                strokeWidth = 2.dp,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                label,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = SheafColors.Muted
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                                IconTile(iconRes = iconFor(tool), accent = GroupAccents.of(tool.group), size = 52.dp, filled = true)
+                                Text(
+                                    label,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = SheafColors.Text,
+                                    modifier = Modifier.padding(top = 12.dp)
+                                )
+                                Text(
+                                    when (tool.input) {
+                                        ToolId.InputKind.IMAGES -> "Photos and scans, as many as you like"
+                                        ToolId.InputKind.SEVERAL_PDFS -> "One PDF, or several"
+                                        ToolId.InputKind.PDF_AND_FILES -> "The PDF first, then the files to put in it"
+                                        ToolId.InputKind.PDF_AND_IMAGE -> "The PDF, then the image"
+                                        ToolId.InputKind.PDF_AND_CERT -> "The PDF, then your .pfx or .p12"
+                                        ToolId.InputKind.OFFICE -> ".docx, .xlsx, .txt, .md or .csv"
+                                        else -> "It is never changed; the result is a new file"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = SheafColors.Muted,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
                         }
+                    } else {
+                        SecondaryButton(
+                            text = label,
+                            icon = Icons.Filled.Add,
+                            onClick = onAddFiles,
+                            modifier = Modifier.fillMaxWidth(),
+                            tall = false
+                        )
                     }
                 }
 
                 if (tool == ToolId.ORGANISE && state.pageOrder.isNotEmpty()) {
                     item {
                         OrganisePanel(
-                            pageOrder = state.pageOrder,
-                            selectedPages = state.selectedPages,
-                            rotations = state.rotations,
-                            thumbnails = state.thumbnails,
-                            thumbnailsCapped = state.thumbnailsCapped,
-                            canUndoPageEdit = state.canUndoPageEdit,
+                            state = state,
                             onTogglePage = onTogglePage,
                             onRotate = onRotateSelected,
                             onDelete = onDeleteSelected,
@@ -343,7 +384,7 @@ fun ToolScreen(
                             TextButton(onClick = onKeepSignature) {
                                 Text(
                                     "Keep this signature for next time",
-                                    color = SheafColors.BandBright,
+                                    color = SheafColors.Band,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -364,19 +405,13 @@ fun ToolScreen(
                             tool = tool,
                             config = state.config,
                             page = state.previewPage,
-                            signature = state.signatureBitmap,
-                            locked = state.documents.firstOrNull()?.needsPassword == true,
-                            previewFailed = state.previewFailed
+                            signature = state.signatureBitmap
                         )
                     }
                 } else if (tool == ToolId.EXTRACT && state.pageOrder.isNotEmpty()) {
                     item {
                         PageChooser(
-                            pageOrder = state.pageOrder,
-                            selectedPages = state.selectedPages,
-                            rotations = state.rotations,
-                            thumbnails = state.thumbnails,
-                            thumbnailsCapped = state.thumbnailsCapped,
+                            state = state,
                             onTogglePage = onTogglePage,
                             onAll = onSelectAllPages,
                             onNone = onClearPageSelection
@@ -398,12 +433,32 @@ fun ToolScreen(
                     } else if (state.formFields.isEmpty()) {
                         item { NoFormFields() }
                     } else {
+                        if (state.savedAnswers.isNotEmpty()) {
+                            item {
+                                SavedAnswers(
+                                    files = state.savedAnswers,
+                                    onUse = onUseAnswers,
+                                    onForget = onForgetAnswers
+                                )
+                            }
+                        }
                         item {
                             FormEditor(
                                 fields = state.formFields,
                                 values = state.formValues,
                                 onValue = onFormValue
                             )
+                        }
+                        if (state.formValues.values.any { it.isNotBlank() }) {
+                            item {
+                                TextButton(onClick = onKeepAnswers) {
+                                    Text(
+                                        "Keep these answers for next time",
+                                        color = SheafColors.Band,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
                         }
                         item {
                             ToolOptions(
@@ -416,6 +471,66 @@ fun ToolScreen(
                             )
                         }
                     }
+                } else if (tool == ToolId.ADD_IMAGE && state.documents.isNotEmpty()) {
+                    item {
+                        ToolOptions(
+                            tool = tool,
+                            config = state.config,
+                            pageCount = state.documents.firstOrNull { it.file.isPdf }?.pageCount,
+                            onChange = onConfigChange
+                        )
+                    }
+                    if (state.stampBitmap != null) {
+                        item {
+                            EffectPreview(
+                                tool = tool,
+                                config = state.config,
+                                page = state.previewPage,
+                                signature = state.stampBitmap
+                            )
+                        }
+                    }
+                } else if (tool == ToolId.BOOKMARKS && state.documents.isNotEmpty()) {
+                    if (!state.outlineRead) {
+                        item { Hint("Reading the bookmarks…") }
+                    } else {
+                        item {
+                            BookmarksEditor(
+                                entries = state.outline,
+                                pageCount = state.documents.firstOrNull()?.pageCount,
+                                onAdd = onAddBookmark,
+                                onSet = onSetBookmark,
+                                onRemove = onRemoveBookmark,
+                                onMove = onMoveBookmark,
+                                onIndent = onIndentBookmark,
+                                onClear = onClearBookmarks
+                            )
+                        }
+                        item {
+                            ToolOptions(
+                                tool = tool,
+                                config = state.config,
+                                pageCount = state.documents.firstOrNull()?.pageCount,
+                                onChange = onConfigChange
+                            )
+                        }
+                    }
+                } else if (tool == ToolId.ATTACHMENTS && state.documents.isNotEmpty()) {
+                    item {
+                        AttachmentsPanel(
+                            read = state.attachmentsRead,
+                            attachments = state.attachments,
+                            extras = state.documents.drop(1).map { it.file.displayName }
+                        )
+                    }
+                    item {
+                        ToolOptions(
+                            tool = tool,
+                            config = state.config,
+                            pageCount = state.documents.firstOrNull()?.pageCount,
+                            onChange = onConfigChange
+                        )
+                    }
                 } else if (tool == ToolId.ANNOTATE && state.pageOrder.isNotEmpty()) {
                     item {
                         MarkupCanvas(
@@ -423,15 +538,15 @@ fun ToolScreen(
                             pageCount = state.pageOrder.size,
                             page = state.thumbnails[state.canvasPage],
                             marks = state.marks[state.canvasPage].orEmpty(),
-                            pen = state.config.markupPen,
+                            tool = state.config.markupTool,
                             colour = state.config.markupColour,
                             onPage = onMarkupPage,
                             onHighlight = { area -> onHighlight(state.canvasPage, area) },
                             onInk = { points -> onInk(state.canvasPage, points) },
+                            onLine = { from, to -> onLine(state.canvasPage, from, to) },
+                            onTap = { at -> onTap(state.canvasPage, at) },
                             onUndo = { onUndoMark(state.canvasPage) },
-                            onClear = { onClearMarks(state.canvasPage) },
-                            documentTotal = state.marks.values.sumOf { it.size },
-                            pageFailed = state.canvasPage in state.failedPages
+                            onClear = { onClearMarks(state.canvasPage) }
                         )
                     }
                     item {
@@ -444,7 +559,49 @@ fun ToolScreen(
                             onChange = onConfigChange
                         )
                     }
+                } else if (tool == ToolId.CREATE_FORM && state.pageOrder.isNotEmpty()) {
+                    val onThisPage = state.newFields.withIndex().filter { it.value.pageIndex == state.canvasPage }
+                    item {
+                        RedactCanvas(
+                            pageIndex = state.canvasPage,
+                            pageCount = state.pageOrder.size,
+                            page = state.thumbnails[state.canvasPage],
+                            areas = onThisPage.map { it.value.area },
+                            onPage = onRedactPage,
+                            onAdd = { area -> onAddField(state.canvasPage, area) },
+                            onClear = { onClearFields(state.canvasPage) },
+                            boxColour = SheafColors.Band.copy(alpha = 0.22f),
+                            labels = onThisPage.map { it.value.name },
+                            emptyHint = "Drag a box where a field should go"
+                        )
+                    }
+                    item {
+                        ToolOptions(
+                            tool = tool,
+                            config = state.config,
+                            pageCount = state.documents.firstOrNull()?.pageCount,
+                            onChange = onConfigChange
+                        )
+                    }
+                    if (state.newFields.isNotEmpty()) {
+                        item {
+                            NewFieldsList(
+                                fields = state.newFields,
+                                onSet = onSetField,
+                                onRemove = onRemoveField
+                            )
+                        }
+                    }
                 } else if (tool == ToolId.REDACT && state.pageOrder.isNotEmpty()) {
+                    item {
+                        FindSensitivePanel(
+                            config = state.config,
+                            finding = state.finding,
+                            report = state.findReport,
+                            onChange = onConfigChange,
+                            onFind = onFindSensitive
+                        )
+                    }
                     item {
                         RedactCanvas(
                             pageIndex = state.canvasPage,
@@ -453,10 +610,7 @@ fun ToolScreen(
                             areas = state.redactions[state.canvasPage].orEmpty(),
                             onPage = onRedactPage,
                             onAdd = { area -> onAddRedaction(state.canvasPage, area) },
-                            onClear = { onClearRedactions(state.canvasPage) },
-                            documentTotal = state.redactions.values.sumOf { it.size },
-                            onUndo = { onUndoRedaction(state.canvasPage) },
-                            pageFailed = state.canvasPage in state.failedPages
+                            onClear = { onClearRedactions(state.canvasPage) }
                         )
                     }
                     item {
@@ -481,16 +635,16 @@ fun ToolScreen(
                         )
                     }
                     if (tool == ToolId.CROP || tool == ToolId.WATERMARK ||
-                        tool == ToolId.PAGE_NUMBERS || tool == ToolId.ADD_TEXT
+                        tool == ToolId.PAGE_NUMBERS || tool == ToolId.ADD_TEXT ||
+                        tool == ToolId.BACKGROUND
                     ) {
                         item {
                             EffectPreview(
                                 tool = tool,
                                 config = state.config,
                                 page = state.previewPage,
+                                pageSize = state.previewPageSize,
                                 signature = null,
-                                locked = state.documents.firstOrNull()?.needsPassword == true,
-                                previewFailed = state.previewFailed,
                                 // Only Add text is placed by hand; the others sit where their
                                 // own settings put them, and a stray tap should not move them.
                                 onPlace = if (tool == ToolId.ADD_TEXT) {
@@ -507,27 +661,28 @@ fun ToolScreen(
                     item { ProblemRow(null, message, isError = true) }
                 }
 
-                item {
-                    Spacer(Modifier.height(4.dp))
-                    PrimaryButton(
-                        text = tool.action,
-                        onClick = onRun,
-                        enabled = state.canRun,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    // Saying why beats a grey button that looks broken.
-                    state.blockedReason?.takeIf { state.documents.isNotEmpty() || !state.busy }
-                        ?.let { reason ->
-                            Text(
-                                reason,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = SheafColors.Dim,
-                                modifier = Modifier.padding(top = 6.dp)
-                            )
+                if (state.busy) {
+                    item {
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = SheafColors.Band, strokeWidth = 2.dp)
                         }
+                    }
                 }
             }
         }
+    }
+
+    // The one coloured button on the screen sits under the list, always in reach, and says
+    // why it is waiting when it is.
+    if (running == null && finished == null) {
+        ActionBar(
+            label = tool.action,
+            enabled = state.canRun,
+            busy = state.busy,
+            reason = state.blockedReason?.takeIf { state.documents.isNotEmpty() || tool.input == ToolId.InputKind.NONE || !state.busy },
+            onRun = onRun
+        )
+    }
     }
 
     // The same tool is left in the list on purpose: a second note on another page, or a
@@ -536,7 +691,6 @@ fun ToolScreen(
         ToolPickerSheet(
             heading = "Use another tool on this",
             documentName = file.displayName,
-            favourites = favourites,
             onDismiss = { chaining = null },
             onPick = { next ->
                 chaining = null
@@ -548,8 +702,16 @@ fun ToolScreen(
 
 @Composable
 private fun RunningPanel(running: JobState.Running, onCancel: () -> Unit) {
-    Panel(modifier = Modifier.fillMaxWidth()) {
-        Text(running.opTitle, style = MaterialTheme.typography.titleMedium, color = SheafColors.Text)
+    Panel(modifier = Modifier.fillMaxWidth(), tint = SheafColors.Running, inset = 18.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            CircularProgressIndicator(color = SheafColors.Running, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+            Text(
+                running.opTitle,
+                style = MaterialTheme.typography.titleMedium,
+                color = SheafColors.Text,
+                modifier = Modifier.padding(start = 10.dp)
+            )
+        }
         if (running.label.isNotEmpty()) {
             Text(
                 running.label,
@@ -561,28 +723,12 @@ private fun RunningPanel(running: JobState.Running, onCancel: () -> Unit) {
         }
         Spacer(Modifier.height(12.dp))
         if (running.unitsTotal > 0) {
-            // Glided between units instead of jumped.
-            //
-            // Progress arrives one unit at a time, so a twelve-page compress used to make
-            // twelve 8% leaps and stand perfectly still in between - and a bar that is not
-            // moving is what makes someone force-quit an operation that is working fine.
-            //
-            // Linear, not an ease: this stands for real work, and an ease-out would claim
-            // the end is nearer than it is. The "N of M" line below is left unanimated on
-            // purpose, so the exact count sits beside the approximate bar. Note the panel is
-            // replaced the moment the job finishes, so the last glide is cut off part way
-            // and the bar is never seen to reach the end - which is fine, because what
-            // replaces it says the job is done, but it is better said than discovered.
-            val shown by animateFloatAsState(
-                targetValue = running.fraction,
-                animationSpec = tween(320, easing = LinearEasing),
-                label = "progress"
-            )
             LinearProgressIndicator(
-                progress = { shown },
-                color = SheafColors.Band,
+                progress = { running.fraction },
+                color = SheafColors.Running,
                 trackColor = SheafColors.SurfaceDim,
-                modifier = Modifier.fillMaxWidth()
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
+                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp))
             )
             Text(
                 "${running.unitsDone} of ${running.unitsTotal}",
@@ -592,44 +738,53 @@ private fun RunningPanel(running: JobState.Running, onCancel: () -> Unit) {
             )
         } else {
             LinearProgressIndicator(
-                color = SheafColors.Band,
+                color = SheafColors.Running,
                 trackColor = SheafColors.SurfaceDim,
-                modifier = Modifier.fillMaxWidth()
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
+                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp))
             )
         }
-        TextButton(onClick = onCancel, modifier = Modifier.padding(top = 4.dp)) {
-            Text("Cancel", color = SheafColors.Muted)
-        }
+        Text(
+            "Keeps going if you switch to another app.",
+            style = MaterialTheme.typography.bodySmall,
+            color = SheafColors.Dim,
+            modifier = Modifier.padding(top = 10.dp)
+        )
+        SecondaryButton(text = "Cancel", onClick = onCancel, modifier = Modifier.padding(top = 12.dp), tall = false)
     }
 }
 
-/**
- * What was produced, and whether any of it is anywhere the user can find it.
- *
- * A result lives in Sheaf's workspace, which is trimmed on the next launch, and nothing in
- * the app lists what is in there - so Done is the last moment the file is reachable. Settings
- * already carries the right sentence, "Results waiting to be saved", on the wrong screen. The
- * second sentence drops away as the files are saved rather than staying as a standing warning.
- */
 @Composable
-private fun ResultSummary(finished: JobState.Finished, saved: Set<String>) {
+private fun ResultSummary(finished: JobState.Finished) {
+    val nothing = finished.produced.isEmpty() && finished.failed.isNotEmpty()
     val text = when {
-        finished.produced.isEmpty() && finished.failed.isNotEmpty() -> "Nothing was produced."
-        finished.allSucceeded && finished.produced.size == 1 -> "One file is ready."
-        finished.allSucceeded -> "${finished.produced.size} files are ready."
-        else -> "${finished.produced.size} of ${finished.outcomes.size} finished."
+        nothing -> "Nothing was produced"
+        finished.allSucceeded && finished.produced.size == 1 -> "Your file is ready"
+        finished.allSucceeded -> "${finished.produced.size} files are ready"
+        else -> "${finished.produced.size} of ${finished.outcomes.size} finished"
     }
-    val unsaved = finished.produced.count { it.file.file.path !in saved }
-    val note = when {
-        unsaved == 0 -> null
-        finished.produced.size == 1 -> "It is not saved to your phone yet."
-        else -> "They are not saved to your phone yet."
+    val accent = if (nothing) SheafColors.Failed else SheafColors.Done
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+        Box(
+            modifier = Modifier.size(44.dp).background(accent.copy(alpha = 0.18f), RoundedCornerShape(14.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (nothing) Icons.Filled.Warning else Icons.Filled.Check,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+        Column(modifier = Modifier.padding(start = 12.dp)) {
+            Text(text, style = MaterialTheme.typography.headlineSmall, color = SheafColors.Text)
+            Text(
+                if (nothing) "What went wrong is listed below." else "Nothing was uploaded. The original is untouched.",
+                style = MaterialTheme.typography.bodySmall,
+                color = SheafColors.Dim
+            )
+        }
     }
-    Text(
-        listOfNotNull(text, note).joinToString(" "),
-        style = MaterialTheme.typography.bodyMedium,
-        color = SheafColors.Muted
-    )
 }
 
 /**
@@ -643,7 +798,6 @@ private fun ResultSummary(finished: JobState.Finished, saved: Set<String>) {
 private fun ResultRow(
     outcome: OpOutcome.Produced,
     preview: ResultPreview?,
-    saved: Boolean,
     onSave: () -> Unit,
     onOpen: () -> Unit,
     onChain: () -> Unit,
@@ -655,22 +809,26 @@ private fun ResultRow(
         if (file.isText || file.isImage) onNeedPreview()
     }
 
-    Panel(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            file.displayName,
-            style = MaterialTheme.typography.titleMedium,
-            color = SheafColors.Text,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        outcome.detail?.let { detail ->
-            Text(
-                detail,
-                style = MaterialTheme.typography.bodyMedium,
-                color = SheafColors.Done,
-                modifier = Modifier.padding(top = 3.dp)
-            )
+    Panel(modifier = Modifier.fillMaxWidth(), tint = SheafColors.Done) {
+        Row(verticalAlignment = Alignment.Top) {
+            IconTile(iconRes = fileIcon(file), accent = SheafColors.Done, filled = true, size = 40.dp)
+            Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
+                Text(
+                    file.displayName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = SheafColors.Text,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                outcome.detail?.let { detail ->
+                    Text(
+                        detail,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SheafColors.Done,
+                        modifier = Modifier.padding(top = 3.dp)
+                    )
+                }
+            }
         }
 
         when (preview) {
@@ -680,7 +838,7 @@ private fun ResultRow(
                         .fillMaxWidth()
                         .padding(top = 10.dp)
                         .heightIn(max = 220.dp)
-                        .clip(MaterialTheme.shapes.small)
+                        .clip(RoundedCornerShape(8.dp))
                         .background(SheafColors.SurfaceDim)
                         .verticalScroll(rememberScrollState())
                         .padding(12.dp)
@@ -696,7 +854,7 @@ private fun ResultRow(
                     }
                 }
                 TextButton(onClick = { onCopy(preview.content) }) {
-                    Text("Copy text", color = SheafColors.BandBright)
+                    Text("Copy text", color = SheafColors.Band)
                 }
             }
 
@@ -708,53 +866,74 @@ private fun ResultRow(
                     .fillMaxWidth()
                     .heightIn(max = 220.dp)
                     .padding(top = 10.dp)
-                    .clip(MaterialTheme.shapes.small)
+                    .clip(RoundedCornerShape(8.dp))
                     .background(SheafColors.Paper)
             )
 
             null -> Unit
         }
 
-        RowBetween(modifier = Modifier.padding(top = 6.dp)) {
-            // Weighted so the three buttons measure first and this gives way rather than
-            // pushing Save off the edge: "Next tool…" and "Saved" together are close to all
-            // of a 360dp row.
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f, fill = false)
-            ) {
-                Text(
-                    formatBytes(file.sizeBytes),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = SheafColors.Dim,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                // Said on the row rather than in a snackbar, which is gone by the time the
-                // second file of a batch is saved and cannot be gone back to.
-                if (saved) {
-                    Text(
-                        "Saved",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = SheafColors.Done,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-            Row {
+        RowBetween(modifier = Modifier.padding(top = 10.dp)) {
+            Pill(formatBytes(file.sizeBytes), SheafColors.Muted)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (file.isPdf) {
-                    TextButton(onClick = onOpen) { Text("Open", color = SheafColors.Muted) }
+                    SecondaryButton(text = "Open", onClick = onOpen, tall = false)
                     // The chain. Without this, compressing something you just merged means
                     // saving it, leaving, and finding the same file again in the picker.
-                    // Named for what it opens: beside Open and Save, "Then…" read as a third
-                    // thing to do with the file rather than as another tool.
-                    TextButton(onClick = onChain) { Text("Next tool…", color = SheafColors.Muted) }
+                    SecondaryButton(text = "Then…", onClick = onChain, tall = false)
                 }
-                TextButton(onClick = onSave) { Text("Save", color = SheafColors.BandBright) }
+                PrimaryButton(text = "Save", onClick = onSave, tall = false)
             }
         }
+    }
+}
+
+@Composable
+private fun ProblemRow(name: String?, reason: String, isError: Boolean) {
+    val accent = if (isError) SheafColors.Failed else SheafColors.Skipped
+    Panel(modifier = Modifier.fillMaxWidth(), tint = accent, inset = 14.dp) {
+        Row(verticalAlignment = Alignment.Top) {
+            Icon(
+                imageVector = if (isError) Icons.Filled.Warning else Icons.Filled.Info,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(18.dp).padding(top = 1.dp)
+            )
+            Column(modifier = Modifier.padding(start = 10.dp)) {
+                if (!name.isNullOrBlank()) {
+                    Text(name, style = MaterialTheme.typography.titleMedium, color = accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                Text(reason, style = MaterialTheme.typography.bodyMedium, color = SheafColors.Muted)
+            }
+        }
+    }
+}
+
+/** The run button and, under it, why it is waiting. */
+@Composable
+private fun ActionBar(label: String, enabled: Boolean, busy: Boolean, reason: String?, onRun: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SheafColors.Background)
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+    ) {
+        if (reason != null && !busy) {
+            Text(
+                reason,
+                style = MaterialTheme.typography.bodySmall,
+                color = SheafColors.Dim,
+                modifier = Modifier.padding(bottom = 8.dp),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        PrimaryButton(
+            text = if (busy) "Reading the file…" else label,
+            onClick = onRun,
+            enabled = enabled && !busy,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
@@ -762,37 +941,42 @@ private fun ResultRow(
 private fun DocumentRow(
     doc: SelectedDoc,
     canReorder: Boolean,
+    role: String? = null,
     isFirst: Boolean,
     isLast: Boolean,
     onRemove: () -> Unit,
     onUp: () -> Unit,
     onDown: () -> Unit,
     onPasswordChange: (String) -> Unit,
-    onPasswordDone: () -> Unit,
-    modifier: Modifier = Modifier
+    onPasswordDone: () -> Unit
 ) {
-    Panel(modifier = modifier.fillMaxWidth()) {
-        Text(
-            doc.file.displayName,
-            style = MaterialTheme.typography.titleMedium,
-            color = SheafColors.Text,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        val detail = buildString {
-            doc.pageCount?.let { append(formatPageCount(it)).append(" · ") }
-            append(formatBytes(doc.file.sizeBytes))
-            if (doc.encrypted && !doc.needsPassword) append(" · protected")
+    Panel(modifier = Modifier.fillMaxWidth(), inset = 14.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconTile(
+                iconRes = fileIcon(doc.file),
+                accent = if (doc.unreadableReason != null) SheafColors.Failed else if (doc.file.isPdf) SheafColors.Band else SheafColors.Running
+            )
+            Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
+                Text(
+                    doc.file.displayName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = SheafColors.Text,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                val detail = buildString {
+                    role?.let { append(it).append(" · ") }
+                    doc.pageCount?.let { append(formatPageCount(it)).append(" · ") }
+                    append(formatBytes(doc.file.sizeBytes))
+                    if (doc.encrypted && !doc.needsPassword) append(" · protected")
+                }
+                Text(detail, style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
+            }
+            RoundIconButton(icon = Icons.Filled.Close, contentDescription = "Remove", onClick = onRemove, size = 32.dp)
         }
-        Text(detail, style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
 
         doc.unreadableReason?.let {
-            // The same bordered shape a failed job gets, rather than a line of red text that
-            // reads as part of the detail line above it. A file that cannot be used is the
-            // most important thing in its own row.
-            Spacer(Modifier.height(8.dp))
-            ProblemRow(name = null, reason = it, isError = true)
+            Text(it, style = MaterialTheme.typography.bodySmall, color = SheafColors.Failed, modifier = Modifier.padding(top = 6.dp))
         }
 
         if (doc.needsPassword) {
@@ -809,21 +993,193 @@ private fun DocumentRow(
             )
         }
 
-        RowBetween(modifier = Modifier.padding(top = 4.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (canReorder) {
-                    TextButton(onClick = onUp, enabled = !isFirst) { Text("Up", color = SheafColors.Muted) }
-                    TextButton(onClick = onDown, enabled = !isLast) { Text("Down", color = SheafColors.Muted) }
+        if (canReorder) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 10.dp)) {
+                SecondaryButton(text = "Up", onClick = onUp, enabled = !isFirst, tall = false, icon = Icons.Filled.KeyboardArrowUp)
+                SecondaryButton(text = "Down", onClick = onDown, enabled = !isLast, tall = false, icon = Icons.Filled.KeyboardArrowDown)
+            }
+        }
+    }
+}
+
+/** The drawing for a file in a list: a page, a picture, or a box for anything else. */
+private fun fileIcon(file: SheafFile): Int = when {
+    file.isPdf -> R.drawable.ic_tool_read
+    file.isImage -> R.drawable.ic_tool_images_to_pdf
+    file.isText -> R.drawable.ic_tool_extract_text
+    else -> R.drawable.ic_tool_attachments
+}
+
+/**
+ * What to look for and a button to look. The boxes it draws join the drawn ones on the canvas
+ * below, where they can be checked page by page before anything is removed.
+ */
+@Composable
+private fun FindSensitivePanel(
+    config: ToolConfig,
+    finding: Boolean,
+    report: String?,
+    onChange: (((ToolConfig) -> ToolConfig)) -> Unit,
+    onFind: () -> Unit
+) {
+    Panel(modifier = Modifier.fillMaxWidth()) {
+        SectionHeading("Find and mark")
+        Text(
+            "Finds these in the text and marks each one for removal, so an ID scan or a " +
+                "statement can be shared without the numbers on it.",
+            style = MaterialTheme.typography.bodySmall,
+            color = SheafColors.Dim,
+            modifier = Modifier.padding(top = 2.dp, bottom = 6.dp)
+        )
+        com.layerbit.sheaf.ui.components.ToggleRow(
+            title = "Aadhaar numbers",
+            checked = config.findAadhaar,
+            onChange = { on -> onChange { it.copy(findAadhaar = on) } }
+        )
+        com.layerbit.sheaf.ui.components.ToggleRow(
+            title = "PAN numbers",
+            checked = config.findPan,
+            onChange = { on -> onChange { it.copy(findPan = on) } }
+        )
+        com.layerbit.sheaf.ui.components.ToggleRow(
+            title = "Phone numbers",
+            checked = config.findPhone,
+            onChange = { on -> onChange { it.copy(findPhone = on) } }
+        )
+        com.layerbit.sheaf.ui.components.ToggleRow(
+            title = "Email addresses",
+            checked = config.findEmail,
+            onChange = { on -> onChange { it.copy(findEmail = on) } }
+        )
+        com.layerbit.sheaf.ui.components.ToggleRow(
+            title = "Card numbers",
+            checked = config.findCard,
+            onChange = { on -> onChange { it.copy(findCard = on) } }
+        )
+        Spacer(Modifier.height(6.dp))
+        Field(
+            value = config.findText,
+            label = "Or any words or number",
+            keyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
+            onChange = { text -> onChange { it.copy(findText = text) } }
+        )
+        RowBetween(modifier = Modifier.padding(top = 6.dp)) {
+            Text(
+                report ?: if (finding) "Looking…" else "",
+                style = MaterialTheme.typography.bodySmall,
+                color = SheafColors.Done,
+                modifier = Modifier.weight(1f).padding(end = 8.dp)
+            )
+            OutlinedButton(onClick = onFind, enabled = !finding) {
+                Text("Find and mark", color = SheafColors.Band)
+            }
+        }
+    }
+}
+
+/** The fields drawn so far: name, kind, and for a drop-down what it offers. */
+@Composable
+private fun NewFieldsList(
+    fields: List<com.layerbit.sheaf.pdf.NewField>,
+    onSet: (Int, String?, com.layerbit.sheaf.pdf.NewField.Kind?, String?) -> Unit,
+    onRemove: (Int) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SectionHeading(if (fields.size == 1) "1 field" else "${fields.size} fields")
+        fields.forEachIndexed { index, field ->
+            Panel(modifier = Modifier.fillMaxWidth()) {
+                Field(
+                    value = field.name,
+                    label = "Name · page ${field.pageIndex + 1}",
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
+                    onChange = { text -> onSet(index, text, null, null) }
+                )
+                Spacer(Modifier.height(6.dp))
+                com.layerbit.sheaf.ui.components.ChipRow(
+                    options = com.layerbit.sheaf.pdf.NewField.Kind.entries.map { it to it.label },
+                    selected = field.kind,
+                    onSelect = { kind -> onSet(index, null, kind, null) }
+                )
+                if (field.kind == com.layerbit.sheaf.pdf.NewField.Kind.CHOICE) {
+                    Spacer(Modifier.height(6.dp))
+                    Field(
+                        value = field.options.joinToString(", "),
+                        label = "Choices, separated by commas",
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
+                        onChange = { text -> onSet(index, null, null, text) }
+                    )
+                }
+                RowBetween(modifier = Modifier.padding(top = 2.dp)) {
+                    Spacer(Modifier.height(1.dp))
+                    TextButton(onClick = { onRemove(index) }) { Text("Remove", color = SheafColors.Dim) }
                 }
             }
-            // Named for a screen reader, because a list of files is a column of buttons all
-            // reading "Remove" with nothing to say which file each one takes away.
-            TextButton(
-                onClick = onRemove,
-                modifier = Modifier.semantics {
-                    contentDescription = "Remove ${doc.file.displayName}"
-                }
-            ) { Text("Remove", color = SheafColors.Dim) }
+        }
+    }
+}
+
+/** Answer sets kept from earlier runs, to fill the same form again. */
+@Composable
+private fun SavedAnswers(
+    files: List<java.io.File>,
+    onUse: (java.io.File) -> Unit,
+    onForget: (java.io.File) -> Unit
+) {
+    Panel(modifier = Modifier.fillMaxWidth()) {
+        SectionHeading("Answers you kept")
+        files.forEach { file ->
+            RowBetween(modifier = Modifier.padding(top = 4.dp)) {
+                Text(
+                    file.nameWithoutExtension,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SheafColors.Text,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = { onUse(file) }) { Text("Use", color = SheafColors.Band) }
+                TextButton(onClick = { onForget(file) }) { Text("Forget", color = SheafColors.Dim) }
+            }
+        }
+    }
+}
+
+/** What the document already carries inside it, and what is about to go in. */
+@Composable
+private fun AttachmentsPanel(
+    read: Boolean,
+    attachments: List<com.layerbit.sheaf.pdf.AttachmentInfo>,
+    extras: List<String>
+) {
+    Panel(modifier = Modifier.fillMaxWidth()) {
+        SectionHeading(
+            when {
+                !read -> "Looking inside…"
+                attachments.isEmpty() -> "Nothing attached yet"
+                attachments.size == 1 -> "1 file inside"
+                else -> "${attachments.size} files inside"
+            }
+        )
+        attachments.forEach { attachment ->
+            RowBetween(modifier = Modifier.padding(top = 4.dp)) {
+                Text(
+                    attachment.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SheafColors.Text,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(formatBytes(attachment.sizeBytes), style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
+            }
+        }
+        if (extras.isNotEmpty()) {
+            Text(
+                "To add: " + extras.joinToString(", "),
+                style = MaterialTheme.typography.bodySmall,
+                color = SheafColors.Done,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
     }
 }
@@ -832,7 +1188,7 @@ private fun DocumentRow(
 private fun PasswordPrompt(value: String, onChange: (String) -> Unit, onSubmit: () -> Unit) {
     Column {
         PasswordField(value = value, label = "Password", onChange = onChange)
-        TextButton(onClick = onSubmit) { Text("Unlock", color = SheafColors.BandBright) }
+        TextButton(onClick = onSubmit) { Text("Unlock", color = SheafColors.Band) }
     }
 }
 
@@ -843,20 +1199,10 @@ private fun PasswordPrompt(value: String, onChange: (String) -> Unit, onSubmit: 
  * and drop: drag inside a scrolling grid is finicky to get right and easy to trigger by
  * accident, and getting page order wrong is not a small mistake. Drag can come later, once
  * there is a reason to trust it.
- *
- * Takes the fields it draws rather than the whole ToolUiState. Every keystroke anywhere on the
- * screen emits a fresh state object, and a parameter of that type is compared by instance, so a
- * panel holding one recomposes the grid and every cell in it for an edit that touched none of
- * these collections.
  */
 @Composable
 private fun OrganisePanel(
-    pageOrder: List<Int>,
-    selectedPages: Set<Int>,
-    rotations: Map<Int, Int>,
-    thumbnails: Map<Int, Bitmap>,
-    thumbnailsCapped: Boolean,
-    canUndoPageEdit: Boolean,
+    state: ToolUiState,
     onTogglePage: (Int) -> Unit,
     onRotate: (Int) -> Unit,
     onDelete: () -> Unit,
@@ -865,10 +1211,10 @@ private fun OrganisePanel(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         RowBetween {
-            SectionHeading("${pageOrder.size} pages")
-            if (selectedPages.isNotEmpty()) {
+            SectionHeading("${state.pageOrder.size} pages")
+            if (state.selectedPages.isNotEmpty()) {
                 Text(
-                    "${selectedPages.size} selected",
+                    "${state.selectedPages.size} selected",
                     style = MaterialTheme.typography.bodySmall,
                     color = SheafColors.BandBright
                 )
@@ -883,31 +1229,19 @@ private fun OrganisePanel(
             // LazyColumn. Tall enough for three rows, and it scrolls within itself.
             modifier = Modifier.heightIn(max = 420.dp)
         ) {
-            // The lookups belong in here rather than above the grid: position and the
-            // last-page test are per-cell, and reading them outside the item lambda leaves
-            // them stale the moment the order changes.
-            itemsIndexed(pageOrder, key = { _, page -> page }) { position, page ->
+            itemsIndexed(state.pageOrder, key = { _, page -> page }) { position, page ->
                 PageThumb(
                     position = position,
                     pageIndex = page,
-                    thumb = thumbnails[page],
-                    selected = page in selectedPages,
-                    rotation = rotations[page] ?: 0,
-                    isLast = position == pageOrder.lastIndex,
+                    state = state,
                     onTap = { onTogglePage(page) },
                     onLeft = { onMovePage(position, position - 1) },
-                    onRight = { onMovePage(position, position + 1) },
-                    // Placement only. The grid is keyed by page, so a tap on an arrow now
-                    // slides two thumbnails past each other instead of swapping their
-                    // contents in place. The comment above this panel rejected drag because
-                    // getting page order wrong is not a small mistake - which makes seeing
-                    // what the arrow actually did the thing carrying the whole feature.
-                    modifier = Modifier.animateItem(placementSpec = tween(220))
+                    onRight = { onMovePage(position, position + 1) }
                 )
             }
         }
 
-        if (thumbnailsCapped) {
+        if (state.thumbnailsCapped) {
             Hint(
                 "Only the first pages are shown as pictures - a few hundred thumbnails is " +
                     "more memory than this app is allowed. The rest are still here and keep " +
@@ -918,21 +1252,21 @@ private fun OrganisePanel(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(
                 onClick = { onRotate(90) },
-                enabled = selectedPages.isNotEmpty()
+                enabled = state.selectedPages.isNotEmpty()
             ) { Text("Rotate", color = SheafColors.Text) }
             OutlinedButton(
                 onClick = onDelete,
-                enabled = selectedPages.isNotEmpty()
+                enabled = state.selectedPages.isNotEmpty()
             ) { Text("Delete", color = SheafColors.Failed) }
             // Nothing here has been written yet - the whole screen is a plan - so stepping
             // back is just the previous plan, and deleting the wrong page costs a tap.
             OutlinedButton(
                 onClick = onUndo,
-                enabled = canUndoPageEdit
+                enabled = state.canUndoPageEdit
             ) {
                 Text(
                     "Undo",
-                    color = if (canUndoPageEdit) SheafColors.Text else SheafColors.Dim
+                    color = if (state.canUndoPageEdit) SheafColors.Text else SheafColors.Dim
                 )
             }
         }
@@ -963,9 +1297,9 @@ private fun SavedSignatures(
                     Box(
                         modifier = Modifier
                             .size(width = 108.dp, height = 56.dp)
-                            .clip(MaterialTheme.shapes.small)
+                            .clip(RoundedCornerShape(8.dp))
                             .background(SheafColors.Paper)
-                            .border(1.dp, SheafColors.Border, MaterialTheme.shapes.small)
+                            .border(1.dp, SheafColors.Border, RoundedCornerShape(8.dp))
                             .clickable { onUse(file) },
                         contentAlignment = Alignment.Center
                     ) {
@@ -998,17 +1332,10 @@ private fun SavedSignatures(
  * twelve-page one, where the question is really "which of these do I want" and the answer is
  * in front of you. Both work and both write the same value, so the typed field below is not a
  * fallback - it is the other half of the same control.
- *
- * The fields are taken one by one for the same reason as OrganisePanel, and here it is the whole
- * point: typing in the range field is exactly what used to redraw this grid on every keystroke.
  */
 @Composable
 private fun PageChooser(
-    pageOrder: List<Int>,
-    selectedPages: Set<Int>,
-    rotations: Map<Int, Int>,
-    thumbnails: Map<Int, Bitmap>,
-    thumbnailsCapped: Boolean,
+    state: ToolUiState,
     onTogglePage: (Int) -> Unit,
     onAll: () -> Unit,
     onNone: () -> Unit
@@ -1016,10 +1343,10 @@ private fun PageChooser(
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         RowBetween {
             SectionHeading(
-                if (selectedPages.isEmpty()) {
+                if (state.selectedPages.isEmpty()) {
                     "Tap the pages to keep"
                 } else {
-                    "${selectedPages.size} of ${pageOrder.size} pages"
+                    "${state.selectedPages.size} of ${state.pageOrder.size} pages"
                 }
             )
             Row {
@@ -1040,14 +1367,11 @@ private fun PageChooser(
             // LazyColumn. Tall enough for three rows, and it scrolls within itself.
             modifier = Modifier.heightIn(max = 420.dp)
         ) {
-            itemsIndexed(pageOrder, key = { _, page -> page }) { position, page ->
+            itemsIndexed(state.pageOrder, key = { _, page -> page }) { position, page ->
                 PageThumb(
                     position = position,
                     pageIndex = page,
-                    thumb = thumbnails[page],
-                    selected = page in selectedPages,
-                    rotation = rotations[page] ?: 0,
-                    isLast = position == pageOrder.lastIndex,
+                    state = state,
                     onTap = { onTogglePage(page) },
                     onLeft = {},
                     onRight = {},
@@ -1056,7 +1380,7 @@ private fun PageChooser(
             }
         }
 
-        if (thumbnailsCapped) {
+        if (state.thumbnailsCapped) {
             Hint(
                 "Only the first pages are shown as pictures - a few hundred thumbnails is " +
                     "more memory than this app is allowed. The rest are still here, numbered " +
@@ -1070,63 +1394,33 @@ private fun PageChooser(
 private fun PageThumb(
     position: Int,
     pageIndex: Int,
-    thumb: Bitmap?,
-    selected: Boolean,
-    rotation: Int,
-    isLast: Boolean,
+    state: ToolUiState,
     onTap: () -> Unit,
     onLeft: () -> Unit,
     onRight: () -> Unit,
     /** Off where the order is not the user's to change - picking pages out, for instance. */
-    reorderable: Boolean = true,
-    modifier: Modifier = Modifier
+    reorderable: Boolean = true
 ) {
-    val shape = MaterialTheme.shapes.small
-    val turn = ((rotation % 360) + 360) % 360
-    // The rotation is said rather than coloured. Selected and rotated used to paint the same
-    // accent on the same number, so a page that was one looked exactly like a page that was
-    // the other, and a page that was both looked like either.
-    val caption = if (turn == 0) "${position + 1}" else "${position + 1}, $turn°"
-    val edge by animateColorAsState(
-        targetValue = if (selected) SheafColors.Band else SheafColors.Border,
-        animationSpec = tween(120),
-        label = "pageEdge"
-    )
+    val selected = pageIndex in state.selectedPages
+    val rotation = state.rotations[pageIndex] ?: 0
+    val shape = RoundedCornerShape(6.dp)
 
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(0.707f)
                 .clip(shape)
                 .background(SheafColors.Paper)
-                .border(2.dp, edge, shape)
-                .toggleable(value = selected, role = Role.Checkbox, onValueChange = { onTap() })
-                // On the frame rather than on the picture, so a page past the thumbnail cap
-                // has something to announce as well - those cells used to say nothing at all.
-                // Position, not page index, because that is what the caption on the cell and
-                // the two reorder buttons beside it both say. Announcing the original page
-                // number here meant that after any reorder a screen reader called a cell
-                // "Page 3" while it was captioned "1" and its button said "Move page 1 later".
-                .semantics {
-                    contentDescription = if (turn == 0) {
-                        "Page ${position + 1}"
-                    } else {
-                        "Page ${position + 1}, rotated $turn degrees"
-                    }
-                    stateDescription = if (selected) "kept" else "not kept"
-                },
+                .border(2.dp, if (selected) SheafColors.Band else SheafColors.Border, shape)
+                .clickable(onClick = onTap),
             contentAlignment = Alignment.Center
         ) {
+            val thumb = state.thumbnails[pageIndex]
             if (thumb != null) {
-                // asImageBitmap() hands back a new wrapper every call, and that wrapper is the
-                // key Image remembers its painter by: without this the cell rebuilds the
-                // painter and redraws the page on any recomposition at all.
-                val image = remember(thumb) { thumb.asImageBitmap() }
                 Image(
-                    bitmap = image,
-                    // Named on the frame above. Both, and TalkBack reads "Page 4" twice.
-                    contentDescription = null,
+                    bitmap = thumb.asImageBitmap(),
+                    contentDescription = "Page ${pageIndex + 1}",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .fillMaxSize()
@@ -1134,82 +1428,31 @@ private fun PageThumb(
                         .rotate(rotation.toFloat())
                 )
             }
-            // Selection has to read across the whole grid rather than at the one 2dp edge
-            // under the fingertip that just set it, which is invisible from reading distance.
-            if (selected) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(SheafColors.Band.copy(alpha = 0.14f))
-                )
-            }
-            // The number sits on the page rather than under it. The row below is now the
-            // reorder strip, and two buttons at the 48dp Material lays them out at - which
-            // .size(34.dp) only squeezed the content box of, never the button - plus a
-            // number came to more than a 96dp cell holds, so the chevrons drew outside it.
-            Text(
-                caption,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (selected) SheafColors.BandBright else SheafColors.Dim,
-                maxLines = 1,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(4.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(SheafColors.Surface.copy(alpha = 0.88f))
-                    .padding(horizontal = 5.dp, vertical = 1.dp)
-            )
         }
-        if (reorderable) {
-            Row(Modifier.fillMaxWidth()) {
-                PageArrow(
-                    icon = R.drawable.ic_chevron_left,
-                    label = "Move page ${position + 1} earlier",
-                    enabled = position > 0,
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (reorderable) {
+                TextButton(
                     onClick = onLeft,
-                    modifier = Modifier.weight(1f)
-                )
-                PageArrow(
-                    icon = R.drawable.ic_chevron_right,
-                    label = "Move page ${position + 1} later",
-                    enabled = !isLast,
+                    enabled = position > 0,
+                    modifier = Modifier.size(34.dp)
+                ) { Text("‹", color = SheafColors.Muted) }
+            }
+            Text(
+                "${position + 1}",
+                style = MaterialTheme.typography.bodySmall,
+                color = when {
+                    selected -> SheafColors.BandBright
+                    rotation != 0 -> SheafColors.BandBright
+                    else -> SheafColors.Dim
+                }
+            )
+            if (reorderable) {
+                TextButton(
                     onClick = onRight,
-                    modifier = Modifier.weight(1f)
-                )
+                    enabled = position < state.pageOrder.lastIndex,
+                    modifier = Modifier.size(34.dp)
+                ) { Text("›", color = SheafColors.Muted) }
             }
         }
-    }
-}
-
-/**
- * One half of a cell's reorder strip.
- *
- * Not [com.layerbit.sheaf.ui.components.IconAction], which keeps a text button's 24dp side
- * padding: two of those need 136dp and the cell is 96dp wide. Here the touch target is the
- * weighted half itself, which is 48dp high and at least 48dp wide, so dropping the content
- * padding costs nothing.
- */
-@Composable
-private fun PageArrow(
-    icon: Int,
-    label: String,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    TextButton(
-        onClick = onClick,
-        enabled = enabled,
-        contentPadding = PaddingValues(0.dp),
-        modifier = modifier
-            .height(48.dp)
-            .semantics { contentDescription = label }
-    ) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = null,
-            tint = if (enabled) SheafColors.Muted else SheafColors.Dim,
-            modifier = Modifier.size(20.dp)
-        )
     }
 }

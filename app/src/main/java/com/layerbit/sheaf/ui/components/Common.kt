@@ -1,94 +1,71 @@
 package com.layerbit.sheaf.ui.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.layerbit.sheaf.ui.theme.SheafColors
-import com.layerbit.sheaf.ui.theme.ToolAccent
-import com.layerbit.sheaf.ui.theme.brandSweep
-import com.layerbit.sheaf.ui.theme.sweep
 import java.util.Locale
 
 /**
- * The handful of shapes every screen is built from. Same idea as Deja's and Abhyas's
- * components/Common.kt: one definition of a panel and a section heading, so screens do not
- * each invent their own padding.
+ * The handful of shapes every screen is built from. One definition of a panel, a heading, a
+ * button and a chip, so screens do not each invent their own padding - and so the whole app
+ * changes character when one of these does.
  */
 
-/**
- * The chip a tool, a result or a document is identified by.
- *
- * One definition for the three lists that show it - the tool board, the Library and the
- * recents - because the chip is the only thing carrying a group's colour outside the board,
- * and three hand-rolled copies of a 36dp box is how it stops matching.
- *
- * The glyph is [ToolAccent.onTile] and not [ToolAccent.ink]: the tile is a saturated gradient
- * in both palettes, so what sits on it is near-white either way. See [ToolAccent].
- */
+val PanelShape = RoundedCornerShape(18.dp)
+val ButtonShape = RoundedCornerShape(14.dp)
+
+/** A press that gives a little, which is most of what makes a surface feel like a button. */
 @Composable
-fun AccentTile(
-    icon: Int,
-    accent: ToolAccent,
-    modifier: Modifier = Modifier,
-    size: Dp = 36.dp
-) {
-    Box(
-        modifier = modifier
-            .size(size)
-            .background(accent.sweep(), MaterialTheme.shapes.small),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = null,
-            tint = accent.onTile,
-            // Proportional, so a 28dp chip in a list row and a 36dp chip on a card hold the
-            // same glyph at the same weight rather than one of them looking padded.
-            modifier = Modifier.size(size * 0.56f)
-        )
-    }
+fun Modifier.pressScale(interaction: MutableInteractionSource, amount: Float = 0.975f): Modifier {
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) amount else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+        label = "press"
+    )
+    return this.scale(scale)
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -99,75 +76,63 @@ fun Panel(
     /** A second gesture on the same panel - starring a tool, in practice. */
     onLongClick: (() -> Unit)? = null,
     highlighted: Boolean = false,
-    /**
-     * The group this panel belongs to, where it belongs to one.
-     *
-     * A panel with an accent is drawn in that group's colour: its border is the group's
-     * [ToolAccent.edge] and a tenth-opacity wash of the tile sits over Surface. Null is the
-     * ordinary panel - a form, a details card, a settings block - and stays grey, because
-     * those belong to no group and tinting them would make the colour mean nothing.
-     *
-     * The wash is an alpha over Surface rather than a colour of its own so that it is
-     * automatically right in both palettes, and a tenth because the title and summary on top
-     * of it are still Text on Surface: any heavier and twenty-six cards would each need their
-     * own contrast check.
-     */
-    accent: ToolAccent? = null,
+    /** A tint behind the panel: a success, a warning, a group's colour. */
+    tint: Color? = null,
+    inset: androidx.compose.ui.unit.Dp = 16.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val shape = MaterialTheme.shapes.medium
-    val base = modifier
-        .clip(shape)
+    val interaction = remember { MutableInteractionSource() }
+    val surface = tint?.let { it.copy(alpha = if (SheafColors.isDark) 0.14f else 0.10f) } ?: SheafColors.Surface
+    val border = when {
+        highlighted -> SheafColors.Band.copy(alpha = 0.6f)
+        tint != null -> tint.copy(alpha = 0.35f)
+        else -> SheafColors.Border
+    }
+    var base = modifier
+    if (onClick != null) base = base.pressScale(interaction)
+    base = base
+        .clip(PanelShape)
         .background(SheafColors.Surface)
-        .then(
-            if (accent == null) Modifier
-            else Modifier.background(accent.tile.copy(alpha = 0.10f))
-        )
-        .border(
-            1.dp,
-            when {
-                highlighted -> SheafColors.Band
-                accent != null -> accent.edge
-                else -> SheafColors.Border
-            },
-            shape
-        )
-    val haptics = LocalHapticFeedback.current
+        .then(if (tint != null) Modifier.background(surface) else Modifier)
+        .border(1.dp, border, PanelShape)
     val tappable = when {
         onClick == null -> base
-        onLongClick == null -> base.clickable(onClick = onClick)
-        else -> base.combinedClickable(
-            onClick = onClick,
-            // Compose Foundation, unlike the View system, performs no haptic of its own on a
-            // long press. Starring a tool is the only long press in the app and it confirms
-            // itself with a 1dp border and a small star, both underneath the finger that is
-            // still holding the card down - so without this the gesture completes with no
-            // sign at all that it worked.
-            onLongClick = {
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                onLongClick()
-            }
-        )
+        onLongClick == null -> base.clickable(interactionSource = interaction, indication = null, onClick = onClick)
+        else -> base.combinedClickable(interactionSource = interaction, indication = null, onClick = onClick, onLongClick = onLongClick)
     }
-    Column(modifier = tappable.padding(16.dp), content = content)
+    Column(modifier = tappable.padding(inset), content = content)
 }
 
 @Composable
-fun SectionHeading(
-    text: String,
-    modifier: Modifier = Modifier,
-    /**
-     * The group's own hue, where the heading labels one. Grey everywhere else, which is most
-     * places - a heading that is merely organising a form has no group to belong to.
-     */
-    color: Color = SheafColors.Dim
-) {
-    Text(
-        text = text.uppercase(Locale.ROOT),
-        style = MaterialTheme.typography.labelSmall,
-        color = color,
-        modifier = modifier
-    )
+fun SectionHeading(text: String, modifier: Modifier = Modifier, accent: Color? = null) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        if (accent != null) {
+            Box(Modifier.size(8.dp).background(accent, CircleShape))
+            Box(Modifier.size(8.dp))
+        }
+        Text(
+            text = text.uppercase(Locale.ROOT),
+            style = MaterialTheme.typography.labelSmall,
+            color = SheafColors.Dim,
+            letterSpacing = 1.4.sp
+        )
+    }
+}
+
+/** A screen's own title, bigger than the bar's. */
+@Composable
+fun ScreenTitle(text: String, modifier: Modifier = Modifier, subtitle: String? = null) {
+    Column(modifier = modifier) {
+        Text(text, style = MaterialTheme.typography.headlineMedium, color = SheafColors.Text)
+        if (subtitle != null) {
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = SheafColors.Muted,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+    }
 }
 
 /** Label above, value below - the pairing used for document details throughout. */
@@ -199,6 +164,133 @@ fun RowBetween(
 }
 
 /**
+ * The one coloured button on a screen: what the screen is for.
+ *
+ * The band runs as a gradient rather than a flat fill, which is what makes it read as a
+ * thing with weight rather than a rectangle. Disabled, it goes quiet rather than grey, so
+ * the eye still knows where the action will be once the form is complete.
+ */
+@Composable
+fun PrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    icon: ImageVector? = null,
+    iconRes: Int? = null,
+    tall: Boolean = true
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val brush = if (enabled) {
+        Brush.horizontalGradient(listOf(SheafColors.Band, SheafColors.BandBright))
+    } else {
+        Brush.horizontalGradient(listOf(SheafColors.SurfaceDim, SheafColors.SurfaceDim))
+    }
+    Row(
+        modifier = modifier
+            .pressScale(interaction)
+            .height(if (tall) 52.dp else 40.dp)
+            .clip(ButtonShape)
+            .background(brush)
+            .then(if (!enabled) Modifier.border(1.dp, SheafColors.Border, ButtonShape) else Modifier)
+            .clickable(enabled = enabled, interactionSource = interaction, indication = null, onClick = onClick)
+            .padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val tint = if (enabled) SheafColors.OnBand else SheafColors.Dim
+        if (icon != null) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+            Box(Modifier.size(8.dp))
+        } else if (iconRes != null) {
+            Icon(painterResource(iconRes), contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+            Box(Modifier.size(8.dp))
+        }
+        Text(text, style = MaterialTheme.typography.titleMedium, color = tint, maxLines = 1)
+    }
+}
+
+/** The quieter sibling: outlined, for the second-best thing to do. */
+@Composable
+fun SecondaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    icon: ImageVector? = null,
+    iconRes: Int? = null,
+    tall: Boolean = true
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val tint = if (enabled) SheafColors.Text else SheafColors.Dim
+    Row(
+        modifier = modifier
+            .pressScale(interaction)
+            .height(if (tall) 52.dp else 40.dp)
+            .clip(ButtonShape)
+            .background(SheafColors.Surface)
+            .border(1.dp, SheafColors.BorderStrong, ButtonShape)
+            .clickable(enabled = enabled, interactionSource = interaction, indication = null, onClick = onClick)
+            .padding(horizontal = 18.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (icon != null) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+            Box(Modifier.size(8.dp))
+        } else if (iconRes != null) {
+            Icon(painterResource(iconRes), contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+            Box(Modifier.size(8.dp))
+        }
+        Text(text, style = MaterialTheme.typography.titleMedium, color = tint, maxLines = 1)
+    }
+}
+
+/** A small coloured square with an icon in it: the mark every tool and file carries. */
+@Composable
+fun IconTile(
+    iconRes: Int,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    size: androidx.compose.ui.unit.Dp = 40.dp,
+    filled: Boolean = false
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .background(
+                if (filled) {
+                    Brush.linearGradient(listOf(accent, accent.copy(alpha = 0.75f)))
+                } else {
+                    Brush.linearGradient(listOf(accent.copy(alpha = 0.22f), accent.copy(alpha = 0.12f)))
+                },
+                RoundedCornerShape(size * 0.3f)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            tint = if (filled) Color.White else accent,
+            modifier = Modifier.size(size * 0.5f)
+        )
+    }
+}
+
+/** A word in a capsule: a state, a file type, a count. */
+@Composable
+fun Pill(text: String, colour: Color, modifier: Modifier = Modifier, filled: Boolean = false) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        color = if (filled) Color.White else colour,
+        modifier = modifier
+            .background(if (filled) colour else colour.copy(alpha = 0.16f), RoundedCornerShape(999.dp))
+            .padding(horizontal = 9.dp, vertical = 3.dp)
+    )
+}
+
+/**
  * Human file sizes. Base 1024 with the shorter unit names, matching what Android's own file
  * managers show, so a number here agrees with the number in Files.
  */
@@ -214,9 +306,8 @@ fun formatPageCount(pages: Int): String = if (pages == 1) "1 page" else "$pages 
 /**
  * A row of mutually exclusive choices, as chips.
  *
- * One definition for the whole app. The tool options screen and the settings screen are the
- * same control answering different questions, and two copies of it drift apart the first time
- * one of them is adjusted.
+ * One definition for the whole app. The chosen chip is solid band with light type, so the
+ * answer to a question is visible from across the room; the others sit back in the surface.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -224,78 +315,32 @@ fun <T> ChipRow(
     options: List<Pair<T, String>>,
     selected: T,
     onSelect: (T) -> Unit,
-    modifier: Modifier = Modifier,
-    /**
-     * The colour each option stands for, drawn as a disc before its label.
-     *
-     * Only the markup tools pass this, and only because theirs is the one control in the app
-     * whose subject is colour: "Yellow" against "Green" is a difference nobody can judge from
-     * two words. It is a parameter here rather than a second copy of this composable because
-     * a second copy is what existed before, and it had already drifted.
-     */
-    swatch: ((T) -> Color)? = null
+    modifier: Modifier = Modifier
 ) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        // Zero, not 8, because each chip now sits in a 48dp box and brings 7dp of its own air
-        // above and below. Spacing the boxes as well would put 22dp between two wrapped rows
-        // of what is meant to read as one control.
-        verticalArrangement = Arrangement.spacedBy(0.dp),
-        // Tells a screen reader these are one set of alternatives rather than a handful of
-        // unrelated buttons, so it can announce "2 of 4" as it moves between them.
-        modifier = modifier.fillMaxWidth().selectableGroup()
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier.fillMaxWidth()
     ) {
         options.forEach { (value, label) ->
             val active = value == selected
             val shape = RoundedCornerShape(999.dp)
-            // The gesture is on this box and not on the pill, which is the whole point of the
-            // box. A pill is about 34dp tall - 13.5sp of text and 8dp either side - and a bare
-            // clickable gets none of the 48dp minimum that Material's own controls enforce, so
-            // every choice in the app was a target a third smaller than the guideline. The box
-            // takes the touch and stays invisible; the pill keeps its own size.
-            Box(
+            val fill by animateColorAsState(if (active) SheafColors.Band else SheafColors.SurfaceDim, label = "chip")
+            val ink by animateColorAsState(if (active) SheafColors.OnBand else SheafColors.Muted, label = "chipInk")
+            val interaction = remember { MutableInteractionSource() }
+            Row(
                 modifier = Modifier
-                    .defaultMinSize(minHeight = 48.dp)
-                    .selectable(
-                        selected = active,
-                        role = Role.RadioButton,
-                        onClick = { onSelect(value) }
-                    ),
-                contentAlignment = Alignment.Center
+                    .pressScale(interaction, 0.95f)
+                    .background(fill, shape)
+                    .border(1.dp, if (active) SheafColors.Band else SheafColors.Border, shape)
+                    .clickable(interactionSource = interaction, indication = null) { onSelect(value) }
+                    .padding(horizontal = 14.dp, vertical = 9.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier
-                        // Ahead of the background, so the ripple is a pill too. Without it the
-                        // press washed a rectangle across a rounded chip.
-                        .clip(shape)
-                        .background(if (active) SheafColors.BandDim else SheafColors.SurfaceDim)
-                        .border(1.dp, if (active) SheafColors.Band else SheafColors.Border, shape)
-                        .padding(
-                            start = if (swatch == null) 14.dp else 10.dp,
-                            end = 14.dp,
-                            top = 8.dp,
-                            bottom = 8.dp
-                        )
-                ) {
-                    if (swatch != null) {
-                        // Ringed, which is what keeps black ink from disappearing into the
-                        // chip and pale yellow from disappearing into nothing at all.
-                        Box(
-                            modifier = Modifier
-                                .size(14.dp)
-                                .clip(CircleShape)
-                                .background(swatch(value))
-                                .border(1.dp, SheafColors.Border, CircleShape)
-                        )
-                    }
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (active) SheafColors.BandBright else SheafColors.Muted
-                    )
-                }
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = ink
+                )
             }
         }
     }
@@ -313,11 +358,7 @@ fun ToggleRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            // toggleable rather than clickable, so the row carries the state as well as the
-            // gesture. As a clickable it announced itself as an unlabelled tappable thing and
-            // the Switch beside it announced a state with no name, so every setting in the
-            // app was read out twice and neither half was a sentence.
-            .toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
+            .clickable { onChange(!checked) }
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -334,9 +375,7 @@ fun ToggleRow(
         }
         Switch(
             checked = checked,
-            // Null hands the gesture to the row above, which is the thing that is labelled.
-            // Tapping the switch still works - the touch falls through to the same toggleable.
-            onCheckedChange = null,
+            onCheckedChange = onChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = SheafColors.OnBand,
                 checkedTrackColor = SheafColors.Band,
@@ -344,189 +383,6 @@ fun ToggleRow(
                 uncheckedTrackColor = SheafColors.SurfaceDim,
                 uncheckedBorderColor = SheafColors.Border
             )
-        )
-    }
-}
-
-/**
- * An icon that does something, with a name a screen reader can say.
- *
- * Before this there were seven controls in the app drawn as punctuation - a back chevron that
- * was a literal "<" at three different sizes depending on the screen, search step arrows, an
- * overflow glyph, the page-reorder arrows. None of them had an accessible name, so TalkBack
- * read them out as "left-pointing single angle quotation mark, button" or skipped them
- * entirely, and none of them matched the twenty-seven drawn tool icons sitting beside them.
- *
- * [label] is required rather than optional, which is the point of having this at all: the
- * drawing problem and the accessibility problem were the same problem, and a primitive that
- * cannot be built without a name closes both of them permanently.
- *
- * [state] is for a control that is on or off - night mode, a bookmark - and is announced
- * after the name, so TalkBack says "Night colours, on" rather than leaving the reader to
- * work out which way the switch is sitting.
- *
- * The semantics go on the button's own modifier chain and the Icon inside is explicitly
- * undescribed. Putting clearAndSetSemantics on the button instead would take the click
- * action out of the semantics tree with it, and TalkBack could then name the control but not
- * press it.
- */
-@Composable
-fun IconAction(
-    icon: Int,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    tint: Color = SheafColors.Muted,
-    state: String? = null,
-    enabled: Boolean = true
-) {
-    TextButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.semantics {
-            contentDescription = label
-            if (state != null) stateDescription = state
-        }
-    ) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = null,
-            tint = if (enabled) tint else SheafColors.Dim,
-            modifier = Modifier.size(20.dp)
-        )
-    }
-}
-
-/**
- * One thing that went wrong, named and explained.
- *
- * Lifted out of the tool screen, where it was private, because three other places need the
- * same shape and two of them are in packages that could not see it: a job that crashed, a
- * capture the scanner could not write, a camera that would not bind. A failure should look
- * the same wherever it is reported, and the alternative to this was each screen inventing
- * its own red text.
- *
- * [isError] separates "this did not work" from "this was left alone", which the batch runner
- * already distinguishes and which the colours should too.
- */
-@Composable
-fun ProblemRow(name: String?, reason: String, isError: Boolean, modifier: Modifier = Modifier) {
-    val accent = if (isError) SheafColors.Failed else SheafColors.Skipped
-    val shape = MaterialTheme.shapes.medium
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(SheafColors.SurfaceDim)
-            .border(1.dp, accent.copy(alpha = 0.45f), shape)
-            .padding(14.dp)
-    ) {
-        if (!name.isNullOrBlank()) {
-            Text(
-                name,
-                style = MaterialTheme.typography.titleMedium,
-                color = accent,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Text(reason, style = MaterialTheme.typography.bodyMedium, color = SheafColors.Muted)
-    }
-}
-
-/**
- * The rhythm a scrolling screen is laid out on.
- *
- * Four screens had invented four: Home 10/12/32, Settings 12/12/40, About 12/8/32, Tool
- * 14/20/20. None of them is wrong and the difference is invisible on any one screen, but
- * having a name for it is what stops the next screen inventing a fifth.
- */
-val ScreenGutter = 20.dp
-
-/** Content padding for a full-screen LazyColumn. The bottom is generous so the last row clears the gesture bar. */
-val ListRhythm = PaddingValues(start = ScreenGutter, end = ScreenGutter, top = 12.dp, bottom = 32.dp)
-
-/** The gap between rows of such a list, stated once. */
-val ListGap = 12.dp
-
-/**
- * A list with nothing in it yet.
- *
- * One definition, where there were three hand-rolled copies with the same 24dp spacer and
- * the same two lines of type - the Library, the bin, the recents and the sessions tab, each
- * having independently arrived at the same shape.
- *
- * IT LEADS WITH A MARK BECAUSE AN EMPTY SCREEN IS MOSTLY NOT A SCREEN. Two paragraphs at the
- * top of a 2400px void is what these were, and the void is the part the eye lands on: the
- * app looked unfinished at exactly the moment it was explaining itself. A 64dp tile in the
- * group's colour is the same answer the board uses - it costs nothing to read and it gives
- * the sentence something to belong to.
- *
- * Left-aligned rather than floated into the middle of the screen, because the list that
- * replaces it starts at this gutter, and an empty state that sits somewhere else makes the
- * first item feel like it moved.
- */
-@Composable
-fun EmptyState(
-    icon: Int,
-    accent: ToolAccent,
-    heading: String,
-    detail: String,
-    modifier: Modifier = Modifier,
-    action: @Composable (() -> Unit)? = null
-) {
-    Column(modifier = modifier.padding(horizontal = ScreenGutter, vertical = 28.dp)) {
-        AccentTile(icon = icon, accent = accent, size = 64.dp)
-        Text(
-            heading,
-            style = MaterialTheme.typography.titleLarge,
-            color = SheafColors.Text,
-            modifier = Modifier.padding(top = 18.dp)
-        )
-        Text(
-            detail,
-            style = MaterialTheme.typography.bodyMedium,
-            color = SheafColors.Muted,
-            modifier = Modifier.padding(top = 6.dp)
-        )
-        if (action != null) action()
-    }
-}
-
-/**
- * The one button on a screen that does the thing.
- *
- * Material's Button takes a container colour and not a brush, so the brand sweep cannot
- * reach it - and the run button at the bottom of every tool is the single most important
- * control in the app. This is that button, drawn by hand so it can wear the gradient.
- *
- * Disabled is deliberately not a faded version of the gradient. A tool that cannot run yet
- * says why in the line underneath, and a washed-out sweep reads as a rendering fault rather
- * than as a state; SurfaceDim with Dim text is the same "not yet" the rest of the app uses.
- */
-@Composable
-fun PrimaryButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true
-) {
-    val shape = RoundedCornerShape(999.dp)
-    Box(
-        modifier = modifier
-            .defaultMinSize(minHeight = 48.dp)
-            // Clipped ahead of the fill, so the press ripple is a pill rather than a
-            // rectangle washing across the corners.
-            .clip(shape)
-            .background(if (enabled) brandSweep() else SolidColor(SheafColors.SurfaceDim))
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.titleMedium,
-            color = if (enabled) SheafColors.OnBand else SheafColors.Dim
         )
     }
 }

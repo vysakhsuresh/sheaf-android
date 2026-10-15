@@ -25,7 +25,7 @@
         <group android:rotation="-26" android:pivotX="54" android:pivotY="80">
             <path android:pathData="M52,26 H56 A5,5 0 0 1 61,31 V75 A5,5 0 0 1 56,80 H52 A5,5 0 0 1 47,75 V31 A5,5 0 0 1 52,26 Z"
                 android:fillColor="#FF93A4C2"
-                android:strokeColor="#FF101A2B"
+                android:strokeColor="#FF0B1220"
                 android:strokeWidth="2.6"
                 android:strokeLineJoin="round" />
         </group>
@@ -33,7 +33,7 @@
         <group android:rotation="26" android:pivotX="54" android:pivotY="80">
             <path android:pathData="M52,26 H56 A5,5 0 0 1 61,31 V75 A5,5 0 0 1 56,80 H52 A5,5 0 0 1 47,75 V31 A5,5 0 0 1 52,26 Z"
                 android:fillColor="#FF93A4C2"
-                android:strokeColor="#FF101A2B"
+                android:strokeColor="#FF0B1220"
                 android:strokeWidth="2.6"
                 android:strokeLineJoin="round" />
         </group>
@@ -41,7 +41,7 @@
         <group android:rotation="-13" android:pivotX="54" android:pivotY="80">
             <path android:pathData="M52,26 H56 A5,5 0 0 1 61,31 V75 A5,5 0 0 1 56,80 H52 A5,5 0 0 1 47,75 V31 A5,5 0 0 1 52,26 Z"
                 android:fillColor="#FFC6D1E5"
-                android:strokeColor="#FF101A2B"
+                android:strokeColor="#FF0B1220"
                 android:strokeWidth="2.6"
                 android:strokeLineJoin="round" />
         </group>
@@ -49,14 +49,14 @@
         <group android:rotation="13" android:pivotX="54" android:pivotY="80">
             <path android:pathData="M52,26 H56 A5,5 0 0 1 61,31 V75 A5,5 0 0 1 56,80 H52 A5,5 0 0 1 47,75 V31 A5,5 0 0 1 52,26 Z"
                 android:fillColor="#FFC6D1E5"
-                android:strokeColor="#FF101A2B"
+                android:strokeColor="#FF0B1220"
                 android:strokeWidth="2.6"
                 android:strokeLineJoin="round" />
         </group>
 
             <path android:pathData="M52,26 H56 A5,5 0 0 1 61,31 V75 A5,5 0 0 1 56,80 H52 A5,5 0 0 1 47,75 V31 A5,5 0 0 1 52,26 Z"
                 android:fillColor="#FFF7F5EF"
-                android:strokeColor="#FF101A2B"
+                android:strokeColor="#FF0B1220"
                 android:strokeWidth="2.6"
                 android:strokeLineJoin="round" />
 

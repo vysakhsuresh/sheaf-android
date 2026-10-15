@@ -25,7 +25,13 @@ interface OcrEngine {
      *
      * @throws PdfException.Unsupported if recognition is unavailable.
      */
-    suspend fun read(bitmap: Bitmap): OcrResult
+    suspend fun read(bitmap: Bitmap, script: OcrScript = OcrScript.LATIN): OcrResult
+}
+
+/** Which recogniser reads a page. Each is its own bundled model. */
+enum class OcrScript(val label: String) {
+    LATIN("English and other Latin scripts"),
+    DEVANAGARI("Hindi, Marathi, Nepali (Devanagari)")
 }
 
 /**

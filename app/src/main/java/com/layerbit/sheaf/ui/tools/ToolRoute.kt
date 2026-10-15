@@ -48,8 +48,6 @@ fun ToolRoute(
     preloadFile: String? = null,
     /** Settings: show the finished document without waiting to be asked. */
     openResultWhenDone: Boolean = false,
-    /** The starred tools, so chaining offers them first. Empty until anyone has starred one. */
-    favourites: Set<String> = emptySet(),
     viewModel: ToolViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -161,7 +159,6 @@ fun ToolRoute(
         ToolScreen(
             tool = tool,
             state = state,
-            favourites = favourites,
             jobState = jobState,
             onAddFiles = { pickFiles.launch(tool.mimeFilter) },
             // The screen hands back the row's index, and it means the row of the list this
@@ -189,13 +186,14 @@ fun ToolRoute(
             onUndoPageEdit = viewModel::undoPageEdit,
             onRedactPage = viewModel::setRedactPage,
             onMarkupPage = viewModel::setMarkupPage,
-            onHighlight = viewModel::addHighlight,
+            onHighlight = viewModel::addArea,
             onInk = viewModel::addInk,
+            onLine = viewModel::addLine,
+            onTap = viewModel::addAt,
             onUndoMark = viewModel::undoMark,
             onClearMarks = viewModel::clearMarks,
             onAddRedaction = viewModel::addRedaction,
             onClearRedactions = viewModel::clearRedactions,
-            onUndoRedaction = viewModel::undoRedaction,
             onRun = viewModel::run,
             onCancel = viewModel::cancel,
             onSave = { file ->
@@ -214,6 +212,39 @@ fun ToolRoute(
             onLoadPreviewPage = viewModel::loadPreviewPage,
             onLoadForm = viewModel::loadFormFields,
             onFormValue = viewModel::setFormValue,
+            onLoadOutline = viewModel::loadOutline,
+            onAddBookmark = viewModel::addBookmark,
+            onSetBookmark = viewModel::setBookmark,
+            onRemoveBookmark = viewModel::removeBookmark,
+            onMoveBookmark = viewModel::moveBookmark,
+            onIndentBookmark = viewModel::indentBookmark,
+            onClearBookmarks = viewModel::clearBookmarks,
+            onLoadAttachments = viewModel::loadAttachments,
+            onFindSensitive = viewModel::findSensitive,
+            onLoadAnswers = viewModel::loadSavedAnswers,
+            onKeepAnswers = {
+                viewModel.keepAnswers()
+                message = "Kept. They will be offered the next time you fill a form."
+            },
+            onUseAnswers = viewModel::useAnswers,
+            onForgetAnswers = viewModel::forgetAnswers,
+            onLoadStamp = viewModel::loadStampBitmap,
+            onAddField = viewModel::addNewField,
+            onSetField = viewModel::setNewField,
+            onRemoveField = viewModel::removeNewField,
+            onClearFields = viewModel::clearNewFields,
+            onSaveZip = { files ->
+                viewModel.zipResults(files) { zip ->
+                    if (zip == null) {
+                        message = "The ZIP could not be written."
+                    } else if (viewModel.askWhereToSave) {
+                        pendingSave = zip
+                        saveFile.launch(viewModel.exportIntent(zip))
+                    } else {
+                        saveInto(listOf(zip))
+                    }
+                }
+            },
             onCheckSize = viewModel::checkCompressedSize,
             onCopy = { text ->
                 viewModel.copyToClipboard(text)

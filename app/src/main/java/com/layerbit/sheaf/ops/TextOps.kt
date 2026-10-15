@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.pdf.BitmapBudget
 import com.layerbit.sheaf.pdf.PageSelection
+import com.layerbit.sheaf.pdf.OcrScript
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
 import com.layerbit.sheaf.pdf.TextPlacement
@@ -22,10 +23,10 @@ import kotlinx.coroutines.withContext
  * operation runs as a foreground-service Worker, because this is the one people will start and
  * then switch away from.
  */
-class OcrOp(private val dpi: Int = DEFAULT_DPI) : Op {
+class OcrOp(private val dpi: Int = DEFAULT_DPI, private val script: OcrScript = OcrScript.LATIN) : Op {
 
     override val tool = ToolId.OCR
-    override val title = "Make searchable"
+    override val title = if (script == OcrScript.LATIN) "Make searchable" else "Make searchable (${script.label})"
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -96,7 +97,7 @@ class OcrOp(private val dpi: Int = DEFAULT_DPI) : Op {
                             sheet = bitmap
                         }
 
-                        val result = ocr.read(bitmap)
+                        val result = ocr.read(bitmap, script)
                         if (!result.isEmpty) {
                             recognised++
                             layers[index] = result.lines.map { line ->

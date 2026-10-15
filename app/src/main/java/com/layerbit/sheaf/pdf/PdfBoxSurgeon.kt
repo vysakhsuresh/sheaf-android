@@ -1,12 +1,12 @@
 package com.layerbit.sheaf.pdf
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.util.Log
 import com.layerbit.sheaf.ops.OpCancelled
+import com.tom_roush.pdfbox.cos.COSName
 import com.tom_roush.pdfbox.io.MemoryUsageSetting
 import com.tom_roush.pdfbox.multipdf.LayerUtility
 import com.tom_roush.pdfbox.multipdf.PDFMergerUtility
@@ -34,6 +34,7 @@ import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import com.tom_roush.pdfbox.pdmodel.graphics.form.PDFormXObject
+import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAppearanceStream
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
 import com.tom_roush.pdfbox.rendering.PDFRenderer
@@ -68,12 +69,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     override fun inspect(input: PdfInput): DocumentInfo = withDocument(input) { doc ->
         DocumentInfo(
             pageCount = doc.numberOfPages,
-            // doc.pages, not getPage(i) in a loop. The page tree is a tree, and getPage walks
-            // it from the root every time it is called, so asking for every page by index is
-            // quadratic in the page count - on a 300-page scan that is the difference between
-            // one walk and three hundred. Every loop in this file that wants all the pages
-            // iterates for this reason; the ones that want a handful still index.
-            pageSizes = doc.pages.map { it.toPageSize() },
+            pageSizes = (0 until doc.numberOfPages).map { doc.getPage(it).toPageSize() },
             isEncrypted = doc.isEncrypted,
             title = doc.documentInformation?.title,
             author = doc.documentInformation?.author,
@@ -146,8 +142,9 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     override fun rotate(input: PdfInput, pages: Collection<Int>, degrees: Int, output: File) =
         withDocument(input) { doc ->
             val targets = pages.toSet()
-            for ((index, page) in doc.pages.withIndex()) {
+            for (index in 0 until doc.numberOfPages) {
                 if (index !in targets) continue
+                val page = doc.getPage(index)
                 page.rotation = normaliseRotation(page.rotation + degrees)
             }
             doc.save(output)
@@ -163,34 +160,26 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         try {
             PDDocument(scratchMemory()).use { doc ->
                 images.forEachIndexed { index, imageFile ->
-                    val (sourceWidth, sourceHeight) = measureImage(imageFile)
+                    val image = try {
+                        PDImageXObject.createFromFile(imageFile.absolutePath, doc)
+                    } catch (e: OutOfMemoryError) {
+                        throw PdfException.OutOfMemory(imageFile.name, e)
+                    } catch (e: Exception) {
+                        throw PdfException.Corrupt("${imageFile.name} could not be read as an image", e)
+                    }
 
-                    // The page is sized from the photo as it arrived, not from the pixels that
-                    // end up inside it. A FIT_IMAGE page takes its size in points from the
-                    // image's own pixel count, so sizing it from the downscaled copy would
-                    // silently change every page size this tool has ever produced.
-                    val page = PDPage(pageBoxFor(spec, sourceWidth.toFloat(), sourceHeight.toFloat()))
+                    val page = PDPage(pageBoxFor(spec, image.width.toFloat(), image.height.toFloat()))
                     doc.addPage(page)
 
-                    val box = page.mediaBox
-                    val margin = if (spec.size == PageSpec.Size.FIT_IMAGE) 0f else spec.marginPoints
-                    val availableWidth = box.width - margin * 2
-                    val availableHeight = box.height - margin * 2
-
-                    val image = embeddedImage(
-                        doc = doc,
-                        file = imageFile,
-                        sourceWidth = sourceWidth,
-                        sourceHeight = sourceHeight,
-                        availableWidth = availableWidth,
-                        availableHeight = availableHeight
-                    )
-
                     PDPageContentStream(doc, page).use { stream ->
+                        val box = page.mediaBox
+                        val margin = if (spec.size == PageSpec.Size.FIT_IMAGE) 0f else spec.marginPoints
+                        val available = box.width - margin * 2 to box.height - margin * 2
+
                         // Fit, never fill: an image is never cropped to make a page look tidy.
                         val scale = minOf(
-                            availableWidth / image.width,
-                            availableHeight / image.height
+                            available.first / image.width,
+                            available.second / image.height
                         )
                         val drawWidth = image.width * scale
                         val drawHeight = image.height * scale
@@ -202,9 +191,6 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                             drawHeight
                         )
                     }
-                    // Also where a cancel is noticed: the callback the ops layer passes throws,
-                    // and one image per check is the right grain - the decode below it is the
-                    // only slow part and it cannot be interrupted halfway.
                     onProgress(index + 1, images.size)
                 }
                 doc.save(output)
@@ -283,73 +269,47 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         onProgress: (Int, Int) -> Unit
     ): CompressionResult = withDocument(input) { doc ->
         val originalBytes = input.file.length()
-        val total = doc.numberOfPages
         var recompressed = 0
         var skipped = 0
 
-        // One decision per distinct image, held by identity the way extractImages counts them.
-        // A letterhead logo is a single object in the file that every page points at: without
-        // this it was decoded, scaled and re-encoded once per page, and each page was then
-        // given its own copy of the result - so a fifty-page document came out carrying fifty
-        // logos, which is the opposite of what this operation is for. An image left alone is
-        // remembered too, so both counts are per image rather than per placement.
-        val replacements = java.util.IdentityHashMap<Any, PDImageXObject>()
-        val declined = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Any, Boolean>())
+        for (pageIndex in 0 until doc.numberOfPages) {
+            val resources = doc.getPage(pageIndex).resources ?: continue
 
-        for ((pageIndex, page) in doc.pages.withIndex()) {
-            val resources = page.resources
-            if (resources != null) {
-                // getXObjectNames is lazy over the resource dictionary and replacing an entry
-                // while iterating it is undefined, so the names are taken first.
-                for (name in resources.xObjectNames.toList()) {
-                    val existing = try {
-                        resources.getXObject(name)
-                    } catch (_: Exception) {
-                        skipped++
-                        continue
-                    }
-                    if (existing !is PDImageXObject) continue
+            // getXObjectNames is lazy over the resource dictionary and replacing an entry
+            // while iterating it is undefined, so the names are taken first.
+            for (name in resources.xObjectNames.toList()) {
+                val existing = try {
+                    resources.getXObject(name)
+                } catch (_: Exception) {
+                    skipped++
+                    continue
+                }
+                if (existing !is PDImageXObject) continue
 
-                    val key: Any = existing.cosObject
-                    val ready = replacements[key]
-                    if (ready != null) {
-                        resources.put(name, ready)
-                        continue
-                    }
-                    if (declined.contains(key)) continue
+                // A soft mask carries transparency and JPEG has no alpha channel, so
+                // re-encoding one as JPEG would turn transparent areas black. Left alone.
+                if (existing.softMask != null) {
+                    skipped++
+                    continue
+                }
 
-                    // A soft mask carries transparency and JPEG has no alpha channel, so
-                    // re-encoding one as JPEG would turn transparent areas black. Left alone.
-                    if (existing.softMask != null) {
-                        declined.add(key)
-                        skipped++
-                        continue
-                    }
+                val shrunk = shrink(existing, level)
+                if (shrunk == null) {
+                    skipped++
+                    continue
+                }
 
-                    val shrunk = shrink(existing, level)
-                    if (shrunk == null) {
-                        declined.add(key)
-                        skipped++
-                        continue
-                    }
-
-                    try {
-                        val replacement = JPEGFactory.createFromImage(doc, shrunk, level.jpegQuality / 100f)
-                        resources.put(name, replacement)
-                        replacements[key] = replacement
-                        recompressed++
-                    } catch (_: Exception) {
-                        declined.add(key)
-                        skipped++
-                    } finally {
-                        shrunk.recycle()
-                    }
+                try {
+                    val replacement = JPEGFactory.createFromImage(doc, shrunk, level.jpegQuality / 100f)
+                    resources.put(name, replacement)
+                    recompressed++
+                } catch (_: Exception) {
+                    skipped++
+                } finally {
+                    shrunk.recycle()
                 }
             }
-            // Outside the resources check, because this is the only cancellation point in the
-            // operation: a document of pages with nothing to compress used to run to the end
-            // without ever giving the caller a chance to stop it.
-            onProgress(pageIndex + 1, total)
+            onProgress(pageIndex + 1, doc.numberOfPages)
         }
 
         doc.save(output)
@@ -365,14 +325,25 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         input: PdfInput,
         userPassword: String,
         output: File,
-        permissions: DocumentPermissions
+        permissions: DocumentPermissions,
+        restrictOnly: Boolean
     ) =
         withDocument(input) { doc ->
-            if (userPassword.isBlank()) throw PdfException.Refused("The password cannot be empty.")
+            if (!restrictOnly && userPassword.isBlank()) {
+                throw PdfException.Refused("The password cannot be empty.")
+            }
+            if (restrictOnly && permissions.allowPrinting && permissions.allowCopying && permissions.allowChanges) {
+                throw PdfException.Refused("Everything is allowed, so there is nothing to restrict.")
+            }
 
             // The owner password is set to the same value deliberately. An owner password that
             // the user does not know is a document they can open but never change again, and a
             // random one would be worse - there would be no way to recover it.
+            //
+            // Restricting only is the one case where a random owner password is the point: the
+            // document opens for anyone (empty user password), and the flags are all it carries.
+            val ownerPassword = if (restrictOnly) randomOwnerPassword() else userPassword
+            val openPassword = if (restrictOnly) "" else userPassword
             val access = AccessPermission().apply {
                 setCanPrint(permissions.allowPrinting)
                 setCanExtractContent(permissions.allowCopying)
@@ -384,7 +355,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                 // screen reader, and nothing this app is for needs that.
                 setCanExtractForAccessibility(true)
             }
-            val policy = StandardProtectionPolicy(userPassword, userPassword, access).apply {
+            val policy = StandardProtectionPolicy(ownerPassword, openPassword, access).apply {
                 // AES-256. The 128-bit default is RC4-era and long past being worth shipping.
                 // setPreferAES is called rather than assigned: ProtectionPolicy keeps the
                 // field private and only exposes the setter.
@@ -408,9 +379,10 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         onProgress: (Int, Int) -> Unit
     ) = withDocument(input) { doc ->
         val total = doc.numberOfPages
-        for ((index, page) in doc.pages.withIndex()) {
+        for (index in 0 until total) {
             val placements = layers[index].orEmpty()
             if (placements.isNotEmpty()) {
+                val page = doc.getPage(index)
                 val box = page.mediaBox ?: PDRectangle.A4
 
                 // APPEND with resetContext, so the layer goes on top of the page that is
@@ -477,30 +449,11 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     override fun search(input: PdfInput, query: String): List<SearchHit> = withDocument(input) { doc ->
         val needle = query.trim()
         if (needle.isEmpty()) return@withDocument emptyList()
-
-        // Compiled once. Neither the needle nor the flags change from page to page, and a
-        // document of three hundred pages was parsing the same pattern three hundred times.
         val pattern = Regex(Regex.escape(needle), RegexOption.IGNORE_CASE)
 
         buildList {
-            for ((index, page) in doc.pages.withIndex()) {
-                val box = page.cropBox ?: page.mediaBox ?: PDRectangle.A4
-
-                // A stripper that keeps the glyph positions, not just the words. Page numbers
-                // alone told the reader which page to go to and then left them to find the
-                // phrase again by eye; these are what let the viewer draw a box round it.
-                //
-                // A quarter-turned page is stripped in reading order, so the rectangles come
-                // back against a page whose width and height have swapped. The viewer renders
-                // it turned too, so they have to be normalised against the same swap.
-                val quarterTurned = normaliseRotation(page.rotation) % 180 == 90
-                val finder = if (quarterTurned) {
-                    MatchFinder(needle, box.height, box.width)
-                } else {
-                    MatchFinder(needle, box.width, box.height)
-                }
-                finder.startPage = index + 1
-                finder.endPage = index + 1
+            for (index in 0 until doc.numberOfPages) {
+                val finder = finderFor(doc, index, pattern) { true }
                 val text = runCatching { finder.getText(doc) }.getOrNull() ?: continue
 
                 val matches = pattern.findAll(text).toList()
@@ -515,6 +468,384 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
 
                 add(SearchHit(index, snippet, matches.size, finder.areas.toList()))
             }
+        }
+    }
+
+    override fun findAreas(
+        input: PdfInput,
+        pattern: Regex,
+        accept: (String) -> Boolean
+    ): Map<Int, List<PageArea>> = withDocument(input) { doc ->
+        buildMap {
+            for (index in 0 until doc.numberOfPages) {
+                val finder = finderFor(doc, index, pattern, accept)
+                runCatching { finder.getText(doc) }.getOrNull() ?: continue
+                if (finder.areas.isNotEmpty()) put(index, finder.areas.toList())
+            }
+        }
+    }
+
+    /**
+     * A stripper that keeps the glyph positions, not just the words. Page numbers alone told
+     * the reader which page to go to and then left them to find the phrase again by eye; these
+     * are what let the viewer draw a box round it, and what Remove areas blacks out.
+     *
+     * A quarter-turned page is stripped in reading order, so the rectangles come back against
+     * a page whose width and height have swapped. The viewer renders it turned too, so they
+     * have to be normalised against the same swap.
+     */
+    private fun finderFor(doc: PDDocument, index: Int, pattern: Regex, accept: (String) -> Boolean): MatchFinder {
+        val page = doc.getPage(index)
+        val box = page.cropBox ?: page.mediaBox ?: PDRectangle.A4
+        val quarterTurned = normaliseRotation(page.rotation) % 180 == 90
+        val finder = if (quarterTurned) {
+            MatchFinder(pattern, accept, box.height, box.width)
+        } else {
+            MatchFinder(pattern, accept, box.width, box.height)
+        }
+        finder.startPage = index + 1
+        finder.endPage = index + 1
+        return finder
+    }
+
+    override fun placedWords(input: PdfInput, onProgress: (Int, Int) -> Unit): List<PlacedWord> =
+        withDocument(input) { doc ->
+            buildList {
+                for (index in 0 until doc.numberOfPages) {
+                    val page = doc.getPage(index)
+                    val box = page.cropBox ?: page.mediaBox ?: PDRectangle.A4
+                    val quarterTurned = normaliseRotation(page.rotation) % 180 == 90
+                    val stripper = if (quarterTurned) WordFinder(box.height, box.width) else WordFinder(box.width, box.height)
+                    stripper.startPage = index + 1
+                    stripper.endPage = index + 1
+                    runCatching { stripper.getText(doc) }
+                    for ((text, area) in stripper.words) add(PlacedWord(text, index, area))
+                    onProgress(index + 1, doc.numberOfPages)
+                }
+            }
+        }
+
+    override fun replaceText(
+        input: PdfInput,
+        pattern: Regex,
+        replacement: String,
+        output: File,
+        onProgress: (Int, Int) -> Unit
+    ): Int = withDocument(input) { doc ->
+        val font = PDType1Font.HELVETICA
+        val text = replacement.toWinAnsiSafe()
+        var changed = 0
+        for (index in 0 until doc.numberOfPages) {
+            val finder = finderFor(doc, index, pattern) { true }
+            runCatching { finder.getText(doc) }
+            val areas = finder.areas
+            if (areas.isEmpty()) {
+                onProgress(index + 1, doc.numberOfPages)
+                continue
+            }
+            val page = doc.getPage(index)
+            val shown = ShownPage(page)
+            PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { stream ->
+                stream.saveGraphicsState()
+                stream.transform(shown.viewMatrix())
+                for (area in areas) {
+                    val left = area.left * shown.width
+                    val width = area.width * shown.width
+                    val height = area.height * shown.height
+                    val bottom = shown.height - (area.top + area.height) * shown.height
+                    // The patch is a hair bigger than the glyph box: the box is the glyphs'
+                    // advance, and a descender or an italic overhang sits just outside it.
+                    stream.setNonStrokingColor(1f, 1f, 1f)
+                    stream.addRect(left - COVER_PADDING, bottom - height * 0.25f, width + COVER_PADDING * 2f, height * 1.3f)
+                    stream.fill()
+                    if (text.isNotEmpty()) {
+                        // Sized to the old words' height, then shrunk until it fits their width
+                        // too, so a longer replacement never runs into the next word.
+                        var size = (height / (NOTE_ASCENT + NOTE_DESCENT)).coerceIn(MIN_NOTE_POINTS, MAX_NOTE_POINTS)
+                        val needed = font.getStringWidth(text) / 1000f * size
+                        if (needed > width && needed > 0f) size = (size * width / needed).coerceAtLeast(MIN_NOTE_POINTS)
+                        stream.setNonStrokingColor(0f, 0f, 0f)
+                        stream.beginText()
+                        stream.setFont(font, size)
+                        stream.newLineAtOffset(left, bottom + height * 0.05f)
+                        stream.showText(text)
+                        stream.endText()
+                    }
+                    changed += 1
+                }
+                stream.restoreGraphicsState()
+            }
+            onProgress(index + 1, doc.numberOfPages)
+        }
+        if (changed == 0) throw PdfException.Refused("Those words were not found. A scanned page has no text to find; run Make searchable first.")
+        doc.save(output)
+        changed
+    }
+
+    override fun writeReceipts(receipts: List<ReceiptSpec>, output: File): Int {
+        if (receipts.isEmpty()) throw PdfException.Refused("There is nothing to write.")
+        val regular = PDType1Font.HELVETICA
+        val bold = PDType1Font.HELVETICA_BOLD
+        val italic = PDType1Font.HELVETICA_OBLIQUE
+        val margin = RECEIPT_MARGIN
+        val pageBox = PDRectangle.A4
+        val contentWidth = pageBox.width - margin * 2f
+        val labelWidth = RECEIPT_LABEL_WIDTH
+        val valueWidth = contentWidth - labelWidth
+        val body = 10.5f
+        val cellPad = 5f
+
+        try {
+            PDDocument(scratchMemory()).use { doc ->
+                var stream: PDPageContentStream? = null
+                var pages = 0
+                var cursor = 0f
+
+                fun newPage() {
+                    stream?.close()
+                    val fresh = PDPage(pageBox)
+                    doc.addPage(fresh)
+                    stream = PDPageContentStream(doc, fresh, PDPageContentStream.AppendMode.APPEND, true, true)
+                    pages += 1
+                    cursor = pageBox.height - margin
+                }
+
+                fun text(font: PDType1Font, size: Float, x: Float, y: Float, line: String) {
+                    val s = stream ?: return
+                    s.beginText()
+                    s.setFont(font, size)
+                    s.newLineAtOffset(x, y)
+                    s.showText(line.toWinAnsiSafe())
+                    s.endText()
+                }
+
+                fun centred(font: PDType1Font, size: Float, y: Float, line: String) {
+                    val width = font.getStringWidth(line.toWinAnsiSafe()) / 1000f * size
+                    text(font, size, (pageBox.width - width) / 2f, y, line)
+                }
+
+                for ((i, receipt) in receipts.withIndex()) {
+                    // Two to a page. The second starts at the half-way line, so the two can be
+                    // cut apart with one stroke.
+                    if (i % 2 == 0) newPage() else cursor = pageBox.height / 2f - 18f
+                    val s = stream!!
+                    cursor -= 16f
+                    centred(bold, 16f, cursor, receipt.title)
+                    cursor -= 15f
+                    centred(regular, 11f, cursor, receipt.subtitle)
+                    cursor -= 14f
+
+                    // The table: label in bold, value wrapped inside its column.
+                    val rowsLaidOut = receipt.rows.map { (label, value) ->
+                        val lines = wrapForWidth(value.toWinAnsiSafe(), regular, body, valueWidth - cellPad * 2f)
+                        Triple(label, lines, lines.size * body * LINE_SPACING + cellPad * 2f)
+                    }
+                    s.setLineWidth(0.6f)
+                    s.setStrokingColor(0.55f, 0.55f, 0.55f)
+                    for ((label, lines, rowHeight) in rowsLaidOut) {
+                        val top = cursor
+                        val bottom = cursor - rowHeight
+                        s.addRect(margin, bottom, contentWidth, rowHeight)
+                        s.stroke()
+                        s.moveTo(margin + labelWidth, top)
+                        s.lineTo(margin + labelWidth, bottom)
+                        s.stroke()
+                        text(bold, body, margin + cellPad, top - cellPad - body * NOTE_ASCENT, label)
+                        lines.forEachIndexed { k, line ->
+                            text(regular, body, margin + labelWidth + cellPad, top - cellPad - body * NOTE_ASCENT - k * body * LINE_SPACING, line)
+                        }
+                        cursor = bottom
+                    }
+                    cursor -= 18f
+                    for ((k, line) in receipt.footer.withIndex()) {
+                        text(if (k == 0) regular else italic, if (k == 0) body else 9f, margin, cursor, line)
+                        cursor -= 14f
+                    }
+                }
+                stream?.close()
+                doc.save(output)
+                return pages
+            }
+        } catch (e: IOException) {
+            throw e.asPdfException("writing the receipts")
+        }
+    }
+
+    override fun pageLines(input: PdfInput, onProgress: (Int, Int) -> Unit): List<List<TextLine>> =
+        withDocument(input) { doc ->
+            List(doc.numberOfPages) { index ->
+                val page = doc.getPage(index)
+                val box = page.cropBox ?: page.mediaBox ?: PDRectangle.A4
+                val quarterTurned = normaliseRotation(page.rotation) % 180 == 90
+                val stripper = if (quarterTurned) LineFinder(box.height, box.width) else LineFinder(box.width, box.height)
+                stripper.startPage = index + 1
+                stripper.endPage = index + 1
+                runCatching { stripper.getText(doc) }
+                onProgress(index + 1, doc.numberOfPages)
+                stripper.lines.toList()
+            }
+        }
+
+    override fun layoutFlow(document: FlowDocument, output: File, onProgress: (Int, Int) -> Unit): Int {
+        try {
+            PDDocument(scratchMemory()).use { doc ->
+                val pages = FlowLayout(doc, onProgress).layout(document)
+                doc.save(output)
+                return pages
+            }
+        } catch (e: IOException) {
+            throw e.asPdfException("laying out the document")
+        }
+    }
+
+    override fun makeArchival(input: PdfInput, output: File): ArchivalReport = withDocument(input) { doc ->
+        val report = doc.makeArchival()
+        doc.save(output)
+        report
+    }
+
+    override fun addFormFields(input: PdfInput, fields: List<NewField>, output: File): List<String> =
+        withDocument(input) { doc ->
+            if (fields.isEmpty()) throw PdfException.Refused("Draw a field on the page first.")
+            val names = doc.addFormFields(fields)
+            if (names.isEmpty()) throw PdfException.Refused("None of the fields landed on a page of this document.")
+            doc.save(output)
+            names
+        }
+
+    override fun signWithCertificate(
+        input: PdfInput,
+        certificate: File,
+        password: String,
+        spec: SignSpec,
+        output: File
+    ): SignReport {
+        val credentials = Signing.load(certificate, password)
+        val signer = Signing.commonName(credentials.certificate)
+        val issuer = Signing.commonName(credentials.certificate, issuer = true)
+
+        // The signature covers the file's bytes as saved, so everything else - the visible
+        // box, taking a lock off - is written to a plain copy first, and that copy is what
+        // is signed, incrementally, into the output.
+        val prepared = File.createTempFile("to-sign", ".pdf", output.parentFile)
+        try {
+            withDocument(input) { doc ->
+                doc.isAllSecurityToBeRemoved = true
+                if (spec.visible && doc.numberOfPages > 0) {
+                    val index = if (spec.onFirstPage) 0 else doc.numberOfPages - 1
+                    val page = doc.getPage(index)
+                    val shown = ShownPage(page)
+                    val font = PDType1Font.HELVETICA
+                    val bold = PDType1Font.HELVETICA_BOLD
+                    val date = java.text.SimpleDateFormat("d MMM yyyy, HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
+                    val lines = buildList {
+                        add("Digitally signed by $signer")
+                        add("Date: $date")
+                        if (spec.reason.isNotBlank()) add("Reason: ${spec.reason}")
+                        if (spec.location.isNotBlank()) add("Location: ${spec.location}")
+                    }.map { it.toWinAnsiSafe() }
+                    val size = 8f
+                    val pad = 6f
+                    val boxWidth = minOf(shown.width - MARGIN_POINTS * 2f, 240f)
+                    val boxHeight = lines.size * size * LINE_SPACING + pad * 2f
+                    val left = MARGIN_POINTS
+                    val bottom = MARGIN_POINTS * 0.6f
+                    PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { stream ->
+                        stream.saveGraphicsState()
+                        stream.transform(shown.viewMatrix())
+                        stream.setNonStrokingColor(0.96f, 0.97f, 1f)
+                        stream.setStrokingColor(0.35f, 0.45f, 0.7f)
+                        stream.setLineWidth(0.8f)
+                        stream.addRect(left, bottom, boxWidth, boxHeight)
+                        stream.fillAndStroke()
+                        stream.setNonStrokingColor(0.1f, 0.15f, 0.3f)
+                        stream.beginText()
+                        stream.setFont(bold, size)
+                        stream.newLineAtOffset(left + pad, bottom + boxHeight - pad - size * NOTE_ASCENT)
+                        lines.forEachIndexed { i, line ->
+                            if (i == 1) stream.setFont(font, size)
+                            if (i > 0) stream.newLineAtOffset(0f, -size * LINE_SPACING)
+                            stream.showText(line)
+                        }
+                        stream.endText()
+                        stream.restoreGraphicsState()
+                    }
+                }
+                doc.save(prepared)
+            }
+            try {
+                PDDocument.load(prepared, scratchMemory()).use { doc ->
+                    output.outputStream().use { out -> Signing.sign(doc, credentials, spec, out) }
+                }
+            } catch (e: PdfException) {
+                throw e
+            } catch (e: Exception) {
+                throw PdfException.Refused("The document could not be signed: ${e.message ?: "the signature could not be made"}", e)
+            }
+        } finally {
+            prepared.delete()
+        }
+        return SignReport(signer, issuer)
+    }
+
+    override fun readComments(input: PdfInput): List<Comment> = withDocument(input) { doc ->
+        buildList {
+            for (index in 0 until doc.numberOfPages) {
+                val annotations = runCatching { doc.getPage(index).annotations }.getOrNull() ?: continue
+                for (annotation in annotations) {
+                    val subtype = annotation.subtype ?: continue
+                    // Links and form fields are not comments, and a popup is the window a note
+                    // opens in rather than a note of its own.
+                    if (subtype == "Link" || subtype == "Widget" || subtype == "Popup") continue
+                    val cos = annotation.cosObject
+                    // A comment is a remark, or a mark with no remark on it. Marks with
+                    // nothing to say are listed too: a highlight is something somebody meant.
+                    val text = annotation.contents?.trim().orEmpty()
+                    val replyOf = cos.getDictionaryObject(COSName.getPDFName("IRT"))
+                    add(
+                        Comment(
+                            pageIndex = index,
+                            kind = (if (replyOf != null) "Reply" else commentKind(subtype)),
+                            author = cos.getString(COSName.T)?.trim()?.takeIf { it.isNotEmpty() },
+                            text = text,
+                            date = tidyPdfDate(cos.getString(COSName.M))
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    private fun commentKind(subtype: String): String = when (subtype) {
+        "Text" -> "Note"
+        "FreeText" -> "Text box"
+        "Highlight" -> "Highlight"
+        "Underline" -> "Underline"
+        "StrikeOut" -> "Strikethrough"
+        "Squiggly" -> "Squiggle"
+        "Ink" -> "Drawing"
+        "Square" -> "Box"
+        "Circle" -> "Circle"
+        "Line" -> "Line"
+        "Polygon", "PolyLine" -> "Shape"
+        "Stamp" -> "Stamp"
+        "Caret" -> "Insertion"
+        "FileAttachment" -> "Attached file"
+        "Sound" -> "Sound"
+        "Movie", "Screen", "RichMedia" -> "Media"
+        "Redact" -> "Redaction mark"
+        else -> subtype
+    }
+
+    /** "D:20240305142000+05'30'" becomes "2024-03-05 14:20"; anything else is left alone. */
+    private fun tidyPdfDate(raw: String?): String? {
+        val s = raw?.trim()?.removePrefix("D:") ?: return null
+        if (s.length < 8 || !s.take(8).all { it.isDigit() }) return raw.takeIf { it.isNotBlank() }
+        val date = "${s.substring(0, 4)}-${s.substring(4, 6)}-${s.substring(6, 8)}"
+        return if (s.length >= 12 && s.substring(8, 12).all { it.isDigit() }) {
+            "$date ${s.substring(8, 10)}:${s.substring(10, 12)}"
+        } else {
+            date
         }
     }
 
@@ -552,48 +883,109 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         output: File,
         onProgress: (Int, Int) -> Unit
     ) = withDocument(input) { doc ->
-        val text = spec.text.toWinAnsiSafe()
-        if (text.isBlank()) throw PdfException.Refused("The watermark has no text in it.")
+        val text = spec.text.replace(Regex("[\\r\\n\\t]+"), " ").trim().toWinAnsiSafe()
+        if (text.isBlank()) throw PdfException.Refused("Type the watermark text, such as DRAFT or COPY.")
 
         val font = PDType1Font.HELVETICA_BOLD
         val total = doc.numberOfPages
+        val chosen = spec.pages.ifEmpty { (0 until total).toList() }.filter { it in 0 until total }
+        if (chosen.isEmpty()) throw PdfException.Refused("None of the pages typed are in this document.")
+        val opacity = spec.opacity.coerceIn(0.02f, 1f)
+        val capRatio = (font.fontDescriptor?.capHeight?.takeIf { it > 0f } ?: 718f) / 1000f
 
-        // The text and the type size are the same on every page, so its width is too. Measuring
-        // it inside the loop walked the font's metrics once per glyph per sheet.
-        val widthPoints = font.getStringWidth(text) / 1000f * spec.fontSize
+        // A tiled watermark is a couple of hundred copies of the words on every page. Drawn
+        // one by one that is 17 KB a page; drawn once into a form that every page of the same
+        // size shares, each page only says "draw that here".
+        val tiles = HashMap<String, PDFormXObject>()
 
-        for ((index, page) in doc.pages.withIndex()) {
-            val box = page.mediaBox ?: PDRectangle.A4
+        for ((done, index) in chosen.withIndex()) {
+            val page = doc.getPage(index)
+            val shown = ShownPage(page)
+            val short = minOf(shown.width, shown.height)
+
+            // Sized to the page and to the word, so DRAFT and CONFIDENTIAL both cross the
+            // page; anything longer is shrunk to fit inside it.
+            val tiled = spec.layout == WatermarkSpec.Layout.TILED
+            val straight = spec.layout == WatermarkSpec.Layout.STRAIGHT
+            val angle = when (spec.layout) {
+                WatermarkSpec.Layout.TILED -> 30.0
+                WatermarkSpec.Layout.STRAIGHT -> 0.0
+                WatermarkSpec.Layout.ONCE_DIAGONAL -> 45.0
+            }
+            var size = if (tiled) {
+                maxOf(14f, short * 0.045f)
+            } else {
+                val across = if (straight) shown.width else Math.hypot(shown.width.toDouble(), shown.height.toDouble()).toFloat()
+                minOf(short * 0.2f, across * 0.7f / maxOf(4f, text.length * 0.6f))
+            }
+            if (!tiled) {
+                // A small page (a till receipt, a card) gets a margin to match, and words that
+                // would still run off its edge, straight or turned, are made smaller to fit.
+                val margin = minOf(36f, short * 0.08f)
+                size = fitted(shown, angle, margin, size) { s -> (font.getStringWidth(text) / 1000f * s) to (capRatio * s) }
+            }
+            val width = font.getStringWidth(text) / 1000f * size
+            val cap = capRatio * size
+            val rad = Math.toRadians(angle)
+            val cos = Math.cos(rad).toFloat()
+            val sin = Math.sin(rad).toFloat()
+
+            // Every placement is worked out in the space the reader sees (origin bottom-left
+            // of the visible page, y up) and the page's own turn is one transform on top.
+            val centres = if (tiled) {
+                tileCentres(shown.width, shown.height, width, size)
+            } else {
+                listOf(shown.width / 2f to shown.height / 2f)
+            }
 
             PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true)
                 .use { stream ->
-                    // Transparency lives in a graphics state, not on the text operator, so a
-                    // watermark needs one of these - setting a grey fill instead would go
-                    // opaque over anything it crossed.
-                    stream.setGraphicsStateParameters(
-                        PDExtendedGraphicsState().apply {
-                            nonStrokingAlphaConstant = spec.opacity.coerceIn(0.02f, 1f)
+                    stream.saveGraphicsState()
+                    stream.transform(shown.viewMatrix())
+                    if (tiled) {
+                        val key = listOf(text, size, shown.width.toInt(), shown.height.toInt()).joinToString("|")
+                        val form = tiles.getOrPut(key) {
+                            // An appearance stream is a form XObject with a content-stream
+                            // constructor; a plain form has none in this port.
+                            PDAppearanceStream(doc).also { form ->
+                                form.resources = PDResources()
+                                form.bBox = PDRectangle(0f, 0f, shown.width, shown.height)
+                                PDPageContentStream(doc, form).use { inner ->
+                                    inner.setGraphicsStateParameters(alphaState(opacity))
+                                    inner.setNonStrokingColor(spec.colour.red(), spec.colour.green(), spec.colour.blue())
+                                    inner.beginText()
+                                    inner.setFont(font, size)
+                                    for ((cx, cy) in centres) {
+                                        val vx = cx - cos * width / 2f + sin * cap / 2f
+                                        val vy = cy - sin * width / 2f - cos * cap / 2f
+                                        inner.setTextMatrix(Matrix.getRotateInstance(rad, vx, vy))
+                                        inner.showText(text)
+                                    }
+                                    inner.endText()
+                                }
+                            }
                         }
-                    )
-                    stream.setNonStrokingColor(0.35f, 0.35f, 0.35f)
-                    stream.setFont(font, spec.fontSize)
-
-                    val positions = if (spec.tiled) {
-                        tilePositions(box.width, box.height, widthPoints, spec.fontSize)
+                        stream.drawForm(form)
                     } else {
-                        listOf((box.width - widthPoints) / 2f to box.height / 2f)
-                    }
-
-                    for ((x, y) in positions) {
+                        // Transparency lives in a graphics state, not on the text operator, so
+                        // a watermark needs one of these - setting a grey fill instead would
+                        // go opaque over anything it crossed.
+                        stream.setGraphicsStateParameters(alphaState(opacity))
+                        stream.setNonStrokingColor(spec.colour.red(), spec.colour.green(), spec.colour.blue())
                         stream.beginText()
-                        // A rotation has to go through a text matrix; newLineAtOffset can only
-                        // translate, so an angled watermark cannot be done with it alone.
-                        stream.setTextMatrix(Matrix.getRotateInstance(Math.toRadians(spec.degrees.toDouble()), x, y))
-                        stream.showText(text)
+                        stream.setFont(font, size)
+                        for ((cx, cy) in centres) {
+                            // The text's own origin is its bottom-left; put its centre on (cx, cy).
+                            val vx = cx - cos * width / 2f + sin * cap / 2f
+                            val vy = cy - sin * width / 2f - cos * cap / 2f
+                            stream.setTextMatrix(Matrix.getRotateInstance(rad, vx, vy))
+                            stream.showText(text)
+                        }
                         stream.endText()
                     }
+                    stream.restoreGraphicsState()
                 }
-            onProgress(index + 1, total)
+            onProgress(done + 1, chosen.size)
         }
         doc.save(output)
     }
@@ -608,16 +1000,16 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         val total = doc.numberOfPages
         val numbered = total - spec.skipFirst
 
-        for ((index, page) in doc.pages.withIndex()) {
+        for (index in 0 until total) {
             if (index < spec.skipFirst) {
                 onProgress(index + 1, total)
                 continue
             }
 
             val number = spec.startAt + (index - spec.skipFirst)
-            val shown = if (spec.padTo > 0) number.toString().padStart(spec.padTo, '0') else number.toString()
+            val digits = if (spec.padTo > 0) number.toString().padStart(spec.padTo, '0') else number.toString()
             val label = spec.format
-                .replace("{n}", shown)
+                .replace("{n}", spec.prefix + digits)
                 .replace("{total}", numbered.toString())
                 .toWinAnsiSafe()
             if (label.isBlank()) {
@@ -625,29 +1017,35 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                 continue
             }
 
-            val box = page.mediaBox ?: PDRectangle.A4
+            val page = doc.getPage(index)
+            // Placed on the page as the reader sees it: inside the crop box, and the right
+            // way up on a page stored sideways.
+            val shown = ShownPage(page)
             val width = font.getStringWidth(label) / 1000f * spec.fontSize
-            val margin = MARGIN_POINTS
+            val margin = minOf(MARGIN_POINTS, minOf(shown.width, shown.height) * 0.08f)
 
             val x = when (spec.position) {
                 PageNumberSpec.Position.TOP_LEFT, PageNumberSpec.Position.BOTTOM_LEFT -> margin
-                PageNumberSpec.Position.TOP_CENTRE, PageNumberSpec.Position.BOTTOM_CENTRE -> (box.width - width) / 2f
-                else -> box.width - width - margin
+                PageNumberSpec.Position.TOP_CENTRE, PageNumberSpec.Position.BOTTOM_CENTRE -> (shown.width - width) / 2f
+                else -> shown.width - width - margin
             }
             val y = when (spec.position) {
                 PageNumberSpec.Position.TOP_LEFT, PageNumberSpec.Position.TOP_CENTRE, PageNumberSpec.Position.TOP_RIGHT ->
-                    box.height - margin - spec.fontSize
+                    shown.height - margin - spec.fontSize
                 else -> margin
             }
 
             PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true)
                 .use { stream ->
+                    stream.saveGraphicsState()
+                    stream.transform(shown.viewMatrix())
                     stream.setNonStrokingColor(0f, 0f, 0f)
                     stream.beginText()
                     stream.setFont(font, spec.fontSize)
                     stream.newLineAtOffset(x, y)
                     stream.showText(label)
                     stream.endText()
+                    stream.restoreGraphicsState()
                 }
             onProgress(index + 1, total)
         }
@@ -661,19 +1059,65 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         onProgress: (Int, Int) -> Unit
     ) = withDocument(input) { doc ->
         val total = doc.numberOfPages
+        val chosen = (spec.pages.ifEmpty { (0 until total).toList() }).filter { it in 0 until total }
+        if (chosen.isEmpty()) throw PdfException.Refused("None of the pages typed are in this document.")
 
-        for ((index, page) in doc.pages.withIndex()) {
-            val box = page.cropBox ?: page.mediaBox ?: PDRectangle.A4
+        val renderer = if (spec.auto) PDFRenderer(doc) else null
+        var trimmed = 0
 
-            val left = box.lowerLeftX + box.width * spec.left.coerceIn(0f, MAX_TRIM)
-            val bottom = box.lowerLeftY + box.height * spec.bottom.coerceIn(0f, MAX_TRIM)
-            val right = box.upperRightX - box.width * spec.right.coerceIn(0f, MAX_TRIM)
-            val top = box.upperRightY - box.height * spec.top.coerceIn(0f, MAX_TRIM)
+        for ((done, index) in chosen.withIndex()) {
+            val page = doc.getPage(index)
+            val shown = ShownPage(page)
 
-            if (right > left && top > bottom) {
-                page.cropBox = PDRectangle(left, bottom, right - left, top - bottom)
+            // The kept part of the page, as fractions of what the reader sees.
+            var left = 0f
+            var top = 0f
+            var right = 1f
+            var bottom = 1f
+
+            if (spec.auto) {
+                val bitmap = renderer!!.renderImage(index, 1f)
+                val ink = try {
+                    inkBounds(bitmap)
+                } finally {
+                    bitmap.recycle()
+                }
+                if (ink == null) {
+                    onProgress(done + 1, chosen.size)
+                    continue
+                }
+                val padX = AUTO_PAD_POINTS / shown.width
+                val padY = AUTO_PAD_POINTS / shown.height
+                left = (ink[0] - padX).coerceAtLeast(0f)
+                top = (ink[1] - padY).coerceAtLeast(0f)
+                right = (ink[2] + padX).coerceAtMost(1f)
+                bottom = (ink[3] + padY).coerceAtMost(1f)
+                // Less than a millimetre to gain all round: leave the page alone.
+                if ((left + 1f - right) * shown.width < MM_POINTS && (top + 1f - bottom) * shown.height < MM_POINTS) {
+                    onProgress(done + 1, chosen.size)
+                    continue
+                }
+            } else if (spec.trims) {
+                left = spec.leftMm * MM_POINTS / shown.width
+                top = spec.topMm * MM_POINTS / shown.height
+                right = 1f - spec.rightMm * MM_POINTS / shown.width
+                bottom = 1f - spec.bottomMm * MM_POINTS / shown.height
             }
-            onProgress(index + 1, total)
+
+            if (spec.auto || spec.trims) {
+                if ((right - left) * shown.width < SMALLEST_PAGE_POINTS || (bottom - top) * shown.height < SMALLEST_PAGE_POINTS) {
+                    throw PdfException.Refused("That much off the edges would leave almost nothing of page ${index + 1}. Use smaller margins."
+                    )
+                }
+                page.cropBox = shown.storedRect(left, top, right, bottom)
+                trimmed += 1
+            }
+            onProgress(done + 1, chosen.size)
+        }
+
+        if (spec.auto && trimmed == 0 && spec.resizeTo == null) {
+            throw PdfException.Refused("No white margins to remove: what is on the pages already runs to their edges, or they are blank."
+            )
         }
 
         if (spec.resizeTo == null || spec.resizeTo == PageSpec.Size.FIT_IMAGE) {
@@ -684,18 +1128,25 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         // Resizing is a different operation from cropping and cannot be done by setting a box.
         // A page has to be redrawn at the new size, so each one is imported as a form and
         // placed, scaled to fit, on a fresh sheet - the same technique N-up uses.
+        val chosenSet = chosen.toSet()
         PDDocument(scratchMemory()).use { target ->
             // One utility per target document. It holds the import cache, so building a new
             // one per page would copy shared resources again for every page.
             val layers = LayerUtility(target)
 
             for (index in 0 until doc.numberOfPages) {
+                if (index !in chosenSet) {
+                    // A page not chosen keeps its own size, so it is carried across as it is.
+                    target.importPage(doc.getPage(index))
+                    continue
+                }
                 val sourceBox = doc.getPage(index).cropBox ?: doc.getPage(index).mediaBox ?: PDRectangle.A4
                 val portrait = PDRectangle(spec.resizeTo.widthPoints, spec.resizeTo.heightPoints)
 
-                // A landscape page goes onto a landscape sheet. Forcing everything portrait
-                // would shrink wide pages to a third of the paper for no reason.
-                val sheetBox = if (sourceBox.width > sourceBox.height) {
+                // A landscape page goes onto a landscape sheet, as the reader sees it. Forcing
+                // everything portrait would shrink wide pages to a third of the paper.
+                val shown = ShownPage(doc.getPage(index))
+                val sheetBox = if (shown.width > shown.height) {
                     PDRectangle(portrait.height, portrait.width)
                 } else {
                     portrait
@@ -706,10 +1157,12 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
 
                 val form = layers.importPageAsForm(doc, index)
                 val bounds = placedBounds(form, sourceBox)
-                val scale = minOf(
+                var scale = minOf(
                     sheetBox.width / bounds.width.coerceAtLeast(1f),
                     sheetBox.height / bounds.height.coerceAtLeast(1f)
                 )
+                // An ID card stays card-sized on the sheet when asked, for printing.
+                if (!spec.enlarge && scale > 1f) scale = 1f
                 val drawWidth = bounds.width * scale
                 val drawHeight = bounds.height * scale
 
@@ -831,29 +1284,35 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                 throw PdfException.Refused("Page ${stamp.pageIndex + 1} does not exist in this document.")
             }
             val page = doc.getPage(stamp.pageIndex)
-            val box = page.mediaBox ?: PDRectangle.A4
+            // Placed on the page as the reader sees it: inside the crop box, the right way up.
+            val shown = ShownPage(page)
 
             val image = try {
                 PDImageXObject.createFromFile(stamp.image.absolutePath, doc)
             } catch (e: Exception) {
-                throw PdfException.Corrupt("the signature image could not be read", e)
+                throw PdfException.Corrupt("the image could not be read", e)
             }
 
-            val width = box.width * stamp.widthFraction.coerceIn(0.05f, 1f)
-            val height = width * image.height / image.width.coerceAtLeast(1)
-            val margin = box.width * stamp.marginFraction
+            var width = shown.width * stamp.widthFraction.coerceIn(0.05f, 1f)
+            var height = width * image.height / image.width.coerceAtLeast(1)
+            // A tall picture at a wide setting would run off the page; it is held inside it.
+            if (height > shown.height * 0.9f) {
+                height = shown.height * 0.9f
+                width = height * image.width / image.height.coerceAtLeast(1)
+            }
+            val margin = shown.width * stamp.marginFraction
 
             val x = when (stamp.anchor) {
                 ImageStamp.Anchor.TOP_LEFT, ImageStamp.Anchor.MIDDLE_LEFT, ImageStamp.Anchor.BOTTOM_LEFT -> margin
                 ImageStamp.Anchor.TOP_CENTRE, ImageStamp.Anchor.MIDDLE_CENTRE, ImageStamp.Anchor.BOTTOM_CENTRE ->
-                    (box.width - width) / 2f
-                else -> box.width - width - margin
+                    (shown.width - width) / 2f
+                else -> shown.width - width - margin
             }
             val y = when (stamp.anchor) {
                 ImageStamp.Anchor.TOP_LEFT, ImageStamp.Anchor.TOP_CENTRE, ImageStamp.Anchor.TOP_RIGHT ->
-                    box.height - height - margin
+                    shown.height - height - margin
                 ImageStamp.Anchor.MIDDLE_LEFT, ImageStamp.Anchor.MIDDLE_CENTRE, ImageStamp.Anchor.MIDDLE_RIGHT ->
-                    (box.height - height) / 2f
+                    (shown.height - height) / 2f
                 else -> margin
             }
 
@@ -861,7 +1320,12 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
             // the document. An annotation can be moved or deleted by the next reader, which is
             // not what anyone means by signing something.
             PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true)
-                .use { stream -> stream.drawImage(image, x, y, width, height) }
+                .use { stream ->
+                    stream.saveGraphicsState()
+                    stream.transform(shown.viewMatrix())
+                    stream.drawImage(image, x, y, width, height)
+                    stream.restoreGraphicsState()
+                }
 
             doc.save(output)
         }
@@ -943,14 +1407,23 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
 
         val total = marked.size
         var done = 0
+        val font = PDType1Font.HELVETICA
+        val bold = PDType1Font.HELVETICA_BOLD
 
         for ((index, list) in marked) {
             if (index !in 0 until doc.numberOfPages) continue
             val page = doc.getPage(index)
             val shown = ShownPage(page)
+            // Every mark is worked out in the space the reader sees, with the page's own turn
+            // and crop origin applied once, which is what makes a mark land correctly on a
+            // page that is stored sideways.
+            fun x(fraction: Float) = fraction * shown.width
+            fun y(fraction: Float) = shown.height - fraction * shown.height
 
             PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true)
                 .use { stream ->
+                    stream.saveGraphicsState()
+                    stream.transform(shown.viewMatrix())
                     for (mark in list) {
                         val red = ((mark.colour shr 16) and 0xFF) / 255f
                         val green = ((mark.colour shr 8) and 0xFF) / 255f
@@ -962,29 +1435,13 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                                 // Transparency lives in a graphics state, not on the fill, so
                                 // a highlight needs one of these - an opaque block of yellow
                                 // would hide the words it is pointing at.
-                                stream.setGraphicsStateParameters(
-                                    PDExtendedGraphicsState().apply {
-                                        nonStrokingAlphaConstant = HIGHLIGHT_ALPHA
-                                    }
-                                )
+                                stream.setGraphicsStateParameters(alphaState(HIGHLIGHT_ALPHA))
                                 stream.setNonStrokingColor(red, green, blue)
-
-                                // Both corners are turned into page space and the rectangle
-                                // rebuilt from them, which is what makes a highlight land
-                                // correctly on a page that is stored sideways.
-                                val (x1, y1) = shown.pointAt(
-                                    mark.area.left * shown.width,
-                                    mark.area.top * shown.height
-                                )
-                                val (x2, y2) = shown.pointAt(
-                                    (mark.area.left + mark.area.width) * shown.width,
-                                    (mark.area.top + mark.area.height) * shown.height
-                                )
                                 stream.addRect(
-                                    minOf(x1, x2),
-                                    minOf(y1, y2),
-                                    kotlin.math.abs(x2 - x1),
-                                    kotlin.math.abs(y2 - y1)
+                                    x(mark.area.left),
+                                    y(mark.area.top + mark.area.height),
+                                    mark.area.width * shown.width,
+                                    mark.area.height * shown.height
                                 )
                                 stream.fill()
                                 stream.restoreGraphicsState()
@@ -999,24 +1456,144 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                                 // reads as a series of tiles rather than one stroke.
                                 stream.setLineCapStyle(1)
                                 stream.setLineJoinStyle(1)
-
-                                val first = shown.pointAt(
-                                    mark.points.first().x * shown.width,
-                                    mark.points.first().y * shown.height
-                                )
-                                stream.moveTo(first.first, first.second)
-                                for (point in mark.points.drop(1)) {
-                                    val (x, y) = shown.pointAt(
-                                        point.x * shown.width,
-                                        point.y * shown.height
-                                    )
-                                    stream.lineTo(x, y)
-                                }
+                                stream.moveTo(x(mark.points.first().x), y(mark.points.first().y))
+                                for (point in mark.points.drop(1)) stream.lineTo(x(point.x), y(point.y))
                                 stream.stroke()
+                                stream.restoreGraphicsState()
+                            }
+
+                            is PageMark.Shape -> {
+                                val left = x(mark.area.left)
+                                val right = x(mark.area.left + mark.area.width)
+                                val top = y(mark.area.top)
+                                val bottom = y(mark.area.top + mark.area.height)
+                                stream.saveGraphicsState()
+                                stream.setStrokingColor(red, green, blue)
+                                stream.setLineWidth(mark.widthPoints.coerceIn(0.3f, 12f))
+                                stream.setLineCapStyle(1)
+                                stream.setLineJoinStyle(1)
+                                when (mark.kind) {
+                                    PageMark.Shape.Kind.UNDERLINE -> {
+                                        // Just under the dragged area: the drag is across the
+                                        // words, and the rule belongs beneath them.
+                                        stream.moveTo(left, bottom)
+                                        stream.lineTo(right, bottom)
+                                        stream.stroke()
+                                    }
+                                    PageMark.Shape.Kind.STRIKETHROUGH -> {
+                                        val middle = (top + bottom) / 2f
+                                        stream.moveTo(left, middle)
+                                        stream.lineTo(right, middle)
+                                        stream.stroke()
+                                    }
+                                    PageMark.Shape.Kind.BOX -> {
+                                        stream.addRect(left, bottom, right - left, top - bottom)
+                                        stream.stroke()
+                                    }
+                                    PageMark.Shape.Kind.CIRCLE -> {
+                                        ellipse(stream, left, bottom, right - left, top - bottom)
+                                        stream.stroke()
+                                    }
+                                }
+                                stream.restoreGraphicsState()
+                            }
+
+                            is PageMark.Line -> {
+                                val x1 = x(mark.from.x)
+                                val y1 = y(mark.from.y)
+                                val x2 = x(mark.to.x)
+                                val y2 = y(mark.to.y)
+                                val width = mark.widthPoints.coerceIn(0.3f, 12f)
+                                stream.saveGraphicsState()
+                                stream.setStrokingColor(red, green, blue)
+                                stream.setNonStrokingColor(red, green, blue)
+                                stream.setLineWidth(width)
+                                stream.setLineCapStyle(1)
+                                stream.setLineJoinStyle(1)
+                                stream.moveTo(x1, y1)
+                                stream.lineTo(x2, y2)
+                                stream.stroke()
+                                if (mark.arrow) {
+                                    // A head sized to the line, so a thick arrow has a head
+                                    // one can see and a hairline one does not get a barn door.
+                                    val head = (width * 5f).coerceIn(7f, 24f)
+                                    val angle = Math.atan2((y2 - y1).toDouble(), (x2 - x1).toDouble())
+                                    val spread = Math.toRadians(26.0)
+                                    val ax = (x2 - head * Math.cos(angle - spread)).toFloat()
+                                    val ay = (y2 - head * Math.sin(angle - spread)).toFloat()
+                                    val bx = (x2 - head * Math.cos(angle + spread)).toFloat()
+                                    val by = (y2 - head * Math.sin(angle + spread)).toFloat()
+                                    stream.moveTo(x2, y2)
+                                    stream.lineTo(ax, ay)
+                                    stream.lineTo(bx, by)
+                                    stream.closePath()
+                                    stream.fill()
+                                }
+                                stream.restoreGraphicsState()
+                            }
+
+                            is PageMark.Note -> {
+                                val text = mark.text.toWinAnsiSafe().trim()
+                                if (text.isEmpty()) continue
+                                val size = mark.sizePoints.coerceIn(MIN_NOTE_POINTS, MAX_NOTE_POINTS)
+                                val lines = wrapForWidth(text, font, size, shown.width * 0.45f)
+                                val widest = lines.maxOf { font.getStringWidth(it) / 1000f * size }
+                                val pad = size * 0.5f
+                                val cardWidth = widest + pad * 2f
+                                val cardHeight = lines.size * size * LINE_SPACING + pad * 2f
+                                // The card stays on the page: a note tapped near the right
+                                // edge is pulled back in rather than cut off.
+                                val cardLeft = x(mark.at.x).coerceIn(0f, (shown.width - cardWidth).coerceAtLeast(0f))
+                                val cardTop = y(mark.at.y).coerceIn(cardHeight.coerceAtMost(shown.height), shown.height)
+                                stream.saveGraphicsState()
+                                stream.setNonStrokingColor(1f, 0.97f, 0.78f)
+                                stream.setStrokingColor(0.85f, 0.75f, 0.35f)
+                                stream.setLineWidth(0.6f)
+                                stream.addRect(cardLeft, cardTop - cardHeight, cardWidth, cardHeight)
+                                stream.fillAndStroke()
+                                stream.setNonStrokingColor(red, green, blue)
+                                stream.beginText()
+                                stream.setFont(font, size)
+                                stream.newLineAtOffset(cardLeft + pad, cardTop - pad - size * NOTE_ASCENT)
+                                lines.forEachIndexed { i, line ->
+                                    if (i > 0) stream.newLineAtOffset(0f, -size * LINE_SPACING)
+                                    stream.showText(line)
+                                }
+                                stream.endText()
+                                stream.restoreGraphicsState()
+                            }
+
+                            is PageMark.Stamp -> {
+                                val text = mark.text.toWinAnsiSafe().trim().uppercase()
+                                if (text.isEmpty()) continue
+                                // Sized to the page, like a watermark: a stamp on a receipt
+                                // is not the size of one on a poster.
+                                val size = (minOf(shown.width, shown.height) * 0.045f).coerceIn(10f, 28f)
+                                val textWidth = bold.getStringWidth(text) / 1000f * size
+                                val pad = size * 0.45f
+                                val boxWidth = textWidth + pad * 2f
+                                val boxHeight = size * 1.5f
+                                val cx = x(mark.at.x)
+                                val cy = y(mark.at.y)
+                                stream.saveGraphicsState()
+                                stream.setGraphicsStateParameters(alphaState(0.85f))
+                                // Turned a few degrees, the way a hand-stamped one lands.
+                                stream.transform(Matrix.getRotateInstance(Math.toRadians(-8.0), cx, cy))
+                                stream.setStrokingColor(red, green, blue)
+                                stream.setNonStrokingColor(red, green, blue)
+                                stream.setLineWidth(size * 0.12f)
+                                stream.addRect(-boxWidth / 2f, -boxHeight / 2f, boxWidth, boxHeight)
+                                stream.stroke()
+                                stream.beginText()
+                                stream.setFont(bold, size)
+                                stream.newLineAtOffset(-textWidth / 2f, -size * 0.36f)
+                                stream.showText(text)
+                                stream.endText()
                                 stream.restoreGraphicsState()
                             }
                         }
                     }
+                    stream.restoreGraphicsState()
                 }
 
             done += 1
@@ -1024,6 +1601,41 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         }
 
         doc.save(output)
+    }
+
+    /** An ellipse inside the box, as four Bezier curves; PDF has no circle operator. */
+    private fun ellipse(stream: PDPageContentStream, left: Float, bottom: Float, width: Float, height: Float) {
+        val k = 0.5523f
+        val cx = left + width / 2f
+        val cy = bottom + height / 2f
+        val rx = width / 2f
+        val ry = height / 2f
+        stream.moveTo(cx + rx, cy)
+        stream.curveTo(cx + rx, cy + ry * k, cx + rx * k, cy + ry, cx, cy + ry)
+        stream.curveTo(cx - rx * k, cy + ry, cx - rx, cy + ry * k, cx - rx, cy)
+        stream.curveTo(cx - rx, cy - ry * k, cx - rx * k, cy - ry, cx, cy - ry)
+        stream.curveTo(cx + rx * k, cy - ry, cx + rx, cy - ry * k, cx + rx, cy)
+        stream.closePath()
+    }
+
+    /** Breaks text into lines no wider than [maxWidth], at spaces where it can. */
+    private fun wrapForWidth(text: String, font: PDType1Font, size: Float, maxWidth: Float): List<String> {
+        val out = mutableListOf<String>()
+        for (paragraph in text.split('\n')) {
+            var line = StringBuilder()
+            for (word in paragraph.split(' ')) {
+                val candidate = if (line.isEmpty()) word else "$line $word"
+                val width = runCatching { font.getStringWidth(candidate) / 1000f * size }.getOrDefault(candidate.length * size * 0.5f)
+                if (width <= maxWidth || line.isEmpty()) {
+                    line = StringBuilder(candidate)
+                } else {
+                    out += line.toString()
+                    line = StringBuilder(word)
+                }
+            }
+            out += line.toString()
+        }
+        return out.ifEmpty { listOf(text) }
     }
 
     override fun stampHeaderFooter(
@@ -1215,11 +1827,20 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         insert: PdfInput?,
         blankPages: Int,
         atIndex: Int,
-        output: File
+        output: File,
+        replace: List<Int>
     ) = withDocument(input) { doc ->
-        val at = atIndex.coerceIn(0, doc.numberOfPages)
+        val replacing = replace.filter { it in 0 until doc.numberOfPages }.distinct().sorted()
+        if (replacing.size == doc.numberOfPages && insert == null) {
+            throw PdfException.Refused("That would replace every page with blank ones.")
+        }
+        // Replacing: the new pages go where the first of the replaced ones was.
+        val at = (if (replacing.isNotEmpty()) replacing.first() else atIndex).coerceIn(0, doc.numberOfPages)
         // Null when the pages go at the end, which is where insertBefore cannot help.
         val anchor = if (at < doc.numberOfPages) doc.getPage(at) else null
+        // Taken out after the new ones are in, by identity: the anchor itself may be one of
+        // them, and removing it first would leave nowhere to insert before.
+        val leaving = replacing.map { doc.getPage(it) }
 
         if (insert != null) {
             // The imported pages share objects with the document they came from, so the
@@ -1237,6 +1858,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                         doc.pages.insertBefore(imported, anchor)
                     }
                 }
+                for (page in leaving) doc.pages.remove(page)
                 doc.save(output)
             }
         } else {
@@ -1250,80 +1872,83 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                 val blank = PDPage(PDRectangle(template.width, template.height))
                 if (anchor != null) doc.pages.insertBefore(blank, anchor) else doc.addPage(blank)
             }
+            for (page in leaving) doc.pages.remove(page)
             doc.save(output)
         }
     }
 
     // ---- P4: power tools ----
 
-    override fun nUp(input: PdfInput, perSheet: Int, output: File, onProgress: (Int, Int) -> Unit) =
-        withDocument(input) { source ->
-            val columns = if (perSheet >= 4) 2 else 1
-            val rows = if (perSheet >= 4) 2 else 2
-            val slots = columns * rows
+    override fun nUp(
+        input: PdfInput,
+        perSheet: Int,
+        paper: PageSpec.Size,
+        output: File,
+        onProgress: (Int, Int) -> Unit
+    ) = withDocument(input) { source ->
+        val per = if (perSheet in GRIDS) perSheet else 2
+        val total = source.numberOfPages
+        if (total == 0) throw PdfException.Refused("This document has no pages.")
 
-            PDDocument(scratchMemory()).use { target ->
-                val layers = LayerUtility(target)
-                val total = source.numberOfPages
-                var index = 0
-
-                while (index < total) {
-                    // The sheet takes the first page's proportions, turned on its side for
-                    // 2-up so two portrait pages sit side by side the way a booklet does.
-                    val first = source.getPage(index).mediaBox ?: PDRectangle.A4
-                    val sheetBox = if (slots == 2) {
-                        PDRectangle(first.height, first.width)
-                    } else {
-                        PDRectangle(first.width, first.height)
-                    }
-                    val sheet = PDPage(sheetBox)
-                    target.addPage(sheet)
-
-                    PDPageContentStream(target, sheet, PDPageContentStream.AppendMode.APPEND, true, true)
-                        .use { stream ->
-                            for (slot in 0 until slots) {
-                                val pageIndex = index + slot
-                                if (pageIndex >= total) break
-
-                                val form = layers.importPageAsForm(source, pageIndex)
-                                val cellWidth = sheetBox.width / columns
-                                val cellHeight = sheetBox.height / rows
-                                val column = slot % columns
-                                val row = slot / columns
-
-                                val bounds = placedBounds(form, first)
-                                val scale = minOf(
-                                    (cellWidth - CELL_GAP * 2) / bounds.width.coerceAtLeast(1f),
-                                    (cellHeight - CELL_GAP * 2) / bounds.height.coerceAtLeast(1f)
-                                )
-                                val drawWidth = bounds.width * scale
-                                val drawHeight = bounds.height * scale
-                                // Both offsets carry the box origin, for the same reason the
-                                // resize path does: a page whose content does not begin at zero
-                                // is otherwise drawn that far outside its cell.
-                                val x = column * cellWidth +
-                                    (cellWidth - drawWidth) / 2f - bounds.lowerLeftX * scale
-                                // Rows run down the sheet, but PDF's origin is at the bottom,
-                                // so row zero is the top and the index is inverted here.
-                                val y = (rows - 1 - row) * cellHeight +
-                                    (cellHeight - drawHeight) / 2f - bounds.lowerLeftY * scale
-
-                                stream.saveGraphicsState()
-                                stream.transform(Matrix.getTranslateInstance(x, y))
-                                stream.transform(Matrix.getScaleInstance(scale, scale))
-                                stream.drawForm(form)
-                                stream.restoreGraphicsState()
-                            }
-                        }
-
-                    index += slots
-                    onProgress(minOf(index, total), total)
-                }
-                target.save(output)
-            }
+        // The grid is chosen for the shape most of the pages have, as the reader sees them.
+        val shapes = HashMap<String, Triple<Float, Float, Int>>()
+        for (index in 0 until total) {
+            val shown = ShownPage(source.getPage(index))
+            val key = "${shown.width.toInt()}x${shown.height.toInt()}"
+            val seen = shapes[key]
+            shapes[key] = Triple(shown.width, shown.height, (seen?.third ?: 0) + 1)
         }
+        val usual = shapes.values.maxByOrNull { it.third } ?: Triple(595f, 842f, 1)
+        val layout = nUpLayout(per, paper, usual.first, usual.second)
 
-    override fun planSizeSplit(
+        PDDocument(scratchMemory()).use { target ->
+            val layers = LayerUtility(target)
+            var index = 0
+            while (index < total) {
+                val sheet = PDPage(PDRectangle(layout.sheetWidth, layout.sheetHeight))
+                target.addPage(sheet)
+
+                PDPageContentStream(target, sheet, PDPageContentStream.AppendMode.APPEND, true, true)
+                    .use { stream ->
+                        for (slot in 0 until per) {
+                            val pageIndex = index + slot
+                            if (pageIndex >= total) break
+                            val column = slot % layout.columns
+                            val row = slot / layout.columns
+                            val cellX = layout.margin + column * (layout.cellWidth + layout.gap)
+                            // Rows run down the sheet, but PDF's origin is at the bottom, so
+                            // row zero is the top and the index is inverted here.
+                            val cellY = layout.sheetHeight - layout.margin - (row + 1) * layout.cellHeight - row * layout.gap
+
+                            val form = layers.importPageAsForm(source, pageIndex)
+                            val bounds = placedBounds(form, source.getPage(pageIndex).mediaBox ?: PDRectangle.A4)
+                            val scale = minOf(
+                                layout.cellWidth / bounds.width.coerceAtLeast(1f),
+                                layout.cellHeight / bounds.height.coerceAtLeast(1f)
+                            )
+                            val drawWidth = bounds.width * scale
+                            val drawHeight = bounds.height * scale
+                            // Both offsets carry the box origin: a page whose content does not
+                            // begin at zero is otherwise drawn that far outside its cell.
+                            val x = cellX + (layout.cellWidth - drawWidth) / 2f - bounds.lowerLeftX * scale
+                            val y = cellY + (layout.cellHeight - drawHeight) / 2f - bounds.lowerLeftY * scale
+
+                            stream.saveGraphicsState()
+                            stream.transform(Matrix.getTranslateInstance(x, y))
+                            stream.transform(Matrix.getScaleInstance(scale, scale))
+                            stream.drawForm(form)
+                            stream.restoreGraphicsState()
+                        }
+                    }
+
+                index += per
+                onProgress(minOf(index, total), total)
+            }
+            target.save(output)
+        }
+    }
+
+    override fun measureSizeSplit(
         input: PdfInput,
         maxBytes: Long,
         onProgress: (Int, Int) -> Unit
@@ -1331,13 +1956,56 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         val total = doc.numberOfPages
         if (total == 0) return@withDocument emptyList()
 
-        // Estimated from the whole file rather than measured per page. Measuring means writing
-        // every candidate to disk, which on a 300-page scan is minutes of work for a number
-        // that is only ever a guide - shared objects mean the parts never add up exactly.
-        val bytesPerPage = (input.file.length().toDouble() / total).coerceAtLeast(1.0)
-        val perPart = kotlin.math.floor(maxBytes / bytesPerPage).toInt().coerceAtLeast(1)
+        // A trial save of the pages from..to, inclusive, measured and thrown away.
+        fun sizeOf(from: Int, to: Int): Long {
+            PDDocument(scratchMemory()).use { part ->
+                for (index in from..to) part.importPage(doc.getPage(index))
+                val trial = File.createTempFile("part", ".pdf", input.file.parentFile)
+                try {
+                    part.save(trial)
+                    return trial.length()
+                } finally {
+                    trial.delete()
+                }
+            }
+        }
 
-        val groups = (0 until total).chunked(perPart)
+        val groups = mutableListOf<List<Int>>()
+        var start = 0
+        while (start < total) {
+            onProgress(start, total)
+            var bestEnd = start
+            if (sizeOf(start, start) <= maxBytes) {
+                // Doubling out until a part is too big, then halving back into the gap.
+                var step = 1
+                var tooBig = total
+                while (bestEnd < total - 1) {
+                    val candidate = minOf(total - 1, bestEnd + step)
+                    if (sizeOf(start, candidate) <= maxBytes) {
+                        bestEnd = candidate
+                        step *= 2
+                    } else {
+                        tooBig = candidate
+                        break
+                    }
+                }
+                var low = bestEnd + 1
+                var high = tooBig - 1
+                while (low <= high) {
+                    val mid = (low + high) / 2
+                    if (sizeOf(start, mid) <= maxBytes) {
+                        bestEnd = mid
+                        low = mid + 1
+                    } else {
+                        high = mid - 1
+                    }
+                }
+            }
+            // A single page over the limit still goes out as a part of its own, flagged by the
+            // caller, rather than stopping the whole split.
+            groups += (start..bestEnd).toList()
+            start = bestEnd + 1
+        }
         onProgress(total, total)
         groups
     }
@@ -1376,7 +2044,9 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                     // bitmap". PDFBox frees it when the document closes.
                     val bitmap = runCatching { xObject.image }.getOrNull() ?: continue
                     found++
-                    val file = File(outputDir, "$baseName-${found.toString().padStart(3, '0')}.png")
+                    // The page is in the name, so a converter can put each picture back on
+                    // the page it came from.
+                    val file = File(outputDir, "$baseName-p${index + 1}-${found.toString().padStart(3, '0')}.png")
                     try {
                         FileOutputStream(file).use { out ->
                             bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
@@ -1419,26 +2089,152 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
             doc.save(output)
         }
 
-    /** Evenly spaced anchor points for a tiled watermark. */
-    private fun tilePositions(
+    override fun cleanDocument(input: PdfInput, spec: CleanSpec, output: File): CleanReport =
+        withDocument(input) { doc ->
+            val report = doc.cleanUp(spec)
+            doc.save(output)
+            report
+        }
+
+    override fun setPageLabels(input: PdfInput, spec: PageLabelSpec?, output: File) =
+        withDocument(input) { doc ->
+            doc.applyPageLabels(spec)
+            doc.save(output)
+        }
+
+    override fun setBackground(
+        input: PdfInput,
+        colour: Int,
+        pages: List<Int>,
+        output: File,
+        onProgress: (Int, Int) -> Unit
+    ) = withDocument(input) { doc ->
+        val total = doc.numberOfPages
+        val chosen = pages.ifEmpty { (0 until total).toList() }.filter { it in 0 until total }
+        if (chosen.isEmpty()) throw PdfException.Refused("None of the pages typed are in this document.")
+        for ((done, index) in chosen.withIndex()) {
+            doc.paintBackground(doc.getPage(index), colour)
+            onProgress(done + 1, chosen.size)
+        }
+        doc.save(output)
+    }
+
+    override fun readAttachments(input: PdfInput): List<AttachmentInfo> = withDocument(input) { doc ->
+        val all = doc.embeddedFiles().entries.map { (name, spec) -> name to spec } + doc.attachmentNotes()
+        all.map { (name, spec) ->
+            val size = runCatching { (spec.embeddedFileUnicode ?: spec.embeddedFile)?.size?.toLong() }.getOrNull()
+                ?: spec.bytesOrNull()?.size?.toLong()
+                ?: 0L
+            AttachmentInfo(name, size)
+        }
+    }
+
+    override fun attachFiles(input: PdfInput, files: List<Pair<String, File>>, output: File) =
+        withDocument(input) { doc ->
+            if (files.isEmpty()) throw PdfException.Refused("Pick at least one file to attach.")
+            doc.attach(files)
+            doc.save(output)
+        }
+
+    override fun extractAttachments(input: PdfInput, outputDir: File): List<File> = withDocument(input) { doc ->
+        outputDir.mkdirs()
+        val all = doc.embeddedFiles().entries.map { (name, spec) -> name to spec } + doc.attachmentNotes()
+        if (all.isEmpty()) throw PdfException.Refused("This document has no files attached to it.")
+        val written = mutableListOf<File>()
+        val taken = mutableSetOf<String>()
+        for ((wanted, spec) in all) {
+            val bytes = spec.bytesOrNull() ?: continue
+            // A file name is the attachment's own; only what cannot be a file name is replaced.
+            val safe = wanted.replace(Regex("[\\\\/:*?\"<>|\\p{Cntrl}]"), "_").trim().ifEmpty { "attachment" }
+            var name = safe
+            var n = 2
+            while (name.lowercase() in taken) {
+                val dot = safe.lastIndexOf('.')
+                name = if (dot > 0) "${safe.substring(0, dot)} ($n)${safe.substring(dot)}" else "$safe ($n)"
+                n += 1
+            }
+            taken += name.lowercase()
+            val file = File(outputDir, name)
+            file.writeBytes(bytes)
+            written += file
+        }
+        if (written.isEmpty()) throw PdfException.Refused("The attached files could not be read out of this document.")
+        written
+    }
+
+    override fun writeOutline(input: PdfInput, entries: List<OutlineEntry>, output: File) =
+        withDocument(input) { doc ->
+            doc.replaceOutline(entries)
+            doc.save(output)
+        }
+
+    /** One graphics state carrying a fill opacity, for anything see-through. */
+    private fun alphaState(opacity: Float): PDExtendedGraphicsState =
+        PDExtendedGraphicsState().apply {
+            nonStrokingAlphaConstant = opacity
+            strokingAlphaConstant = opacity
+        }
+
+    /**
+     * The size at which words set [size] tall, turned by [angle] degrees, fit inside the
+     * page with [margin] all round. Smaller when they would not; never larger.
+     */
+    private fun fitted(
+        shown: ShownPage,
+        angle: Double,
+        margin: Float,
+        size: Float,
+        measure: (Float) -> Pair<Float, Float>
+    ): Float {
+        val rad = Math.toRadians(angle)
+        val (w, h) = measure(size)
+        val across = (Math.abs(Math.cos(rad)) * w + Math.abs(Math.sin(rad)) * h).toFloat()
+        val down = (Math.abs(Math.sin(rad)) * w + Math.abs(Math.cos(rad)) * h).toFloat()
+        val roomX = shown.width - 2f * margin
+        val roomY = shown.height - 2f * margin
+        if (roomX <= 0f || roomY <= 0f || across <= 0f || down <= 0f) return size
+        val k = minOf(1f, roomX / across, roomY / down)
+        return if (k < 1f) maxOf(size * 0.01f, size * k) else size
+    }
+
+    /**
+     * Centres for a staggered grid that covers the page, capped so tiny text cannot draw
+     * ten thousand copies.
+     */
+    private fun tileCentres(
         pageWidth: Float,
         pageHeight: Float,
         textWidth: Float,
-        fontSize: Float
+        size: Float
     ): List<Pair<Float, Float>> {
-        val stepX = (textWidth + fontSize * 2f).coerceAtLeast(fontSize * 4f)
-        val stepY = fontSize * 4f
-        val positions = mutableListOf<Pair<Float, Float>>()
-        var y = -pageHeight * 0.2f
-        while (y < pageHeight * 1.2f) {
-            var x = -pageWidth * 0.2f
-            while (x < pageWidth * 1.2f) {
-                positions += x to y
-                x += stepX
+        val stepX = textWidth + size * 3f
+        val stepY = size * 5f
+        val out = mutableListOf<Pair<Float, Float>>()
+        var row = 0
+        var cy = -pageHeight * 0.25f
+        while (cy < pageHeight * 1.25f && out.size < MAX_TILES) {
+            val offset = if (row % 2 == 0) 0f else stepX / 2f
+            var cx = -pageWidth * 0.25f + offset
+            while (cx < pageWidth * 1.25f && out.size < MAX_TILES) {
+                out += cx to cy
+                cx += stepX
             }
-            y += stepY
+            row += 1
+            cy += stepY
         }
-        return positions
+        return out
+    }
+
+    /**
+     * An owner password nobody knows, for a file that opens freely but is restricted.
+     *
+     * The restrictions are only as strong as the owner password, so a guessable one would
+     * be no restriction at all. Thrown away after the save: there is nothing to keep.
+     */
+    private fun randomOwnerPassword(): String {
+        val bytes = ByteArray(24)
+        java.security.SecureRandom().nextBytes(bytes)
+        return bytes.joinToString("") { "%02x".format(it) }
     }
 
     // ---- internals ----
@@ -1516,12 +2312,6 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         val longest = maxOf(image.width, image.height)
         if (longest <= 0) return null
 
-        // Already small enough. Re-encoding would only degrade it - and the question is asked
-        // before the decode rather than after, because the dictionary knows the size and the
-        // decode is the expensive part: a document of correctly sized images used to be
-        // decoded in full, to a bitmap PDImageXObject then held, to learn nothing.
-        if (longest <= level.maxDimension) return null
-
         val decoded = try {
             image.image
         } catch (_: Exception) {
@@ -1529,6 +2319,9 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         } catch (_: OutOfMemoryError) {
             return null
         } ?: return null
+
+        // Already small enough. Re-encoding would only degrade it.
+        if (longest <= level.maxDimension) return null
 
         val scale = level.maxDimension.toFloat() / longest
         val width = (decoded.width * scale).toInt().coerceAtLeast(1)
@@ -1546,120 +2339,6 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         } catch (_: IllegalStateException) {
             null
         }
-    }
-
-    /**
-     * The pixel size of an image file, without decoding it.
-     *
-     * inJustDecodeBounds reads the header and nothing else, which is what makes it safe to ask
-     * this about a twelve-megapixel photo before deciding how much of it to keep.
-     */
-    private fun measureImage(file: File): Pair<Int, Int> {
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeFile(file.absolutePath, bounds)
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
-            throw PdfException.Corrupt("${file.name} could not be read as an image")
-        }
-        return bounds.outWidth to bounds.outHeight
-    }
-
-    /**
-     * The image to put on a page with [availableWidth] x [availableHeight] points to fill.
-     *
-     * A phone camera hands over twelve megapixels. Fitted to A4 at [EMBED_DPI] that page can
-     * show about 1.6 of them, so the rest is weight nobody can ever see: thirty gallery photos
-     * embedded whole are a document of a hundred megabytes, mailed and synced and backed up
-     * forever, and each one costs a full-size decode on the way in. The source is therefore
-     * subsampled to roughly what the page can show and re-encoded at [EMBED_JPEG_QUALITY],
-     * which is a scan's quality and is honest about being one.
-     *
-     * [MAX_EMBED_EDGE] is the second ceiling and the only one a FIT_IMAGE page ever meets,
-     * because such a page is as many points across as the photo is pixels - a resolution target
-     * expressed against it can never bite.
-     *
-     * An image already inside both ceilings is embedded exactly as it arrived: for a JPEG that
-     * means its own bytes go into the file without being decoded at all, and for a PNG it means
-     * keeping the lossless encoding rather than trading it for artefacts at the same size. It
-     * is the bargain [shrink] makes for compression, for the same reason.
-     */
-    private fun embeddedImage(
-        doc: PDDocument,
-        file: File,
-        sourceWidth: Int,
-        sourceHeight: Int,
-        availableWidth: Float,
-        availableHeight: Float
-    ): PDImageXObject {
-        // How wide the image will actually be drawn, which is the width that decides how many
-        // pixels are worth carrying. The fit is the same one the caller draws with.
-        val fit = minOf(availableWidth / sourceWidth, availableHeight / sourceHeight)
-        // A margin wider than the page leaves nothing to fill, and answering that with a
-        // one-pixel image would throw the photo away over a setting the user can undo.
-        val widthByDpi = if (fit > 0f) {
-            BitmapBudget.widthForDpi(sourceWidth * fit, EMBED_DPI)
-        } else {
-            sourceWidth
-        }
-        val longestEdge = maxOf(sourceWidth, sourceHeight)
-        val widthByEdge = (MAX_EMBED_EDGE.toLong() * sourceWidth / longestEdge).toInt()
-        val targetWidth = minOf(sourceWidth, widthByDpi, widthByEdge).coerceAtLeast(1)
-
-        if (targetWidth >= sourceWidth) {
-            return try {
-                PDImageXObject.createFromFile(file.absolutePath, doc)
-            } catch (e: OutOfMemoryError) {
-                throw PdfException.OutOfMemory(file.name, e)
-            } catch (e: Exception) {
-                throw PdfException.Corrupt("${file.name} could not be read as an image", e)
-            }
-        }
-
-        val options = BitmapFactory.Options().apply {
-            // Halvings only, and never past the target: the full-size decode is the allocation
-            // this method exists to avoid, so this gets as close to the target as the decoder
-            // can on its own and never overshoots it downwards.
-            inSampleSize = sampleSizeFor(sourceWidth, targetWidth)
-        }
-        val decoded = try {
-            BitmapFactory.decodeFile(file.absolutePath, options)
-        } catch (e: OutOfMemoryError) {
-            throw PdfException.OutOfMemory(file.name, e)
-        } ?: throw PdfException.Corrupt("${file.name} could not be read as an image")
-
-        // A halving lands somewhere between the target and twice it, so the last step down is
-        // taken here - where it copies the subsampled bitmap rather than the original.
-        val scaled = try {
-            if (decoded.width > targetWidth) {
-                val height = (decoded.height.toLong() * targetWidth / decoded.width)
-                    .toInt().coerceAtLeast(1)
-                Bitmap.createScaledBitmap(decoded, targetWidth, height, true)
-            } else {
-                decoded
-            }
-        } catch (e: OutOfMemoryError) {
-            decoded.recycle()
-            throw PdfException.OutOfMemory(file.name, e)
-        }
-        if (scaled !== decoded) decoded.recycle()
-
-        return try {
-            JPEGFactory.createFromImage(doc, scaled, EMBED_JPEG_QUALITY)
-        } catch (e: OutOfMemoryError) {
-            throw PdfException.OutOfMemory(file.name, e)
-        } catch (e: Exception) {
-            throw PdfException.Corrupt("${file.name} could not be read as an image", e)
-        } finally {
-            // The JPEG is in the document by now and this bitmap is nobody else's - unlike the
-            // ones PDImageXObject hands out - so it goes before the next image is decoded.
-            scaled.recycle()
-        }
-    }
-
-    /** The largest halving of [sourceWidth] that is still at least [targetWidth] wide. */
-    private fun sampleSizeFor(sourceWidth: Int, targetWidth: Int): Int {
-        var sample = 1
-        while (sourceWidth / (sample * 2) >= targetWidth) sample *= 2
-        return sample
     }
 
     private fun pageBoxFor(spec: PageSpec, imageWidth: Float, imageHeight: Float): PDRectangle =
@@ -1697,28 +2376,6 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         /** PNG ignores this; JPEG uses it. Separate from the compression tiers on purpose. */
         const val JPEG_EXPORT_QUALITY = 92
 
-        /**
-         * What a photo is worth once it is a page of a document.
-         *
-         * 200 DPI is a scan: a 10pt word is twenty-eight pixels tall, which reads cleanly on a
-         * screen and prints without looking soft. It is also the default the export tool
-         * offers, so the two directions agree about what a page is worth.
-         *
-         * No user-facing setting feeds this yet, which it should - see PageSpec.
-         */
-        const val EMBED_DPI = 200
-
-        /**
-         * Hard ceiling on the longest edge of an embedded photo, in pixels.
-         *
-         * 2400 is A4 at [EMBED_DPI] with room to spare, and it is the one limit that applies to
-         * a FIT_IMAGE page, whose size in points is the photo's own pixel count.
-         */
-        const val MAX_EMBED_EDGE = 2400
-
-        /** A photo of a document is a scan; this is a scan's quality, not a photograph's. */
-        const val EMBED_JPEG_QUALITY = 0.82f
-
         /** Characters of context either side of a search match. */
         const val SNIPPET_LEAD = 40
         const val SNIPPET_TRAIL = 120
@@ -1729,14 +2386,23 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         /** Half an inch, the margin page numbers sit in. */
         const val MARGIN_POINTS = 36f
 
-        /** Cropping past this leaves almost nothing of the page. */
-        const val MAX_TRIM = 0.45f
+        /** A millimetre, in points. */
+        const val MM_POINTS = 72f / 25.4f
+
+        /** Two millimetres of white kept around the ink by an automatic crop. */
+        const val AUTO_PAD_POINTS = 2f * MM_POINTS
+
+        /** Half an inch each way is the least a page can be cropped down to and still be one. */
+        const val SMALLEST_PAGE_POINTS = 36f
+
+        /** A tiled watermark stops here; past it, the copies are smaller than the gaps. */
+        const val MAX_TILES = 240
 
         /** Redacted pages become images; this keeps them readable without doubling the file. */
         const val REDACT_JPEG_QUALITY = 0.82f
 
-        /** Breathing room around each page on an N-up sheet. */
-        const val CELL_GAP = 8f
+        /** Pages per sheet N-up knows how to lay out. */
+        val GRIDS: Set<Int> get() = GRID_SHAPES.keys
 
         /** Smaller than this is unreadable; larger is a poster, not a note. */
         const val MIN_NOTE_POINTS = 4f
@@ -1760,8 +2426,67 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
 
         /** The value a tick box carries when the UI has ticked it. */
         const val TICKED = "true"
+
+        /** A receipt's page margin and the width of its label column, in points. */
+        const val RECEIPT_MARGIN = 56f
+        const val RECEIPT_LABEL_WIDTH = 150f
     }
 }
+
+/** A sheet cut into cells, with the pages scaled by [scale] to sit in them. */
+private class NUpLayout(
+    val sheetWidth: Float,
+    val sheetHeight: Float,
+    val columns: Int,
+    val rows: Int,
+    val cellWidth: Float,
+    val cellHeight: Float,
+    val margin: Float,
+    val gap: Float,
+    val scale: Float
+)
+
+/**
+ * The sheet and grid that show the pages biggest: two upright pages side by side on a
+ * sideways sheet, two wide slides one above the other on an upright one. Reading order is
+ * across, then down.
+ */
+private fun nUpLayout(per: Int, paper: PageSpec.Size, pageWidth: Float, pageHeight: Float): NUpLayout {
+    val margin = NUP_MARGIN_POINTS
+    val gap = NUP_GAP_POINTS
+    val paperWidth = if (paper.widthPoints > 0f) paper.widthPoints else PDRectangle.A4.width
+    val paperHeight = if (paper.heightPoints > 0f) paper.heightPoints else PDRectangle.A4.height
+    var best: NUpLayout? = null
+    val grids = GRID_SHAPES[per] ?: GRID_SHAPES.getValue(2)
+    for ((cols, rows) in grids) {
+        for (landscape in listOf(true, false)) {
+            val sheetW = if (landscape) maxOf(paperWidth, paperHeight) else minOf(paperWidth, paperHeight)
+            val sheetH = if (landscape) minOf(paperWidth, paperHeight) else maxOf(paperWidth, paperHeight)
+            val cellW = (sheetW - margin * 2f - gap * (cols - 1)) / cols
+            val cellH = (sheetH - margin * 2f - gap * (rows - 1)) / rows
+            val scale = minOf(cellW / pageWidth.coerceAtLeast(1f), cellH / pageHeight.coerceAtLeast(1f))
+            val current = best
+            if (current == null || scale > current.scale + 1e-6f) {
+                best = NUpLayout(sheetW, sheetH, cols, rows, cellW, cellH, margin, gap, scale)
+            }
+        }
+    }
+    return best!!
+}
+
+/** Breathing room on an N-up sheet: outside the grid, and between its cells. */
+private const val NUP_MARGIN_POINTS = 18f
+private const val NUP_GAP_POINTS = 12f
+
+/** The ways a sheet can be cut into equal cells: columns x rows, by pages per sheet. */
+private val GRID_SHAPES: Map<Int, List<Pair<Int, Int>>> = mapOf(
+    2 to listOf(2 to 1, 1 to 2),
+    4 to listOf(2 to 2),
+    6 to listOf(3 to 2, 2 to 3),
+    8 to listOf(4 to 2, 2 to 4),
+    9 to listOf(3 to 3),
+    16 to listOf(4 to 4)
+)
 
 /**
  * Flattens a form's field tree down to the fields that actually hold a value.
@@ -1795,7 +2520,7 @@ private const val MAX_FIELD_DEPTH = 8
  * something at a spot a person pointed at needs both corrections, so they are written here
  * once instead of in each of them.
  */
-private class ShownPage(page: PDPage) {
+internal class ShownPage(page: PDPage) {
 
     val box: PDRectangle = page.cropBox ?: page.mediaBox ?: PDRectangle.A4
     val rotation: Int = normaliseRotation(page.rotation)
@@ -1819,6 +2544,29 @@ private class ShownPage(page: PDPage) {
         180 -> (box.upperRightX - across) to (box.lowerLeftY + down)
         270 -> (box.upperRightX - down) to (box.upperRightY - across)
         else -> (box.lowerLeftX + across) to (box.upperRightY - down)
+    }
+
+    /**
+     * The stored rectangle that shows as the part of the page between these fractions of
+     * what the reader sees: [left] and [right] across, [top] and [bottom] down, 0 to 1.
+     */
+    fun storedRect(left: Float, top: Float, right: Float, bottom: Float): PDRectangle {
+        val (x1, y1) = pointAt(left * width, top * height)
+        val (x2, y2) = pointAt(right * width, bottom * height)
+        return PDRectangle(minOf(x1, x2), minOf(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1))
+    }
+
+    /**
+     * The transform that takes a point in the reader's space (origin at the bottom-left of
+     * the visible page, y upwards, the page the right way up) into the stored page.
+     *
+     * Concatenated onto a content stream, everything drawn after it can be worked out as
+     * if the page were unrotated and its visible corner were at zero, which is how every
+     * placement here is worked out.
+     */
+    fun viewMatrix(): Matrix {
+        val (originX, originY) = pointAt(0f, height)
+        return Matrix.getRotateInstance(radians, originX, originY)
     }
 }
 
@@ -1870,7 +2618,8 @@ private fun placedBounds(form: PDFormXObject, fallback: PDRectangle): PDRectangl
  * exactly right and one that is a few points wide either way, which nobody reading notices.
  */
 private class MatchFinder(
-    private val needle: String,
+    private val pattern: Regex,
+    private val accept: (String) -> Boolean,
     private val pageWidth: Float,
     private val pageHeight: Float
 ) : PDFTextStripper() {
@@ -1878,34 +2627,146 @@ private class MatchFinder(
     val areas = mutableListOf<PageArea>()
 
     override fun writeString(text: String, textPositions: List<TextPosition>) {
-        var index = text.indexOf(needle, 0, ignoreCase = true)
-        while (index >= 0) {
-            val end = (index + needle.length).coerceAtMost(textPositions.size)
-            if (index < textPositions.size && end > index) {
-                areaFor(textPositions.subList(index, end))?.let { areas += it }
+        for (match in pattern.findAll(text)) {
+            if (!accept(match.value)) continue
+            val start = match.range.first
+            val end = (match.range.last + 1).coerceAtMost(textPositions.size)
+            if (start < textPositions.size && end > start) {
+                areaFor(textPositions.subList(start, end))?.let { areas += it }
             }
-            index = text.indexOf(needle, index + 1, ignoreCase = true)
         }
         super.writeString(text, textPositions)
     }
 
-    private fun areaFor(glyphs: List<TextPosition>): PageArea? {
-        if (glyphs.isEmpty() || pageWidth <= 0f || pageHeight <= 0f) return null
+    private fun areaFor(glyphs: List<TextPosition>): PageArea? = glyphArea(glyphs, pageWidth, pageHeight)
+}
 
-        val left = glyphs.minOf { it.xDirAdj }
-        val right = glyphs.maxOf { it.xDirAdj + it.widthDirAdj }
-        // yDirAdj is measured from the top of the page down to the baseline, which is the one
-        // place in this file where the vertical axis already points the way the screen does.
-        val baseline = glyphs.maxOf { it.yDirAdj }
-        val height = glyphs.maxOf { it.heightDir }.coerceAtLeast(1f)
+/**
+ * Every word on a page with its box, in the order the stripper reads them. A word is a run
+ * of glyphs with no space in it; punctuation stays attached, as it does on the page.
+ */
+private class WordFinder(
+    private val pageWidth: Float,
+    private val pageHeight: Float
+) : PDFTextStripper() {
 
-        return PageArea(
-            left = (left / pageWidth).coerceIn(0f, 1f),
-            top = ((baseline - height) / pageHeight).coerceIn(0f, 1f),
-            width = ((right - left) / pageWidth).coerceIn(0f, 1f),
-            height = (height / pageHeight).coerceIn(0f, 1f)
+    val words = mutableListOf<Pair<String, PageArea>>()
+
+    override fun writeString(text: String, textPositions: List<TextPosition>) {
+        var start = -1
+        val count = minOf(text.length, textPositions.size)
+        for (i in 0..count) {
+            val space = i == count || text[i].isWhitespace()
+            if (space) {
+                if (start >= 0) {
+                    glyphArea(textPositions.subList(start, i), pageWidth, pageHeight)?.let { area ->
+                        words += text.substring(start, i) to area
+                    }
+                    start = -1
+                }
+            } else if (start < 0) {
+                start = i
+            }
+        }
+        super.writeString(text, textPositions)
+    }
+}
+
+/**
+ * Every line on a page with its size, weight and box, cut into cells at its wide gaps.
+ *
+ * The stripper hands over text a run at a time and says where lines end; this keeps the
+ * runs of the current line with their glyphs, and at the line's end works out the box, the
+ * commonest size and whether the run of a table's columns shows in the gaps.
+ */
+private class LineFinder(
+    private val pageWidth: Float,
+    private val pageHeight: Float
+) : PDFTextStripper() {
+
+    val lines = mutableListOf<TextLine>()
+    private val runs = mutableListOf<Pair<String, List<TextPosition>>>()
+
+    override fun writeString(text: String, textPositions: List<TextPosition>) {
+        if (text.isNotEmpty() && textPositions.isNotEmpty()) runs += text to textPositions
+    }
+
+    override fun writeWordSeparator() = Unit
+
+    override fun writeLineSeparator() = endLine()
+
+    override fun writeParagraphSeparator() = endLine()
+
+    override fun endPage(page: PDPage) {
+        endLine()
+        super.endPage(page)
+    }
+
+    private fun endLine() {
+        if (runs.isEmpty()) return
+        val glyphs = runs.flatMap { it.second }
+        val area = glyphArea(glyphs, pageWidth, pageHeight)
+        if (area == null) { runs.clear(); return }
+        val size = glyphs.groupingBy { Math.round(it.fontSizeInPt * 2f) / 2f }.eachCount().maxByOrNull { it.value }?.key ?: 11f
+        val names = glyphs.mapNotNull { runCatching { it.font?.name }.getOrNull() }
+        val bold = names.isNotEmpty() && names.count { it.contains("Bold", true) || it.contains("Black", true) || it.contains("Heavy", true) } * 2 >= names.size
+        val italic = names.isNotEmpty() && names.count { it.contains("Italic", true) || it.contains("Oblique", true) } * 2 >= names.size
+
+        // Cells: a gap wider than a couple of spaces splits the line, which is how a table's
+        // columns show. Runs come in reading order, so only the gap to the one before counts.
+        val cells = mutableListOf<String>()
+        val current = StringBuilder()
+        var lastEnd = Float.NaN
+        for ((text, positions) in runs) {
+            val first = positions.first()
+            val start = first.xDirAdj
+            val end = positions.last().let { it.xDirAdj + it.widthDirAdj }
+            if (!lastEnd.isNaN()) {
+                val gap = start - lastEnd
+                val wide = gap > maxOf(first.fontSizeInPt * 1.6f, first.widthOfSpace * 3f)
+                if (wide) {
+                    if (current.isNotBlank()) cells += current.toString().trim()
+                    current.clear()
+                } else if (gap > first.widthOfSpace * 0.3f && current.isNotEmpty() && !current.endsWith(' ')) {
+                    current.append(' ')
+                }
+            }
+            current.append(text)
+            lastEnd = end
+        }
+        if (current.isNotBlank()) cells += current.toString().trim()
+        runs.clear()
+        if (cells.isEmpty()) return
+        lines += TextLine(
+            cells = cells,
+            sizePoints = size,
+            bold = bold,
+            italic = italic,
+            left = area.left,
+            top = area.top,
+            width = area.width,
+            height = area.height
         )
     }
+}
+
+/** The box round a run of glyphs, as fractions of the page, origin top-left. */
+private fun glyphArea(glyphs: List<TextPosition>, pageWidth: Float, pageHeight: Float): PageArea? {
+    if (glyphs.isEmpty() || pageWidth <= 0f || pageHeight <= 0f) return null
+
+    val left = glyphs.minOf { it.xDirAdj }
+    val right = glyphs.maxOf { it.xDirAdj + it.widthDirAdj }
+    // yDirAdj is measured from the top of the page down to the baseline, which is the one
+    // place in this file where the vertical axis already points the way the screen does.
+    val baseline = glyphs.maxOf { it.yDirAdj }
+    val height = glyphs.maxOf { it.heightDir }.coerceAtLeast(1f)
+
+    return PageArea(
+        left = (left / pageWidth).coerceIn(0f, 1f),
+        top = ((baseline - height) / pageHeight).coerceIn(0f, 1f),
+        width = ((right - left) / pageWidth).coerceIn(0f, 1f),
+        height = (height / pageHeight).coerceIn(0f, 1f)
+    )
 }
 
 /**

@@ -25,3 +25,9 @@
 # is taking on a native codec for an encoding almost nothing produces. If JPEG 2000 ever has
 # to be supported, the fix is the com.gemalto.jp2:jp2-android dependency and deleting this.
 -dontwarn com.gemalto.jp2.**
+
+# BouncyCastle finds its algorithm classes by name; stripping or renaming them breaks the
+# signature it makes without a compile error to say so.
+-keep class org.bouncycastle.** { *; }
+-dontwarn org.bouncycastle.**
+-dontwarn javax.naming.**

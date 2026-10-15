@@ -3,6 +3,7 @@ package com.layerbit.sheaf.ui.scan
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +22,10 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,6 +45,10 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.scan.PageProcessor
 import com.layerbit.sheaf.ui.components.ChipRow
+import com.layerbit.sheaf.ui.components.Pill
+import com.layerbit.sheaf.ui.components.PrimaryButton
+import com.layerbit.sheaf.ui.components.RoundIconButton
+import com.layerbit.sheaf.ui.components.SecondaryButton
 import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.theme.SheafColors
 import kotlin.math.hypot
@@ -63,7 +72,15 @@ fun PageEditor(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
-        SectionHeading("Drag the corners onto the page")
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Pill("Adjust", SheafColors.Band, filled = true)
+            Text(
+                "Drag the corners onto the page",
+                style = MaterialTheme.typography.titleMedium,
+                color = SheafColors.Text,
+                modifier = Modifier.padding(start = 10.dp)
+            )
+        }
         Spacer(Modifier.height(10.dp))
 
         BoxWithConstraints(
@@ -164,6 +181,8 @@ fun PageEditor(
         }
 
         Spacer(Modifier.height(14.dp))
+        SectionHeading("Look")
+        Spacer(Modifier.height(8.dp))
         ChipRow(
             options = PageProcessor.Filter.entries.map { it to it.label },
             selected = editing.filter,
@@ -172,15 +191,8 @@ fun PageEditor(
 
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Button(
-                onClick = onKeep,
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = SheafColors.Band,
-                    contentColor = SheafColors.OnBand
-                )
-            ) { Text("Keep this page") }
-            OutlinedButton(onClick = onDiscard) { Text("Retake", color = SheafColors.Muted) }
+            PrimaryButton(text = "Keep this page", icon = Icons.Filled.Check, onClick = onKeep, modifier = Modifier.weight(1.4f))
+            SecondaryButton(text = "Retake", icon = Icons.Filled.Refresh, onClick = onDiscard, modifier = Modifier.weight(1f))
         }
     }
 }
@@ -194,52 +206,56 @@ fun ScannedPages(
     onMakePdf: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxWidth().padding(16.dp)) {
-        SectionHeading(if (pages.size == 1) "1 page scanned" else "${pages.size} pages scanned")
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(SheafColors.Surface, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+            .padding(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            SectionHeading(if (pages.size == 1) "1 page scanned" else "${pages.size} pages scanned", modifier = Modifier.weight(1f))
+            Text("Tap a page's ✕ to drop it", style = MaterialTheme.typography.labelSmall, color = SheafColors.Dim)
+        }
         Spacer(Modifier.height(10.dp))
 
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             itemsIndexed(pages, key = { _, page -> page.file.path }) { index, page ->
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box {
                     Image(
                         bitmap = page.thumbnail.asImageBitmap(),
                         contentDescription = "Scanned page ${index + 1}",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .height(96.dp)
+                            .height(104.dp)
                             .aspectRatio(0.72f)
-                            .clip(MaterialTheme.shapes.small)
+                            .clip(RoundedCornerShape(10.dp))
                             .background(SheafColors.Paper)
+                            .border(1.dp, SheafColors.Border, RoundedCornerShape(10.dp))
                     )
-                    TextButton(onClick = { onRemove(index) }) {
-                        Text("Remove", style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
-                    }
+                    Pill(
+                        "${index + 1}",
+                        SheafColors.Band,
+                        filled = true,
+                        modifier = Modifier.align(Alignment.BottomStart).padding(6.dp)
+                    )
+                    RoundIconButton(
+                        icon = Icons.Filled.Close,
+                        contentDescription = "Remove page ${index + 1}",
+                        onClick = { onRemove(index) },
+                        size = 24.dp,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
+                    )
                 }
             }
         }
 
-        Spacer(Modifier.height(12.dp))
-        Button(
+        Spacer(Modifier.height(14.dp))
+        PrimaryButton(
+            text = if (busy) "Making the PDF…" else "Make a PDF of ${if (pages.size == 1) "this page" else "these ${pages.size} pages"}",
             onClick = onMakePdf,
             enabled = pages.isNotEmpty() && !busy,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = SheafColors.Band,
-                contentColor = SheafColors.OnBand,
-                disabledContainerColor = SheafColors.SurfaceDim,
-                disabledContentColor = SheafColors.Dim
-            )
-        ) {
-            if (busy) {
-                CircularProgressIndicator(
-                    color = SheafColors.OnBand,
-                    strokeWidth = 2.dp,
-                    modifier = Modifier.size(18.dp)
-                )
-            } else {
-                Text("Make a PDF", style = MaterialTheme.typography.titleMedium)
-            }
-        }
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
