@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -84,6 +85,15 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.SolidColor
+import com.layerbit.sheaf.ui.components.Pill
 import com.layerbit.sheaf.ui.components.PrimaryButton
 import com.layerbit.sheaf.ui.components.RoundIconButton
 import com.layerbit.sheaf.ui.components.RowBetween
@@ -437,6 +447,24 @@ private fun ViewerHeader(
                 tall = false
             )
         }
+        // How far through: a thread of the band colour under the bar, which is the one glance
+        // that says whether this is page three of forty or thirty-seven.
+        if (state.pageCount > 1) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp)
+                    .height(3.dp)
+                    .background(SheafColors.SurfaceDim, RoundedCornerShape(2.dp))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(((currentPage + 1).toFloat() / state.pageCount).coerceIn(0.02f, 1f))
+                        .height(3.dp)
+                        .background(SheafColors.Band, RoundedCornerShape(2.dp))
+                )
+            }
+        }
     }
 }
 
@@ -445,9 +473,13 @@ private fun ViewerHeader(
 private fun ReadAloudBar(readAloud: ReadAloud, onStop: () -> Unit) {
     RowBetween(
         modifier = Modifier
-            .background(SheafColors.Surface)
-            .padding(horizontal = 20.dp, vertical = 4.dp)
+            .background(SheafColors.Band.copy(alpha = if (SheafColors.isDark) 0.14f else 0.1f))
+            .padding(horizontal = 20.dp, vertical = 6.dp)
     ) {
+        if (readAloud.speaking) {
+            Box(Modifier.size(8.dp).background(SheafColors.BandBright, CircleShape))
+            Spacer(Modifier.width(10.dp))
+        }
         Text(
             text = when {
                 readAloud.starting -> "Starting the voice…"
@@ -526,11 +558,12 @@ private fun PageBadge(label: String, onClick: () -> Unit, modifier: Modifier = M
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(SheafColors.Surface.copy(alpha = 0.92f))
+            .background(SheafColors.Surface.copy(alpha = 0.94f))
+            .border(1.dp, SheafColors.BorderStrong, RoundedCornerShape(999.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 7.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        Text(label, style = MaterialTheme.typography.bodySmall, color = SheafColors.Muted)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = SheafColors.Text)
     }
 }
 
@@ -554,31 +587,38 @@ private fun SearchBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SheafColors.SurfaceDim)
+            .background(SheafColors.Surface)
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = reading.query,
-                onValueChange = onSearch,
-                placeholder = { Text("Find in this document", style = MaterialTheme.typography.bodyMedium) },
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = SheafColors.Band,
-                    unfocusedBorderColor = SheafColors.Border,
-                    focusedTextColor = SheafColors.Text,
-                    unfocusedTextColor = SheafColors.Text,
-                    cursorColor = SheafColors.Band
-                ),
-                modifier = Modifier.weight(1f)
-            )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            val shape = RoundedCornerShape(999.dp)
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+                    .background(SheafColors.SurfaceDim, shape)
+                    .border(1.dp, if (reading.query.isNotBlank()) SheafColors.Band.copy(alpha = 0.7f) else SheafColors.Border, shape)
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Filled.Search, contentDescription = null, tint = SheafColors.Dim, modifier = Modifier.size(16.dp))
+                Box(modifier = Modifier.weight(1f).padding(start = 8.dp)) {
+                    if (reading.query.isEmpty()) {
+                        Text("Find in this document", style = MaterialTheme.typography.bodyMedium, color = SheafColors.Dim)
+                    }
+                    BasicTextField(
+                        value = reading.query,
+                        onValueChange = onSearch,
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = SheafColors.Text),
+                        cursorBrush = SolidColor(SheafColors.Band),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
             if (reading.hits.isNotEmpty()) {
-                TextButton(onClick = { onStep(false) }) {
-                    Text("‹", style = MaterialTheme.typography.titleLarge, color = SheafColors.Muted)
-                }
-                TextButton(onClick = { onStep(true) }) {
-                    Text("›", style = MaterialTheme.typography.titleLarge, color = SheafColors.Muted)
-                }
+                RoundIconButton(icon = Icons.Filled.KeyboardArrowUp, contentDescription = "Previous match", onClick = { onStep(false) }, size = 36.dp)
+                RoundIconButton(icon = Icons.Filled.KeyboardArrowDown, contentDescription = "Next match", onClick = { onStep(true) }, size = 36.dp, filled = true)
             }
         }
 
@@ -593,11 +633,10 @@ private fun SearchBar(
             else -> "${reading.hits.size} pages"
         }
         status?.let {
-            Text(
+            Pill(
                 it,
-                style = MaterialTheme.typography.bodySmall,
-                color = SheafColors.Dim,
-                modifier = Modifier.padding(top = 6.dp)
+                if (reading.hits.isEmpty() && reading.query.isNotBlank() && !reading.searching) SheafColors.Skipped else SheafColors.Muted,
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
 
@@ -616,28 +655,36 @@ private fun SearchBar(
         // Bounded, because a search for "the" in a book matches every page and an unbounded
         // list inside a header would take the whole screen.
         if (showResults) {
-            reading.hits.take(MAX_VISIBLE_HITS).forEach { hit ->
-                Column(
+            reading.hits.take(MAX_VISIBLE_HITS).forEachIndexed { n, hit ->
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(top = if (n == 0) 10.dp else 4.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SheafColors.SurfaceDim)
                         .clickable { onJump(hit.pageIndex) }
-                        .padding(vertical = 8.dp)
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.Top
                 ) {
-                    Text(
-                        text = "Page ${hit.pageIndex + 1}" +
-                            if (hit.matchCount > 1) " · ${hit.matchCount} matches" else "",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = SheafColors.BandBright
-                    )
-                    // The match is highlighted inside the snippet. A result that only says
-                    // "page 4" makes you find the word again once you get there.
-                    Text(
-                        text = highlight(hit.snippet, reading.query),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = SheafColors.Muted,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Pill("p. ${hit.pageIndex + 1}", SheafColors.Band, filled = true)
+                    Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
+                        if (hit.matchCount > 1) {
+                            Text(
+                                "${hit.matchCount} matches on this page",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = SheafColors.Dim
+                            )
+                        }
+                        // The match is highlighted inside the snippet. A result that only
+                        // says "page 4" makes you find the word again once you get there.
+                        Text(
+                            text = highlight(hit.snippet, reading.query),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SheafColors.Muted,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
@@ -745,38 +792,35 @@ private fun GoToPageSheet(pageCount: Int, onDismiss: () -> Unit, onGo: (Int) -> 
 
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = SheafColors.Surface) {
         Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
-            SectionHeading("Go to page")
-            Spacer(Modifier.height(10.dp))
+            Text("Go to page", style = MaterialTheme.typography.headlineSmall, color = SheafColors.Text)
+            Text("This document has $pageCount pages.", style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
+            Spacer(Modifier.height(14.dp))
             OutlinedTextField(
                 value = typed,
                 onValueChange = { typed = it.filter { character -> character.isDigit() }.take(6) },
-                label = { Text("1 to $pageCount", style = MaterialTheme.typography.bodySmall) },
+                placeholder = { Text("1 to $pageCount", style = MaterialTheme.typography.bodyMedium) },
                 singleLine = true,
+                shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                textStyle = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = SheafColors.Band,
                     unfocusedBorderColor = SheafColors.Border,
                     focusedTextColor = SheafColors.Text,
                     unfocusedTextColor = SheafColors.Text,
-                    cursorColor = SheafColors.Band
+                    cursorColor = SheafColors.Band,
+                    focusedContainerColor = SheafColors.SurfaceDim,
+                    unfocusedContainerColor = SheafColors.SurfaceDim
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(Modifier.height(8.dp))
-            TextButton(
+            Spacer(Modifier.height(12.dp))
+            PrimaryButton(
+                text = "Go",
                 enabled = target != null && target in 1..pageCount,
-                onClick = { target?.let { onGo(it - 1) } }
-            ) {
-                Text(
-                    "Go",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (target != null && target in 1..pageCount) {
-                        SheafColors.Band
-                    } else {
-                        SheafColors.Dim
-                    }
-                )
-            }
+                onClick = { target?.let { onGo(it - 1) } },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
@@ -934,7 +978,10 @@ private fun PageItem(
             .fillMaxWidth()
             .padding(horizontal = PAGE_MARGIN, vertical = PAGE_GAP / 2)
             .aspectRatio(aspect)
-            .clip(RoundedCornerShape(3.dp))
+            // A sheet of paper, not a rectangle: a little shadow and a hairline edge.
+            .shadow(if (nightMode) 0.dp else 6.dp, RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(6.dp))
+            .border(1.dp, SheafColors.Border, RoundedCornerShape(6.dp))
             // The paper color sits under the render, so a page that has not arrived yet is a
             // blank sheet rather than a hole in the list.
             .background(

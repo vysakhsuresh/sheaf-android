@@ -27,7 +27,16 @@ import com.layerbit.sheaf.pdf.PageNumberSpec
 import com.layerbit.sheaf.pdf.WatermarkSpec
 import com.layerbit.sheaf.pdf.PageSpec
 import com.layerbit.sheaf.pdf.StampSpec
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.filled.Info
 import com.layerbit.sheaf.ui.components.ChipRow
+import com.layerbit.sheaf.ui.components.Panel
+import com.layerbit.sheaf.ui.components.RoundIconButton
+import com.layerbit.sheaf.ui.components.SecondaryButton
+import com.layerbit.sheaf.ui.theme.GroupAccents
 import com.layerbit.sheaf.ui.components.ToggleRow
 import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.components.formatBytes
@@ -52,7 +61,16 @@ fun ToolOptions(
     sizeCheck: SizeCheck = SizeCheck.Idle,
     onCheckSize: () -> Unit = {}
 ) {
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    // These have their own canvases on the tool screen rather than plain settings.
+    if (tool == ToolId.SCAN || tool == ToolId.ORGANISE) return
+    val hintOnly = tool in HINT_ONLY
+    Panel(modifier = modifier.fillMaxWidth()) {
+        SectionHeading(
+            if (hintOnly) "About this tool" else "Options",
+            accent = GroupAccents.of(tool.group),
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         when (tool) {
             ToolId.EXTRACT -> {
                 ChoiceRow(
@@ -250,9 +268,7 @@ fun ToolOptions(
                 // from image sizes would be wrong in exactly the cases that matter, and the
                 // question being asked is whether this will fit under an attachment limit.
                 when (sizeCheck) {
-                    SizeCheck.Idle -> TextButton(onClick = onCheckSize) {
-                        Text("Check the size first", color = SheafColors.Band)
-                    }
+                    SizeCheck.Idle -> SecondaryButton(text = "Check the size first", onClick = onCheckSize, tall = false)
                     SizeCheck.Working -> Text(
                         "Trying it…",
                         style = MaterialTheme.typography.bodyMedium,
@@ -1231,8 +1247,15 @@ fun ToolOptions(
 
             ToolId.ORGANISE -> Unit
         }
+        }
     }
 }
+
+/** Tools whose options panel only explains; the controls are on the screen, or there are none. */
+private val HINT_ONLY = setOf(
+    ToolId.MERGE, ToolId.REMOVE_PASSWORD, ToolId.EXTRACT_IMAGES, ToolId.REDACT, ToolId.BOOKMARKS,
+    ToolId.COMPARE, ToolId.OFFICE_TO_PDF, ToolId.PDF_A
+)
 
 @Composable
 private fun PageSpecField(
@@ -1255,17 +1278,36 @@ private fun PageSpecField(
 
 @Composable
 private fun NumberField(value: Int, label: String, min: Int, max: Int, onChange: (Int) -> Unit) {
-    Field(
-        value = value.toString(),
-        label = label,
-        keyboardType = KeyboardType.Number,
-        onChange = { text ->
-            // An empty field while typing must not snap back to a number, so blank maps to the
-            // minimum rather than being rejected outright.
-            val parsed = text.filter { it.isDigit() }.toIntOrNull() ?: min
-            onChange(parsed.coerceIn(min, maxOf(min, max)))
+    val top = maxOf(min, max)
+    androidx.compose.foundation.layout.Row(
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = SheafColors.Muted,
+            modifier = Modifier.weight(1f).padding(end = 10.dp)
+        )
+        // Nudged a step at a time, or typed: a page number is usually one off, a Bates start
+        // is usually six digits.
+        RoundIconButton(iconRes = com.layerbit.sheaf.R.drawable.ic_minus, contentDescription = "Less", onClick = { onChange((value - 1).coerceIn(min, top)) }, size = 36.dp)
+        androidx.compose.foundation.layout.Box(modifier = Modifier.width(88.dp).padding(horizontal = 6.dp)) {
+            Field(
+                value = value.toString(),
+                label = "",
+                keyboardType = KeyboardType.Number,
+                onChange = { text ->
+                    // An empty field while typing must not snap back to a number, so blank
+                    // maps to the minimum rather than being rejected outright.
+                    val parsed = text.filter { it.isDigit() }.toIntOrNull() ?: min
+                    onChange(parsed.coerceIn(min, top))
+                },
+                centred = true
+            )
         }
-    )
+        RoundIconButton(iconRes = com.layerbit.sheaf.R.drawable.ic_plus, contentDescription = "More", onClick = { onChange((value + 1).coerceIn(min, top)) }, size = 36.dp)
+    }
 }
 
 /** A length in millimetres, typed. Blank reads as nothing off that edge. */
@@ -1300,16 +1342,17 @@ internal fun Field(
     label: String,
     keyboardType: KeyboardType,
     password: Boolean = false,
-    onChange: (String) -> Unit
+    onChange: (String) -> Unit,
+    centred: Boolean = false
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
-        label = { Text(label, style = MaterialTheme.typography.bodySmall) },
+        label = if (label.isEmpty()) null else ({ Text(label, style = MaterialTheme.typography.bodySmall) }),
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         visualTransformation = if (password) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
-        textStyle = MaterialTheme.typography.bodyLarge,
+        textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = if (centred) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = SheafColors.Band,
@@ -1339,9 +1382,24 @@ private fun <T> ChoiceRow(options: List<Pair<T, String>>, selected: T, onSelect:
 /** A sentence under a control saying what it does, or what it costs. Shared with the screen. */
 @Composable
 internal fun Hint(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = SheafColors.Dim
-    )
+    androidx.compose.foundation.layout.Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SheafColors.SurfaceDim, androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.Top
+    ) {
+        androidx.compose.material3.Icon(
+            imageVector = androidx.compose.material.icons.Icons.Filled.Info,
+            contentDescription = null,
+            tint = SheafColors.Dim,
+            modifier = Modifier.size(16.dp).padding(top = 1.dp)
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = SheafColors.Muted,
+            modifier = Modifier.padding(start = 8.dp)
+        )
+    }
 }
