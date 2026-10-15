@@ -23,7 +23,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -45,7 +58,13 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.sheaf.jobs.JobState
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.ui.components.IconTile
 import com.layerbit.sheaf.ui.components.Panel
+import com.layerbit.sheaf.ui.components.Pill
+import com.layerbit.sheaf.ui.components.PrimaryButton
+import com.layerbit.sheaf.ui.components.SecondaryButton
+import com.layerbit.sheaf.ui.components.pressScale
 import com.layerbit.sheaf.ui.theme.SheafColors
 import java.util.concurrent.Executors
 
@@ -119,6 +138,7 @@ fun ScanRoute(
                 onCaptured = viewModel::captured,
                 captureTarget = viewModel::captureTarget,
                 onError = { /* surfaced through state below */ },
+                pageCount = state.pages.size,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -133,12 +153,9 @@ fun ScanRoute(
         }
 
         state.error?.let { message ->
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = SheafColors.Failed,
-                modifier = Modifier.padding(16.dp)
-            )
+            Panel(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), tint = SheafColors.Failed, inset = 12.dp) {
+                Text(text = message, style = MaterialTheme.typography.bodyMedium, color = SheafColors.Text)
+            }
         }
     }
 }
@@ -148,6 +165,7 @@ private fun Viewfinder(
     onCaptured: (java.io.File) -> Unit,
     captureTarget: () -> java.io.File,
     onError: (String) -> Unit,
+    pageCount: Int,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -193,58 +211,114 @@ private fun Viewfinder(
             }
         )
 
+        // Corner guides: where the page should sit. A frame tells the hand what the words
+        // underneath say, before the words are read.
+        Canvas(modifier = Modifier.fillMaxSize().padding(28.dp)) {
+            val arm = 34.dp.toPx()
+            val stroke = 3.dp.toPx()
+            val colour = Color.White.copy(alpha = 0.85f)
+            val w = size.width
+            val h = size.height
+            val corners = listOf(
+                Offset(0f, 0f) to Pair(Offset(arm, 0f), Offset(0f, arm)),
+                Offset(w, 0f) to Pair(Offset(w - arm, 0f), Offset(w, arm)),
+                Offset(0f, h) to Pair(Offset(arm, h), Offset(0f, h - arm)),
+                Offset(w, h) to Pair(Offset(w - arm, h), Offset(w, h - arm))
+            )
+            for ((corner, arms) in corners) {
+                drawLine(colour, corner, arms.first, stroke, StrokeCap.Round)
+                drawLine(colour, corner, arms.second, stroke, StrokeCap.Round)
+            }
+        }
+
+        // A dark scrim top and bottom, so the hint and the controls read over any page.
         Box(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 28.dp)
-                .size(72.dp)
-                .background(SheafColors.Band, CircleShape)
-                .border(4.dp, SheafColors.OnBand, CircleShape)
-                .clickable {
-                    val target = captureTarget()
-                    capture?.takePicture(
-                        ImageCapture.OutputFileOptions.Builder(target).build(),
-                        executor,
-                        object : ImageCapture.OnImageSavedCallback {
-                            override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                                onCaptured(target)
-                            }
-
-                            override fun onError(exception: ImageCaptureException) {
-                                target.delete()
-                                onError(exception.message ?: "The photo could not be taken.")
-                            }
-                        }
-                    )
-                }
+                .fillMaxWidth()
+                .height(96.dp)
+                .align(Alignment.TopCenter)
+                .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent)))
         )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp)
+                .align(Alignment.BottomCenter)
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f))))
+        )
+
+        Row(
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Pill(if (pageCount == 0) "Fill the frame with the page" else "Page ${pageCount + 1}", Color.White, filled = false)
+            if (pageCount > 0) Pill("$pageCount kept", SheafColors.BandBright, filled = true)
+        }
+
+        Column(
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            val interaction = remember { MutableInteractionSource() }
+            Box(
+                modifier = Modifier
+                    .pressScale(interaction, 0.9f)
+                    .size(78.dp)
+                    .border(4.dp, Color.White, CircleShape)
+                    .padding(6.dp)
+                    .background(SheafColors.Band, CircleShape)
+                    .clickable(interactionSource = interaction, indication = null) {
+                        val target = captureTarget()
+                        capture?.takePicture(
+                            ImageCapture.OutputFileOptions.Builder(target).build(),
+                            executor,
+                            object : ImageCapture.OnImageSavedCallback {
+                                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                                    onCaptured(target)
+                                }
+
+                                override fun onError(exception: ImageCaptureException) {
+                                    target.delete()
+                                    onError(exception.message ?: "The photo could not be taken.")
+                                }
+                            }
+                        )
+                    }
+            )
+            Text(
+                "Tap to capture",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.85f),
+                modifier = Modifier.padding(top = 10.dp)
+            )
+        }
     }
 }
 
 @Composable
 private fun CameraDenied(onRetry: () -> Unit, modifier: Modifier = Modifier) {
     Box(modifier = modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-        Panel(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = "Sheaf needs the camera to scan a page",
-                style = MaterialTheme.typography.titleMedium,
-                color = SheafColors.Text
-            )
-            Text(
-                text = "The photo is processed on this phone and never sent anywhere - Sheaf " +
-                    "has no permission to use the internet at all.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = SheafColors.Muted,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            Spacer(Modifier.height(12.dp))
-            Button(
-                onClick = onRetry,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = SheafColors.Band,
-                    contentColor = SheafColors.OnBand
+        Panel(modifier = Modifier.fillMaxWidth(), tint = SheafColors.Band, inset = 22.dp) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                IconTile(iconRes = R.drawable.ic_tool_scan, accent = SheafColors.Band, filled = true, size = 56.dp)
+                Text(
+                    text = "Sheaf needs the camera to scan a page",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = SheafColors.Text,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 14.dp)
                 )
-            ) { Text("Allow the camera") }
+                Text(
+                    text = "The photo is processed on this phone and never sent anywhere - Sheaf " +
+                        "has no permission to use the internet at all.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SheafColors.Muted,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+                PrimaryButton(text = "Allow the camera", onClick = onRetry, modifier = Modifier.fillMaxWidth().padding(top = 16.dp))
+            }
         }
     }
 }
@@ -252,40 +326,56 @@ private fun CameraDenied(onRetry: () -> Unit, modifier: Modifier = Modifier) {
 @Composable
 private fun ScanResult(finished: JobState.Finished, onShare: () -> Unit, onDone: () -> Unit) {
     val produced = finished.produced.firstOrNull()
+    val accent = if (produced != null) SheafColors.Done else SheafColors.Failed
     Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-        Text(
-            text = if (produced != null) "Your scan is ready" else "Nothing was produced",
-            style = MaterialTheme.typography.titleLarge,
-            color = SheafColors.Text
-        )
-        Text(
-            text = produced?.file?.displayName
-                ?: finished.failed.firstOrNull()?.reason
-                ?: "Try scanning again.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = SheafColors.Muted,
-            textAlign = TextAlign.Start,
-            modifier = Modifier.padding(top = 6.dp)
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier.size(44.dp).background(accent.copy(alpha = 0.18f), RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (produced != null) Icons.Filled.Check else Icons.Filled.Warning,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Column(modifier = Modifier.padding(start = 12.dp)) {
+                Text(
+                    text = if (produced != null) "Your scan is ready" else "Nothing was produced",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = SheafColors.Text
+                )
+                Text(
+                    "Made on this phone. Nothing was uploaded.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SheafColors.Dim
+                )
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Panel(modifier = Modifier.fillMaxWidth(), tint = accent) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconTile(iconRes = R.drawable.ic_tool_read, accent = accent, filled = true)
+                Column(modifier = Modifier.padding(start = 12.dp)) {
+                    Text(
+                        text = produced?.file?.displayName
+                            ?: finished.failed.firstOrNull()?.reason
+                            ?: "Try scanning again.",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SheafColors.Text
+                    )
+                    produced?.detail?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = accent, modifier = Modifier.padding(top = 2.dp))
+                    }
+                }
+            }
+        }
         Spacer(Modifier.height(16.dp))
         if (produced != null) {
-            Button(
-                onClick = onShare,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = SheafColors.Band,
-                    contentColor = SheafColors.OnBand
-                )
-            ) { Text("Save or share it") }
-            Spacer(Modifier.height(8.dp))
+            PrimaryButton(text = "Save or share it", icon = Icons.Filled.Share, onClick = onShare, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(10.dp))
         }
-        Button(
-            onClick = onDone,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = SheafColors.SurfaceDim,
-                contentColor = SheafColors.Muted
-            )
-        ) { Text("Scan something else") }
+        SecondaryButton(text = "Scan something else", onClick = onDone, modifier = Modifier.fillMaxWidth())
     }
 }
