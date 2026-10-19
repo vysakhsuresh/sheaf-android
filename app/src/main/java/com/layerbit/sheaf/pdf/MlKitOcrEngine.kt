@@ -70,7 +70,11 @@ class MlKitOcrEngine : OcrEngine {
                             left = box.left.toFloat(),
                             top = box.top.toFloat(),
                             width = box.width().toFloat(),
-                            height = box.height().toFloat()
+                            height = box.height().toFloat(),
+                            words = line.elements.mapNotNull { element ->
+                                val b = element.boundingBox ?: return@mapNotNull null
+                                OcrLine(element.text, b.left.toFloat(), b.top.toFloat(), b.width().toFloat(), b.height().toFloat())
+                            }
                         )
                     )
                 }

@@ -2175,6 +2175,22 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         written
     }
 
+    override fun editableLines(input: PdfInput, pages: List<Int>): Map<Int, EditablePage> = withDocument(input) { doc ->
+        pages.filter { it in 0 until doc.numberOfPages }.associateWith { index -> TextEditing.lines(doc, index) }
+    }
+
+    override fun editText(input: PdfInput, edits: List<TextEdit>, output: File): Int = withDocument(input) { doc ->
+        val lettering = Lettering(doc)
+        var made = 0
+        for ((index, onPage) in edits.groupBy { it.pageIndex }) {
+            if (index !in 0 until doc.numberOfPages) continue
+            made += TextEditing.write(doc, doc.getPage(index), onPage, lettering)
+        }
+        if (made == 0) throw PdfException.Refused("Tap a line of text and change it first.")
+        lettering.use { doc.save(output) }
+        made
+    }
+
     override fun findPictures(input: PdfInput, pageIndex: Int): List<PageArea> = withDocument(input) { doc ->
         if (pageIndex !in 0 until doc.numberOfPages) return@withDocument emptyList()
         val page = doc.getPage(pageIndex)

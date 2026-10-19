@@ -434,6 +434,14 @@ interface PdfSurgeon {
      */
     @Throws(PdfException::class)
     fun editPictures(input: PdfInput, edits: Map<Int, List<PictureEdit>>, output: File): PictureReport
+
+    /** The lines Edit text can change on each of [pages]. A scan's page says it is one and offers none. */
+    @Throws(PdfException::class)
+    fun editableLines(input: PdfInput, pages: List<Int>): Map<Int, EditablePage>
+
+    /** Paints over old words and writes new ones. Returns how many changes were made. */
+    @Throws(PdfException::class)
+    fun editText(input: PdfInput, edits: List<TextEdit>, output: File): Int
 }
 
 /** What [PdfSurgeon.cleanDocument] takes out. Everything on by default. */

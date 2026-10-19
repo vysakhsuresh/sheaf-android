@@ -56,5 +56,7 @@ data class OcrLine(
     val left: Float,
     val top: Float,
     val width: Float,
-    val height: Float
+    val height: Float,
+    /** The words of the line, each with its own box, in the same pixel space. */
+    val words: List<OcrLine> = emptyList()
 )

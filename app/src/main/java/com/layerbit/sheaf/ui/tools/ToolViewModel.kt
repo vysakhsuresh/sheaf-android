@@ -22,7 +22,10 @@ import com.layerbit.sheaf.ops.PdfAOp
 import com.layerbit.sheaf.ops.CompareOp
 import com.layerbit.sheaf.ops.RentReceipts
 import com.layerbit.sheaf.ops.RentReceiptsOp
-import com.layerbit.sheaf.ops.ReplaceTextOp
+import com.layerbit.sheaf.ops.EditTextOp
+import com.layerbit.sheaf.ops.TextEditPlans
+import com.layerbit.sheaf.pdf.EditablePage
+import com.layerbit.sheaf.pdf.TextEdit
 import com.layerbit.sheaf.ops.PageLabelsOp
 import com.layerbit.sheaf.ops.AnnotateOp
 import com.layerbit.sheaf.ops.FillFormOp
@@ -189,7 +192,11 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     newFields = emptyList(),
                     pictures = emptyMap(),
                     pictureChanges = emptyMap(),
-                    selectedPicture = null
+                    selectedPicture = null,
+                    editPages = emptyMap(),
+                    lineEdits = emptyMap(),
+                    selectedLine = null,
+                    replaceStatus = null
                 )
             }
         }
@@ -240,7 +247,11 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     newFields = emptyList(),
                     pictures = emptyMap(),
                     pictureChanges = emptyMap(),
-                    selectedPicture = null
+                    selectedPicture = null,
+                    editPages = emptyMap(),
+                    lineEdits = emptyMap(),
+                    selectedLine = null,
+                    replaceStatus = null
                 )
             }
         }
@@ -424,7 +435,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         // was the one path in this app that could not survive a long scan, so these two
         // render on demand.
         if (_state.value.tool == ToolId.REDACT || _state.value.tool == ToolId.ANNOTATE || _state.value.tool == ToolId.CREATE_FORM ||
-            _state.value.tool == ToolId.EDIT_IMAGES
+            _state.value.tool == ToolId.EDIT_IMAGES || _state.value.tool == ToolId.EDIT_TEXT
         ) {
             loadPageCountOnly(doc)
             return
@@ -488,6 +499,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             _state.update { it.copy(busy = false, pageOrder = (0 until count).toList()) }
             if (count > 0) renderBigPage(0)
             if (count > 0 && _state.value.tool == ToolId.EDIT_IMAGES) loadPictures(0)
+            if (count > 0 && _state.value.tool == ToolId.EDIT_TEXT) loadEditable(0)
         }
     }
 
@@ -634,7 +646,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         val config = state.config
         return when (tool) {
             ToolId.OCR -> OcrOp(script = config.ocrScript)
-            ToolId.EDIT_TEXT -> ReplaceTextOp(config.findText, config.replaceText, config.matchCase)
+            ToolId.EDIT_TEXT -> EditTextOp(state.textEdits())
             ToolId.PDF_A -> PdfAOp()
             ToolId.CREATE_FORM -> CreateFormOp(state.newFields)
             ToolId.DIGITAL_SIGN -> DigitalSignOp(
@@ -1479,6 +1491,213 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- edit text ----
+
+    fun setEditPage(index: Int) {
+        _state.update { it.copy(canvasPage = index, selectedLine = null) }
+        renderBigPage(index)
+        loadEditable(index)
+    }
+
+    private fun loadEditable(page: Int) {
+        val doc = _state.value.documents.firstOrNull() ?: return
+        if (_state.value.editPages.containsKey(page)) return
+        viewModelScope.launch {
+            val found = withContext(Dispatchers.IO) {
+                runCatching { sheaf.surgeon.editableLines(PdfInput(doc.file.file, doc.password), listOf(page))[page] }.getOrNull()
+            } ?: EditablePage(emptyList(), false)
+            _state.update { it.copy(editPages = it.editPages + (page to found)) }
+        }
+    }
+
+    /** Opens a line to be changed, with the paper and ink sampled where it sits. */
+    fun selectLine(index: Int?) {
+        _state.update { current ->
+            if (index == null) return@update current.copy(selectedLine = null)
+            val page = current.canvasPage
+            val line = current.editPages[page]?.lines?.getOrNull(index) ?: return@update current
+            val onPage = current.lineEdits[page].orEmpty()
+            if (onPage.containsKey(index)) return@update current.copy(selectedLine = index, error = null)
+            val (paper, ink) = current.thumbnails[page]?.let { sampleColours(it, line.area) } ?: (TextEditPlans.WHITE to TextEditPlans.INK)
+            current.copy(
+                selectedLine = index,
+                lineEdits = current.lineEdits + (page to (onPage + (index to LineEdit(line.text, paper, ink)))),
+                error = null
+            )
+        }
+    }
+
+    fun setLineText(text: String) {
+        _state.update { current ->
+            val index = current.selectedLine ?: return@update current
+            val page = current.canvasPage
+            val onPage = current.lineEdits[page].orEmpty()
+            val edit = onPage[index] ?: return@update current
+            current.copy(lineEdits = current.lineEdits + (page to (onPage + (index to edit.copy(text = text.replace('\n', ' '))))))
+        }
+    }
+
+    /** Puts the selected line back as it was. */
+    fun undoLine() {
+        _state.update { current ->
+            val index = current.selectedLine ?: return@update current
+            val page = current.canvasPage
+            current.copy(lineEdits = current.lineEdits + (page to (current.lineEdits[page].orEmpty() - index)), selectedLine = null)
+        }
+    }
+
+    /**
+     * Reads the words on a scanned page with the phone's recogniser, so its lines can be
+     * tapped and changed like any other. Only the words that change are repainted.
+     */
+    fun readScannedPage() {
+        val doc = _state.value.documents.firstOrNull() ?: return
+        val page = _state.value.canvasPage
+        val script = _state.value.config.ocrScript
+        _state.update { it.copy(readingScan = true, error = null) }
+        viewModelScope.launch {
+            val read = withContext(Dispatchers.IO) {
+                runCatching {
+                    val engine = if (doc.encrypted) sheaf.encryptedReader else sheaf.pdfEngine
+                    engine.open(doc.file.file, doc.password).use { opened ->
+                        val size = opened.pageSize(page)
+                        val bitmap = opened.renderPage(page, SCAN_READ_WIDTH_PX)
+                        try {
+                            val result = sheaf.ocr.read(bitmap, script)
+                            val pixels = IntArray(bitmap.width * bitmap.height)
+                            bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+                            val shares = mutableMapOf<PageArea, Float>()
+                            fun share(a: PageArea): Float = shares.getOrPut(a) { inkShare(pixels, bitmap.width, bitmap.height, a) }
+                            val all = result.lines.flatMap { line -> line.words }.map { w ->
+                                share(PageArea(w.left / bitmap.width, w.top / bitmap.height, w.width / bitmap.width, w.height / bitmap.height))
+                            }.filter { it > 0f }.sorted()
+                            val median = all.getOrNull(all.size / 2) ?: 0f
+                            val lines = TextEditPlans.scanLines(result.lines, bitmap.width, bitmap.height, size.heightPoints) { a ->
+                                median > 0f && share(a) > median * 1.3f
+                            }
+                            EditablePage(lines, true, size.widthPoints, size.heightPoints)
+                        } finally {
+                            bitmap.recycle()
+                        }
+                    }
+                }
+            }
+            _state.update { current ->
+                read.fold(
+                    onSuccess = { found ->
+                        current.copy(
+                            readingScan = false,
+                            editPages = current.editPages + (page to found),
+                            error = if (found.lines.isEmpty()) {
+                                "No words could be read on this page: it may be handwritten, or too faint. Write on it with Add text instead."
+                            } else {
+                                null
+                            }
+                        )
+                    },
+                    onFailure = { current.copy(readingScan = false, error = "The words on this page could not be read.") }
+                )
+            }
+        }
+    }
+
+    /** How much of a word's box is ink: heavier type has more. */
+    private fun inkShare(pixels: IntArray, width: Int, height: Int, a: PageArea): Float {
+        val x0 = (a.left * width).toInt().coerceIn(0, width - 1)
+        val x1 = ((a.left + a.width) * width).toInt().coerceIn(x0 + 1, width)
+        val y0 = (a.top * height).toInt().coerceIn(0, height - 1)
+        val y1 = ((a.top + a.height) * height).toInt().coerceIn(y0 + 1, height)
+        var dark = 0
+        for (y in y0 until y1) for (x in x0 until x1) {
+            val c = pixels[y * width + x]
+            if (((c shr 16) and 0xFF) + ((c shr 8) and 0xFF) + (c and 0xFF) < 384) dark++
+        }
+        return dark.toFloat() / ((x1 - x0) * (y1 - y0))
+    }
+
+    private fun sampleColours(bitmap: Bitmap, area: PageArea): Pair<Int, Int> {
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        return TextEditPlans.colours(pixels, bitmap.width, bitmap.height, area)
+    }
+
+    /**
+     * Replaces whole words wherever they appear, on every page whose words can be read, and
+     * leaves each change outlined on its page to be checked or adjusted.
+     */
+    fun replaceEverywhere() {
+        val doc = _state.value.documents.firstOrNull() ?: return
+        val find = _state.value.config.findText.trim()
+        if (find.isEmpty()) {
+            _state.update { it.copy(replaceStatus = "Type what to find.") }
+            return
+        }
+        val with = _state.value.config.replaceText.trim()
+        val matchCase = _state.value.config.matchCase
+        val pageCount = _state.value.pageOrder.size
+        _state.update { it.copy(replacing = true, replaceStatus = "Looking through the pages…") }
+        viewModelScope.launch {
+            val input = PdfInput(doc.file.file, doc.password)
+            val missing = (0 until pageCount).filter { it !in _state.value.editPages }
+            val loaded = withContext(Dispatchers.IO) {
+                runCatching { sheaf.surgeon.editableLines(input, missing) }.getOrDefault(emptyMap())
+            }
+            _state.update { it.copy(editPages = loaded + it.editPages) }
+            val pattern = TextEditPlans.wholeWords(find, matchCase)
+            val snapshot = _state.value
+            val hits = snapshot.editPages.filter { (page, p) ->
+                p.lines.withIndex().any { (i, line) -> pattern.containsMatchIn(snapshot.lineEdits[page]?.get(i)?.text ?: line.text) }
+            }.keys
+            // Pages not on screen are drawn small, once, to find their paper and ink.
+            val drawings: Map<Int, Bitmap> = withContext(Dispatchers.IO) {
+                runCatching {
+                    val engine = if (doc.encrypted) sheaf.encryptedReader else sheaf.pdfEngine
+                    engine.open(doc.file.file, doc.password).use { opened ->
+                        hits.filter { it !in snapshot.thumbnails }.associateWith { page -> opened.renderPage(page, COLOUR_SAMPLE_WIDTH_PX) }
+                    }
+                }.getOrDefault(emptyMap())
+            }
+            var places = 0
+            val touched = mutableSetOf<Int>()
+            _state.update { current ->
+                places = 0
+                touched.clear()
+                var all = current.lineEdits
+                for (page in hits) {
+                    val lines = current.editPages[page]?.lines ?: continue
+                    val drawing = drawings[page] ?: current.thumbnails[page]
+                    var onPage = all[page].orEmpty()
+                    for ((i, line) in lines.withIndex()) {
+                        val before = onPage[i]?.text ?: line.text
+                        val count = pattern.findAll(before).count()
+                        if (count == 0) continue
+                        val after = TextEditPlans.replaceIn(before, find, with, matchCase)
+                        val colours = onPage[i]?.let { it.paper to it.ink }
+                            ?: drawing?.let { sampleColours(it, line.area) }
+                            ?: (TextEditPlans.WHITE to TextEditPlans.INK)
+                        onPage = onPage + (i to LineEdit(after, colours.first, colours.second))
+                        places += count
+                        touched += page
+                    }
+                    all = all + (page to onPage)
+                }
+                val unread = current.editPages.values.any { it.scanned && it.lines.isEmpty() }
+                current.copy(
+                    lineEdits = all,
+                    replacing = false,
+                    replaceStatus = if (places == 0) {
+                        "\"$find\" isn't in the text of this document." +
+                            (if (unread) " Scanned pages have to be read first: open one and tap Read the words on this page." else "")
+                    } else {
+                        "Changed in $places ${if (places == 1) "place" else "places"}, on ${touched.size} " +
+                            "${if (touched.size == 1) "page" else "pages"}. Each is outlined on its page; tap one to adjust it."
+                    }
+                )
+            }
+            drawings.values.forEach { it.recycle() }
+        }
+    }
+
     // ---- edit pictures ----
 
     fun setPicturesPage(index: Int) {
@@ -1657,6 +1876,12 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         /** Enough to see what came out without holding a whole book in memory. */
         const val PREVIEW_CHARS = 4000
         const val PREVIEW_PX = 420
+
+        /** About 300 dpi across an A4 page: what the recogniser reads a scan at. */
+        const val SCAN_READ_WIDTH_PX = 2480
+
+        /** Enough of a page to tell its paper from its ink. */
+        const val COLOUR_SAMPLE_WIDTH_PX = 700
     }
 }
 
@@ -1751,6 +1976,13 @@ data class ToolUiState(
     /** Attachments: what the first document already carries, once [attachmentsRead]. */
     val attachments: List<AttachmentInfo> = emptyList(),
     val attachmentsRead: Boolean = false,
+    /** Edit text: the lines each page offers, and the changes typed, by page then line. */
+    val editPages: Map<Int, EditablePage> = emptyMap(),
+    val lineEdits: Map<Int, Map<Int, LineEdit>> = emptyMap(),
+    val selectedLine: Int? = null,
+    val readingScan: Boolean = false,
+    val replacing: Boolean = false,
+    val replaceStatus: String? = null,
     /** Edit pictures: the pictures found on each page, where they were. */
     val pictures: Map<Int, List<PageArea>> = emptyMap(),
     /** Edit pictures: what has been done to them, by page and then by the picture's place in [pictures]. */
@@ -1764,6 +1996,18 @@ data class ToolUiState(
         (pageEdits + PageEdit(pageOrder, rotations)).takeLast(MAX_PAGE_EDITS)
 
     val canUndoPageEdit: Boolean get() = pageEdits.isNotEmpty()
+
+    /** Edit text: every changed line as the writer takes it; the preview draws the same list. */
+    fun textEdits(page: Int? = null): List<TextEdit> = lineEdits.filterKeys { page == null || it == page }.flatMap { (p, onPage) ->
+        val editable = editPages[p] ?: return@flatMap emptyList()
+        val aspect = if (editable.widthPoints > 0f) editable.heightPoints / editable.widthPoints else 1.414f
+        onPage.flatMap { (i, edit) ->
+            val line = editable.lines.getOrNull(i) ?: return@flatMap emptyList()
+            TextEditPlans.edits(p, line, edit.text, edit.paper, edit.ink, aspect) { text ->
+                helveticaWidth(text, line.sizePoints) / editable.widthPoints.coerceAtLeast(1f)
+            }
+        }
+    }
 
     /** Edit pictures: every change that does something, as the surgeon takes them. */
     fun pictureEdits(): Map<Int, List<PictureEdit>> = pictureChanges.mapValues { (page, changes) ->
@@ -1816,7 +2060,8 @@ data class ToolUiState(
                 "Type a width and a height between 16 and 4096 pixels."
             tool == ToolId.COMPARE && documents.size != 2 ->
                 if (documents.size < 2) "Add the newer version as the second file." else "Compare takes exactly two files: the older, then the newer."
-            tool == ToolId.EDIT_TEXT && config.findText.isBlank() -> "Type the words to find."
+            tool == ToolId.EDIT_TEXT && lineEdits.values.all { it.isEmpty() } -> "Tap a line of text and change it."
+            tool == ToolId.EDIT_TEXT && textEdits().isEmpty() -> "Change the words first."
             tool == ToolId.SIGN && signatureFile == null -> "Draw your signature above."
             tool == ToolId.ANNOTATE && marks.values.all { it.isEmpty() } ->
                 "Highlight a line or draw on the page."
@@ -2148,4 +2393,15 @@ data class PictureChange(
     fun changedFrom(original: PageArea): Boolean = removed || replacement != null ||
         kotlin.math.abs(area.left - original.left) + kotlin.math.abs(area.top - original.top) +
         kotlin.math.abs(area.width - original.width) + kotlin.math.abs(area.height - original.height) > 0.003f
+}
+
+/** A line being changed in Edit text: its new words, and the page's paper and ink round it. */
+data class LineEdit(val text: String, val paper: Int, val ink: Int)
+
+/** Near enough to Helvetica for deciding what fits; the writer measures exactly. */
+private val measurePaint = android.graphics.Paint().apply { typeface = android.graphics.Typeface.SANS_SERIF }
+
+internal fun helveticaWidth(text: String, sizePoints: Float): Float = synchronized(measurePaint) {
+    measurePaint.textSize = sizePoints
+    measurePaint.measureText(text)
 }

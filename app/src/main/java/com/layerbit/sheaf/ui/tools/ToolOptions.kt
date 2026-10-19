@@ -428,31 +428,15 @@ fun ToolOptions(
                 )
             }
 
-            ToolId.EDIT_TEXT -> {
-                Field(
-                    value = config.findText,
-                    label = "Find",
-                    keyboardType = KeyboardType.Text,
-                    onChange = { value -> onChange { it.copy(findText = value) } }
-                )
-                Field(
-                    value = config.replaceText,
-                    label = "Replace with (leave empty to remove)",
-                    keyboardType = KeyboardType.Text,
-                    onChange = { value -> onChange { it.copy(replaceText = value) } }
-                )
-                ToggleRow(
-                    title = "Match capitals exactly",
-                    checked = config.matchCase,
-                    onChange = { on -> onChange { it.copy(matchCase = on) } }
-                )
-                Hint(
-                    "Every place the words appear is changed. The old words are covered and " +
-                        "the new ones written over them in Helvetica, sized to fit the same " +
-                        "space - so the font will differ from the document's own, and a much " +
-                        "longer replacement is made smaller to fit. Works on text, not on scans."
-                )
-            }
+            ToolId.EDIT_TEXT -> Hint(
+                "The old words are painted over in the page's own colour and the new ones written " +
+                    "in their place: in the document's own font where it can be, otherwise the " +
+                    "nearest built-in one, and squeezed a little to stay inside a table cell. Hindi, " +
+                    "Malayalam and every other script the phone shows can be typed. On a scan, only " +
+                    "the words you change are repainted. The old words stay inside the file " +
+                    "underneath, so anyone who copies the text can still find them: to take words " +
+                    "out for good, use Remove areas."
+            )
 
             ToolId.CREATE_FORM -> {
                 SectionHeading("The next box you drag becomes a")

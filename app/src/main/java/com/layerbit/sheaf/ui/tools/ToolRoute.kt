@@ -242,6 +242,12 @@ fun ToolRoute(
             onMovePicture = viewModel::movePicture,
             onToggleRemovePicture = viewModel::toggleRemovePicture,
             onPickReplacement = { pickReplacement.launch(arrayOf("image/*")) },
+            onEditPage = viewModel::setEditPage,
+            onSelectLine = viewModel::selectLine,
+            onLineText = viewModel::setLineText,
+            onUndoLine = viewModel::undoLine,
+            onReadScan = viewModel::readScannedPage,
+            onReplaceEverywhere = viewModel::replaceEverywhere,
             onSaveZip = { files ->
                 viewModel.zipResults(files) { zip ->
                     if (zip == null) {

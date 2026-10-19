@@ -155,6 +155,12 @@ fun ToolScreen(
     onMovePicture: (Int, Int, com.layerbit.sheaf.pdf.PageArea) -> Unit = { _, _, _ -> },
     onToggleRemovePicture: (Int, Int) -> Unit = { _, _ -> },
     onPickReplacement: () -> Unit = {},
+    onEditPage: (Int) -> Unit = {},
+    onSelectLine: (Int?) -> Unit = {},
+    onLineText: (String) -> Unit = {},
+    onUndoLine: () -> Unit = {},
+    onReadScan: () -> Unit = {},
+    onReplaceEverywhere: () -> Unit = {},
     /** Bundles every result into one ZIP and saves that. */
     onSaveZip: (List<SheafFile>) -> Unit,
     onCheckSize: () -> Unit,
@@ -170,7 +176,7 @@ fun ToolScreen(
             // These edit pages, so they need the pages themselves.
             // Extract shows them to be tapped rather than typed.
             ToolId.ORGANISE, ToolId.REDACT, ToolId.EXTRACT, ToolId.ANNOTATE, ToolId.CREATE_FORM,
-            ToolId.EDIT_IMAGES -> onLoadPages()
+            ToolId.EDIT_IMAGES, ToolId.EDIT_TEXT -> onLoadPages()
             // These change how a page looks, so one page is enough to show it.
             ToolId.CROP, ToolId.WATERMARK, ToolId.PAGE_NUMBERS,
             ToolId.ADD_TEXT, ToolId.BACKGROUND -> onLoadPreviewPage()
@@ -597,6 +603,48 @@ fun ToolScreen(
                                 onRemove = onRemoveField
                             )
                         }
+                    }
+                } else if (tool == ToolId.EDIT_TEXT && state.pageOrder.isNotEmpty()) {
+                    item {
+                        val selectedText = state.selectedLine?.let { state.lineEdits[state.canvasPage]?.get(it)?.text }
+                        EditTextCanvas(
+                            pageIndex = state.canvasPage,
+                            pageCount = state.pageOrder.size,
+                            page = state.thumbnails[state.canvasPage],
+                            editable = state.editPages[state.canvasPage],
+                            edits = state.textEdits(state.canvasPage),
+                            selected = state.selectedLine,
+                            selectedText = selectedText,
+                            reading = state.readingScan,
+                            script = state.config.ocrScript,
+                            onPage = onEditPage,
+                            onSelect = onSelectLine,
+                            onText = onLineText,
+                            onUndo = onUndoLine,
+                            onRead = onReadScan,
+                            onScript = { s -> onConfigChange { it.copy(ocrScript = s) } }
+                        )
+                    }
+                    item {
+                        ReplacePanel(
+                            find = state.config.findText,
+                            with = state.config.replaceText,
+                            matchCase = state.config.matchCase,
+                            busy = state.replacing,
+                            status = state.replaceStatus,
+                            onFind = { v -> onConfigChange { it.copy(findText = v) } },
+                            onWith = { v -> onConfigChange { it.copy(replaceText = v) } },
+                            onMatchCase = { v -> onConfigChange { it.copy(matchCase = v) } },
+                            onReplace = onReplaceEverywhere
+                        )
+                    }
+                    item {
+                        ToolOptions(
+                            tool = tool,
+                            config = state.config,
+                            pageCount = state.documents.firstOrNull()?.pageCount,
+                            onChange = onConfigChange
+                        )
                     }
                 } else if (tool == ToolId.EDIT_IMAGES && state.pageOrder.isNotEmpty()) {
                     item {
