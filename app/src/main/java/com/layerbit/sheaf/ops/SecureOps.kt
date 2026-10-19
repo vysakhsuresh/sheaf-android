@@ -26,7 +26,12 @@ class CompressOp(
      * A size to get under, in bytes. The levels are tried lightest first and the first that
      * fits is kept; when none does, the smallest is kept and the result says so.
      */
-    private val targetBytes: Long? = null
+    private val targetBytes: Long? = null,
+    /**
+     * When no level gets under [targetBytes], let each page become one picture of itself,
+     * its words kept invisibly underneath. Asked for, never assumed: text stops being sharp.
+     */
+    private val allowPictures: Boolean = false
 ) : Op {
 
     override val tool = ToolId.COMPRESS
@@ -137,6 +142,12 @@ class CompressOp(
             return OpOutcome.Failed(input.displayName, e.message ?: "Compression failed.")
         }
         val (file, level) = smallest ?: return OpOutcome.Failed(input.displayName, "Compression failed.")
+        if (allowPictures) {
+            picturesUnder(input, context, target, step)?.let { pictures ->
+                file.delete()
+                return pictures
+            }
+        }
         if (file.length() >= input.sizeBytes) {
             file.delete()
             return OpOutcome.Skipped(
@@ -152,7 +163,63 @@ class CompressOp(
         )
     }
 
+
+    /**
+     * Each page as one JPEG of itself, down a ladder of sharpness until the file fits. The
+     * page's words go underneath, invisible, so it can still be searched and copied. Null when
+     * not even the last rung fits, so the caller reports its own smallest instead.
+     */
+    private fun picturesUnder(input: SheafFile, context: OpContext, target: Long, step: (String) -> Unit): OpOutcome? {
+        val password = context.passwords[input.file.path]
+        val pdfInput = PdfInput(input.file, password)
+        val words = runCatching { context.surgeon.placedWords(pdfInput) { _, _ -> context.checkCancelled() } }.getOrDefault(emptyList())
+        val layers = words.groupBy { it.pageIndex }.mapValues { (_, list) ->
+            list.map { com.layerbit.sheaf.pdf.TextPlacement(it.text, it.area.left, it.area.top, it.area.width, it.area.height) }
+        }
+        val encrypted = runCatching { context.surgeon.inspect(pdfInput).isEncrypted }.getOrDefault(false)
+        val engine = if (encrypted) context.encryptedReader else context.engine
+        for ((dpi, quality) in PICTURE_LADDER) {
+            context.checkCancelled()
+            step("pages as pictures at $dpi dpi")
+            val jpegs = mutableListOf<Pair<File, com.layerbit.sheaf.pdf.PageSize>>()
+            val output = context.workspace.newOutput(input.baseName, "compressed")
+            try {
+                engine.open(input.file, password).use { doc ->
+                    for (i in 0 until doc.pageCount) {
+                        context.checkCancelled()
+                        val size = doc.pageSize(i)
+                        val bitmap = doc.renderPage(i, (size.widthPoints / 72f * dpi).toInt().coerceAtLeast(16))
+                        val jpeg = context.workspace.newOutput("${input.baseName}-$i", "page", "jpg")
+                        jpeg.outputStream().buffered().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, quality, it) }
+                        bitmap.recycle()
+                        jpegs += jpeg to size
+                    }
+                }
+                context.surgeon.picturePages(jpegs, layers, output)
+            } catch (e: OpCancelled) {
+                output.delete()
+                throw e
+            } catch (e: Exception) {
+                output.delete()
+                return null
+            } finally {
+                jpegs.forEach { it.first.delete() }
+            }
+            if (output.length() <= target) {
+                return OpOutcome.Produced(
+                    SheafFile(output, "${input.baseName} compressed.pdf", SheafFile.Origin.Derived("compressed")),
+                    "${describeBytes(input.sizeBytes)} → ${describeBytes(output.length())}, under ${describeBytes(target)}; " +
+                        "pages are now pictures at $dpi dpi, with their words kept underneath to search and copy"
+                )
+            }
+            output.delete()
+        }
+        return null
+    }
     companion object {
+        /** Sharpness, then JPEG quality, for pages made pictures: Foolscap's ladder. */
+        private val PICTURE_LADDER = listOf(150 to 70, 120 to 60, 100 to 50, 85 to 45, 72 to 40, 60 to 35)
+
         fun describeBytes(bytes: Long): String {
             val mb = bytes / (1024f * 1024f)
             return if (mb == mb.toInt().toFloat()) "${mb.toInt()} MB" else "%.1f MB".format(mb)

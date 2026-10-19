@@ -708,6 +708,7 @@ fun ToolScreen(
                             pageCount = state.documents.firstOrNull()?.pageCount,
                             sizeCheck = state.sizeCheck,
                             onCheckSize = onCheckSize,
+                            fileCount = state.documents.size,
                             onChange = onConfigChange
                         )
                     }

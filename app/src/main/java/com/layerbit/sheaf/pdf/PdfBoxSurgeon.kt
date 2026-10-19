@@ -2175,6 +2175,27 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         written
     }
 
+    override fun picturePages(pages: List<Pair<File, PageSize>>, layers: Map<Int, List<TextPlacement>>, output: File) {
+        if (pages.isEmpty()) throw PdfException.Refused("There are no pages to write.")
+        val pictures = File(scratchDir ?: output.parentFile, "pictures-${System.nanoTime()}.pdf")
+        try {
+            PDDocument(scratchMemory()).use { doc ->
+                for ((jpeg, size) in pages) {
+                    val page = PDPage(PDRectangle(size.widthPoints, size.heightPoints))
+                    doc.addPage(page)
+                    val image = jpeg.inputStream().use { JPEGFactory.createFromStream(doc, it) }
+                    PDPageContentStream(doc, page).use { it.drawImage(image, 0f, 0f, size.widthPoints, size.heightPoints) }
+                }
+                doc.save(pictures)
+            }
+            addTextLayer(PdfInput(pictures), layers, output)
+        } catch (e: IOException) {
+            throw e.asPdfException("making the pages into pictures")
+        } finally {
+            pictures.delete()
+        }
+    }
+
     override fun editableLines(input: PdfInput, pages: List<Int>): Map<Int, EditablePage> = withDocument(input) { doc ->
         pages.filter { it in 0 until doc.numberOfPages }.associateWith { index -> TextEditing.lines(doc, index) }
     }

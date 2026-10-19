@@ -59,7 +59,9 @@ fun ToolOptions(
     onChange: ((ToolConfig) -> ToolConfig) -> Unit,
     modifier: Modifier = Modifier,
     sizeCheck: SizeCheck = SizeCheck.Idle,
-    onCheckSize: () -> Unit = {}
+    onCheckSize: () -> Unit = {},
+    /** How many files the options apply to; some say something different for a batch. */
+    fileCount: Int = 1
 ) {
     // These have their own canvases on the tool screen rather than plain settings.
     if (tool == ToolId.SCAN || tool == ToolId.ORGANISE) return
@@ -249,6 +251,15 @@ fun ToolOptions(
                         "The levels are tried lightest first and the first that fits is kept. " +
                             "If none fits, you get the smallest and are told; Split by size can " +
                             "then cut it into parts that do."
+                    )
+                    ToggleRow(
+                        title = "Let pages become pictures if that is what it takes",
+                        checked = config.compressPictures,
+                        onChange = { on -> onChange { it.copy(compressPictures = on) } }
+                    )
+                    Hint(
+                        "Only when no level gets under the size. Each page becomes one picture that " +
+                            "looks the same; its words are kept underneath, so search and copy still work."
                     )
                 } else {
                     SectionHeading("How hard to squeeze")
@@ -1235,7 +1246,13 @@ fun ToolOptions(
                         )
                     }
                     ToolConfig.MetaMode.EDIT -> {
-                        Hint("These are the document's current details. Edit whichever you want to change.")
+                        Hint(
+                            if (fileCount > 1) {
+                                "For all $fileCount files: a box you fill is set on every one; a box left empty keeps each file's own."
+                            } else {
+                                "These are the document's current details. Edit whichever you want to change; an empty box clears it."
+                            }
+                        )
                         Field(
                             value = config.metaTitle,
                             label = "Title",

@@ -442,6 +442,13 @@ interface PdfSurgeon {
     /** Paints over old words and writes new ones. Returns how many changes were made. */
     @Throws(PdfException::class)
     fun editText(input: PdfInput, edits: List<TextEdit>, output: File): Int
+
+    /**
+     * A document whose pages are each one JPEG picture of the page, at the page's own size,
+     * with the page's words laid invisibly underneath so search and copy still work.
+     */
+    @Throws(PdfException::class)
+    fun picturePages(pages: List<Pair<File, PageSize>>, layers: Map<Int, List<TextPlacement>>, output: File)
 }
 
 /** What [PdfSurgeon.cleanDocument] takes out. Everything on by default. */

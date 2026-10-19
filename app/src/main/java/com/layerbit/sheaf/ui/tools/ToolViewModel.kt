@@ -234,6 +234,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     documents = combined,
                     busy = false,
                     error = failure,
+                    config = current.config.forSeveral(current.metaSeed, combined.size),
                     // A different document is a different form, so what was read about the
                     // last one has to go rather than be shown against this one.
                     formFields = emptyList(),
@@ -300,14 +301,18 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
 
             // Document details cannot be edited without showing what they already are. Filling
             // the fields here is the difference between an editor and three empty boxes.
-            if (tool == ToolId.METADATA) {
+            // From the first file only. Seeding from each in turn left the last file's title in
+            // the boxes, and the boxes then went onto every file of the batch.
+            if (tool == ToolId.METADATA && _state.value.metaSeed == null && _state.value.documents.isEmpty()) {
+                val seed = DocumentMetadata(info.title.orEmpty(), info.author.orEmpty(), info.subject.orEmpty(), info.keywords.orEmpty())
                 _state.update { current ->
                     current.copy(
+                        metaSeed = seed,
                         config = current.config.copy(
-                            metaTitle = info.title.orEmpty(),
-                            metaAuthor = info.author.orEmpty(),
-                            metaSubject = info.subject.orEmpty(),
-                            metaKeywords = info.keywords.orEmpty()
+                            metaTitle = seed.title.orEmpty(),
+                            metaAuthor = seed.author.orEmpty(),
+                            metaSubject = seed.subject.orEmpty(),
+                            metaKeywords = seed.keywords.orEmpty()
                         )
                     )
                 }
@@ -779,14 +784,20 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             ToolId.SPLIT_BY_SIZE -> SplitBySizeOp(config.partMb.toLong() * 1024 * 1024)
             ToolId.EXTRACT_IMAGES -> ExtractImagesOp()
             ToolId.METADATA -> when (config.metaMode) {
-                ToolConfig.MetaMode.EDIT -> MetadataOp(
-                    DocumentMetadata(
-                        title = config.metaTitle,
-                        author = config.metaAuthor,
-                        subject = config.metaSubject,
-                        keywords = config.metaKeywords
+                ToolConfig.MetaMode.EDIT -> {
+                    // One file: an empty box clears that detail. Several: an empty box leaves
+                    // each file's own, so one author set on ten files does not wipe ten titles.
+                    val several = state.documents.count { it.isReady } > 1
+                    fun field(value: String) = if (several && value.isBlank()) null else value
+                    MetadataOp(
+                        DocumentMetadata(
+                            title = field(config.metaTitle),
+                            author = field(config.metaAuthor),
+                            subject = field(config.metaSubject),
+                            keywords = field(config.metaKeywords)
+                        )
                     )
-                )
+                }
                 ToolConfig.MetaMode.STRIP -> MetadataOp(DocumentMetadata(stripAll = true))
                 ToolConfig.MetaMode.CLEAN -> CleanOp(
                     CleanSpec(
@@ -821,7 +832,8 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             ToolId.OFFICE_TO_PDF -> OfficeToPdfOp()
             ToolId.COMPRESS -> CompressOp(
                 config.compression,
-                targetBytes = if (config.compressToSize) config.compressTargetMb.toLong() * 1024 * 1024 else null
+                targetBytes = if (config.compressToSize) config.compressTargetMb.toLong() * 1024 * 1024 else null,
+                allowPictures = config.compressToSize && config.compressPictures
             )
             ToolId.ADD_IMAGE -> AddImageOp(
                 anchor = config.signAnchor,
@@ -1976,6 +1988,8 @@ data class ToolUiState(
     /** Attachments: what the first document already carries, once [attachmentsRead]. */
     val attachments: List<AttachmentInfo> = emptyList(),
     val attachmentsRead: Boolean = false,
+    /** Document details: what the first file said, so a second file can clear the boxes it filled. */
+    val metaSeed: DocumentMetadata? = null,
     /** Edit text: the lines each page offers, and the changes typed, by page then line. */
     val editPages: Map<Int, EditablePage> = emptyMap(),
     val lineEdits: Map<Int, Map<Int, LineEdit>> = emptyMap(),
@@ -2210,6 +2224,8 @@ data class ToolConfig(
     /** Compress: get under a size rather than pick a level. */
     val compressToSize: Boolean = false,
     val compressTargetMb: Int = 2,
+    /** Compress to a size: let pages become pictures if nothing else gets under it. */
+    val compressPictures: Boolean = false,
 
     /** Remove areas: what Find and mark looks for. */
     val findAadhaar: Boolean = true,
@@ -2399,9 +2415,20 @@ data class PictureChange(
 data class LineEdit(val text: String, val paper: Int, val ink: Int)
 
 /** Near enough to Helvetica for deciding what fits; the writer measures exactly. */
-private val measurePaint = android.graphics.Paint().apply { typeface = android.graphics.Typeface.SANS_SERIF }
+private val measurePaint by lazy { android.graphics.Paint().apply { typeface = android.graphics.Typeface.SANS_SERIF } }
 
 internal fun helveticaWidth(text: String, sizePoints: Float): Float = synchronized(measurePaint) {
     measurePaint.textSize = sizePoints
     measurePaint.measureText(text)
+}
+
+/**
+ * Document details with more than one file: the boxes filled from the first file are emptied
+ * while untouched, because an empty box then means "keep each file's own".
+ */
+internal fun ToolConfig.forSeveral(seed: DocumentMetadata?, files: Int): ToolConfig {
+    if (seed == null || files < 2) return this
+    val untouched = metaTitle == seed.title.orEmpty() && metaAuthor == seed.author.orEmpty() &&
+        metaSubject == seed.subject.orEmpty() && metaKeywords == seed.keywords.orEmpty()
+    return if (untouched) copy(metaTitle = "", metaAuthor = "", metaSubject = "", metaKeywords = "") else this
 }
