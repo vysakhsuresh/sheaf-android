@@ -10,6 +10,8 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -1402,9 +1404,31 @@ internal fun Field(
     onChange: (String) -> Unit,
     centred: Boolean = false
 ) {
+    // The field keeps what is typed itself and tells the model, rather than showing the
+    // model's copy back: that copy arrives a frame later, and a keyboard that sends edits
+    // faster than frames - or replaces a whole word at once - had characters dropped.
+    var text by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(value) }
+    // What this field has sent and not yet seen come back. A value that is one of them is
+    // its own echo, late; anything else was set from outside - Replace everywhere, a kept
+    // answer - and is taken.
+    val sent = androidx.compose.runtime.remember { mutableListOf<String>() }
+    androidx.compose.runtime.LaunchedEffect(value) {
+        val echo = sent.indexOf(value)
+        if (echo >= 0) {
+            repeat(echo + 1) { sent.removeAt(0) }
+        } else if (value != text) {
+            sent.clear()
+            text = value
+        }
+    }
     OutlinedTextField(
-        value = value,
-        onValueChange = onChange,
+        value = text,
+        onValueChange = {
+            text = it
+            sent += it
+            if (sent.size > 64) sent.removeAt(0)
+            onChange(it)
+        },
         label = if (label.isEmpty()) null else ({ Text(label, style = MaterialTheme.typography.bodySmall) }),
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),

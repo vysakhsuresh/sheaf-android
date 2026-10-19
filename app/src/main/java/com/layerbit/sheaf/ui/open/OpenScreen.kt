@@ -198,6 +198,8 @@ private fun SuggestionCard(suggestion: Suggest.Suggestion, onClick: () -> Unit) 
                     when {
                         tool == null -> "Read"
                         suggestion.preset == Suggest.PRESET_EXCEL -> "PDF to Excel"
+                        tool == ToolId.PDF_TO_OFFICE -> "PDF to Word"
+                        tool == ToolId.OFFICE_TO_PDF -> "Word, Excel or text to PDF"
                         else -> tool.title
                     },
                     style = MaterialTheme.typography.titleMedium,

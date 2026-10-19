@@ -186,7 +186,8 @@ fun PicturesCanvas(
                     val change = changes[i]
                     val moved = i == dragging || (change != null && change.area != original)
                     if (change?.removed == true || change?.replacement != null || moved) {
-                        drawRect(Color.White, topLeft = original.topLeft(size), size = original.size(size))
+                        // A pixel wider all round, or the old picture's soft edge shows as a ghost outline.
+                        drawRect(Color.White, topLeft = original.topLeft(size) - Offset(1.5f, 1.5f), size = original.size(size).let { Size(it.width + 3f, it.height + 3f) })
                     }
                 }
                 for ((i, original) in list.withIndex()) {

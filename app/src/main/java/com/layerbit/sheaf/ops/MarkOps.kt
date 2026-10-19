@@ -205,7 +205,7 @@ class RedactOp(
             OpOutcome.Produced(
                 SheafFile(output, "${input.baseName} redacted.pdf", SheafFile.Origin.Derived("redacted")),
                 "$boxes ${if (boxes == 1) "area" else "areas"} removed from " +
-                    "$pages ${if (pages == 1) "page" else "pages"}, which are now images"
+                    if (pages == 1) "1 page, which is now an image" else "$pages pages, which are now images"
             )
         )
     }

@@ -25,8 +25,8 @@ class RecipeOp(private val name: String, private val steps: List<Op>) : Op {
         val originals = inputs.map { it.file }.toSet()
         var current = inputs
         val failures = mutableListOf<OpOutcome>()
-        // Why a file came through a step untouched, kept for the final list.
-        val untouched = HashMap<String, String>()
+        // What each file has been through, step by step, for its line in the results.
+        val notes = HashMap<String, String>()
         var lastProduced = emptyList<OpOutcome.Produced>()
 
         for ((k, op) in steps.withIndex()) {
@@ -43,13 +43,19 @@ class RecipeOp(private val name: String, private val steps: List<Op>) : Op {
             val produced = mutableListOf<OpOutcome.Produced>()
             for ((i, outcome) in outcomes.withIndex()) {
                 when (outcome) {
-                    is OpOutcome.Produced -> { next += outcome.file; produced += outcome }
+                    is OpOutcome.Produced -> {
+                        next += outcome.file
+                        produced += outcome
+                        // A step that makes one file per file carries the earlier story on.
+                        val before = if (outcomes.size == current.size) notes[current[i].file.path] else null
+                        notes[outcome.file.file.path] = listOfNotNull(before, outcome.detail ?: op.title).joinToString("; ")
+                    }
                     is OpOutcome.Skipped -> {
                         // Skips name their input; match it back, or by position for one-to-one steps.
                         val input = current.firstOrNull { it.displayName == outcome.inputName } ?: current.getOrNull(i)
                         if (input != null) {
                             next += input
-                            untouched[input.file.path] = outcome.reason
+                            notes[input.file.path] = (notes[input.file.path]?.let { "$it; " } ?: "") + "${op.title}: ${outcome.reason}"
                         }
                     }
                     is OpOutcome.Failed -> failures += OpOutcome.Failed(outcome.inputName, "${op.title}: ${outcome.reason}")
@@ -67,7 +73,7 @@ class RecipeOp(private val name: String, private val steps: List<Op>) : Op {
 
         val results = current.map { file ->
             lastProduced.firstOrNull { it.file.file == file.file }
-                ?: OpOutcome.Produced(file, untouched[file.file.path] ?: "Unchanged")
+                ?: OpOutcome.Produced(file, notes[file.file.path] ?: "Unchanged")
         }
         return results + failures
     }

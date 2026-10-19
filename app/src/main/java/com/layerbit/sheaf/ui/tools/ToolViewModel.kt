@@ -1521,7 +1521,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 for ((label, byPage) in found) {
                     val n = byPage.values.sumOf { it.size }
                     if (n == 0) continue
-                    counts += "$n $label"
+                    counts += if (n == 1) "1 ${label.removeSuffix("es").takeIf { label.endsWith("sses") } ?: label.removeSuffix("s")}" else "$n $label"
                     for ((page, areas) in byPage) {
                         val existing = redactions[page].orEmpty()
                         // The same area found twice - a number that matches two patterns - is

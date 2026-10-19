@@ -51,7 +51,11 @@ object Suggest {
 
     fun mb(bytes: Long): String {
         val mb = bytes / (1024.0 * 1024.0)
-        return if (mb >= 10) "${mb.roundToInt()} MB" else "%.1f MB".format(mb)
+        return when {
+            mb >= 10 -> "${mb.roundToInt()} MB"
+            mb >= 1 -> "%.1f MB".format(mb)
+            else -> "${(bytes / 1024.0).roundToInt().coerceAtLeast(1)} KB"
+        }
     }
 
     private fun plural(n: Int, one: String, many: String = one + "s") = if (n == 1) "1 $one" else "$n $many"
