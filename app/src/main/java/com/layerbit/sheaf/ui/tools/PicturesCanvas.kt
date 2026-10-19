@@ -66,6 +66,7 @@ fun PicturesCanvas(
     onMove: (Int, PageArea) -> Unit,
     onToggleRemove: (Int) -> Unit,
     onReplace: () -> Unit,
+    onSharpen: (Float) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val currentPictures by rememberUpdatedState(pictures.orEmpty())
@@ -80,6 +81,8 @@ fun PicturesCanvas(
             Text("Page ${pageIndex + 1} of $pageCount", style = MaterialTheme.typography.bodyMedium, color = SheafColors.Text)
             OutlinedButton(onClick = { onPage(pageIndex + 1) }, enabled = pageIndex < pageCount - 1) { Text("Next", color = SheafColors.Muted) }
         }
+        val zoom = rememberZoomState(Unit)
+        ZoomControls(zoom, Modifier.padding(top = 4.dp))
 
         val handle = with(LocalDensity.current) { 22.dp.toPx() }
         BoxWithConstraints(
@@ -91,6 +94,7 @@ fun PicturesCanvas(
                 .background(SheafColors.Paper)
                 .border(1.dp, SheafColors.Border, RoundedCornerShape(6.dp))
         ) {
+            ZoomFrame(zoom, Modifier.fillMaxSize(), onSettled = onSharpen) {
             // A drag in progress: which picture, how, and the box it would land in.
             var dragging by remember(pageIndex) { mutableStateOf<Int?>(null) }
             var resizing by remember(pageIndex) { mutableStateOf(false) }
@@ -242,6 +246,7 @@ fun PicturesCanvas(
                         drawLine(Color.White, cross + Offset(-r, r), cross + Offset(r, -r), strokeWidth = 4f)
                     }
                 }
+            }
             }
         }
 

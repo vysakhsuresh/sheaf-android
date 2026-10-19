@@ -289,7 +289,9 @@ fun RedactCanvas(
     /** Create a form draws its boxes see-through with a label; Remove areas draws them black. */
     boxColour: Color = Color.Black,
     labels: List<String> = emptyList(),
-    emptyHint: String = "Drag a box over anything that should go"
+    emptyHint: String = "Drag a box over anything that should go",
+    /** Told the zoom once it settles, so the page can be drawn sharp at it. */
+    onSharpen: (Float) -> Unit = {}
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -308,6 +310,8 @@ fun RedactCanvas(
                 Text("Next", color = SheafColors.Muted)
             }
         }
+        val zoom = rememberZoomState(Unit)
+        ZoomControls(zoom, Modifier.padding(top = 4.dp))
 
         BoxWithConstraints(
             modifier = Modifier
@@ -320,6 +324,7 @@ fun RedactCanvas(
                 .background(SheafColors.Paper)
                 .border(1.dp, SheafColors.Border, RoundedCornerShape(6.dp))
         ) {
+            ZoomFrame(zoom, Modifier.fillMaxSize(), onSettled = onSharpen) {
             if (page != null) {
                 Image(
                     bitmap = page.asImageBitmap(),
@@ -392,6 +397,7 @@ fun RedactCanvas(
                     )
                 }
             }
+            }
         }
 
         Row(
@@ -440,7 +446,9 @@ fun MarkupCanvas(
     onTap: (PagePoint) -> Unit,
     onUndo: () -> Unit,
     onClear: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Told the zoom once it settles, so the page can be drawn sharp at it. */
+    onSharpen: (Float) -> Unit = {}
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -460,6 +468,8 @@ fun MarkupCanvas(
                 enabled = pageIndex < pageCount - 1
             ) { Text("Next", color = SheafColors.Muted) }
         }
+        val zoom = rememberZoomState(Unit)
+        ZoomControls(zoom, Modifier.padding(top = 4.dp))
 
         val pen = tool == ToolConfig.MarkupTool.PEN
         val lineTool = tool == ToolConfig.MarkupTool.LINE || tool == ToolConfig.MarkupTool.ARROW
@@ -479,6 +489,7 @@ fun MarkupCanvas(
                         val down = awaitPointerEvent().changes.firstOrNull { it.pressed }
                             ?: continue
                         val drawing = SignatureStroke(size.width, size.height)
+                        var cancelled = false
                         drawing.start(down.position)
                         stroke.value = drawing
                         version++
@@ -487,6 +498,12 @@ fun MarkupCanvas(
                         while (true) {
                             val event = awaitPointerEvent()
                             val change = event.changes.firstOrNull() ?: break
+                            // A second finger is a pinch: what the first had drawn is dropped.
+                            if (event.changes.count { it.pressed } > 1 || change.isConsumed) {
+                                cancelled = true
+                                while (awaitPointerEvent().changes.any { it.pressed }) Unit
+                                break
+                            }
                             if (!change.pressed) {
                                 change.consume()
                                 break
@@ -501,7 +518,7 @@ fun MarkupCanvas(
 
                         // A tap is not a stroke. Handing one over would put an invisible mark
                         // in the list and count towards the total.
-                        if (drawing.points.size >= 2) {
+                        if (!cancelled && drawing.points.size >= 2) {
                             onInk(drawing.points.map { PagePoint(it.x, it.y) })
                         }
                         stroke.value = null
@@ -568,6 +585,7 @@ fun MarkupCanvas(
                 .background(SheafColors.Paper)
                 .border(1.dp, SheafColors.Border, RoundedCornerShape(6.dp))
         ) {
+            ZoomFrame(zoom, Modifier.fillMaxSize(), onSettled = onSharpen) {
             if (page != null) {
                 Image(
                     bitmap = page.asImageBitmap(),
@@ -622,6 +640,7 @@ fun MarkupCanvas(
                         )
                     }
                 }
+            }
             }
         }
 

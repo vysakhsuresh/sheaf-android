@@ -255,6 +255,7 @@ fun ToolRoute(
             onReadScan = viewModel::readScannedPage,
             onReplaceEverywhere = viewModel::replaceEverywhere,
             onPickFolder = { pickWholeFolder.launch(null) },
+            onSharpen = viewModel::sharpenPage,
             onRecipe = RecipeActions(
                 load = viewModel::loadRecipes,
                 select = viewModel::selectRecipe,

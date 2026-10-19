@@ -173,6 +173,7 @@ fun ToolScreen(
     onReplaceEverywhere: () -> Unit = {},
     onPickFolder: () -> Unit = {},
     onRecipe: RecipeActions = RecipeActions(),
+    onSharpen: (Float) -> Unit = {},
     /** Bundles every result into one ZIP and saves that. */
     onSaveZip: (List<SheafFile>) -> Unit,
     onCheckSize: () -> Unit,
@@ -653,7 +654,8 @@ fun ToolScreen(
                             onLine = { from, to -> onLine(state.canvasPage, from, to) },
                             onTap = { at -> onTap(state.canvasPage, at) },
                             onUndo = { onUndoMark(state.canvasPage) },
-                            onClear = { onClearMarks(state.canvasPage) }
+                            onClear = { onClearMarks(state.canvasPage) },
+                            onSharpen = onSharpen
                         )
                     }
                     item {
@@ -679,7 +681,8 @@ fun ToolScreen(
                             onClear = { onClearFields(state.canvasPage) },
                             boxColour = SheafColors.Band.copy(alpha = 0.22f),
                             labels = onThisPage.map { it.value.name },
-                            emptyHint = "Drag a box where a field should go"
+                            emptyHint = "Drag a box where a field should go",
+                            onSharpen = onSharpen
                         )
                     }
                     item {
@@ -717,7 +720,8 @@ fun ToolScreen(
                             onText = onLineText,
                             onUndo = onUndoLine,
                             onRead = onReadScan,
-                            onScript = { s -> onConfigChange { it.copy(ocrScript = s) } }
+                            onScript = { s -> onConfigChange { it.copy(ocrScript = s) } },
+                            onSharpen = onSharpen
                         )
                     }
                     item {
@@ -754,7 +758,8 @@ fun ToolScreen(
                             onSelect = onSelectPicture,
                             onMove = { i, area -> onMovePicture(state.canvasPage, i, area) },
                             onToggleRemove = { i -> onToggleRemovePicture(state.canvasPage, i) },
-                            onReplace = onPickReplacement
+                            onReplace = onPickReplacement,
+                            onSharpen = onSharpen
                         )
                     }
                     item {
@@ -782,7 +787,8 @@ fun ToolScreen(
                             areas = state.redactions[state.canvasPage].orEmpty(),
                             onPage = onRedactPage,
                             onAdd = { area -> onAddRedaction(state.canvasPage, area) },
-                            onClear = { onClearRedactions(state.canvasPage) }
+                            onClear = { onClearRedactions(state.canvasPage) },
+                            onSharpen = onSharpen
                         )
                     }
                     item {

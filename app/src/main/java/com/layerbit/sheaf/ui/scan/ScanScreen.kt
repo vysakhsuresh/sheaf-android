@@ -5,6 +5,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -125,6 +129,8 @@ fun PageEditor(
                 modifier = Modifier.fillMaxSize()
             )
 
+            var loupe by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Offset?>(null) }
+
             val handles = listOf(
                 CornerHandle.TOP_LEFT to editing.corners.topLeft,
                 CornerHandle.TOP_RIGHT to editing.corners.topRight,
@@ -147,12 +153,13 @@ fun PageEditor(
                                     .minByOrNull { (_, d) -> d }
                                     ?.first
                             },
-                            onDragEnd = { dragging = null },
-                            onDragCancel = { dragging = null },
+                            onDragEnd = { dragging = null; loupe = null },
+                            onDragCancel = { dragging = null; loupe = null },
                             onDrag = { change, _ ->
                                 val handle = dragging ?: return@detectDragGestures
                                 change.consume()
                                 val (x, y) = toImage(change.position)
+                                loupe = change.position
                                 onMoveCorner(handle, x, y)
                             }
                         )
@@ -176,6 +183,42 @@ fun PageEditor(
                             .background(SheafColors.Band.copy(alpha = 0.55f))
                             .border(2.dp, SheafColors.OnBand, CircleShape)
                     )
+                }
+            }
+
+            // While a corner is held, the photo round it at three times, above the finger, so
+            // the corner can be set on the paper's edge the finger is covering.
+            val loupeAt = loupe
+            if (loupeAt != null) {
+                val sidePx = with(density) { LOUPE_SIZE.toPx() }
+                val gapPx = with(density) { 36.dp.toPx() }
+                androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                    val above = loupeAt.y - gapPx - sidePx
+                    val top = if (above >= 0f) above else loupeAt.y + gapPx
+                    val left = (loupeAt.x - sidePx / 2f).coerceIn(-sidePx / 3f, size.width - 2f * sidePx / 3f)
+                    val centre = Offset(left + sidePx / 2f, top + sidePx / 2f)
+                    val (ix, iy) = toImage(loupeAt)
+                    // Image pixels per screen pixel, then a third of that inside the loupe.
+                    val perPx = bitmap.width / drawnWidthPx / 3f
+                    val half = sidePx / 2f * perPx
+                    val native = drawContext.canvas.nativeCanvas
+                    val clip = android.graphics.Path().apply { addCircle(centre.x, centre.y, sidePx / 2f, android.graphics.Path.Direction.CW) }
+                    native.save()
+                    native.clipPath(clip)
+                    native.drawColor(android.graphics.Color.rgb(10, 12, 16))
+                    native.drawBitmap(
+                        bitmap,
+                        android.graphics.Rect((ix - half).toInt(), (iy - half).toInt(), (ix + half).toInt(), (iy + half).toInt()),
+                        android.graphics.RectF(left, top, left + sidePx, top + sidePx),
+                        android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG)
+                    )
+                    native.restore()
+                    val arm = sidePx * 0.18f
+                    for ((colour, width) in listOf(Color.White.copy(alpha = 0.9f) to 3.dp.toPx(), Color(0xFF0A0C10) to 1.25.dp.toPx())) {
+                        drawLine(colour, centre - Offset(arm, 0f), centre + Offset(arm, 0f), strokeWidth = width)
+                        drawLine(colour, centre - Offset(0f, arm), centre + Offset(0f, arm), strokeWidth = width)
+                    }
+                    drawCircle(Color.White.copy(alpha = 0.9f), radius = sidePx / 2f, center = centre, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
                 }
             }
         }
@@ -265,3 +308,4 @@ private val HANDLE_SIZE = 30.dp
 
 /** Generous on purpose: a fingertip is about 9mm and the handle is smaller than that. */
 private val GRAB_RADIUS = 44.dp
+private val LOUPE_SIZE = 112.dp

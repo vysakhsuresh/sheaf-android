@@ -68,6 +68,7 @@ fun EditTextCanvas(
     onUndo: () -> Unit,
     onRead: () -> Unit,
     onScript: (OcrScript) -> Unit,
+    onSharpen: (Float) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val lines = editable?.lines.orEmpty()
@@ -79,6 +80,8 @@ fun EditTextCanvas(
             Text("Page ${pageIndex + 1} of $pageCount", style = MaterialTheme.typography.bodyMedium, color = SheafColors.Text)
             OutlinedButton(onClick = { onPage(pageIndex + 1) }, enabled = pageIndex < pageCount - 1) { Text("Next", color = SheafColors.Muted) }
         }
+        val zoom = rememberZoomState(Unit)
+        ZoomControls(zoom, Modifier.padding(top = 4.dp))
 
         BoxWithConstraints(
             modifier = Modifier
@@ -89,6 +92,7 @@ fun EditTextCanvas(
                 .background(SheafColors.Paper)
                 .border(1.dp, SheafColors.Border, RoundedCornerShape(6.dp))
         ) {
+            ZoomFrame(zoom, Modifier.fillMaxSize(), onSettled = onSharpen) {
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
@@ -146,6 +150,7 @@ fun EditTextCanvas(
                         style = Stroke(width = if (i == selected) 3.5f else 1.4f)
                     )
                 }
+            }
             }
         }
 

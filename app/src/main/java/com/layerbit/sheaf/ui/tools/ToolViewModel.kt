@@ -661,6 +661,29 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Draws the page being worked on again at the zoom it settled at, so type stays sharp
+     * under the finger. Capped, because a phone's memory is the limit at 400%.
+     */
+    fun sharpenPage(zoom: Float) {
+        val doc = _state.value.documents.firstOrNull() ?: return
+        val index = _state.value.canvasPage
+        val want = (REDACT_PAGE_WIDTH_PX * zoom).toInt().coerceAtMost(SHARP_PAGE_WIDTH_PX)
+        val have = _state.value.thumbnails[index]?.width ?: 0
+        if (want <= have * 1.1f) return
+        viewModelScope.launch {
+            val bitmap = withContext(Dispatchers.IO) {
+                runCatching {
+                    val engine = if (doc.encrypted) sheaf.encryptedReader else sheaf.pdfEngine
+                    engine.open(doc.file.file, doc.password).use { it.renderPage(index, want) }
+                }.getOrNull()
+            } ?: return@launch
+            _state.update { current ->
+                if (current.canvasPage != index) current else current.copy(thumbnails = mapOf(index to bitmap))
+            }
+        }
+    }
+
     fun togglePageSelected(index: Int) {
         _state.update { current ->
             val selected = current.selectedPages.toMutableSet()
@@ -2129,6 +2152,9 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
 
         /** Readable enough to aim a redaction box at, small enough to hold a few of. */
         const val REDACT_PAGE_WIDTH_PX = 900
+
+        /** The sharpest a zoomed page is drawn: about 30 MB of pixels for an A4 page. */
+        const val SHARP_PAGE_WIDTH_PX = 2400
 
         /** Big enough to judge a margin or a watermark on a phone screen. */
         const val PREVIEW_PAGE_WIDTH_PX = 700
