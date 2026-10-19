@@ -423,6 +423,17 @@ interface PdfSurgeon {
      */
     @Throws(PdfException::class)
     fun writeOutline(input: PdfInput, entries: List<OutlineEntry>, output: File)
+
+    /** The pictures page [pageIndex] draws itself, as fractions of the page the reader sees. */
+    @Throws(PdfException::class)
+    fun findPictures(input: PdfInput, pageIndex: Int): List<PageArea>
+
+    /**
+     * Moves, resizes, takes out or swaps pictures already on pages, keyed by page index. Each
+     * edit names the picture by where it was; one that cannot be matched is counted as missed.
+     */
+    @Throws(PdfException::class)
+    fun editPictures(input: PdfInput, edits: Map<Int, List<PictureEdit>>, output: File): PictureReport
 }
 
 /** What [PdfSurgeon.cleanDocument] takes out. Everything on by default. */

@@ -2175,6 +2175,30 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         written
     }
 
+    override fun findPictures(input: PdfInput, pageIndex: Int): List<PageArea> = withDocument(input) { doc ->
+        if (pageIndex !in 0 until doc.numberOfPages) return@withDocument emptyList()
+        val page = doc.getPage(pageIndex)
+        PictureSurgery.calls(page, PictureSurgery.tokens(page)).map { it.area }
+    }
+
+    override fun editPictures(input: PdfInput, edits: Map<Int, List<PictureEdit>>, output: File): PictureReport =
+        withDocument(input) { doc ->
+            var report = PictureReport(0, 0, 0, 0)
+            for ((index, list) in edits) {
+                if (index !in 0 until doc.numberOfPages || list.isEmpty()) continue
+                val r = PictureSurgery.edit(doc, doc.getPage(index), list)
+                report = PictureReport(report.removed + r.removed, report.moved + r.moved, report.replaced + r.replaced, report.missed + r.missed)
+            }
+            if (report.done == 0) {
+                throw PdfException.Refused(
+                    "Those pictures could not be found in the page's drawing, so nothing was changed. " +
+                        "A picture inside a drawing or a scan cannot be edited on its own."
+                )
+            }
+            doc.save(output)
+            report
+        }
+
     override fun writeOutline(input: PdfInput, entries: List<OutlineEntry>, output: File) =
         withDocument(input) { doc ->
             doc.replaceOutline(entries)

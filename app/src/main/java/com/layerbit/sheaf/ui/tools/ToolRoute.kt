@@ -92,6 +92,10 @@ fun ToolRoute(
         viewModel.addDocuments(uris)
     }
 
+    val pickReplacement = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? -> if (uri != null) viewModel.replacePicture(uri) }
+
     val pickFolder = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -233,6 +237,11 @@ fun ToolRoute(
             onSetField = viewModel::setNewField,
             onRemoveField = viewModel::removeNewField,
             onClearFields = viewModel::clearNewFields,
+            onPicturesPage = viewModel::setPicturesPage,
+            onSelectPicture = viewModel::selectPicture,
+            onMovePicture = viewModel::movePicture,
+            onToggleRemovePicture = viewModel::toggleRemovePicture,
+            onPickReplacement = { pickReplacement.launch(arrayOf("image/*")) },
             onSaveZip = { files ->
                 viewModel.zipResults(files) { zip ->
                     if (zip == null) {

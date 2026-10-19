@@ -150,6 +150,11 @@ fun ToolScreen(
     onSetField: (Int, String?, com.layerbit.sheaf.pdf.NewField.Kind?, String?) -> Unit,
     onRemoveField: (Int) -> Unit,
     onClearFields: (Int) -> Unit,
+    onPicturesPage: (Int) -> Unit = {},
+    onSelectPicture: (Int?) -> Unit = {},
+    onMovePicture: (Int, Int, com.layerbit.sheaf.pdf.PageArea) -> Unit = { _, _, _ -> },
+    onToggleRemovePicture: (Int, Int) -> Unit = { _, _ -> },
+    onPickReplacement: () -> Unit = {},
     /** Bundles every result into one ZIP and saves that. */
     onSaveZip: (List<SheafFile>) -> Unit,
     onCheckSize: () -> Unit,
@@ -164,7 +169,8 @@ fun ToolScreen(
         when (tool) {
             // These edit pages, so they need the pages themselves.
             // Extract shows them to be tapped rather than typed.
-            ToolId.ORGANISE, ToolId.REDACT, ToolId.EXTRACT, ToolId.ANNOTATE, ToolId.CREATE_FORM -> onLoadPages()
+            ToolId.ORGANISE, ToolId.REDACT, ToolId.EXTRACT, ToolId.ANNOTATE, ToolId.CREATE_FORM,
+            ToolId.EDIT_IMAGES -> onLoadPages()
             // These change how a page looks, so one page is enough to show it.
             ToolId.CROP, ToolId.WATERMARK, ToolId.PAGE_NUMBERS,
             ToolId.ADD_TEXT, ToolId.BACKGROUND -> onLoadPreviewPage()
@@ -591,6 +597,29 @@ fun ToolScreen(
                                 onRemove = onRemoveField
                             )
                         }
+                    }
+                } else if (tool == ToolId.EDIT_IMAGES && state.pageOrder.isNotEmpty()) {
+                    item {
+                        PicturesCanvas(
+                            pageIndex = state.canvasPage,
+                            pageCount = state.pageOrder.size,
+                            page = state.thumbnails[state.canvasPage],
+                            pictures = state.pictures[state.canvasPage],
+                            changes = state.pictureChanges[state.canvasPage].orEmpty(),
+                            selected = state.selectedPicture,
+                            onPage = onPicturesPage,
+                            onSelect = onSelectPicture,
+                            onMove = { i, area -> onMovePicture(state.canvasPage, i, area) },
+                            onToggleRemove = { i -> onToggleRemovePicture(state.canvasPage, i) },
+                            onReplace = onPickReplacement
+                        )
+                    }
+                    item {
+                        Hint(
+                            "Nothing else on the page changes. A picture taken out is no longer drawn, " +
+                                "but its data may still be inside the file: for something private, use " +
+                                "Remove areas. A picture that is part of a scan cannot be edited on its own."
+                        )
                     }
                 } else if (tool == ToolId.REDACT && state.pageOrder.isNotEmpty()) {
                     item {

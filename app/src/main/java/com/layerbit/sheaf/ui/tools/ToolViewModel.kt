@@ -52,6 +52,8 @@ import com.layerbit.sheaf.ops.PdfToImagesOp
 import com.layerbit.sheaf.ops.RemovePasswordOp
 import com.layerbit.sheaf.ops.ResizePhotoOp
 import com.layerbit.sheaf.ops.KeyPointsOp
+import com.layerbit.sheaf.ops.EditPicturesOp
+import com.layerbit.sheaf.pdf.PictureEdit
 import com.layerbit.sheaf.ops.PhotoPixels
 import com.layerbit.sheaf.ops.SetPasswordOp
 import com.layerbit.sheaf.ops.SplitOp
@@ -184,7 +186,10 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     attachments = emptyList(),
                     attachmentsRead = false,
                     findReport = null,
-                    newFields = emptyList()
+                    newFields = emptyList(),
+                    pictures = emptyMap(),
+                    pictureChanges = emptyMap(),
+                    selectedPicture = null
                 )
             }
         }
@@ -232,7 +237,10 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     attachments = emptyList(),
                     attachmentsRead = false,
                     findReport = null,
-                    newFields = emptyList()
+                    newFields = emptyList(),
+                    pictures = emptyMap(),
+                    pictureChanges = emptyMap(),
+                    selectedPicture = null
                 )
             }
         }
@@ -415,7 +423,9 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         // Rendering the whole document at that size is hundreds of megabytes of bitmap and
         // was the one path in this app that could not survive a long scan, so these two
         // render on demand.
-        if (_state.value.tool == ToolId.REDACT || _state.value.tool == ToolId.ANNOTATE || _state.value.tool == ToolId.CREATE_FORM) {
+        if (_state.value.tool == ToolId.REDACT || _state.value.tool == ToolId.ANNOTATE || _state.value.tool == ToolId.CREATE_FORM ||
+            _state.value.tool == ToolId.EDIT_IMAGES
+        ) {
             loadPageCountOnly(doc)
             return
         }
@@ -477,6 +487,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             }
             _state.update { it.copy(busy = false, pageOrder = (0 until count).toList()) }
             if (count > 0) renderBigPage(0)
+            if (count > 0 && _state.value.tool == ToolId.EDIT_IMAGES) loadPictures(0)
         }
     }
 
@@ -825,7 +836,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 )
             }
             ToolId.REMOVE_PASSWORD -> RemovePasswordOp()
-            ToolId.EDIT_IMAGES -> null
+            ToolId.EDIT_IMAGES -> EditPicturesOp(state.pictureEdits())
             ToolId.SUMMARISE -> KeyPointsOp()
             ToolId.RESIZE_PHOTO -> ResizePhotoOp(
                 kb = config.photoKb.toFloat(),
@@ -1468,6 +1479,75 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- edit pictures ----
+
+    fun setPicturesPage(index: Int) {
+        _state.update { it.copy(canvasPage = index, selectedPicture = null) }
+        renderBigPage(index)
+        loadPictures(index)
+    }
+
+    /** Finds the pictures on one page, once. */
+    private fun loadPictures(page: Int) {
+        val doc = _state.value.documents.firstOrNull() ?: return
+        if (_state.value.pictures.containsKey(page)) return
+        viewModelScope.launch {
+            val found = withContext(Dispatchers.IO) {
+                runCatching { sheaf.surgeon.findPictures(PdfInput(doc.file.file, doc.password), page) }.getOrDefault(emptyList())
+            }
+            _state.update { it.copy(pictures = it.pictures + (page to found)) }
+        }
+    }
+
+    fun selectPicture(index: Int?) {
+        _state.update { it.copy(selectedPicture = index) }
+    }
+
+    private fun changePicture(page: Int, index: Int, transform: (PictureChange) -> PictureChange) {
+        _state.update { current ->
+            val original = current.pictures[page]?.getOrNull(index) ?: return@update current
+            val onPage = current.pictureChanges[page].orEmpty()
+            val change = transform(onPage[index] ?: PictureChange(original))
+            current.copy(pictureChanges = current.pictureChanges + (page to (onPage + (index to change))), selectedPicture = index, error = null)
+        }
+    }
+
+    fun movePicture(page: Int, index: Int, area: PageArea) = changePicture(page, index) { it.copy(area = area) }
+
+    /** Takes a picture out, or, tapped again, keeps it. Taking it out forgets any swap. */
+    fun toggleRemovePicture(page: Int, index: Int) = changePicture(page, index) {
+        if (it.removed) it.copy(removed = false) else it.copy(removed = true, replacement = null, replacementBitmap = null)
+    }
+
+    /** Puts the chosen image in place of the selected picture. */
+    fun replacePicture(uri: Uri) {
+        val state = _state.value
+        val index = state.selectedPicture
+        if (index == null) {
+            _state.update { it.copy(error = "Tap a picture on the page first, then choose the new one.") }
+            return
+        }
+        val page = state.canvasPage
+        viewModelScope.launch {
+            val loaded = withContext(Dispatchers.IO) {
+                runCatching {
+                    val imported = sheaf.documentStore.import(uri)
+                    val options = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    android.graphics.BitmapFactory.decodeFile(imported.file.path, options)
+                    if (options.outWidth <= 0) return@runCatching null
+                    options.inSampleSize = (maxOf(options.outWidth, options.outHeight) / PREVIEW_PX).coerceAtLeast(1)
+                    options.inJustDecodeBounds = false
+                    imported.file to android.graphics.BitmapFactory.decodeFile(imported.file.path, options)
+                }.getOrNull()
+            }
+            if (loaded == null) {
+                _state.update { it.copy(error = "That picture couldn't be read. Try a JPEG or PNG.") }
+                return@launch
+            }
+            changePicture(page, index) { it.copy(removed = false, replacement = loaded.first, replacementBitmap = loaded.second) }
+        }
+    }
+
     // ---- marking up ----
 
     fun setMarkupPage(index: Int) {
@@ -1671,6 +1751,11 @@ data class ToolUiState(
     /** Attachments: what the first document already carries, once [attachmentsRead]. */
     val attachments: List<AttachmentInfo> = emptyList(),
     val attachmentsRead: Boolean = false,
+    /** Edit pictures: the pictures found on each page, where they were. */
+    val pictures: Map<Int, List<PageArea>> = emptyMap(),
+    /** Edit pictures: what has been done to them, by page and then by the picture's place in [pictures]. */
+    val pictureChanges: Map<Int, Map<Int, PictureChange>> = emptyMap(),
+    val selectedPicture: Int? = null,
     /** True once the form has been looked for, which is how "none" differs from "not yet". */
     val formRead: Boolean = false
 ) {
@@ -1679,6 +1764,22 @@ data class ToolUiState(
         (pageEdits + PageEdit(pageOrder, rotations)).takeLast(MAX_PAGE_EDITS)
 
     val canUndoPageEdit: Boolean get() = pageEdits.isNotEmpty()
+
+    /** Edit pictures: every change that does something, as the surgeon takes them. */
+    fun pictureEdits(): Map<Int, List<PictureEdit>> = pictureChanges.mapValues { (page, changes) ->
+        changes.mapNotNull { (i, change) ->
+            val original = pictures[page]?.getOrNull(i) ?: return@mapNotNull null
+            if (!change.changedFrom(original)) return@mapNotNull null
+            PictureEdit(
+                original,
+                when {
+                    change.removed -> PictureEdit.Action.Remove
+                    change.replacement != null -> PictureEdit.Action.Replace(change.replacement)
+                    else -> PictureEdit.Action.Move(change.area)
+                }
+            )
+        }
+    }.filterValues { it.isNotEmpty() }
 
     /**
      * Why the button is disabled, or null when it is not.
@@ -1708,6 +1809,7 @@ data class ToolUiState(
                 documents.firstNotNullOfOrNull { it.unreadableReason }
                     ?: "One file still needs its password."
             tool == ToolId.MERGE && documents.size < 2 -> "Merging needs at least two files."
+            tool == ToolId.EDIT_IMAGES && pictureEdits().isEmpty() -> "Move, take out or replace a picture first."
             tool == ToolId.RESIZE_PHOTO && config.photoKb < 2 -> "Type a size of at least 2 KB."
             tool == ToolId.RESIZE_PHOTO && config.photoMode == ToolConfig.PhotoMode.EXACT &&
                 (config.photoWidth !in 16..4096 || config.photoHeight !in 16..4096) ->
@@ -2034,3 +2136,16 @@ val HIGHLIGHT_YELLOW: Int = 0xFFFFE14D.toInt()
 val HIGHLIGHT_GREEN: Int = 0xFF9BE37A.toInt()
 val HIGHLIGHT_PINK: Int = 0xFFFF9EC4.toInt()
 val HIGHLIGHT_BLUE: Int = 0xFF8FD2FF.toInt()
+
+/** What has been done to one picture on a page, in Edit pictures. */
+data class PictureChange(
+    /** Where it is now, as fractions of the page. */
+    val area: PageArea,
+    val removed: Boolean = false,
+    val replacement: java.io.File? = null,
+    val replacementBitmap: Bitmap? = null
+) {
+    fun changedFrom(original: PageArea): Boolean = removed || replacement != null ||
+        kotlin.math.abs(area.left - original.left) + kotlin.math.abs(area.top - original.top) +
+        kotlin.math.abs(area.width - original.width) + kotlin.math.abs(area.height - original.height) > 0.003f
+}
