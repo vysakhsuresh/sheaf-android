@@ -58,4 +58,7 @@ fun iconFor(tool: ToolId): Int = when (tool) {
     ToolId.RENT_RECEIPTS -> R.drawable.ic_tool_receipt
     ToolId.SET_PASSWORD -> R.drawable.ic_tool_lock
     ToolId.REMOVE_PASSWORD -> R.drawable.ic_tool_unlock
+    ToolId.RESIZE_PHOTO -> R.drawable.ic_tool_resize_photo
+    ToolId.EDIT_IMAGES -> R.drawable.ic_tool_edit_images
+    ToolId.SUMMARISE -> R.drawable.ic_tool_summarise
 }

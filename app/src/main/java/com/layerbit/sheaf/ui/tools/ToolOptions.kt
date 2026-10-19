@@ -379,6 +379,55 @@ fun ToolOptions(
                 )
             }
 
+            ToolId.RESIZE_PHOTO -> {
+                SectionHeading("Under")
+                ChoiceRow(
+                    options = listOf(20 to "20 KB", 50 to "50 KB", 100 to "100 KB", 200 to "200 KB", 500 to "500 KB"),
+                    selected = config.photoKb,
+                    onSelect = { value -> onChange { it.copy(photoKb = value) } }
+                )
+                NumberField(
+                    value = config.photoKb,
+                    label = "Or any size, in KB",
+                    min = 2,
+                    max = 100000,
+                    onChange = { value -> onChange { it.copy(photoKb = value) } }
+                )
+                Hint("Whatever the form asks for, at least 2 KB.")
+                SectionHeading("Pixels")
+                ChoiceRow(
+                    options = ToolConfig.PhotoMode.entries.map { it to it.label },
+                    selected = config.photoMode,
+                    onSelect = { value -> onChange { it.copy(photoMode = value) } }
+                )
+                when (config.photoMode) {
+                    ToolConfig.PhotoMode.KEEP -> Hint("As many pixels as it has, unless it needs fewer to fit.")
+                    ToolConfig.PhotoMode.PASSPORT -> Hint("413 × 531 pixels (300 dpi), cut from the middle to that shape.")
+                    ToolConfig.PhotoMode.EXACT -> {
+                        NumberField(
+                            value = config.photoWidth,
+                            label = "Width (px)",
+                            min = 16,
+                            max = 4096,
+                            onChange = { value -> onChange { it.copy(photoWidth = value) } }
+                        )
+                        NumberField(
+                            value = config.photoHeight,
+                            label = "Height (px)",
+                            min = 16,
+                            max = 4096,
+                            onChange = { value -> onChange { it.copy(photoHeight = value) } }
+                        )
+                        Hint("Cut from the middle to that shape, then made exactly that size.")
+                    }
+                }
+                Hint(
+                    "Each picture comes out as a JPEG under the size you choose, as sharp as that " +
+                        "allows. Here 1 KB is 1,000 bytes, so it is under the limit however the " +
+                        "form counts. The phone's hidden details, its location too, are left out."
+                )
+            }
+
             ToolId.EDIT_TEXT -> {
                 Field(
                     value = config.findText,
@@ -1243,7 +1292,7 @@ fun ToolOptions(
             )
 
             // These have their own canvases on the tool screen rather than plain settings.
-            ToolId.SCAN -> Unit
+            ToolId.SCAN, ToolId.EDIT_IMAGES, ToolId.SUMMARISE -> Unit
 
             ToolId.ORGANISE -> Unit
         }

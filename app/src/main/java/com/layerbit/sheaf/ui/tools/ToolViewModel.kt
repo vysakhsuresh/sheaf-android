@@ -50,6 +50,8 @@ import com.layerbit.sheaf.ops.Op
 import com.layerbit.sheaf.ops.OrganiseOp
 import com.layerbit.sheaf.ops.PdfToImagesOp
 import com.layerbit.sheaf.ops.RemovePasswordOp
+import com.layerbit.sheaf.ops.ResizePhotoOp
+import com.layerbit.sheaf.ops.PhotoPixels
 import com.layerbit.sheaf.ops.SetPasswordOp
 import com.layerbit.sheaf.ops.SplitOp
 import com.layerbit.sheaf.ops.ToolId
@@ -822,6 +824,15 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 )
             }
             ToolId.REMOVE_PASSWORD -> RemovePasswordOp()
+            ToolId.EDIT_IMAGES, ToolId.SUMMARISE -> null
+            ToolId.RESIZE_PHOTO -> ResizePhotoOp(
+                kb = config.photoKb.toFloat(),
+                pixels = when (config.photoMode) {
+                    ToolConfig.PhotoMode.KEEP -> PhotoPixels.Keep
+                    ToolConfig.PhotoMode.PASSPORT -> PhotoPixels.Passport
+                    ToolConfig.PhotoMode.EXACT -> PhotoPixels.Exact(config.photoWidth, config.photoHeight)
+                }
+            )
         }
     }
 
@@ -1695,6 +1706,10 @@ data class ToolUiState(
                 documents.firstNotNullOfOrNull { it.unreadableReason }
                     ?: "One file still needs its password."
             tool == ToolId.MERGE && documents.size < 2 -> "Merging needs at least two files."
+            tool == ToolId.RESIZE_PHOTO && config.photoKb < 2 -> "Type a size of at least 2 KB."
+            tool == ToolId.RESIZE_PHOTO && config.photoMode == ToolConfig.PhotoMode.EXACT &&
+                (config.photoWidth !in 16..4096 || config.photoHeight !in 16..4096) ->
+                "Type a width and a height between 16 and 4096 pixels."
             tool == ToolId.COMPARE && documents.size != 2 ->
                 if (documents.size < 2) "Add the newer version as the second file." else "Compare takes exactly two files: the older, then the newer."
             tool == ToolId.EDIT_TEXT && config.findText.isBlank() -> "Type the words to find."
@@ -1908,9 +1923,21 @@ data class ToolConfig(
     val metaKeywords: String = "",
     val cleanScripts: Boolean = true,
     val cleanAttachments: Boolean = true,
-    val cleanComments: Boolean = true
+    val cleanComments: Boolean = true,
+
+    /** Resize photo to KB: the limit, in KB of 1,000 bytes, and how many pixels. */
+    val photoKb: Int = 50,
+    val photoMode: PhotoMode = PhotoMode.KEEP,
+    val photoWidth: Int = 300,
+    val photoHeight: Int = 400
 ) {
     enum class SplitMode { EVERY_N, EACH_PAGE, RANGES, AT_BOOKMARKS }
+
+    enum class PhotoMode(val label: String) {
+        KEEP("Keep its shape"),
+        PASSPORT("Passport photo, 3.5 × 4.5 cm"),
+        EXACT("Width × height in pixels")
+    }
 
     /** What Document details does: edit the fields, blank them, or clean everything hidden. */
     enum class MetaMode { EDIT, STRIP, CLEAN }

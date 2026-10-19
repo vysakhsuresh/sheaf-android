@@ -241,8 +241,8 @@ enum class ToolId(
         Group.PROTECT
     ),
     EDIT_TEXT(
-        "Find and replace text",
-        "Change a date, a name or a number wherever it appears",
+        "Edit text",
+        "Change words already on the page, or find and replace them",
         InputKind.ONE_PDF,
         Group.MARK
     ),
@@ -250,6 +250,24 @@ enum class ToolId(
         "Compare two versions",
         "See what changed: new words in green, a note where words went",
         InputKind.SEVERAL_PDFS,
+        Group.READ
+    ),
+    RESIZE_PHOTO(
+        "Resize photo to KB",
+        "Get a photo or signature under 20 KB, 50 KB or whatever a form asks",
+        InputKind.IMAGES,
+        Group.CONVERT
+    ),
+    EDIT_IMAGES(
+        "Edit pictures",
+        "Move, resize, take out or swap the pictures already on a page",
+        InputKind.ONE_PDF,
+        Group.MARK
+    ),
+    SUMMARISE(
+        "Key points",
+        "The sentences that carry a document, picked on this phone",
+        InputKind.ONE_PDF,
         Group.READ
     ),
     RENT_RECEIPTS(
@@ -338,7 +356,10 @@ enum class ToolId(
             CREATE_FORM -> "Add the fields"
             DIGITAL_SIGN -> "Sign it"
             PDF_A -> "Make the archive copy"
-            EDIT_TEXT -> "Replace it"
+            EDIT_TEXT -> "Save the changes"
+            RESIZE_PHOTO -> "Resize it"
+            EDIT_IMAGES -> "Save the changes"
+            SUMMARISE -> "Pick the key points"
             COMPARE -> "Compare them"
             RENT_RECEIPTS -> "Make the receipts"
         }
