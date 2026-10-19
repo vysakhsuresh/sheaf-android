@@ -104,9 +104,15 @@ class SystemFonts(private val doc: PDDocument) {
         }
         val weights = if (bold) listOf("Bold", "Regular") else listOf("Regular")
         val names = mutableListOf<String>()
-        for (family in families) for (weight in weights) names += "$family-$weight.ttf"
+        for (family in families) {
+            for (weight in weights) names += "$family-$weight.ttf"
+            // Android 13 and later ship one variable font per script in place of the
+            // Regular and Bold files; its default instance is the regular weight.
+            names += "$family-VF.ttf"
+        }
         // Latin with accents, Greek, Cyrillic, symbols: the phone's UI font has them all.
         for (weight in weights) names += "Roboto-$weight.ttf"
+        names += "RobotoStatic-Regular.ttf"
         names += "NotoSans-Regular.ttf"
         names += "DroidSans.ttf"
         names += "DroidSansFallback.ttf"

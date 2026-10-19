@@ -379,6 +379,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         onProgress: (Int, Int) -> Unit
     ) = withDocument(input) { doc ->
         val total = doc.numberOfPages
+        val invisible = InvisibleText(doc)
         for (index in 0 until total) {
             val placements = layers[index].orEmpty()
             if (placements.isNotEmpty()) {
@@ -395,8 +396,8 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                         stream.setRenderingMode(RenderingMode.NEITHER)
 
                         for (placement in placements) {
-                            val encodable = placement.text.toWinAnsiSafe()
-                            if (encodable.isBlank()) continue
+                            val words = placement.text.trim()
+                            if (words.isBlank()) continue
 
                             // Normalised, origin top-left, to PDF points, origin bottom-left.
                             // This flip is the whole reason TextPlacement is normalised: it is
@@ -409,12 +410,25 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                             // roughly h/0.9 em of font. Close enough that a selection rectangle
                             // lands on the ink rather than above or below it.
                             val fontSize = (heightPoints / 0.9f).coerceIn(1f, 1000f)
+                            val widthPoints = placement.width * box.width
 
                             try {
+                                if (!Lettering.isPlain(words)) {
+                                    // Hindi, Malayalam, Arabic: the glyphless font carries any script.
+                                    invisible.write(stream, words, x, baseline + heightPoints * 0.2f, widthPoints, heightPoints * 0.92f)
+                                    stream.setRenderingMode(RenderingMode.NEITHER)
+                                    continue
+                                }
                                 stream.beginText()
                                 stream.setFont(PDType1Font.HELVETICA, fontSize)
+                                // Squeezed or stretched to the line's own width, so selecting a
+                                // word highlights that word on the scan and not its neighbour.
+                                val natural = PDType1Font.HELVETICA.getStringWidth(words) / 1000f * fontSize
+                                if (natural > 0f && widthPoints > 0f) {
+                                    stream.setHorizontalScaling((100f * widthPoints / natural).coerceIn(10f, 500f))
+                                }
                                 stream.newLineAtOffset(x, baseline)
-                                stream.showText(encodable)
+                                stream.showText(words)
                                 stream.endText()
                             } catch (_: Exception) {
                                 // One unplaceable line must not cost the whole document its
@@ -532,8 +546,8 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         output: File,
         onProgress: (Int, Int) -> Unit
     ): Int = withDocument(input) { doc ->
-        val font = PDType1Font.HELVETICA
-        val text = replacement.toWinAnsiSafe()
+        val lettering = Lettering(doc)
+        val text = replacement.replace(Regex("[\r\n\t]+"), " ").trim()
         var changed = 0
         for (index in 0 until doc.numberOfPages) {
             val finder = finderFor(doc, index, pattern) { true }
@@ -562,14 +576,9 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                         // Sized to the old words' height, then shrunk until it fits their width
                         // too, so a longer replacement never runs into the next word.
                         var size = (height / (NOTE_ASCENT + NOTE_DESCENT)).coerceIn(MIN_NOTE_POINTS, MAX_NOTE_POINTS)
-                        val needed = font.getStringWidth(text) / 1000f * size
+                        val needed = lettering.width(text, size)
                         if (needed > width && needed > 0f) size = (size * width / needed).coerceAtLeast(MIN_NOTE_POINTS)
-                        stream.setNonStrokingColor(0f, 0f, 0f)
-                        stream.beginText()
-                        stream.setFont(font, size)
-                        stream.newLineAtOffset(left, bottom + height * 0.05f)
-                        stream.showText(text)
-                        stream.endText()
+                        lettering.draw(stream, text, size, left, bottom + height * 0.05f, INK_BLACK)
                     }
                     changed += 1
                 }
@@ -578,7 +587,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
             onProgress(index + 1, doc.numberOfPages)
         }
         if (changed == 0) throw PdfException.Refused("Those words were not found. A scanned page has no text to find; run Make searchable first.")
-        doc.save(output)
+        lettering.use { doc.save(output) }
         changed
     }
 
@@ -600,6 +609,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                 var stream: PDPageContentStream? = null
                 var pages = 0
                 var cursor = 0f
+                val lettering = Lettering(doc)
 
                 fun newPage() {
                     stream?.close()
@@ -612,16 +622,23 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
 
                 fun text(font: PDType1Font, size: Float, x: Float, y: Float, line: String) {
                     val s = stream ?: return
+                    if (!Lettering.isPlain(line)) {
+                        lettering.draw(s, line, size, x, y, INK_BLACK, bold = font == bold)
+                        return
+                    }
                     s.beginText()
                     s.setFont(font, size)
                     s.newLineAtOffset(x, y)
-                    s.showText(line.toWinAnsiSafe())
+                    s.showText(line)
                     s.endText()
                 }
 
+                fun measure(font: PDType1Font, size: Float, line: String): Float =
+                    if (Lettering.isPlain(line)) font.getStringWidth(line) / 1000f * size
+                    else lettering.width(line, size, bold = font == bold)
+
                 fun centred(font: PDType1Font, size: Float, y: Float, line: String) {
-                    val width = font.getStringWidth(line.toWinAnsiSafe()) / 1000f * size
-                    text(font, size, (pageBox.width - width) / 2f, y, line)
+                    text(font, size, (pageBox.width - measure(font, size, line)) / 2f, y, line)
                 }
 
                 for ((i, receipt) in receipts.withIndex()) {
@@ -637,7 +654,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
 
                     // The table: label in bold, value wrapped inside its column.
                     val rowsLaidOut = receipt.rows.map { (label, value) ->
-                        val lines = wrapForWidth(value.toWinAnsiSafe(), regular, body, valueWidth - cellPad * 2f)
+                        val lines = wrapForWidth(value, valueWidth - cellPad * 2f) { measure(regular, body, it) }
                         Triple(label, lines, lines.size * body * LINE_SPACING + cellPad * 2f)
                     }
                     s.setLineWidth(0.6f)
@@ -663,7 +680,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                     }
                 }
                 stream?.close()
-                doc.save(output)
+                lettering.use { doc.save(output) }
                 return pages
             }
         } catch (e: IOException) {
@@ -883,14 +900,18 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         output: File,
         onProgress: (Int, Int) -> Unit
     ) = withDocument(input) { doc ->
-        val text = spec.text.replace(Regex("[\\r\\n\\t]+"), " ").trim().toWinAnsiSafe()
+        val text = spec.text.replace(Regex("[\\r\\n\\t]+"), " ").trim()
         if (text.isBlank()) throw PdfException.Refused("Type the watermark text, such as DRAFT or COPY.")
 
         val font = PDType1Font.HELVETICA_BOLD
+        val lettering = Lettering(doc)
         val total = doc.numberOfPages
         val chosen = spec.pages.ifEmpty { (0 until total).toList() }.filter { it in 0 until total }
         if (chosen.isEmpty()) throw PdfException.Refused("None of the pages typed are in this document.")
         val opacity = spec.opacity.coerceIn(0.02f, 1f)
+        // A shaped line carries its own opacity, because the form it is drawn from sets its
+        // own graphics state; Helvetica takes it from the state set around it.
+        val ink = (Math.round(opacity * 255f) shl 24) or (spec.colour and 0xFFFFFF)
         val capRatio = (font.fontDescriptor?.capHeight?.takeIf { it > 0f } ?: 718f) / 1000f
 
         // A tiled watermark is a couple of hundred copies of the words on every page. Drawn
@@ -922,9 +943,9 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                 // A small page (a till receipt, a card) gets a margin to match, and words that
                 // would still run off its edge, straight or turned, are made smaller to fit.
                 val margin = minOf(36f, short * 0.08f)
-                size = fitted(shown, angle, margin, size) { s -> (font.getStringWidth(text) / 1000f * s) to (capRatio * s) }
+                size = fitted(shown, angle, margin, size) { s -> lettering.width(text, s, bold = true) to (capRatio * s) }
             }
-            val width = font.getStringWidth(text) / 1000f * size
+            val width = lettering.width(text, size, bold = true)
             val cap = capRatio * size
             val rad = Math.toRadians(angle)
             val cos = Math.cos(rad).toFloat()
@@ -952,16 +973,17 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                                 form.bBox = PDRectangle(0f, 0f, shown.width, shown.height)
                                 PDPageContentStream(doc, form).use { inner ->
                                     inner.setGraphicsStateParameters(alphaState(opacity))
-                                    inner.setNonStrokingColor(spec.colour.red(), spec.colour.green(), spec.colour.blue())
-                                    inner.beginText()
-                                    inner.setFont(font, size)
-                                    for ((cx, cy) in centres) {
+                                    // The words go in once for search, on the copy nearest the middle.
+                                    val homeTile = centres.indices.minByOrNull { i -> Math.hypot((centres[i].first - shown.width / 2f).toDouble(), (centres[i].second - shown.height / 2f).toDouble()) } ?: 0
+                                    for ((n, centre) in centres.withIndex()) {
+                                        val (cx, cy) = centre
                                         val vx = cx - cos * width / 2f + sin * cap / 2f
                                         val vy = cy - sin * width / 2f - cos * cap / 2f
-                                        inner.setTextMatrix(Matrix.getRotateInstance(rad, vx, vy))
-                                        inner.showText(text)
+                                        inner.saveGraphicsState()
+                                        inner.transform(Matrix.getRotateInstance(rad, vx, vy))
+                                        lettering.draw(inner, text, size, 0f, 0f, ink, bold = true, searchable = n == homeTile)
+                                        inner.restoreGraphicsState()
                                     }
-                                    inner.endText()
                                 }
                             }
                         }
@@ -971,23 +993,21 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                         // a watermark needs one of these - setting a grey fill instead would
                         // go opaque over anything it crossed.
                         stream.setGraphicsStateParameters(alphaState(opacity))
-                        stream.setNonStrokingColor(spec.colour.red(), spec.colour.green(), spec.colour.blue())
-                        stream.beginText()
-                        stream.setFont(font, size)
                         for ((cx, cy) in centres) {
                             // The text's own origin is its bottom-left; put its centre on (cx, cy).
                             val vx = cx - cos * width / 2f + sin * cap / 2f
                             val vy = cy - sin * width / 2f - cos * cap / 2f
-                            stream.setTextMatrix(Matrix.getRotateInstance(rad, vx, vy))
-                            stream.showText(text)
+                            stream.saveGraphicsState()
+                            stream.transform(Matrix.getRotateInstance(rad, vx, vy))
+                            lettering.draw(stream, text, size, 0f, 0f, ink, bold = true)
+                            stream.restoreGraphicsState()
                         }
-                        stream.endText()
                     }
                     stream.restoreGraphicsState()
                 }
             onProgress(done + 1, chosen.size)
         }
-        doc.save(output)
+        lettering.use { doc.save(output) }
     }
 
     override fun addPageNumbers(
@@ -996,7 +1016,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         output: File,
         onProgress: (Int, Int) -> Unit
     ) = withDocument(input) { doc ->
-        val font = PDType1Font.HELVETICA
+        val lettering = Lettering(doc)
         val total = doc.numberOfPages
         val numbered = total - spec.skipFirst
 
@@ -1011,7 +1031,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
             val label = spec.format
                 .replace("{n}", spec.prefix + digits)
                 .replace("{total}", numbered.toString())
-                .toWinAnsiSafe()
+                .trim()
             if (label.isBlank()) {
                 onProgress(index + 1, total)
                 continue
@@ -1021,7 +1041,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
             // Placed on the page as the reader sees it: inside the crop box, and the right
             // way up on a page stored sideways.
             val shown = ShownPage(page)
-            val width = font.getStringWidth(label) / 1000f * spec.fontSize
+            val width = lettering.width(label, spec.fontSize)
             val margin = minOf(MARGIN_POINTS, minOf(shown.width, shown.height) * 0.08f)
 
             val x = when (spec.position) {
@@ -1039,17 +1059,13 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                 .use { stream ->
                     stream.saveGraphicsState()
                     stream.transform(shown.viewMatrix())
-                    stream.setNonStrokingColor(0f, 0f, 0f)
-                    stream.beginText()
-                    stream.setFont(font, spec.fontSize)
-                    stream.newLineAtOffset(x, y)
-                    stream.showText(label)
-                    stream.endText()
+                    plate(stream, x, y, width, spec.fontSize)
+                    lettering.draw(stream, label, spec.fontSize, x, y, INK_BLACK)
                     stream.restoreGraphicsState()
                 }
             onProgress(index + 1, total)
         }
-        doc.save(output)
+        lettering.use { doc.save(output) }
     }
 
     override fun cropPages(
@@ -1332,12 +1348,13 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
 
     override fun addText(input: PdfInput, notes: List<TextNote>, output: File) =
         withDocument(input) { doc ->
+            val lettering = Lettering(doc)
             for (note in notes) {
                 if (note.pageIndex !in 0 until doc.numberOfPages) {
                     throw PdfException.Refused("Page ${note.pageIndex + 1} does not exist in this document.")
                 }
 
-                val lines = note.text.lines().map { it.toWinAnsiSafe() }
+                val lines = note.text.lines().map { it.trimEnd() }
                     .dropLastWhile { it.isBlank() }
                 if (lines.isEmpty() || lines.all { it.isBlank() }) continue
 
@@ -1362,7 +1379,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                         stream.transform(Matrix.getRotateInstance(shown.radians, originX, originY))
 
                         if (note.cover) {
-                            val widest = lines.maxOf { widthOfHelvetica(it, size) }
+                            val widest = lines.maxOf { lettering.width(it, size) }
                             val drop = (lines.size - 1) * lineHeight
                             stream.setNonStrokingColor(1f, 1f, 1f)
                             stream.addRect(
@@ -1374,26 +1391,15 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                             stream.fill()
                         }
 
-                        stream.setNonStrokingColor(
-                            ((note.colour shr 16) and 0xFF) / 255f,
-                            ((note.colour shr 8) and 0xFF) / 255f,
-                            (note.colour and 0xFF) / 255f
-                        )
-                        stream.beginText()
-                        stream.setFont(PDType1Font.HELVETICA, size)
-                        stream.newLineAtOffset(0f, 0f)
+                        val ink = note.colour or (0xFF shl 24)
                         lines.forEachIndexed { index, line ->
-                            // Td is measured from the start of the line before it, so this
-                            // both drops a line and returns to the left edge.
-                            if (index > 0) stream.newLineAtOffset(0f, -lineHeight)
-                            stream.showText(line)
+                            lettering.draw(stream, line, size, 0f, -index * lineHeight, ink)
                         }
-                        stream.endText()
                         stream.restoreGraphicsState()
                     }
             }
 
-            doc.save(output)
+            lettering.use { doc.save(output) }
         }
 
     override fun annotate(
@@ -1407,8 +1413,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
 
         val total = marked.size
         var done = 0
-        val font = PDType1Font.HELVETICA
-        val bold = PDType1Font.HELVETICA_BOLD
+        val lettering = Lettering(doc)
 
         for ((index, list) in marked) {
             if (index !in 0 until doc.numberOfPages) continue
@@ -1533,11 +1538,11 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                             }
 
                             is PageMark.Note -> {
-                                val text = mark.text.toWinAnsiSafe().trim()
+                                val text = mark.text.trim()
                                 if (text.isEmpty()) continue
                                 val size = mark.sizePoints.coerceIn(MIN_NOTE_POINTS, MAX_NOTE_POINTS)
-                                val lines = wrapForWidth(text, font, size, shown.width * 0.45f)
-                                val widest = lines.maxOf { font.getStringWidth(it) / 1000f * size }
+                                val lines = wrapForWidth(text, shown.width * 0.45f) { lettering.width(it, size) }
+                                val widest = lines.maxOf { lettering.width(it, size) }
                                 val pad = size * 0.5f
                                 val cardWidth = widest + pad * 2f
                                 val cardHeight = lines.size * size * LINE_SPACING + pad * 2f
@@ -1551,25 +1556,24 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                                 stream.setLineWidth(0.6f)
                                 stream.addRect(cardLeft, cardTop - cardHeight, cardWidth, cardHeight)
                                 stream.fillAndStroke()
-                                stream.setNonStrokingColor(red, green, blue)
-                                stream.beginText()
-                                stream.setFont(font, size)
-                                stream.newLineAtOffset(cardLeft + pad, cardTop - pad - size * NOTE_ASCENT)
                                 lines.forEachIndexed { i, line ->
-                                    if (i > 0) stream.newLineAtOffset(0f, -size * LINE_SPACING)
-                                    stream.showText(line)
+                                    lettering.draw(
+                                        stream, line, size,
+                                        cardLeft + pad,
+                                        cardTop - pad - size * NOTE_ASCENT - i * size * LINE_SPACING,
+                                        mark.colour or (0xFF shl 24)
+                                    )
                                 }
-                                stream.endText()
                                 stream.restoreGraphicsState()
                             }
 
                             is PageMark.Stamp -> {
-                                val text = mark.text.toWinAnsiSafe().trim().uppercase()
+                                val text = mark.text.trim().uppercase()
                                 if (text.isEmpty()) continue
                                 // Sized to the page, like a watermark: a stamp on a receipt
                                 // is not the size of one on a poster.
                                 val size = (minOf(shown.width, shown.height) * 0.045f).coerceIn(10f, 28f)
-                                val textWidth = bold.getStringWidth(text) / 1000f * size
+                                val textWidth = lettering.width(text, size, bold = true)
                                 val pad = size * 0.45f
                                 val boxWidth = textWidth + pad * 2f
                                 val boxHeight = size * 1.5f
@@ -1584,11 +1588,11 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                                 stream.setLineWidth(size * 0.12f)
                                 stream.addRect(-boxWidth / 2f, -boxHeight / 2f, boxWidth, boxHeight)
                                 stream.stroke()
-                                stream.beginText()
-                                stream.setFont(bold, size)
-                                stream.newLineAtOffset(-textWidth / 2f, -size * 0.36f)
-                                stream.showText(text)
-                                stream.endText()
+                                lettering.draw(
+                                    stream, text, size, -textWidth / 2f, -size * 0.36f,
+                                    (Math.round(0.85f * 255f) shl 24) or (mark.colour and 0xFFFFFF),
+                                    bold = true
+                                )
                                 stream.restoreGraphicsState()
                             }
                         }
@@ -1600,7 +1604,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
             onProgress(done, total)
         }
 
-        doc.save(output)
+        lettering.use { doc.save(output) }
     }
 
     /** An ellipse inside the box, as four Bezier curves; PDF has no circle operator. */
@@ -1619,13 +1623,13 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
     }
 
     /** Breaks text into lines no wider than [maxWidth], at spaces where it can. */
-    private fun wrapForWidth(text: String, font: PDType1Font, size: Float, maxWidth: Float): List<String> {
+    private fun wrapForWidth(text: String, maxWidth: Float, measure: (String) -> Float): List<String> {
         val out = mutableListOf<String>()
         for (paragraph in text.split('\n')) {
             var line = StringBuilder()
             for (word in paragraph.split(' ')) {
                 val candidate = if (line.isEmpty()) word else "$line $word"
-                val width = runCatching { font.getStringWidth(candidate) / 1000f * size }.getOrDefault(candidate.length * size * 0.5f)
+                val width = measure(candidate)
                 if (width <= maxWidth || line.isEmpty()) {
                     line = StringBuilder(candidate)
                 } else {
@@ -1650,7 +1654,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
             throw PdfException.Refused("There is no header or footer text to add.")
         }
 
-        val font = PDType1Font.HELVETICA
+        val lettering = Lettering(doc)
         val size = spec.fontSize.coerceIn(5f, 48f)
         val total = doc.numberOfPages
         val today = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
@@ -1671,8 +1675,6 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
             // sideways page gets a header along the edge the reader calls the top.
             PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true)
                 .use { stream ->
-                    stream.setNonStrokingColor(0f, 0f, 0f)
-
                     for ((text, fromTop) in listOf(
                         header to margin,
                         footer to shown.height - margin
@@ -1682,11 +1684,11 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                             .replace("{total}", total.toString())
                             .replace("{date}", today)
                             .replace("{name}", name)
-                            .toWinAnsiSafe()
+                            .replace(Regex("[\r\n\t]+"), " ")
+                            .trim()
                         if (line.isBlank()) continue
 
-                        val lineWidth = runCatching { font.getStringWidth(line) / 1000f * size }
-                            .getOrDefault(line.length * size * 0.5f)
+                        val lineWidth = lettering.width(line, size)
                         val across = when (spec.align) {
                             StampSpec.Align.LEFT -> margin
                             StampSpec.Align.CENTRE -> (shown.width - lineWidth) / 2f
@@ -1697,22 +1699,33 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
                         stream.saveGraphicsState()
                         stream.transform(Matrix.getRotateInstance(shown.radians, x, y))
                         try {
-                            stream.beginText()
-                            stream.setFont(font, size)
-                            stream.newLineAtOffset(0f, 0f)
-                            stream.showText(line)
-                            stream.endText()
+                            plate(stream, 0f, 0f, lineWidth, size)
+                            lettering.draw(stream, line, size, 0f, 0f, INK_BLACK)
                         } catch (_: Exception) {
-                            // A line that will not encode must not leave the stream inside a
-                            // text object, which would corrupt every page after this one.
-                            runCatching { stream.endText() }
+                            // One line that will not place must not cost the rest of the file.
                         }
                         stream.restoreGraphicsState()
                     }
                 }
             onProgress(index + 1, total)
         }
-        doc.save(output)
+        lettering.use { doc.save(output) }
+    }
+
+    /**
+     * A white card under stamped words, at 88%.
+     *
+     * Invisible on white paper; on a phone photo of a page, where the number lands on the
+     * table or floor round the sheet, it is what keeps the words readable.
+     */
+    private fun plate(stream: PDPageContentStream, x: Float, baseline: Float, width: Float, size: Float) {
+        val pad = size * 0.35f
+        stream.saveGraphicsState()
+        stream.setGraphicsStateParameters(alphaState(PLATE_OPACITY))
+        stream.setNonStrokingColor(1f, 1f, 1f)
+        stream.addRect(x - pad, baseline - size * 0.22f - pad, width + pad * 2f, size * 0.96f + pad * 2f)
+        stream.fill()
+        stream.restoreGraphicsState()
     }
 
     override fun readFormFields(input: PdfInput): List<FormField> = withDocument(input) { doc ->
@@ -2883,3 +2896,7 @@ private class PdfBoxDocument(private val doc: PDDocument) : PdfDocument {
         const val TAG = "PdfBoxEngine"
     }
 }
+
+/** Type colour for stamped words: near-black, opaque. */
+private val INK_BLACK: Int = 0xFF000000.toInt()
+private const val PLATE_OPACITY = 0.88f
