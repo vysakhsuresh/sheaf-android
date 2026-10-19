@@ -51,6 +51,7 @@ import com.layerbit.sheaf.ops.OrganiseOp
 import com.layerbit.sheaf.ops.PdfToImagesOp
 import com.layerbit.sheaf.ops.RemovePasswordOp
 import com.layerbit.sheaf.ops.ResizePhotoOp
+import com.layerbit.sheaf.ops.KeyPointsOp
 import com.layerbit.sheaf.ops.PhotoPixels
 import com.layerbit.sheaf.ops.SetPasswordOp
 import com.layerbit.sheaf.ops.SplitOp
@@ -824,7 +825,8 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 )
             }
             ToolId.REMOVE_PASSWORD -> RemovePasswordOp()
-            ToolId.EDIT_IMAGES, ToolId.SUMMARISE -> null
+            ToolId.EDIT_IMAGES -> null
+            ToolId.SUMMARISE -> KeyPointsOp()
             ToolId.RESIZE_PHOTO -> ResizePhotoOp(
                 kb = config.photoKb.toFloat(),
                 pixels = when (config.photoMode) {
