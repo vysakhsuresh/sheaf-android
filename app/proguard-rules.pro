@@ -31,3 +31,8 @@
 -keep class org.bouncycastle.** { *; }
 -dontwarn org.bouncycastle.**
 -dontwarn javax.naming.**
+
+# Recipes are kept as JSON keyed by ToolConfig's field names and enum constant names, read back
+# by reflection. Renaming either would make every saved recipe unreadable after an update.
+-keepclassmembers class com.layerbit.sheaf.ui.tools.ToolConfig { <fields>; }
+-keepclassmembers enum com.layerbit.sheaf.** { <fields>; public static **[] values(); public static ** valueOf(java.lang.String); }

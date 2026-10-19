@@ -55,6 +55,7 @@ import com.layerbit.sheaf.ops.PdfToImagesOp
 import com.layerbit.sheaf.ops.RemovePasswordOp
 import com.layerbit.sheaf.ops.ResizePhotoOp
 import com.layerbit.sheaf.ops.KeyPointsOp
+import com.layerbit.sheaf.ops.RecipeOp
 import com.layerbit.sheaf.ops.EditPicturesOp
 import com.layerbit.sheaf.pdf.PictureEdit
 import com.layerbit.sheaf.ops.PhotoPixels
@@ -124,16 +125,54 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         .map { job -> if (job.belongsTo(_state.value.tool)) job else JobState.Idle }
         .stateIn(viewModelScope, SharingStarted.Eagerly, JobState.Idle)
 
-    fun start(tool: ToolId) {
+    fun start(tool: ToolId, preset: String? = null) {
         if (_state.value.tool == tool) return
         sheaf.jobRunner.acknowledge()
-        _state.value = ToolUiState(tool = tool, config = ToolConfig.defaultFor(tool))
+        val config = ToolConfig.defaultFor(tool).let { base ->
+            when (preset) {
+                com.layerbit.sheaf.ops.Suggest.PRESET_EXCEL -> base.copy(officeTarget = OfficeTarget.EXCEL)
+                else -> base
+            }
+        }
+        _state.value = ToolUiState(tool = tool, config = config)
 
         // A share of several documents from another app lands here rather than in the viewer,
         // which can only show one of them. The list is taken once and cleared, so coming back
         // to this tool later does not reload what was shared an hour ago.
         val shared = sheaf.handoff.take()
         if (shared.isNotEmpty()) addDocuments(shared)
+
+        // Files opened from Open a file, already looked at, handed to the tool picked for them.
+        val opened = sheaf.handoff.takeFiles()
+        if (opened.isNotEmpty()) {
+            viewModelScope.launch {
+                _state.update { it.copy(busy = true) }
+                for (file in opened) addOpenedNow(file)
+                _state.update { it.copy(busy = false) }
+            }
+        }
+    }
+
+    /**
+     * Takes a file Open a file already copied in, keeping its name and type. Finished before
+     * it returns, so several arrive in the order they were opened. Copied again, so this tool's
+     * list owns what it holds and Start over on Open a file cannot pull it out from under it.
+     */
+    private suspend fun addOpenedNow(source: SheafFile) {
+        if (!source.file.isFile) return
+        val copied = withContext(Dispatchers.IO) {
+            runCatching {
+                val destination = sheaf.workspace.newOutput(source.baseName, "carried", source.file.extension.ifBlank { "pdf" })
+                source.file.copyTo(destination, overwrite = true)
+                SheafFile(destination, source.displayName, SheafFile.Origin.Derived("carried"), source.mimeType)
+            }.getOrNull()
+        } ?: return
+        val inspected = inspect(copied)
+        _state.update { current ->
+            val combined = if (current.tool?.acceptsMultiple == false) listOf(inspected) else current.documents + inspected
+            current.copy(documents = combined, config = current.config.forSeveral(current.metaSeed, combined.size))
+        }
+        loadFileThumbs()
     }
 
     // ---- choosing documents ----
@@ -199,6 +238,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     replaceStatus = null
                 )
             }
+            loadFileThumbs()
         }
     }
 
@@ -255,6 +295,91 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     replaceStatus = null
                 )
             }
+            loadFileThumbs()
+        }
+    }
+
+    /**
+     * Draws each chosen file's first page, or its picture, small, for its row. One at a time and
+     * only once a file has been read, so the run button never waits on a thumbnail.
+     */
+    private fun loadFileThumbs() {
+        viewModelScope.launch {
+            for (doc in _state.value.documents) {
+                val key = doc.file.file.path
+                if (key in _state.value.fileThumbs || !doc.isReady) continue
+                val bitmap = withContext(Dispatchers.IO) {
+                    runCatching {
+                        when {
+                            doc.file.isPdf -> {
+                                val engine = if (doc.encrypted) sheaf.encryptedReader else sheaf.pdfEngine
+                                engine.open(doc.file.file, doc.password).use { it.renderPage(0, FILE_THUMB_PX) }
+                            }
+                            doc.file.isImage -> {
+                                val options = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                                android.graphics.BitmapFactory.decodeFile(doc.file.file.path, options)
+                                options.inSampleSize = (maxOf(options.outWidth, options.outHeight) / FILE_THUMB_PX).coerceAtLeast(1)
+                                options.inJustDecodeBounds = false
+                                android.graphics.BitmapFactory.decodeFile(doc.file.file.path, options)
+                            }
+                            else -> null
+                        }
+                    }.getOrNull()
+                } ?: continue
+                _state.update { it.copy(fileThumbs = it.fileThumbs + (key to bitmap)) }
+            }
+        }
+    }
+
+    /**
+     * Takes every file in a folder and in the folders inside it that this tool can use. The
+     * order is the folder's, by name; they can be dragged into another.
+     */
+    fun addFolder(tree: Uri) {
+        val tool = _state.value.tool ?: return
+        _state.update { it.copy(busy = true, error = null, notice = null) }
+        viewModelScope.launch {
+            val (wanted, skipped) = withContext(Dispatchers.IO) {
+                val keep = mutableListOf<Uri>()
+                var other = 0
+                fun walk(dir: androidx.documentfile.provider.DocumentFile, depth: Int) {
+                    if (depth > 8) return
+                    for (child in dir.listFiles().sortedBy { it.name?.lowercase() }) {
+                        val name = child.name.orEmpty()
+                        if (name.startsWith(".")) continue
+                        if (child.isDirectory) { walk(child, depth + 1); continue }
+                        if (folderAccepts(tool, name)) keep += child.uri else other += 1
+                    }
+                }
+                runCatching { androidx.documentfile.provider.DocumentFile.fromTreeUri(getApplication(), tree)?.let { walk(it, 0) } }
+                keep to other
+            }
+            _state.update { it.copy(busy = false) }
+            if (wanted.isEmpty()) {
+                val what = when (tool.input) {
+                    ToolId.InputKind.IMAGES -> "a picture"
+                    ToolId.InputKind.OFFICE -> "a Word, Excel or text file"
+                    else -> "a PDF"
+                }
+                _state.update { it.copy(error = "Nothing in that folder is $what.") }
+                return@launch
+            }
+            if (skipped > 0) {
+                _state.update {
+                    it.copy(notice = "${wanted.size} from the folder; $skipped other ${if (skipped == 1) "file was" else "files were"} left out.")
+                }
+            }
+            addDocuments(wanted)
+        }
+    }
+
+    private fun folderAccepts(tool: ToolId, name: String): Boolean {
+        val ext = name.substringAfterLast('.', "").lowercase()
+        return when (tool.input) {
+            ToolId.InputKind.IMAGES -> ext in setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif", "avif")
+            ToolId.InputKind.OFFICE -> ext in setOf("docx", "xlsx", "txt", "md", "csv")
+            ToolId.InputKind.PDF_AND_FILES -> true
+            else -> ext == "pdf"
         }
     }
 
@@ -401,6 +526,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 )
                 current.copy(documents = list, pageOrder = emptyList())
             }
+            loadFileThumbs()
         }
     }
 
@@ -862,6 +988,23 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             ToolId.REMOVE_PASSWORD -> RemovePasswordOp()
             ToolId.EDIT_IMAGES -> EditPicturesOp(state.pictureEdits())
             ToolId.SUMMARISE -> KeyPointsOp()
+            ToolId.RECIPES -> {
+                val recipe = state.recipes.firstOrNull { it.id == state.recipeId }
+                if (recipe == null) {
+                    _state.update { it.copy(error = "Choose a recipe, or make one.") }
+                    return null
+                }
+                val steps = recipe.steps.map { step ->
+                    // The password is typed for this run and goes only into this run.
+                    val config = if (step.tool == ToolId.SET_PASSWORD) {
+                        step.config.copy(newPassword = config.newPassword, confirmPassword = config.newPassword)
+                    } else {
+                        step.config
+                    }
+                    buildOp(step.tool, ToolUiState(tool = step.tool, config = config, documents = state.documents)) ?: return null
+                }
+                RecipeOp(recipe.name, steps)
+            }
             ToolId.RESIZE_PHOTO -> ResizePhotoOp(
                 kb = config.photoKb.toFloat(),
                 pixels = when (config.photoMode) {
@@ -910,6 +1053,11 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                             options.inJustDecodeBounds = false
                             android.graphics.BitmapFactory.decodeFile(file.file.path, options)
                                 ?.let { ResultPreview.Picture(it) }
+                        }
+                        // The first page, so a result is seen to be the right document before
+                        // it is saved or sent.
+                        file.isPdf -> sheaf.pdfEngine.open(file.file, null).use { opened ->
+                            ResultPreview.Pdf(opened.renderPage(0, RESULT_THUMB_PX), opened.pageCount)
                         }
                         else -> null
                     }
@@ -1020,6 +1168,8 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
     override fun onCleared() {
         super.onCleared()
         _state.value.thumbnails.values.forEach { it.recycle() }
+        _state.value.fileThumbs.values.forEach { it.recycle() }
+        _state.value.previews.values.filterIsInstance<ResultPreview.Pdf>().forEach { it.firstPage.recycle() }
         _state.value.previews.values.filterIsInstance<ResultPreview.Picture>()
             .forEach { it.bitmap.recycle() }
         _state.value.previewPage?.recycle()
@@ -1503,6 +1653,104 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- recipes ----
+
+    private val recipesFile: java.io.File
+        get() = java.io.File(getApplication<Application>().filesDir, "recipes.json")
+
+    fun loadRecipes() {
+        viewModelScope.launch {
+            val kept = withContext(Dispatchers.IO) { Recipes.read(recipesFile) }
+            _state.update { it.copy(recipes = kept, recipeId = it.recipeId ?: kept.firstOrNull()?.id) }
+        }
+    }
+
+    fun selectRecipe(id: String) {
+        _state.update { it.copy(recipeId = id, error = null) }
+    }
+
+    fun newRecipe() {
+        _state.update { it.copy(draft = RecipeDraft(), draftStep = null, recipeProblem = null) }
+    }
+
+    fun cancelRecipe() {
+        _state.update { it.copy(draft = null, draftStep = null, recipeProblem = null) }
+    }
+
+    fun setRecipeName(name: String) {
+        _state.update { current -> current.copy(draft = current.draft?.copy(name = name.take(80)), recipeProblem = null) }
+    }
+
+    fun addRecipeStep(tool: ToolId) {
+        _state.update { current ->
+            val draft = current.draft ?: return@update current
+            if (draft.steps.any { it.tool == tool }) return@update current.copy(recipeProblem = "${tool.title} is already a step.")
+            val steps = draft.steps + RecipeStep(tool, ToolConfig.defaultFor(tool))
+            current.copy(draft = draft.copy(steps = steps), draftStep = steps.lastIndex, recipeProblem = null)
+        }
+    }
+
+    fun removeRecipeStep(index: Int) {
+        _state.update { current ->
+            val draft = current.draft ?: return@update current
+            current.copy(draft = draft.copy(steps = draft.steps.filterIndexed { i, _ -> i != index }), draftStep = null, recipeProblem = null)
+        }
+    }
+
+    fun openRecipeStep(index: Int?) {
+        _state.update { it.copy(draftStep = if (it.draftStep == index) null else index) }
+    }
+
+    fun changeRecipeStep(index: Int, transform: (ToolConfig) -> ToolConfig) {
+        _state.update { current ->
+            val draft = current.draft ?: return@update current
+            val steps = draft.steps.toMutableList()
+            val step = steps.getOrNull(index) ?: return@update current
+            steps[index] = step.copy(config = transform(step.config))
+            current.copy(draft = draft.copy(steps = steps), recipeProblem = null)
+        }
+    }
+
+    fun saveRecipe() {
+        val draft = _state.value.draft ?: return
+        val problem = Recipes.problemWith(draft.name.trim(), draft.steps)
+            ?: draft.steps.firstNotNullOfOrNull { step -> stepProblem(step)?.let { "${step.tool.title}: $it" } }
+        if (problem != null) {
+            _state.update { it.copy(recipeProblem = problem) }
+            return
+        }
+        val recipe = Recipe(java.util.UUID.randomUUID().toString(), draft.name.trim(), draft.steps)
+        val all = _state.value.recipes + recipe
+        viewModelScope.launch {
+            val kept = withContext(Dispatchers.IO) { Recipes.write(recipesFile, all) }
+            _state.update {
+                it.copy(
+                    recipes = all,
+                    recipeId = recipe.id,
+                    draft = null,
+                    draftStep = null,
+                    recipeProblem = null,
+                    error = if (kept) null else "The recipe could not be kept on this phone; it works until you leave this screen."
+                )
+            }
+        }
+    }
+
+    fun deleteRecipe(id: String) {
+        val all = _state.value.recipes.filterNot { it.id == id }
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { Recipes.write(recipesFile, all) }
+            _state.update { it.copy(recipes = all, recipeId = if (it.recipeId == id) all.firstOrNull()?.id else it.recipeId) }
+        }
+    }
+
+    /** Why a step's options will not run, judged the way the tool's own screen judges them. */
+    private fun stepProblem(step: RecipeStep): String? {
+        if (step.tool == ToolId.SET_PASSWORD) return null
+        val stand = SelectedDoc(SheafFile(java.io.File("recipe.pdf"), "recipe.pdf", SheafFile.Origin.Derived("recipe")), pageCount = 2)
+        return ToolUiState(tool = step.tool, config = step.config, documents = listOf(stand, stand)).blockedReason
+    }
+
     // ---- edit text ----
 
     fun setEditPage(index: Int) {
@@ -1889,6 +2137,12 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         const val PREVIEW_CHARS = 4000
         const val PREVIEW_PX = 420
 
+        /** A result's first page, beside its name. */
+        const val RESULT_THUMB_PX = 160
+
+        /** A chosen file's first page, in its row. */
+        const val FILE_THUMB_PX = 120
+
         /** About 300 dpi across an A4 page: what the recogniser reads a scan at. */
         const val SCAN_READ_WIDTH_PX = 2480
 
@@ -1913,6 +2167,7 @@ sealed interface SizeCheck {
 sealed interface ResultPreview {
     data class Text(val content: String) : ResultPreview
     data class Picture(val bitmap: Bitmap) : ResultPreview
+    data class Pdf(val firstPage: Bitmap, val pages: Int) : ResultPreview
 }
 
 /** One state of the organise screen's plan, kept so the next edit can be undone. */
@@ -1941,6 +2196,8 @@ data class ToolUiState(
     val config: ToolConfig = ToolConfig(),
     val busy: Boolean = false,
     val error: String? = null,
+    /** Something worth knowing that is not a problem: what a folder held. */
+    val notice: String? = null,
     /** Organise only: the page order being edited, as indices into the original document. */
     val pageOrder: List<Int> = emptyList(),
     val selectedPages: Set<Int> = emptySet(),
@@ -1952,6 +2209,8 @@ data class ToolUiState(
     val redactions: Map<Int, List<PageArea>> = emptyMap(),
     /** Which page the one-page-at-a-time canvases are showing - redaction and mark-up. */
     val canvasPage: Int = 0,
+    /** Each chosen file's first page or picture, small, keyed by its path. */
+    val fileThumbs: Map<String, Bitmap> = emptyMap(),
     /** Something to look at for each finished result, keyed by its path. */
     val previews: Map<String, ResultPreview> = emptyMap(),
     /** Page one, for the tools whose effect can be shown before running. */
@@ -1988,6 +2247,12 @@ data class ToolUiState(
     /** Attachments: what the first document already carries, once [attachmentsRead]. */
     val attachments: List<AttachmentInfo> = emptyList(),
     val attachmentsRead: Boolean = false,
+    /** Recipes: the ones kept, the one chosen, and one being made. */
+    val recipes: List<Recipe> = emptyList(),
+    val recipeId: String? = null,
+    val draft: RecipeDraft? = null,
+    val draftStep: Int? = null,
+    val recipeProblem: String? = null,
     /** Document details: what the first file said, so a second file can clear the boxes it filled. */
     val metaSeed: DocumentMetadata? = null,
     /** Edit text: the lines each page offers, and the changes typed, by page then line. */
@@ -2067,6 +2332,9 @@ data class ToolUiState(
                 documents.firstNotNullOfOrNull { it.unreadableReason }
                     ?: "One file still needs its password."
             tool == ToolId.MERGE && documents.size < 2 -> "Merging needs at least two files."
+            tool == ToolId.RECIPES && recipes.none { it.id == recipeId } -> "Choose a recipe, or make one."
+            tool == ToolId.RECIPES && recipes.first { it.id == recipeId }.needsPassword && config.newPassword.isBlank() ->
+                "Type the password to lock them with."
             tool == ToolId.EDIT_IMAGES && pictureEdits().isEmpty() -> "Move, take out or replace a picture first."
             tool == ToolId.RESIZE_PHOTO && config.photoKb < 2 -> "Type a size of at least 2 KB."
             tool == ToolId.RESIZE_PHOTO && config.photoMode == ToolConfig.PhotoMode.EXACT &&
@@ -2432,3 +2700,6 @@ internal fun ToolConfig.forSeveral(seed: DocumentMetadata?, files: Int): ToolCon
         metaSubject == seed.subject.orEmpty() && metaKeywords == seed.keywords.orEmpty()
     return if (untouched) copy(metaTitle = "", metaAuthor = "", metaSubject = "", metaKeywords = "") else this
 }
+
+/** A recipe being made: its name and steps so far. */
+data class RecipeDraft(val name: String = "", val steps: List<RecipeStep> = emptyList())

@@ -46,6 +46,8 @@ fun ToolRoute(
     preloadUri: String? = null,
     /** A finished result handed on by another tool: already Sheaf's own file, not a Uri. */
     preloadFile: String? = null,
+    /** Options to start from, chosen by Open a file: "excel" for PDF to Excel. */
+    preset: String? = null,
     /** Settings: show the finished document without waiting to be asked. */
     openResultWhenDone: Boolean = false,
     viewModel: ToolViewModel = viewModel()
@@ -64,7 +66,7 @@ fun ToolRoute(
     var pendingBatch by remember { mutableStateOf<List<SheafFile>>(emptyList()) }
 
     LaunchedEffect(tool, preloadUri, preloadFile) {
-        viewModel.start(tool)
+        viewModel.start(tool, preset)
         if (preloadUri != null) viewModel.addDocuments(listOf(Uri.parse(preloadUri)))
         if (preloadFile != null) viewModel.addLocalDocument(preloadFile)
     }
@@ -91,6 +93,10 @@ fun ToolRoute(
         // single-file tool gets a sensible result rather than nothing at all.
         viewModel.addDocuments(uris)
     }
+
+    val pickWholeFolder = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { tree: Uri? -> if (tree != null) viewModel.addFolder(tree) }
 
     val pickReplacement = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -248,6 +254,20 @@ fun ToolRoute(
             onUndoLine = viewModel::undoLine,
             onReadScan = viewModel::readScannedPage,
             onReplaceEverywhere = viewModel::replaceEverywhere,
+            onPickFolder = { pickWholeFolder.launch(null) },
+            onRecipe = RecipeActions(
+                load = viewModel::loadRecipes,
+                select = viewModel::selectRecipe,
+                delete = viewModel::deleteRecipe,
+                new = viewModel::newRecipe,
+                name = viewModel::setRecipeName,
+                addStep = viewModel::addRecipeStep,
+                removeStep = viewModel::removeRecipeStep,
+                openStep = { viewModel.openRecipeStep(it) },
+                changeStep = viewModel::changeRecipeStep,
+                save = viewModel::saveRecipe,
+                cancel = viewModel::cancelRecipe
+            ),
             onSaveZip = { files ->
                 viewModel.zipResults(files) { zip ->
                     if (zip == null) {

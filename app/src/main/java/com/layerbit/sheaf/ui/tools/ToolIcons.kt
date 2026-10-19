@@ -61,4 +61,5 @@ fun iconFor(tool: ToolId): Int = when (tool) {
     ToolId.RESIZE_PHOTO -> R.drawable.ic_tool_resize_photo
     ToolId.EDIT_IMAGES -> R.drawable.ic_tool_edit_images
     ToolId.SUMMARISE -> R.drawable.ic_tool_summarise
+    ToolId.RECIPES -> R.drawable.ic_tool_recipe
 }

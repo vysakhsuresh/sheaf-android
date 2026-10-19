@@ -38,8 +38,14 @@ class SheafSettings(context: Context) {
             .putBoolean(KEY_CONFIRM_SAVE, updated.askWhereToSave)
             .putStringSet(KEY_FAVOURITES, updated.favouriteTools)
             .putString(KEY_SAVE_FOLDER, updated.saveFolder)
+            .putString(KEY_RECENT_TOOLS, updated.recentTools.joinToString(","))
             .apply()
         _state.value = updated
+    }
+
+    /** Puts [tool] at the front of the recent tools. */
+    fun rememberTool(tool: String) = update { settings ->
+        settings.copy(recentTools = (listOf(tool) + settings.recentTools.filter { it != tool }).take(MAX_RECENT_TOOLS))
     }
 
     fun toggleFavourite(tool: String) = update { settings ->
@@ -60,7 +66,8 @@ class SheafSettings(context: Context) {
             openResultWhenDone = prefs.getBoolean(KEY_OPEN_RESULT, false),
             askWhereToSave = prefs.getBoolean(KEY_CONFIRM_SAVE, true),
             favouriteTools = prefs.getStringSet(KEY_FAVOURITES, emptySet()).orEmpty(),
-            saveFolder = prefs.getString(KEY_SAVE_FOLDER, null)
+            saveFolder = prefs.getString(KEY_SAVE_FOLDER, null),
+            recentTools = prefs.getString(KEY_RECENT_TOOLS, null).orEmpty().split(",").filter { it.matches(Regex("[A-Z_]+")) }
         )
     }
 
@@ -73,6 +80,8 @@ class SheafSettings(context: Context) {
         const val KEY_CONFIRM_SAVE = "askWhereToSave"
         const val KEY_FAVOURITES = "favouriteTools"
         const val KEY_SAVE_FOLDER = "saveFolder"
+        const val KEY_RECENT_TOOLS = "recentTools"
+        const val MAX_RECENT_TOOLS = 6
     }
 }
 
@@ -101,7 +110,11 @@ data class Settings(
      * one, which is why turning the setting off does not immediately change anything: the
      * next save asks for the folder, and every save after it is silent.
      */
-    val saveFolder: String? = null
+    val saveFolder: String? = null,
+    /**
+     * The tools opened lately, newest first, at most six. Tool names only: never a file.
+     */
+    val recentTools: List<String> = emptyList()
 )
 
 enum class ThemeChoice(val label: String) {

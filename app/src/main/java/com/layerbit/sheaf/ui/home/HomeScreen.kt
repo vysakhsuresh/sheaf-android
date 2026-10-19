@@ -82,6 +82,10 @@ fun HomeScreen(
     onToggleFavourite: (ToolId) -> Unit,
     onSettings: () -> Unit,
     onAbout: () -> Unit,
+    /** Tools opened lately, newest first. */
+    recentTools: List<ToolId> = emptyList(),
+    /** Opens any file, or a folder, to be told what can be done with it. */
+    onOpenAny: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var query by remember { mutableStateOf("") }
@@ -112,6 +116,22 @@ fun HomeScreen(
             }
         }
 
+        item(key = "open-any") {
+            Panel(modifier = Modifier.fillMaxWidth(), onClick = onOpenAny, tint = SheafColors.Band, inset = 16.dp) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconTile(iconRes = R.drawable.ic_tool_read, accent = SheafColors.Band, size = 40.dp)
+                    Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
+                        Text("Not sure which tool? Open your file", style = MaterialTheme.typography.titleMedium, color = SheafColors.Text)
+                        Text(
+                            "A PDF, photos, a Word or Excel file, or a whole folder: Sheaf suggests what to do with it, and runs your recipes.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SheafColors.Muted
+                        )
+                    }
+                }
+            }
+        }
+
         item(key = "search") {
             SearchField(query = query, onChange = { query = it })
         }
@@ -134,6 +154,28 @@ fun HomeScreen(
                 }
             }
         } else {
+            if (recentTools.isNotEmpty()) {
+                item(key = "recent-tools") {
+                    SectionHeading("Your recent tools", modifier = Modifier.padding(top = 6.dp, bottom = 8.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(recentTools, key = { it.name }) { tool ->
+                            Panel(onClick = { onTool(tool) }, inset = 10.dp, tint = GroupAccents.of(tool.group)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconTile(iconRes = iconFor(tool), accent = GroupAccents.of(tool.group), size = 28.dp)
+                                    Text(
+                                        tool.title,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = SheafColors.Text,
+                                        maxLines = 1,
+                                        modifier = Modifier.padding(start = 8.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             if (recents.isNotEmpty()) {
                 item(key = "recents") {
                     SectionHeading("Pick up where you left off", modifier = Modifier.padding(top = 6.dp, bottom = 8.dp))

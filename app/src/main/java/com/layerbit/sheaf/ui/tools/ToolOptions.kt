@@ -1293,7 +1293,7 @@ fun ToolOptions(
             )
 
             // These have their own canvases on the tool screen rather than plain settings.
-            ToolId.SCAN, ToolId.EDIT_IMAGES -> Unit
+            ToolId.SCAN, ToolId.EDIT_IMAGES, ToolId.RECIPES -> Unit
             ToolId.SUMMARISE -> Hint(
                 "Picks the sentences that carry the document, and lists the amounts, dates and " +
                     "percentages in it. Every point is a sentence from the document itself, so each " +

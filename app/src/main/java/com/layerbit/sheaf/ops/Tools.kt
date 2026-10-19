@@ -270,6 +270,12 @@ enum class ToolId(
         InputKind.ONE_PDF,
         Group.READ
     ),
+    RECIPES(
+        "Recipes",
+        "Your own chain of steps - compress, number, lock - run on any number of PDFs in one tap",
+        InputKind.SEVERAL_PDFS,
+        Group.CONVERT
+    ),
     RENT_RECEIPTS(
         "Rent receipts",
         "A year of receipts for an HRA claim, ready to sign",
@@ -360,6 +366,7 @@ enum class ToolId(
             RESIZE_PHOTO -> "Resize it"
             EDIT_IMAGES -> "Save the changes"
             SUMMARISE -> "Pick the key points"
+            RECIPES -> "Run the recipe"
             COMPARE -> "Compare them"
             RENT_RECEIPTS -> "Make the receipts"
         }

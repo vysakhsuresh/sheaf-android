@@ -21,6 +21,19 @@ class Handoff {
         waiting = uris
     }
 
+    private var waitingFiles: List<SheafFile> = emptyList()
+
+    /** Sheaf's own files - opened and looked at already - for the tool picked for them. */
+    fun offerFiles(files: List<SheafFile>) {
+        waitingFiles = files
+    }
+
+    fun takeFiles(): List<SheafFile> {
+        val held = waitingFiles
+        waitingFiles = emptyList()
+        return held
+    }
+
     /** Returns what was waiting and forgets it. */
     fun take(): List<Uri> {
         val held = waiting

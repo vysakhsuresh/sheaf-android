@@ -50,6 +50,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.zIndex
+import kotlin.math.roundToInt
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -161,6 +171,8 @@ fun ToolScreen(
     onUndoLine: () -> Unit = {},
     onReadScan: () -> Unit = {},
     onReplaceEverywhere: () -> Unit = {},
+    onPickFolder: () -> Unit = {},
+    onRecipe: RecipeActions = RecipeActions(),
     /** Bundles every result into one ZIP and saves that. */
     onSaveZip: (List<SheafFile>) -> Unit,
     onCheckSize: () -> Unit,
@@ -168,6 +180,10 @@ fun ToolScreen(
     onDone: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    LaunchedEffect(tool) {
+        if (tool == ToolId.RECIPES) onRecipe.load()
+    }
+
     // Organise and Remove areas both draw on rendered pages, and only once a document is
     // actually present.
     LaunchedEffect(tool, state.documents.firstOrNull()?.file?.file?.path, state.documents.size, state.config.markPage) {
@@ -209,6 +225,13 @@ fun ToolScreen(
     /** The finished file waiting for the user to pick the next tool for it. */
     var chaining by remember { mutableStateOf<SheafFile?>(null) }
 
+    // A file row held and being dragged into a new place: which, and how far it has moved.
+    var dragFrom by remember { mutableStateOf<Int?>(null) }
+    var dragBy by remember { mutableFloatStateOf(0f) }
+    var pitch by remember { mutableFloatStateOf(1f) }
+    val rowGapPx = with(LocalDensity.current) { 14.dp.toPx() }
+    val haptics = LocalHapticFeedback.current
+
     Column(modifier = modifier.fillMaxSize()) {
     LazyColumn(
         modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -220,9 +243,11 @@ fun ToolScreen(
 
             finished != null -> {
                 item { ResultSummary(finished) }
-                items(finished.produced, key = { it.file.file.path }) { produced ->
+                itemsIndexedInColumn(finished.produced, key = { _, it -> it.file.file.path }) { index, produced ->
                     ResultRow(
                         outcome = produced,
+                        // Pictures for the first few; a batch of forty does not need forty drawn.
+                        wantsPreview = index < MAX_RESULT_PREVIEWS,
                         preview = state.previews[produced.file.file.path],
                         onSave = { onSave(produced.file) },
                         onOpen = { onOpenResult(produced.file) },
@@ -238,7 +263,7 @@ fun ToolScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                             if (finished.produced.isNotEmpty()) {
                                 PrimaryButton(
-                                    text = if (finished.produced.size > 1) "Share all" else "Share",
+                                    text = if (finished.produced.size > 1) "Send all ${finished.produced.size}" else "Send",
                                     icon = Icons.Filled.Share,
                                     onClick = { onShare(finished.produced.map { it.file }) },
                                     modifier = Modifier.weight(1f)
@@ -288,10 +313,23 @@ fun ToolScreen(
             else -> {
                 item { SectionHeading(if (tool.acceptsMultiple) "Files" else "File") }
 
-                itemsIndexedInColumn(state.documents) { index, doc ->
+                val movable = tool.acceptsMultiple && state.documents.size > 1 &&
+                    tool != ToolId.DIGITAL_SIGN && tool != ToolId.ADD_IMAGE
+                itemsIndexedInColumn(state.documents, key = { _, d -> d.file.file.path }) { index, doc ->
+                    // Where the held row would land, and how far each other row steps aside.
+                    val from = dragFrom
+                    val landing = from?.let { (it + (dragBy / pitch).roundToInt()).coerceIn(0, state.documents.lastIndex) }
+                    val shift = when {
+                        from == null || landing == null -> 0f
+                        index == from -> dragBy
+                        landing > from && index in (from + 1)..landing -> -pitch
+                        landing < from && index in landing until from -> pitch
+                        else -> 0f
+                    }
                     DocumentRow(
                         doc = doc,
-                        canReorder = (tool == ToolId.MERGE || tool == ToolId.ATTACHMENTS || tool == ToolId.COMPARE) && state.documents.size > 1,
+                        thumb = state.fileThumbs[doc.file.file.path],
+                        canReorder = movable,
                         role = when {
                             tool == ToolId.DIGITAL_SIGN && doc.file.isPdf -> "The PDF"
                             tool == ToolId.DIGITAL_SIGN -> "Certificate"
@@ -311,8 +349,53 @@ fun ToolScreen(
                         onUp = { onMoveFile(index, index - 1) },
                         onDown = { onMoveFile(index, index + 1) },
                         onPasswordChange = { onSetPassword(index, it) },
-                        onPasswordDone = { onVerifyPassword(index) }
+                        onPasswordDone = { onVerifyPassword(index) },
+                        modifier = Modifier
+                            .onGloballyPositioned { if (index == 0) pitch = it.size.height + rowGapPx }
+                            .zIndex(if (index == from) 1f else 0f)
+                            .graphicsLayer {
+                                translationY = shift
+                                if (index == from) {
+                                    scaleX = 1.02f
+                                    scaleY = 1.02f
+                                    shadowElevation = 12f
+                                }
+                            }
+                            .pointerInput(movable, index, state.documents.size) {
+                                if (!movable) return@pointerInput
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = {
+                                        dragFrom = index
+                                        dragBy = 0f
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    },
+                                    onDrag = { change, amount ->
+                                        change.consume()
+                                        dragBy += amount.y
+                                    },
+                                    onDragEnd = {
+                                        val to = (index + (dragBy / pitch).roundToInt()).coerceIn(0, state.documents.lastIndex)
+                                        if (to != index) onMoveFile(index, to)
+                                        dragFrom = null
+                                        dragBy = 0f
+                                    },
+                                    onDragCancel = {
+                                        dragFrom = null
+                                        dragBy = 0f
+                                    }
+                                )
+                            }
                     )
+                }
+
+                if (movable) {
+                    item {
+                        Text(
+                            "Hold a file to drag it into order, or use its arrows.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SheafColors.Dim
+                        )
+                    }
                 }
 
                 item {
@@ -366,6 +449,18 @@ fun ToolScreen(
                         )
                     }
                 }
+
+                if (tool.input == ToolId.InputKind.SEVERAL_PDFS || tool.input == ToolId.InputKind.IMAGES ||
+                    tool.input == ToolId.InputKind.OFFICE || tool.input == ToolId.InputKind.PDF_AND_FILES
+                ) {
+                    item {
+                        TextButton(onClick = onPickFolder) {
+                            Text("Pick a whole folder", color = SheafColors.Band, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+
+                state.notice?.let { notice -> item { ProblemRow(null, notice, isError = false) } }
 
                 if (tool == ToolId.ORGANISE && state.pageOrder.isNotEmpty()) {
                     item {
@@ -700,6 +795,23 @@ fun ToolScreen(
                             onChange = onConfigChange
                         )
                     }
+                } else if (tool == ToolId.RECIPES) {
+                    item {
+                        RecipesPanel(
+                            state = state,
+                            onSelect = onRecipe.select,
+                            onDelete = onRecipe.delete,
+                            onNew = onRecipe.new,
+                            onName = onRecipe.name,
+                            onAddStep = onRecipe.addStep,
+                            onRemoveStep = onRecipe.removeStep,
+                            onOpenStep = onRecipe.openStep,
+                            onStepChange = onRecipe.changeStep,
+                            onSave = onRecipe.save,
+                            onCancel = onRecipe.cancel,
+                            onPassword = { p -> onConfigChange { it.copy(newPassword = p, confirmPassword = p) } }
+                        )
+                    }
                 } else if (state.documents.isNotEmpty()) {
                     item {
                         ToolOptions(
@@ -875,6 +987,7 @@ private fun ResultSummary(finished: JobState.Finished) {
 @Composable
 private fun ResultRow(
     outcome: OpOutcome.Produced,
+    wantsPreview: Boolean,
     preview: ResultPreview?,
     onSave: () -> Unit,
     onOpen: () -> Unit,
@@ -884,12 +997,25 @@ private fun ResultRow(
 ) {
     val file = outcome.file
     LaunchedEffect(file.file.path) {
-        if (file.isText || file.isImage) onNeedPreview()
+        if (file.isText || (wantsPreview && (file.isImage || file.isPdf))) onNeedPreview()
     }
 
     Panel(modifier = Modifier.fillMaxWidth(), tint = SheafColors.Done) {
         Row(verticalAlignment = Alignment.Top) {
-            IconTile(iconRes = fileIcon(file), accent = SheafColors.Done, filled = true, size = 40.dp)
+            if (preview is ResultPreview.Pdf) {
+                Image(
+                    bitmap = preview.firstPage.asImageBitmap(),
+                    contentDescription = "First page of ${file.displayName}",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .size(width = 52.dp, height = 70.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(SheafColors.Paper)
+                        .border(1.dp, SheafColors.Border, RoundedCornerShape(4.dp))
+                )
+            } else {
+                IconTile(iconRes = fileIcon(file), accent = SheafColors.Done, filled = true, size = 40.dp)
+            }
             Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
                 Text(
                     file.displayName,
@@ -948,11 +1074,14 @@ private fun ResultRow(
                     .background(SheafColors.Paper)
             )
 
-            null -> Unit
+            is ResultPreview.Pdf, null -> Unit
         }
 
         RowBetween(modifier = Modifier.padding(top = 10.dp)) {
-            Pill(formatBytes(file.sizeBytes), SheafColors.Muted)
+            Pill(
+                if (preview is ResultPreview.Pdf) "${formatPageCount(preview.pages)} · ${formatBytes(file.sizeBytes)}" else formatBytes(file.sizeBytes),
+                SheafColors.Muted
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (file.isPdf) {
                     SecondaryButton(text = "Open", onClick = onOpen, tall = false)
@@ -1017,6 +1146,8 @@ private fun ActionBar(label: String, enabled: Boolean, busy: Boolean, reason: St
 
 @Composable
 private fun DocumentRow(
+    thumb: android.graphics.Bitmap? = null,
+    modifier: Modifier = Modifier,
     doc: SelectedDoc,
     canReorder: Boolean,
     role: String? = null,
@@ -1028,12 +1159,25 @@ private fun DocumentRow(
     onPasswordChange: (String) -> Unit,
     onPasswordDone: () -> Unit
 ) {
-    Panel(modifier = Modifier.fillMaxWidth(), inset = 14.dp) {
+    Panel(modifier = modifier.fillMaxWidth(), inset = 14.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconTile(
-                iconRes = fileIcon(doc.file),
-                accent = if (doc.unreadableReason != null) SheafColors.Failed else if (doc.file.isPdf) SheafColors.Band else SheafColors.Running
-            )
+            if (thumb != null) {
+                Image(
+                    bitmap = thumb.asImageBitmap(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .size(width = 40.dp, height = 54.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(SheafColors.Paper)
+                        .border(1.dp, SheafColors.Border, RoundedCornerShape(4.dp))
+                )
+            } else {
+                IconTile(
+                    iconRes = fileIcon(doc.file),
+                    accent = if (doc.unreadableReason != null) SheafColors.Failed else if (doc.file.isPdf) SheafColors.Band else SheafColors.Running
+                )
+            }
             Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
                 Text(
                     doc.file.displayName,
@@ -1534,3 +1678,4 @@ private fun PageThumb(
         }
     }
 }
+private const val MAX_RESULT_PREVIEWS = 6

@@ -48,13 +48,14 @@ object Routes {
     const val VIEWER = "viewer"
     const val ABOUT = "about"
     const val SETTINGS = "settings"
+    const val OPEN = "open"
 
     /**
      * The tool's enum name is the argument, so a route survives a reordering of ToolId. The
      * optional uri is how the viewer hands the document it has open straight to a tool,
      * which is what stops "open a PDF" being a dead end that only shows you pages.
      */
-    const val TOOL = "tool/{tool}?uri={uri}&file={file}"
+    const val TOOL = "tool/{tool}?uri={uri}&file={file}&preset={preset}"
 
     /**
      * @param uri a document from outside the app, handed over by the viewer.
@@ -62,13 +63,14 @@ object Routes {
      *   tool. The two are separate because one has to be imported through the Storage Access
      *   Framework and the other is already in the workspace.
      */
-    fun tool(tool: ToolId, uri: String? = null, file: String? = null): String {
+    fun tool(tool: ToolId, uri: String? = null, file: String? = null, preset: String? = null): String {
         val base = "tool/${tool.name}"
         // Encoded because a content:// Uri and a path are both full of characters the route
         // parser treats as structure - a raw one silently truncates at the first ? or #.
         val arguments = buildList {
             if (uri != null) add("uri=" + Uri.encode(uri))
             if (file != null) add("file=" + Uri.encode(file))
+            if (preset != null) add("preset=" + Uri.encode(preset))
         }
         return if (arguments.isEmpty()) base else base + "?" + arguments.joinToString("&")
     }
@@ -159,7 +161,9 @@ fun SheafApp(
                         onForgetRecent = { onForgetRecent(it.uri) },
                         onTool = { tool -> navController.navigate(Routes.tool(tool)) },
                         onToggleFavourite = { tool -> sheaf.settings.toggleFavourite(tool.name) },
-                        onAbout = { navController.navigate(Routes.ABOUT) }
+                        onAbout = { navController.navigate(Routes.ABOUT) },
+                        recentTools = settings.recentTools.mapNotNull { name -> ToolId.entries.firstOrNull { it.name == name } },
+                        onOpenAny = { navController.navigate(Routes.OPEN) }
                     )
                 }
             }
@@ -212,6 +216,11 @@ fun SheafApp(
                         nullable = true
                         defaultValue = null
                     },
+                    navArgument("preset") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
                     navArgument("file") {
                         type = NavType.StringType
                         nullable = true
@@ -221,6 +230,7 @@ fun SheafApp(
             ) { entry ->
                 val name = entry.arguments?.getString("tool")
                 val tool = ToolId.entries.firstOrNull { it.name == name }
+                LaunchedEffect(tool) { tool?.let { sheaf.settings.rememberTool(it.name) } }
                 if (tool == ToolId.SCAN) {
                     Column {
                         SheafTopBar(
@@ -245,6 +255,7 @@ fun SheafApp(
                             tool = tool,
                             preloadUri = entry.arguments?.getString("uri"),
                             preloadFile = entry.arguments?.getString("file"),
+                            preset = entry.arguments?.getString("preset"),
                             openResultWhenDone = settings.openResultWhenDone,
                             onOpenResult = { file ->
                                 // Opened straight from the result list so a finished document
@@ -266,6 +277,27 @@ fun SheafApp(
                 }
             }
 
+
+            composable(Routes.OPEN) {
+                Column {
+                    SheafTopBar(
+                        title = "Open a file",
+                        subtitle = "Sheaf looks at it on this phone and suggests what to do",
+                        onBack = { navController.popBackStack() },
+                        iconRes = com.layerbit.sheaf.R.drawable.ic_tool_read,
+                        accent = SheafColors.Band
+                    )
+                    com.layerbit.sheaf.ui.open.OpenRoute(
+                        onTool = { tool, preset -> navController.navigate(Routes.tool(tool, preset = preset)) },
+                        onRead = { file ->
+                            viewerViewModel.openLocal(file)
+                            navController.navigate(Routes.VIEWER) { launchSingleTop = true }
+                        },
+                        onRecipes = { navController.navigate(Routes.tool(ToolId.RECIPES)) },
+                        onAllTools = { navController.popBackStack() }
+                    )
+                }
+            }
             composable(Routes.SETTINGS) {
                 LaunchedEffect(Unit) { workspaceBytes = sheaf.workspace.sizeBytes() }
                 Column {
