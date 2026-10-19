@@ -86,12 +86,15 @@ the signature. Resist any pull towards a convenient `fun run(input: SheafFile): 
 |---|---|
 | Read | Open a document, search it, read it aloud with the phone's own voice, see its comments, then hand it to any tool |
 | Scan a document | Camera capture, corner adjustment, document filter |
-| Make searchable | OCR a scan into an invisible, selectable text layer, in Latin or Devanagari script |
+| Make searchable | OCR a scan into an invisible, selectable text layer; the layer carries any script, through a glyphless font, and each line is stretched to its ink |
+| Key points | The sentences that carry a document, and the amounts, dates and percentages in it, picked on the phone; every point is the document's own sentence |
 | Compare two versions | Older and newer: new words in green on the newer file, a note where words went |
-| Find and replace text | Change a date, a name or a number wherever it appears |
+| Edit text | Tap any line - cell by cell in a table - and change it: painted over in the page's own paper and ink, in its own font where it has the letters, squeezed to fit; scans are read first and only changed words repainted; find and replace across every page |
+| Edit pictures | Move, resize, take out or swap the pictures already on a page, nothing else touched |
+| Resize photo to KB | A photo or signature under 20 KB, 50 KB or any size a form asks, as a passport photo or exact pixels, with location and camera details left out |
 | Rent receipts | A year of HRA receipts from what you type, amount in words, two to a page |
 | Extract text | Pull the words out as plain text |
-| Merge | Join several PDFs, reorderable |
+| Merge | Join several PDFs, in an order you drag them into |
 | Split | Every N pages, single pages, by ranges, or at the document's own bookmarks |
 | Extract or remove pages | Keep only the pages you name, or take those pages out |
 | Insert or replace pages | Put another PDF, or blank pages, in at a chosen page, or in place of pages you name |
@@ -102,28 +105,31 @@ the signature. Resist any pull towards a convenient `fun run(input: SheafFile): 
 | PDF to images | PNG or JPEG at 96, 200 or 300 DPI |
 | PDF to Word, Excel, PowerPoint, EPUB or web page | Paragraphs, headings, lists, tables and pictures rebuilt from the pages, as .docx, .xlsx, .epub or .html; a .pptx with a slide per page, as pictures or editable text |
 | Word, Excel or text to PDF | A .docx, .xlsx, .txt, .md or .csv laid out on A4, in the phone's own fonts for Indian scripts |
-| Compress | Three levels, or a size to get under, and it tells you when there was nothing to gain |
+| Compress | Three levels, or a size to get under - with pages made pictures, their words kept underneath, if that is what it takes - and it tells you when there was nothing to gain |
 | Attachments | Put files inside a PDF, or take out the ones already there |
 | Digital signature | A PKCS#7 signature from your own .pfx or .p12, visible or not, the kind every reader's panel checks |
 | Archive copy (PDF/A) | A PDF/A-2b copy: sRGB profile built in, XMP, file ID, no scripts, attachments or password |
 | Add a password | AES-256, with the printing and copying flags as a stated request; or restrict only, with no password to open |
 | Remove a password | For a document whose password you know |
-| Watermark | DRAFT or a name, once or repeated, grey, red or blue, sized to the page, on the pages you choose |
-| Page numbers | Six positions, five formats, skip a cover; Bates numbers with a prefix that run on across files |
+| Watermark | DRAFT or a name in any script, once or repeated, grey, red or blue, sized to the page, on the pages you choose |
+| Page numbers | Six positions, five formats in any script, skip a cover, on a white plate that keeps them readable on a phone photo; Bates numbers with a prefix that run on across files |
 | Sign | Draw a signature and flatten it into a page |
 | Mark up | Highlight a line or draw on a page with your finger |
-| Add text | Tap a page and write on it, covering what is there if you need to |
+| Add text | Tap a page and write on it in any script, shaped by the phone's own text engine, covering what is there if you need to |
 | Add an image | A logo, a stamp or a photo on a page, drawn in so it cannot be dragged off |
 | Create a form | Drag text boxes, paragraph boxes, tick boxes and drop-downs onto a page; anyone can fill the result |
 | Fill in a form | Type into a real PDF form, keep the answers for next time, and seal them so they cannot be retyped |
-| Header and footer | A line along the top or bottom of every page, with {page}, {total}, {date}, {name} |
+| Header and footer | A line along the top or bottom of every page, in any script, with {page}, {total}, {date}, {name} |
 | Crop pages | Millimetres off each edge, or the white margins found automatically, then A4, Letter, A5, Legal or A3 |
 | Page background | A colour behind the pages, under the text |
 | Pages per sheet | 2, 4, 6, 8, 9 or 16 pages on A4, Letter, A3 or Legal, turned whichever way shows them biggest |
 | Split by size | Parts that fit a 2, 5, 10 or 25 MB limit, or any size you type, each measured by saving it |
 | Extract images | The embedded originals, not re-rendered pages |
 | Remove areas | Genuine removal - see below - and Find and mark for Aadhaar, PAN, phone, email and card numbers |
-| Document details | Edit the title, author, subject and keywords; blank them; or clean out everything hidden - XMP, scripts, attachments, comments, thumbnails, private data - and say what was found |
+| Document details | Edit the title, author, subject and keywords - for several files at once, an empty box keeps each file's own; blank them; or clean out everything hidden - XMP, scripts, attachments, comments, thumbnails, private data - and say what was found |
+| Recipes | Your own chain of steps, set up with each tool's own options, kept on the phone and run on any number of PDFs in one tap |
+
+**Open a file** takes anything - PDFs, photos, Word or Excel, a whole folder - looks at it on the phone and offers the tools that fit, best first, with the reason in words: a scan, a form, a statement full of amounts, an Aadhaar or PAN on the page, a locked file. Every tool that takes several files reorders them by dragging and can take a whole folder; pages being worked on zoom with two fingers.
 
 ### The viewer is a reader, not a preview
 
@@ -247,6 +253,7 @@ answer for compression and is the one most likely to be reached for by accident.
 | **P4** | 0.4.0+ | ✅ N-up, split by size, extract images, metadata. |
 | **P5** | 0.5.0 | ✅ Reader-grade viewer, forms, insert, header/footer, settings, light theme. |
 | **P6** | 0.6.0 | ✅ The Foolscap set: page labels, bookmarks, attachments, background, clean hidden data, restrict-only, replace pages, measured split by size, millimetre and automatic crop, n-up grids, Bates across files, ZIP export. |
+| **P7** | 0.7.0 | ✅ Foolscap's October set and past it: Edit text, Edit pictures, Resize photo to KB, Key points, Recipes, Open a file, every script on the page, zoom in the editors, drag to order, compress through pictures. |
 
 Each phase has an exit gate. P0's was: open a 500-page document, scroll it end to end at 60 fps,
 close it, and return to a flat heap. P1's is: every tool produces a file that opens correctly in
