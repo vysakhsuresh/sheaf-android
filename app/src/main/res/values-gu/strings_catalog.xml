@@ -1,0 +1,408 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="catalog_tool_scan_title">દસ્તાવેજ સ્કૅન કરો</string>
+    <string name="catalog_tool_scan_summary">પેજના ફોટા લો અને તેમને સીધા કરો</string>
+    <string name="catalog_tool_scan_action">સ્કૅન કરો</string>
+    <string name="catalog_tool_ocr_title">શોધી શકાય તેવું બનાવો</string>
+    <string name="catalog_tool_ocr_summary">સ્કૅનમાંનું લખાણ વાંચો, જેથી તમે તેને શોધી અને કૉપિ કરી શકો</string>
+    <string name="catalog_tool_ocr_action">શોધી શકાય તેવું બનાવો</string>
+    <string name="catalog_tool_extract_text_title">લખાણ કાઢો</string>
+    <string name="catalog_tool_extract_text_summary">PDFમાંથી શબ્દોને સાદા લખાણ તરીકે કાઢો</string>
+    <string name="catalog_tool_extract_text_action">લખાણ કાઢો</string>
+    <string name="catalog_tool_merge_title">જોડો</string>
+    <string name="catalog_tool_merge_summary">તમે પસંદ કરો તે ક્રમમાં ઘણી PDFને એકમાં જોડો</string>
+    <string name="catalog_tool_merge_action">એક ફાઇલમાં જોડો</string>
+    <string name="catalog_tool_split_title">વિભાજિત કરો</string>
+    <string name="catalog_tool_split_summary">એક PDFને ઘણી નાની ફાઇલોમાં વહેંચો</string>
+    <string name="catalog_tool_split_action">વિભાજિત કરો</string>
+    <string name="catalog_tool_extract_title">પેજ કાઢો અથવા દૂર કરો</string>
+    <string name="catalog_tool_extract_summary">તમે પસંદ કરેલા પેજ જ રાખો, અથવા તેમને દૂર કરો</string>
+    <string name="catalog_tool_extract_action">આ પેજ રાખો</string>
+    <string name="catalog_tool_insert_title">પેજ ઉમેરો અથવા બદલો</string>
+    <string name="catalog_tool_insert_summary">બીજી PDF અથવા ખાલી પેજ પસંદ કરેલા પેજ પર ઉમેરો, અથવા કેટલાક પેજની જગ્યાએ મૂકો</string>
+    <string name="catalog_tool_insert_action">ઉમેરો</string>
+    <string name="catalog_tool_organise_title">પેજ ગોઠવો</string>
+    <string name="catalog_tool_organise_summary">પેજનો ક્રમ બદલો, ફેરવો અને ડિલીટ કરો</string>
+    <string name="catalog_tool_organise_action">નવો ક્રમ સાચવો</string>
+    <string name="catalog_tool_images_to_pdf_title">છબીઓથી PDF</string>
+    <string name="catalog_tool_images_to_pdf_summary">ફોટા અને સ્કૅનને દસ્તાવેજમાં ફેરવો</string>
+    <string name="catalog_tool_images_to_pdf_action">PDF બનાવો</string>
+    <string name="catalog_tool_pdf_to_images_title">PDFથી છબીઓ</string>
+    <string name="catalog_tool_pdf_to_images_summary">પેજને PNG અથવા JPEG તરીકે સાચવો</string>
+    <string name="catalog_tool_pdf_to_images_action">છબીઓ તરીકે સાચવો</string>
+    <string name="catalog_tool_pdf_to_office_title">PDFથી Word, Excel, PowerPoint, EPUB અથવા વેબ પેજ</string>
+    <string name="catalog_tool_pdf_to_office_summary">ફકરા, મથાળાં, કોષ્ટકો અને ચિત્રો, એવી ફાઇલમાં જેને તમે ફેરફાર કરી કે વાંચી શકો</string>
+    <string name="catalog_tool_pdf_to_office_action">રૂપાંતરિત કરો</string>
+    <string name="catalog_tool_office_to_pdf_title">Word, Excel અથવા લખાણથી PDF</string>
+    <string name="catalog_tool_office_to_pdf_summary">.docx, .xlsx, .txt, .md અથવા .csvને A4 પર ગોઠવેલી PDF તરીકે</string>
+    <string name="catalog_tool_office_to_pdf_action">PDF બનાવો</string>
+    <string name="catalog_tool_compress_title">કમ્પ્રેસ કરો</string>
+    <string name="catalog_tool_compress_summary">ઇમેઇલ કે અપલોડ માટે PDF નાની બનાવો, અથવા ચોક્કસ સાઇઝથી ઓછી કરો</string>
+    <string name="catalog_tool_compress_action">કમ્પ્રેસ કરો</string>
+    <string name="catalog_tool_watermark_title">વૉટરમાર્ક</string>
+    <string name="catalog_tool_watermark_summary">દરેક પેજ પર DRAFT અથવા કોઈ નામ મૂકો</string>
+    <string name="catalog_tool_watermark_action">વૉટરમાર્ક ઉમેરો</string>
+    <string name="catalog_tool_page_numbers_title">પેજ નંબર</string>
+    <string name="catalog_tool_page_numbers_summary">પેજને નંબર આપો, જરૂર હોય તો Bates શૈલીમાં</string>
+    <string name="catalog_tool_page_numbers_action">નંબર ઉમેરો</string>
+    <string name="catalog_tool_sign_title">સહી કરો</string>
+    <string name="catalog_tool_sign_summary">તમારી સહી દોરો અને તેને પેજ પર મૂકો</string>
+    <string name="catalog_tool_sign_action">સહી મૂકો</string>
+    <string name="catalog_tool_annotate_title">નિશાની કરો</string>
+    <string name="catalog_tool_annotate_summary">લીટી હાઇલાઇટ કરો, અથવા આંગળીથી પેજ પર દોરો</string>
+    <string name="catalog_tool_annotate_action">નિશાનીઓ સાચવો</string>
+    <string name="catalog_tool_forms_title">ફોર્મ ભરો</string>
+    <string name="catalog_tool_forms_summary">ફોર્મ ફીલ્ડવાળી PDFમાં ટાઇપ કરો અને તેને સીલ કરો</string>
+    <string name="catalog_tool_forms_action">ભરો</string>
+    <string name="catalog_tool_header_footer_title">હેડર અને ફૂટર</string>
+    <string name="catalog_tool_header_footer_summary">દરેક પેજની ઉપર કે નીચે એક લીટી મૂકો</string>
+    <string name="catalog_tool_header_footer_action">ઉમેરો</string>
+    <string name="catalog_tool_add_text_title">લખાણ ઉમેરો</string>
+    <string name="catalog_tool_add_text_summary">પેજ પર ટાઇપ કરો, અને જરૂર હોય તો ત્યાં જે છે તેને ઢાંકી દો</string>
+    <string name="catalog_tool_add_text_action">લખો</string>
+    <string name="catalog_tool_add_image_title">છબી ઉમેરો</string>
+    <string name="catalog_tool_add_image_summary">પેજ પર લોગો, સ્ટૅમ્પ અથવા ફોટો મૂકો</string>
+    <string name="catalog_tool_add_image_action">છબી મૂકો</string>
+    <string name="catalog_tool_crop_title">પેજ ક્રોપ કરો</string>
+    <string name="catalog_tool_crop_summary">હાંસિયા મિલિમીટરમાં કાપો, સફેદ કિનારીઓ દૂર કરો અથવા પેજની સાઇઝ બદલો</string>
+    <string name="catalog_tool_crop_action">ક્રોપ કરો</string>
+    <string name="catalog_tool_background_title">પેજનું બૅકગ્રાઉન્ડ</string>
+    <string name="catalog_tool_background_summary">પેજની પાછળ રંગ મૂકો</string>
+    <string name="catalog_tool_background_action">પેજને રંગો</string>
+    <string name="catalog_tool_n_up_title">એક શીટ પર ઘણા પેજ</string>
+    <string name="catalog_tool_n_up_summary">છાપવા માટે દરેક શીટ પર 2, 4, 6, 8, 9 અથવા 16 પેજ મૂકો</string>
+    <string name="catalog_tool_n_up_action">ગોઠવો</string>
+    <string name="catalog_tool_split_by_size_title">સાઇઝ મુજબ વિભાજિત કરો</string>
+    <string name="catalog_tool_split_by_size_summary">ફાઇલને ઇમેઇલ કરી શકાય એટલા નાના ભાગોમાં કાપો</string>
+    <string name="catalog_tool_split_by_size_action">સાઇઝ મુજબ વિભાજિત કરો</string>
+    <string name="catalog_tool_extract_images_title">છબીઓ કાઢો</string>
+    <string name="catalog_tool_extract_images_summary">દસ્તાવેજમાં પહેલેથી રહેલાં ચિત્રો બહાર કાઢો</string>
+    <string name="catalog_tool_extract_images_action">છબીઓ કાઢો</string>
+    <string name="catalog_tool_page_labels_title">પેજ લેબલ</string>
+    <string name="catalog_tool_page_labels_summary">રીડર જે રીતે બતાવે તે રીતે પેજને નામ આપો: i, ii, iii, પછી 1, 2, 3</string>
+    <string name="catalog_tool_page_labels_action">પેજને લેબલ આપો</string>
+    <string name="catalog_tool_bookmarks_title">બુકમાર્ક</string>
+    <string name="catalog_tool_bookmarks_summary">દસ્તાવેજની બાજુની પેનલમાં અનુક્રમણિકા લખો</string>
+    <string name="catalog_tool_bookmarks_action">બુકમાર્ક લખો</string>
+    <string name="catalog_tool_attachments_title">જોડાણો</string>
+    <string name="catalog_tool_attachments_summary">PDFની અંદર ફાઇલો મૂકો, અથવા તેમને બહાર કાઢો</string>
+    <string name="catalog_tool_attachments_action">કરો</string>
+    <string name="catalog_tool_redact_title">ભાગ દૂર કરો</string>
+    <string name="catalog_tool_redact_summary">પેજમાંથી કંઈક કાયમ માટે દૂર કરો, અથવા ID અને કાર્ડ નંબર શોધીને દૂર કરો</string>
+    <string name="catalog_tool_redact_action">કાયમ માટે દૂર કરો</string>
+    <string name="catalog_tool_metadata_title">દસ્તાવેજની વિગતો</string>
+    <string name="catalog_tool_metadata_summary">વિગતોમાં ફેરફાર કરો, અથવા ફાઇલ જે કંઈ જાહેર કરે છે તે બધું સાફ કરો</string>
+    <string name="catalog_tool_metadata_action">વિગતો સાચવો</string>
+    <string name="catalog_tool_set_password_title">પાસવર્ડ ઉમેરો</string>
+    <string name="catalog_tool_set_password_summary">PDFને એન્ક્રિપ્ટ કરો જેથી ખોલવા માટે પાસવર્ડ જોઈએ, અથવા ફક્ત પ્રતિબંધ મૂકો</string>
+    <string name="catalog_tool_set_password_action">સુરક્ષિત કરો</string>
+    <string name="catalog_tool_remove_password_title">પાસવર્ડ દૂર કરો</string>
+    <string name="catalog_tool_remove_password_summary">તમે ખોલી શકો તે PDFની અનલૉક કરેલી કૉપિ સાચવો</string>
+    <string name="catalog_tool_remove_password_action">અનલૉક કરો</string>
+    <string name="catalog_tool_create_form_title">ફોર્મ બનાવો</string>
+    <string name="catalog_tool_create_form_summary">કોઈ પણ ભરી શકે તે માટે પેજ પર ટેક્સ્ટ બૉક્સ, ચેકબૉક્સ અને ડ્રૉપ-ડાઉન દોરો</string>
+    <string name="catalog_tool_create_form_action">ફીલ્ડ ઉમેરો</string>
+    <string name="catalog_tool_digital_sign_title">ડિજિટલ સહી</string>
+    <string name="catalog_tool_digital_sign_summary">તમારા .pfx અથવા .p12 પ્રમાણપત્રથી PDFને સીલ કરો, જે રીતે Acrobat તપાસે છે</string>
+    <string name="catalog_tool_digital_sign_action">સહી કરો</string>
+    <string name="catalog_tool_pdf_a_title">આર્કાઇવ કૉપિ (PDF/A)</string>
+    <string name="catalog_tool_pdf_a_summary">રેકોર્ડ ઑફિસ, કોર્ટ અને ઑડિટર માટે PDF/A-2b કૉપિ</string>
+    <string name="catalog_tool_pdf_a_action">આર્કાઇવ કૉપિ બનાવો</string>
+    <string name="catalog_tool_edit_text_title">લખાણમાં ફેરફાર કરો</string>
+    <string name="catalog_tool_edit_text_summary">પેજ પરના શબ્દો બદલો, અથવા શોધીને બદલો</string>
+    <string name="catalog_tool_compare_title">બે વર્ઝનની સરખામણી કરો</string>
+    <string name="catalog_tool_compare_summary">શું બદલાયું તે જુઓ: નવા શબ્દો લીલા રંગમાં, અને જ્યાંથી શબ્દો ગયા ત્યાં નોંધ</string>
+    <string name="catalog_tool_compare_action">સરખામણી કરો</string>
+    <string name="catalog_tool_resize_photo_title">ફોટાને KBમાં રિસાઇઝ કરો</string>
+    <string name="catalog_tool_resize_photo_summary">ફોટો કે સહીને 20 KB, 50 KB અથવા ફોર્મ માગે તેટલી સાઇઝથી ઓછી કરો</string>
+    <string name="catalog_tool_resize_photo_action">રિસાઇઝ કરો</string>
+    <string name="catalog_tool_edit_images_title">ચિત્રોમાં ફેરફાર કરો</string>
+    <string name="catalog_tool_edit_images_summary">પેજ પરનાં ચિત્રો ખસેડો, રિસાઇઝ કરો, દૂર કરો અથવા બદલો</string>
+    <string name="catalog_tool_summarise_title">મુખ્ય મુદ્દા</string>
+    <string name="catalog_tool_summarise_summary">દસ્તાવેજનો સાર ધરાવતાં વાક્યો, આ ફોન પર જ પસંદ કરેલાં</string>
+    <string name="catalog_tool_summarise_action">મુખ્ય મુદ્દા પસંદ કરો</string>
+    <string name="catalog_tool_recipes_title">રેસિપી</string>
+    <string name="catalog_tool_recipes_summary">તમારાં પોતાનાં પગલાંની સાંકળ - કમ્પ્રેસ, નંબર, લૉક - એક ટૅપમાં ગમે તેટલી PDF પર ચલાવો</string>
+    <string name="catalog_tool_recipes_action">રેસિપી ચલાવો</string>
+    <string name="catalog_tool_rent_receipts_title">ભાડાની રસીદો</string>
+    <string name="catalog_tool_rent_receipts_summary">HRA ક્લેમ માટે આખા વર્ષની રસીદો, સહી માટે તૈયાર</string>
+    <string name="catalog_tool_rent_receipts_action">રસીદો બનાવો</string>
+    <string name="catalog_action_save_changes">ફેરફારો સાચવો</string>
+
+    <string name="catalog_group_read">વાંચો અને કૅપ્ચર કરો</string>
+    <string name="catalog_group_pages">પેજ</string>
+    <string name="catalog_group_mark">નિશાની કરો</string>
+    <string name="catalog_group_convert">રૂપાંતર અને પ્રિન્ટ</string>
+    <string name="catalog_group_protect">સુરક્ષા</string>
+    <string name="catalog_group_make">નવું બનાવો</string>
+
+    <string name="catalog_suggest_unlock_one">તે પાસવર્ડ માગે છે: પાસવર્ડથી તેને કાયમ માટે અનલૉક કરો</string>
+    <plurals name="catalog_suggest_unlock_many">
+        <item quantity="one">%d ફાઇલ પાસવર્ડ માગે છે: તેને અનલૉક કરો</item>
+        <item quantity="other">%d ફાઇલો પાસવર્ડ માગે છે: તેમને અનલૉક કરો</item>
+    </plurals>
+    <string name="catalog_suggest_photo_one">ફોટાને PDFમાં ફેરવો</string>
+    <plurals name="catalog_suggest_photos">
+        <item quantity="one">આ %d ચિત્રની એક PDF બનાવો</item>
+        <item quantity="other">આ %d ચિત્રોની એક PDF બનાવો</item>
+    </plurals>
+    <string name="catalog_suggest_resize_one">અપલોડ ફોર્મ માટે? તેને 20 KB, 50 KB અથવા કોઈ પણ સાઇઝથી ઓછું કરો</string>
+    <plurals name="catalog_suggest_resize_many">
+        <item quantity="one">અપલોડ ફોર્મ માટે? %dને 20 KB, 50 KB અથવા કોઈ પણ સાઇઝથી ઓછું કરો</item>
+        <item quantity="other">અપલોડ ફોર્મ માટે? બધા %dને 20 KB, 50 KB અથવા કોઈ પણ સાઇઝથી ઓછા કરો</item>
+    </plurals>
+    <string name="catalog_suggest_office_one">Word, Excel અથવા લખાણ ફાઇલને PDFમાં ફેરવો</string>
+    <plurals name="catalog_suggest_office_many">
+        <item quantity="one">આ %d Word, Excel અથવા લખાણ ફાઇલને PDFમાં ફેરવો</item>
+        <item quantity="other">આ %d Word, Excel અથવા લખાણ ફાઇલોને PDFમાં ફેરવો</item>
+    </plurals>
+    <plurals name="catalog_suggest_merge">
+        <item quantity="one">આ %d PDFને એકમાં જોડો</item>
+        <item quantity="other">આ %d PDFને એકમાં જોડો</item>
+    </plurals>
+    <plurals name="catalog_suggest_compress_all">
+        <item quantity="one">%1$dને નાની બનાવો (કુલ %2$s)</item>
+        <item quantity="other">બધી %1$dને નાની બનાવો (કુલ %2$s)</item>
+    </plurals>
+    <string name="catalog_suggest_compare">એક જ દસ્તાવેજનાં બે વર્ઝન? શું બદલાયું તે જુઓ</string>
+    <plurals name="catalog_suggest_lock_all">
+        <item quantity="one">%dને પાસવર્ડથી લૉક કરો</item>
+        <item quantity="other">બધી %dને પાસવર્ડથી લૉક કરો</item>
+    </plurals>
+    <plurals name="catalog_suggest_word_all">
+        <item quantity="one">%dને ફેરફાર કરી શકાય તેવી Word ફાઇલમાં ફેરવો</item>
+        <item quantity="other">બધી %dને ફેરફાર કરી શકાય તેવી Word ફાઇલોમાં ફેરવો</item>
+    </plurals>
+    <plurals name="catalog_suggest_number_all">
+        <item quantity="one">%dના પેજને નંબર આપો</item>
+        <item quantity="other">બધી %dના પેજને નંબર આપો</item>
+    </plurals>
+    <string name="catalog_suggest_ocr">આ સ્કૅન છે: તેના શબ્દોને શોધી અને કૉપિ કરી શકાય તેવા બનાવો</string>
+    <string name="catalog_suggest_edit_scan">સ્કૅન પરના શબ્દો બદલો: પહેલાં તે આ ફોન પર જ વંચાય છે</string>
+    <string name="catalog_suggest_forms">તેમાં ફીલ્ડ છે: તેને ભરો અને સાચવો</string>
+    <string name="catalog_suggest_amounts">તેમાં ઘણી રકમો છે: તેમને સ્પ્રેડશીટમાં લાવો જ્યાં સરવાળો કરી શકો</string>
+    <string name="catalog_suggest_id_number">તેમાં ID નંબર (આધાર અથવા PAN) દેખાય છે: શેર કરતાં પહેલાં તેને કાયમ માટે છુપાવો</string>
+    <string name="catalog_suggest_big">તે %1$s છે: તેને નાની બનાવો</string>
+    <string name="catalog_suggest_sign">સહી કરો</string>
+    <string name="catalog_suggest_edit">તેના શબ્દો બદલો</string>
+    <plurals name="catalog_suggest_organise">
+        <item quantity="one">તેના %d પેજનો ક્રમ બદલો, ફેરવો અથવા ડિલીટ કરો</item>
+        <item quantity="other">તેના %d પેજનો ક્રમ બદલો, ફેરવો અથવા ડિલીટ કરો</item>
+    </plurals>
+    <plurals name="catalog_suggest_split">
+        <item quantity="one">તેના %d પેજને અલગ ફાઇલમાં વહેંચો</item>
+        <item quantity="other">તેના %d પેજને અલગ અલગ ફાઇલોમાં વહેંચો</item>
+    </plurals>
+    <string name="catalog_suggest_key_points">તેના મુખ્ય મુદ્દા પસંદ કરો</string>
+    <string name="catalog_suggest_extract">ફક્ત જરૂરી પેજ રાખો</string>
+    <string name="catalog_suggest_word">તેને ફેરફાર કરી શકાય તેવી Word ફાઇલમાં ફેરવો</string>
+    <string name="catalog_suggest_annotate">હાઇલાઇટ કરો, અન્ડરલાઇન કરો અથવા નોંધ ઉમેરો</string>
+    <string name="catalog_suggest_compress">તેને નાની બનાવો</string>
+    <string name="catalog_suggest_lock">તેને પાસવર્ડથી લૉક કરો</string>
+    <string name="catalog_suggest_redact">ખાનગી વિગતો કાયમ માટે છુપાવો (આધાર, PAN, ખાતા નંબર)</string>
+    <string name="catalog_suggest_read">ફક્ત વાંચો</string>
+    <string name="catalog_none_damaged_one">આ PDF ખરાબ થયેલી છે અને વાંચી શકાઈ નથી. જો તે ઇમેઇલ કે WhatsAppથી આવી હોય, તો ફરી ડાઉનલોડ કરો: તે અધૂરી આવી હોઈ શકે.</string>
+    <string name="catalog_none_damaged_many">આ PDF ખરાબ થયેલી છે અને વાંચી શકાઈ નથી. જો તે ઇમેઇલ કે WhatsAppથી આવી હોય, તો ફરી ડાઉનલોડ કરો: તે અધૂરી આવી હોઈ શકે.</string>
+    <string name="catalog_none_slides">અહીં હજી સ્લાઇડને PDFમાં ફેરવી શકાતી નથી. PowerPoint, Keynote અથવા Google Slidesમાં Save as PDF પસંદ કરો, પછી તે PDF અહીં ખોલો.</string>
+    <string name="catalog_none_old_office">અહીં ફક્ત .docx, .xlsx, .txt, .md અને .csv ફાઇલોને PDFમાં ફેરવી શકાય છે. તેને .docx અથવા .xlsx તરીકે (અથવા સીધી PDF તરીકે) સાચવો અને તે ખોલો.</string>
+    <string name="catalog_none_nothing">અહીં કંઈ પણ PDF, ચિત્ર અથવા Word કે Excel ફાઇલ નથી. તેના બદલે હોમ સ્ક્રીન પરથી કોઈ ટૂલ પસંદ કરો.</string>
+
+    <string name="catalog_done">થઈ ગયું</string>
+    <string name="catalog_failed">નિષ્ફળ.</string>
+    <string name="catalog_unreadable">વાંચી શકાતું નથી.</string>
+    <string name="catalog_no_document">કોઈ દસ્તાવેજ પસંદ કર્યો નથી.</string>
+    <string name="catalog_progress_page_of">%2$dમાંથી પેજ %1$d</string>
+    <string name="catalog_progress_reading_page">%2$dમાંથી પેજ %1$d વાંચી રહ્યાં છીએ</string>
+    <string name="catalog_progress_reading_file">%1$s વાંચી રહ્યાં છીએ</string>
+    <plurals name="catalog_no_pages_matched">
+        <item quantity="one">\"%1$s\" સાથે કોઈ પેજ મેળ ખાતું નથી. આ દસ્તાવેજમાં %2$d પેજ છે.</item>
+        <item quantity="other">\"%1$s\" સાથે કોઈ પેજ મેળ ખાતું નથી. આ દસ્તાવેજમાં %2$d પેજ છે.</item>
+    </plurals>
+    <plurals name="catalog_n_pages">
+        <item quantity="one">%d પેજ</item>
+        <item quantity="other">%d પેજ</item>
+    </plurals>
+
+    <string name="catalog_merge_need_two">જોડવા માટે ઓછામાં ઓછા બે દસ્તાવેજ પસંદ કરો.</string>
+    <string name="catalog_progress_adding">%1$s ઉમેરી રહ્યાં છીએ</string>
+    <string name="catalog_merge_failed">જોડવાનું નિષ્ફળ થયું.</string>
+    <plurals name="catalog_merge_joined">
+        <item quantity="one">%d ફાઇલ જોડી</item>
+        <item quantity="other">%d ફાઇલો જોડી</item>
+    </plurals>
+    <string name="catalog_extract_title">પેજ કાઢો</string>
+    <string name="catalog_remove_title">પેજ દૂર કરો</string>
+    <string name="catalog_remove_every_page">તેનાથી બધા પેજ દૂર થઈ જશે. ઓછામાં ઓછું એક પેજ રાખો.</string>
+    <plurals name="catalog_progress_writing_pages">
+        <item quantity="one">%d પેજ લખી રહ્યાં છીએ</item>
+        <item quantity="other">%d પેજ લખી રહ્યાં છીએ</item>
+    </plurals>
+    <string name="catalog_extract_failed">પેજ કાઢવાનું નિષ્ફળ થયું.</string>
+    <plurals name="catalog_removed_pages">
+        <item quantity="one">પેજ %1$s દૂર કર્યું; %3$dમાંથી %2$d રાખ્યા</item>
+        <item quantity="other">પેજ %1$s દૂર કર્યા; %3$dમાંથી %2$d રાખ્યા</item>
+    </plurals>
+    <string name="catalog_kept_pages">%2$dમાંથી પેજ %1$s રાખ્યા</string>
+    <plurals name="catalog_split_every_title">
+        <item quantity="one">દર %d પેજે વિભાજિત કરો</item>
+        <item quantity="other">દર %d પેજે વિભાજિત કરો</item>
+    </plurals>
+    <string name="catalog_split_single_title">એક-એક પેજમાં વિભાજિત કરો</string>
+    <string name="catalog_split_ranges_title">રેન્જ મુજબ વિભાજિત કરો</string>
+    <string name="catalog_split_bookmarks_title">બુકમાર્ક પર વિભાજિત કરો</string>
+    <string name="catalog_split_no_toc">આ દસ્તાવેજમાં વિભાજિત કરવા માટે અનુક્રમણિકા નથી. તેના બદલે દર N પેજે અથવા રેન્જ મુજબ વિભાજિત કરો.</string>
+    <string name="catalog_split_no_pages">તે વિભાજનથી કોઈ પેજ બન્યું નથી.</string>
+    <string name="catalog_split_whole">તેમાં આખો દસ્તાવેજ આવી જાય છે, એટલે પરિણામ તેના જેવું જ હશે. કૉપિ જોઈતી હોય તો પેજ કાઢો વાપરો.</string>
+    <string name="catalog_progress_part">%2$dમાંથી ભાગ %1$d</string>
+    <string name="catalog_split_part_pages">પેજ %1$s</string>
+    <string name="catalog_split_part_failed">આ ભાગ લખી શકાયો નથી.</string>
+    <string name="catalog_insert_title">પેજ ઉમેરો</string>
+    <string name="catalog_insert_need_second">ઉમેરવા માટે બીજો દસ્તાવેજ ઉમેરો, અથવા કેટલા ખાલી પેજ ઉમેરવા તે પસંદ કરો.</string>
+    <string name="catalog_progress_inserting">%1$sમાં ઉમેરી રહ્યાં છીએ</string>
+    <plurals name="catalog_replace_none_typed">
+        <item quantity="one">આ ફાઇલમાં %d પેજ છે; ટાઇપ કરેલું કોઈ પેજ તેમાં નથી.</item>
+        <item quantity="other">આ ફાઇલમાં %d પેજ છે; ટાઇપ કરેલું કોઈ પેજ તેમાં નથી.</item>
+    </plurals>
+    <string name="catalog_replace_every">તેનાથી બધા પેજની જગ્યાએ કંઈ નહીં રહે.</string>
+    <plurals name="catalog_blank_pages">
+        <item quantity="one">%d ખાલી પેજ</item>
+        <item quantity="other">%d ખાલી પેજ</item>
+    </plurals>
+    <plurals name="catalog_replaced_pages">
+        <item quantity="one">પેજ %1$sની જગ્યાએ %2$s મૂક્યું</item>
+        <item quantity="other">પેજ %1$sની જગ્યાએ %2$s મૂક્યા</item>
+    </plurals>
+    <string name="catalog_put_in_at">%1$s પેજ %2$d પર ઉમેર્યું</string>
+    <string name="catalog_keep_one_page">દસ્તાવેજમાં ઓછામાં ઓછું એક પેજ હોવું જોઈએ.</string>
+    <plurals name="catalog_progress_rebuilding">
+        <item quantity="one">%d પેજ ફરી બનાવી રહ્યાં છીએ</item>
+        <item quantity="other">%d પેજ ફરી બનાવી રહ્યાં છીએ</item>
+    </plurals>
+    <plurals name="catalog_pages_rotated">
+        <item quantity="one">%1$d પેજ, %2$d ફેરવ્યાં</item>
+        <item quantity="other">%1$d પેજ, %2$d ફેરવ્યાં</item>
+    </plurals>
+
+    <string name="catalog_rent_need_tenant">ભાડૂઆતનું નામ ટાઇપ કરો.</string>
+    <string name="catalog_rent_need_owner">માલિકનું નામ ટાઇપ કરો.</string>
+    <string name="catalog_rent_need_address">સરનામું ટાઇપ કરો.</string>
+    <string name="catalog_rent_need_amount">માસિક ભાડું અને 1થી 24 વચ્ચે મહિનાની સંખ્યા ટાઇપ કરો.</string>
+    <string name="catalog_progress_receipts">રસીદો લખી રહ્યાં છીએ</string>
+    <string name="catalog_rent_failed">રસીદો લખી શકાઈ નથી.</string>
+    <plurals name="catalog_rent_count">
+        <item quantity="one">%1$d રસીદ, %2$s</item>
+        <item quantity="other">%1$d રસીદો, %2$sથી %3$s</item>
+    </plurals>
+    <plurals name="catalog_rent_sheets">
+        <item quantity="one">%d પેજ પર, એક પેજમાં બે</item>
+        <item quantity="other">%d પેજ પર, એક પેજમાં બે</item>
+    </plurals>
+    <string name="catalog_rent_done">%1$s, %2$s: પ્રિન્ટ કરો, સહી કરો અને જમા કરાવો</string>
+    <string name="catalog_rent_done_pan">%1$s, %2$s: પ્રિન્ટ કરો, સહી કરો અને જમા કરાવો. ભાડું વર્ષે ₹1 લાખથી વધુ છે, એટલે તમારા એમ્પ્લોયર માલિકનો PAN માગશે: તે ઉમેરીને ફરી બનાવો</string>
+    <string name="catalog_replace_title">\"%1$s\" બદલો</string>
+    <string name="catalog_replace_need_words">શોધવાના શબ્દો ટાઇપ કરો.</string>
+    <plurals name="catalog_replace_removed">
+        <item quantity="one">\"%1$s\" %2$d જગ્યાએથી દૂર કર્યું</item>
+        <item quantity="other">\"%1$s\" %2$d જગ્યાએથી દૂર કર્યું</item>
+    </plurals>
+    <plurals name="catalog_replace_changed">
+        <item quantity="one">\"%1$s\"ને %3$d જગ્યાએ \"%2$s\"માં બદલ્યું</item>
+        <item quantity="other">\"%1$s\"ને %3$d જગ્યાએ \"%2$s\"માં બદલ્યું</item>
+    </plurals>
+    <string name="catalog_compare_title">સરખામણી કરો</string>
+    <string name="catalog_compare_need_two">બરાબર બે PDF ઉમેરો: પહેલાં જૂનું વર્ઝન, પછી નવું.</string>
+    <string name="catalog_progress_reading_older">જૂની ફાઇલનું પેજ %1$d વાંચી રહ્યાં છીએ</string>
+    <string name="catalog_progress_reading_newer">નવી ફાઇલનું પેજ %1$d વાંચી રહ્યાં છીએ</string>
+    <string name="catalog_compare_no_words">આમાંથી એક ફાઇલમાં સરખાવવા માટે શબ્દો નથી, ફક્ત તેમનાં ચિત્રો છે. પહેલાં તેના પર શોધી શકાય તેવું બનાવો ચલાવો.</string>
+    <string name="catalog_progress_comparing">શબ્દોની સરખામણી કરી રહ્યાં છીએ</string>
+    <string name="catalog_compare_same">આ બે ફાઇલોના શબ્દો એકસરખા છે. કોઈ ફરક હોય તો તે ચિત્રો કે લેઆઉટમાં છે, જ્યારે આ ફક્ત શબ્દોની સરખામણી કરે છે.</string>
+    <plurals name="catalog_compare_words">
+        <item quantity="one">%1$d શબ્દ ઉમેરાયો અને %2$d દૂર થયા</item>
+        <item quantity="other">%1$d શબ્દો ઉમેરાયા અને %2$d દૂર થયા</item>
+    </plurals>
+    <plurals name="catalog_compare_pages">
+        <item quantity="one">નવી ફાઇલના %d પેજ પર</item>
+        <item quantity="other">નવી ફાઇલના %d પેજ પર</item>
+    </plurals>
+    <string name="catalog_compare_done">%1$s, %2$s: નવા શબ્દો લીલા રંગમાં, અને જ્યાંથી શબ્દો ગયા ત્યાં નોંધ</string>
+
+    <string name="catalog_office_word">Word (.docx)</string>
+    <string name="catalog_office_excel">Excel (.xlsx)</string>
+    <string name="catalog_office_epub">EPUB પુસ્તક</string>
+    <string name="catalog_office_html">વેબ પેજ (.html)</string>
+    <string name="catalog_office_powerpoint">PowerPoint (.pptx)</string>
+    <string name="catalog_office_word_title">PDFથી Word</string>
+    <string name="catalog_office_excel_title">PDFથી Excel</string>
+    <string name="catalog_office_epub_title">PDFથી EPUB પુસ્તક</string>
+    <string name="catalog_office_html_title">PDFથી વેબ પેજ</string>
+    <string name="catalog_office_powerpoint_title">PDFથી PowerPoint</string>
+    <string name="catalog_convert_no_words">આ ફાઇલમાં શબ્દો નથી, ફક્ત તેમનાં ચિત્રો છે. પહેલાં તેના પર શોધી શકાય તેવું બનાવો ચલાવો, પછી પરિણામને રૂપાંતરિત કરો.</string>
+    <string name="catalog_progress_writing_ext">%1$s લખી રહ્યાં છીએ</string>
+    <plurals name="catalog_n_paragraphs">
+        <item quantity="one">%d ફકરો</item>
+        <item quantity="other">%d ફકરા</item>
+    </plurals>
+    <plurals name="catalog_n_tables">
+        <item quantity="one">%d કોષ્ટક</item>
+        <item quantity="other">%d કોષ્ટકો</item>
+    </plurals>
+    <plurals name="catalog_n_pictures">
+        <item quantity="one">%d ચિત્ર</item>
+        <item quantity="other">%d ચિત્રો</item>
+    </plurals>
+    <plurals name="catalog_convert_done">
+        <item quantity="one">%2$d પેજમાંથી %1$s</item>
+        <item quantity="other">%2$d પેજમાંથી %1$s</item>
+    </plurals>
+    <string name="catalog_convert_done_no_words">%1$s; પેજમાં શબ્દો નહોતા, ફક્ત ચિત્રો હતાં</string>
+    <string name="catalog_convert_failed">ફાઇલ રૂપાંતરિત થઈ શકી નથી.</string>
+    <string name="catalog_write_failed">ફાઇલ લખી શકાઈ નથી.</string>
+    <string name="catalog_no_pages">આ દસ્તાવેજમાં કોઈ પેજ નથી.</string>
+    <string name="catalog_progress_drawing_pages">પેજ દોરી રહ્યાં છીએ</string>
+    <string name="catalog_progress_drawing_page">%2$dમાંથી પેજ %1$d દોરી રહ્યાં છીએ</string>
+    <string name="catalog_slides_no_words">આ ફાઇલમાં શબ્દો નથી, ફક્ત તેમનાં ચિત્રો છે. પેજનાં ચિત્રો પસંદ કરો, અથવા પહેલાં શોધી શકાય તેવું બનાવો ચલાવો.</string>
+    <string name="catalog_progress_writing_deck">પ્રેઝન્ટેશન લખી રહ્યાં છીએ</string>
+    <plurals name="catalog_slides_pictures">
+        <item quantity="one">%d સ્લાઇડ, દરેક તેના પેજનું ચિત્ર</item>
+        <item quantity="other">%d સ્લાઇડ, દરેક તેના પેજનું ચિત્ર</item>
+    </plurals>
+    <plurals name="catalog_slides_text">
+        <item quantity="one">%d સ્લાઇડ, દરેકમાં પેજની લીટીઓ ફેરફાર કરી શકાય તેવા લખાણ તરીકે</item>
+        <item quantity="other">%d સ્લાઇડ, દરેકમાં પેજની લીટીઓ ફેરફાર કરી શકાય તેવા લખાણ તરીકે</item>
+    </plurals>
+    <string name="catalog_deck_failed">પ્રેઝન્ટેશન બનાવી શકાયું નથી.</string>
+    <string name="catalog_deck_write_failed">પ્રેઝન્ટેશન લખી શકાયું નથી.</string>
+    <string name="catalog_to_pdf_title">PDFમાં</string>
+    <string name="catalog_office_unsupported">Sheaf .docx, .xlsx, .txt, .md અને .csv ફાઇલોને PDFમાં ફેરવી શકે છે; આ કંઈક બીજું છે.</string>
+    <string name="catalog_office_empty">આ ફાઇલમાંથી કંઈ વાંચી શકાયું નથી.</string>
+    <string name="catalog_progress_laying_out">ગોઠવી રહ્યાં છીએ: %2$dમાંથી %1$d</string>
+    <plurals name="catalog_office_done">
+        <item quantity="one">%2$sમાંથી %1$d પેજ; ફોન્ટ ફોનના છે, મૂળ ફાઇલના નહીં</item>
+        <item quantity="other">%2$sમાંથી %1$d પેજ; ફોન્ટ ફોનના છે, મૂળ ફાઇલના નહીં</item>
+    </plurals>
+    <string name="catalog_read_failed">ફાઇલ વાંચી શકાઈ નથી.</string>
+    <string name="catalog_no_images">કોઈ છબી પસંદ કરી નથી.</string>
+    <string name="catalog_one_page_from">%1$sમાંથી એક પેજ</string>
+    <string name="catalog_build_failed">PDF બનાવી શકાઈ નથી.</string>
+    <plurals name="catalog_images_done">
+        <item quantity="one">%d છબી, દરેક પેજ પર એક</item>
+        <item quantity="other">%d છબીઓ, દરેક પેજ પર એક</item>
+    </plurals>
+    <string name="catalog_to_images_title">PDFથી છબીઓ (%1$d DPI, %2$s)</string>
+    <string name="catalog_export_failed">નિકાસ નિષ્ફળ થઈ.</string>
+    <string name="catalog_image_page">%2$d DPI પર પેજ %1$d</string>
+
+    <string name="catalog_keypoints_pick_one">એક PDF પસંદ કરો.</string>
+    <string name="catalog_progress_reading_words">શબ્દો વાંચી રહ્યાં છીએ…</string>
+    <string name="catalog_keypoints_unreadable">આ ફાઇલ વાંચી શકાઈ નથી.</string>
+    <string name="catalog_keypoints_no_words">આ ફાઇલમાં શબ્દો નથી, ફક્ત તેમનાં ચિત્રો છે. પહેલાં શોધી શકાય તેવું બનાવો ચલાવો.</string>
+    <string name="catalog_progress_picking">મુખ્ય મુદ્દા પસંદ કરી રહ્યાં છીએ…</string>
+    <string name="catalog_keypoints_too_few">આ દસ્તાવેજમાં પસંદ કરવા માટે પૂરતાં પૂર્ણ વાક્યો નથી.</string>
+    <string name="catalog_keypoints_first_pages">%2$d પેજમાંથી પહેલાં %1$d</string>
+    <string name="catalog_keypoints_heading">%1$sના મુખ્ય મુદ્દા, %2$sમાંથી:</string>
+    <string name="catalog_keypoints_figures">તેમાંના આંકડા:</string>
+    <plurals name="catalog_keypoints_done">
+        <item quantity="one">%2$sમાંથી %1$d મુખ્ય મુદ્દો, આ ફોન પર પસંદ કરેલો; તે દસ્તાવેજનું જ એક વાક્ય છે</item>
+        <item quantity="other">%2$sમાંથી %1$d મુખ્ય મુદ્દા, આ ફોન પર પસંદ કરેલા; દરેક દસ્તાવેજનું જ એક વાક્ય છે</item>
+    </plurals>
+</resources>

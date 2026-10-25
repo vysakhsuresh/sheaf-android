@@ -4,6 +4,7 @@ import com.layerbit.sheaf.ops.Suggest
 import com.layerbit.sheaf.ops.Suggest.Facts
 import com.layerbit.sheaf.ops.Suggest.Kind
 import com.layerbit.sheaf.ops.ToolId
+import com.layerbit.sheaf.text.Strings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -52,7 +53,7 @@ class SuggestTest {
     }
 
     @Test fun nothingFits() {
-        assertTrue(Suggest.noSuggestion(listOf(Facts(Kind.OTHER, 10, extension = "pptx"))).startsWith("Slides"))
-        assertTrue(Suggest.noSuggestion(listOf(Facts(Kind.PDF, 10, unreadable = true))).startsWith("This PDF is damaged"))
+        assertEquals(Strings.get(R.string.catalog_none_slides), Suggest.noSuggestion(listOf(Facts(Kind.OTHER, 10, extension = "pptx"))))
+        assertEquals(Strings.get(R.string.catalog_none_damaged_one), Suggest.noSuggestion(listOf(Facts(Kind.PDF, 10, unreadable = true))))
     }
 }

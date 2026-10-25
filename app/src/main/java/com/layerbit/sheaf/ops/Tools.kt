@@ -1,5 +1,9 @@
 package com.layerbit.sheaf.ops
 
+import androidx.annotation.StringRes
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
+
 /**
  * Every tool the app offers, and what the home screen needs to draw it.
  *
@@ -11,277 +15,282 @@ package com.layerbit.sheaf.ops
  * The groups are by what someone is trying to do, not by which library implements them.
  */
 enum class ToolId(
-    val title: String,
-    val summary: String,
+    @StringRes val titleRes: Int,
+    @StringRes val summaryRes: Int,
     val input: InputKind,
     val group: Group
 ) {
     SCAN(
-        "Scan a document",
-        "Photograph pages and straighten them",
+        R.string.catalog_tool_scan_title,
+        R.string.catalog_tool_scan_summary,
         InputKind.CAMERA,
         Group.READ
     ),
     OCR(
-        "Make searchable",
-        "Read the text in a scan so you can search and copy it",
+        R.string.catalog_tool_ocr_title,
+        R.string.catalog_tool_ocr_summary,
         InputKind.SEVERAL_PDFS,
         Group.READ
     ),
     EXTRACT_TEXT(
-        "Extract text",
-        "Pull the words out of a PDF as plain text",
+        R.string.catalog_tool_extract_text_title,
+        R.string.catalog_tool_extract_text_summary,
         InputKind.ONE_PDF,
         Group.READ
     ),
 
     MERGE(
-        "Merge",
-        "Join several PDFs into one, in the order you choose",
+        R.string.catalog_tool_merge_title,
+        R.string.catalog_tool_merge_summary,
         InputKind.SEVERAL_PDFS,
         Group.PAGES
     ),
     SPLIT(
-        "Split",
-        "Break one PDF into several smaller files",
+        R.string.catalog_tool_split_title,
+        R.string.catalog_tool_split_summary,
         InputKind.ONE_PDF,
         Group.PAGES
     ),
     EXTRACT(
-        "Extract or remove pages",
-        "Keep only the pages you pick, or take them out",
+        R.string.catalog_tool_extract_title,
+        R.string.catalog_tool_extract_summary,
         InputKind.ONE_PDF,
         Group.PAGES
     ),
     INSERT(
-        "Insert or replace pages",
-        "Put another PDF, or blank pages, in at a chosen page, or in place of some",
+        R.string.catalog_tool_insert_title,
+        R.string.catalog_tool_insert_summary,
         InputKind.SEVERAL_PDFS,
         Group.PAGES
     ),
     ORGANISE(
-        "Organise pages",
-        "Reorder, rotate and delete pages",
+        R.string.catalog_tool_organise_title,
+        R.string.catalog_tool_organise_summary,
         InputKind.ONE_PDF,
         Group.PAGES
     ),
 
     IMAGES_TO_PDF(
-        "Images to PDF",
-        "Turn photos and scans into a document",
+        R.string.catalog_tool_images_to_pdf_title,
+        R.string.catalog_tool_images_to_pdf_summary,
         InputKind.IMAGES,
         Group.CONVERT
     ),
     PDF_TO_IMAGES(
-        "PDF to images",
-        "Save pages as PNG or JPEG",
+        R.string.catalog_tool_pdf_to_images_title,
+        R.string.catalog_tool_pdf_to_images_summary,
         InputKind.ONE_PDF,
         Group.CONVERT
     ),
     PDF_TO_OFFICE(
-        "PDF to Word, Excel, PowerPoint, EPUB or web page",
-        "Paragraphs, headings, tables and pictures, as a file you can edit or read",
+        R.string.catalog_tool_pdf_to_office_title,
+        R.string.catalog_tool_pdf_to_office_summary,
         InputKind.SEVERAL_PDFS,
         Group.CONVERT
     ),
     OFFICE_TO_PDF(
-        "Word, Excel or text to PDF",
-        "A .docx, .xlsx, .txt, .md or .csv as a PDF, laid out on A4",
+        R.string.catalog_tool_office_to_pdf_title,
+        R.string.catalog_tool_office_to_pdf_summary,
         InputKind.OFFICE,
         Group.CONVERT
     ),
     COMPRESS(
-        "Compress",
-        "Make a PDF smaller for email or upload, or get it under a size",
+        R.string.catalog_tool_compress_title,
+        R.string.catalog_tool_compress_summary,
         InputKind.SEVERAL_PDFS,
         Group.CONVERT
     ),
 
     WATERMARK(
-        "Watermark",
-        "Lay DRAFT or a name across every page",
+        R.string.catalog_tool_watermark_title,
+        R.string.catalog_tool_watermark_summary,
         InputKind.SEVERAL_PDFS,
         Group.MARK
     ),
     PAGE_NUMBERS(
-        "Page numbers",
-        "Number the pages, Bates style if you need it",
+        R.string.catalog_tool_page_numbers_title,
+        R.string.catalog_tool_page_numbers_summary,
         InputKind.SEVERAL_PDFS,
         Group.MARK
     ),
     SIGN(
-        "Sign",
-        "Draw your signature and place it on a page",
+        R.string.catalog_tool_sign_title,
+        R.string.catalog_tool_sign_summary,
         InputKind.ONE_PDF,
         Group.MARK
     ),
     ANNOTATE(
-        "Mark up",
-        "Highlight a line, or draw on a page with your finger",
+        R.string.catalog_tool_annotate_title,
+        R.string.catalog_tool_annotate_summary,
         InputKind.ONE_PDF,
         Group.MARK
     ),
     FORMS(
-        "Fill in a form",
-        "Type into a PDF that has real form fields, and seal it",
+        R.string.catalog_tool_forms_title,
+        R.string.catalog_tool_forms_summary,
         InputKind.ONE_PDF,
         Group.MARK
     ),
     HEADER_FOOTER(
-        "Header and footer",
-        "Run a line along the top or bottom of every page",
+        R.string.catalog_tool_header_footer_title,
+        R.string.catalog_tool_header_footer_summary,
         InputKind.SEVERAL_PDFS,
         Group.MARK
     ),
     ADD_TEXT(
-        "Add text",
-        "Type onto a page, and cover what is there if you need to",
+        R.string.catalog_tool_add_text_title,
+        R.string.catalog_tool_add_text_summary,
         InputKind.ONE_PDF,
         Group.MARK
     ),
     ADD_IMAGE(
-        "Add an image",
-        "Put a logo, a stamp or a photo on a page",
+        R.string.catalog_tool_add_image_title,
+        R.string.catalog_tool_add_image_summary,
         InputKind.PDF_AND_IMAGE,
         Group.MARK
     ),
     CROP(
-        "Crop pages",
-        "Trim the margins in millimetres, remove white edges, or change the page size",
+        R.string.catalog_tool_crop_title,
+        R.string.catalog_tool_crop_summary,
         InputKind.SEVERAL_PDFS,
         Group.MARK
     ),
     BACKGROUND(
-        "Page background",
-        "Put a colour behind the pages",
+        R.string.catalog_tool_background_title,
+        R.string.catalog_tool_background_summary,
         InputKind.SEVERAL_PDFS,
         Group.MARK
     ),
 
     N_UP(
-        "Pages per sheet",
-        "Put 2, 4, 6, 8, 9 or 16 pages on each sheet for printing",
+        R.string.catalog_tool_n_up_title,
+        R.string.catalog_tool_n_up_summary,
         InputKind.SEVERAL_PDFS,
         Group.CONVERT
     ),
     SPLIT_BY_SIZE(
-        "Split by size",
-        "Cut a file into parts small enough to email",
+        R.string.catalog_tool_split_by_size_title,
+        R.string.catalog_tool_split_by_size_summary,
         InputKind.ONE_PDF,
         Group.PAGES
     ),
     EXTRACT_IMAGES(
-        "Extract images",
-        "Pull out the pictures already inside a document",
+        R.string.catalog_tool_extract_images_title,
+        R.string.catalog_tool_extract_images_summary,
         InputKind.ONE_PDF,
         Group.CONVERT
     ),
 
     PAGE_LABELS(
-        "Page labels",
-        "Name the pages the way a reader shows them: i, ii, iii, then 1, 2, 3",
+        R.string.catalog_tool_page_labels_title,
+        R.string.catalog_tool_page_labels_summary,
         InputKind.SEVERAL_PDFS,
         Group.PAGES
     ),
     BOOKMARKS(
-        "Bookmarks",
-        "Write a table of contents into the document's side panel",
+        R.string.catalog_tool_bookmarks_title,
+        R.string.catalog_tool_bookmarks_summary,
         InputKind.ONE_PDF,
         Group.PAGES
     ),
     ATTACHMENTS(
-        "Attachments",
-        "Put files inside a PDF, or take them out",
+        R.string.catalog_tool_attachments_title,
+        R.string.catalog_tool_attachments_summary,
         InputKind.PDF_AND_FILES,
         Group.CONVERT
     ),
 
     REDACT(
-        "Remove areas",
-        "Take something out of a page permanently, or find and remove ID and card numbers",
+        R.string.catalog_tool_redact_title,
+        R.string.catalog_tool_redact_summary,
         InputKind.ONE_PDF,
         Group.PROTECT
     ),
     METADATA(
-        "Document details",
-        "Edit the details, or clean out everything a file gives away",
+        R.string.catalog_tool_metadata_title,
+        R.string.catalog_tool_metadata_summary,
         InputKind.SEVERAL_PDFS,
         Group.PROTECT
     ),
 
     SET_PASSWORD(
-        "Add a password",
-        "Encrypt a PDF so it needs a password to open, or just restrict it",
+        R.string.catalog_tool_set_password_title,
+        R.string.catalog_tool_set_password_summary,
         InputKind.SEVERAL_PDFS,
         Group.PROTECT
     ),
     REMOVE_PASSWORD(
-        "Remove a password",
-        "Save an unlocked copy of a PDF you can open",
+        R.string.catalog_tool_remove_password_title,
+        R.string.catalog_tool_remove_password_summary,
         InputKind.SEVERAL_PDFS,
         Group.PROTECT
     ),
 
     CREATE_FORM(
-        "Create a form",
-        "Draw text boxes, tick boxes and drop-downs on a page, for anyone to fill in",
+        R.string.catalog_tool_create_form_title,
+        R.string.catalog_tool_create_form_summary,
         InputKind.ONE_PDF,
         Group.MARK
     ),
     DIGITAL_SIGN(
-        "Digital signature",
-        "Seal a PDF with your .pfx or .p12 certificate, the way Acrobat checks",
+        R.string.catalog_tool_digital_sign_title,
+        R.string.catalog_tool_digital_sign_summary,
         InputKind.PDF_AND_CERT,
         Group.PROTECT
     ),
     PDF_A(
-        "Archive copy (PDF/A)",
-        "A PDF/A-2b copy for records offices, courts and auditors",
+        R.string.catalog_tool_pdf_a_title,
+        R.string.catalog_tool_pdf_a_summary,
         InputKind.SEVERAL_PDFS,
         Group.PROTECT
     ),
     EDIT_TEXT(
-        "Edit text",
-        "Change words already on the page, or find and replace them",
+        R.string.catalog_tool_edit_text_title,
+        R.string.catalog_tool_edit_text_summary,
         InputKind.ONE_PDF,
         Group.MARK
     ),
     COMPARE(
-        "Compare two versions",
-        "See what changed: new words in green, a note where words went",
+        R.string.catalog_tool_compare_title,
+        R.string.catalog_tool_compare_summary,
         InputKind.SEVERAL_PDFS,
         Group.READ
     ),
     RESIZE_PHOTO(
-        "Resize photo to KB",
-        "Get a photo or signature under 20 KB, 50 KB or whatever a form asks",
+        R.string.catalog_tool_resize_photo_title,
+        R.string.catalog_tool_resize_photo_summary,
         InputKind.IMAGES,
         Group.CONVERT
     ),
     EDIT_IMAGES(
-        "Edit pictures",
-        "Move, resize, take out or swap the pictures already on a page",
+        R.string.catalog_tool_edit_images_title,
+        R.string.catalog_tool_edit_images_summary,
         InputKind.ONE_PDF,
         Group.MARK
     ),
     SUMMARISE(
-        "Key points",
-        "The sentences that carry a document, picked on this phone",
+        R.string.catalog_tool_summarise_title,
+        R.string.catalog_tool_summarise_summary,
         InputKind.ONE_PDF,
         Group.READ
     ),
     RECIPES(
-        "Recipes",
-        "Your own chain of steps - compress, number, lock - run on any number of PDFs in one tap",
+        R.string.catalog_tool_recipes_title,
+        R.string.catalog_tool_recipes_summary,
         InputKind.SEVERAL_PDFS,
         Group.CONVERT
     ),
     RENT_RECEIPTS(
-        "Rent receipts",
-        "A year of receipts for an HRA claim, ready to sign",
+        R.string.catalog_tool_rent_receipts_title,
+        R.string.catalog_tool_rent_receipts_summary,
         InputKind.NONE,
         Group.MAKE
     );
+
+    /** Read when asked, so a change of language shows on the next screen drawn. */
+    val title: String get() = Strings.get(titleRes)
+
+    val summary: String get() = Strings.get(summaryRes)
 
     enum class InputKind {
         ONE_PDF,
@@ -308,13 +317,15 @@ enum class ToolId(
     }
 
     /** How the home screen groups the tools. Order here is the order on screen. */
-    enum class Group(val title: String) {
-        READ("Read and capture"),
-        PAGES("Pages"),
-        MARK("Mark up"),
-        CONVERT("Convert and print"),
-        PROTECT("Protect"),
-        MAKE("Make from scratch")
+    enum class Group(@StringRes val titleRes: Int) {
+        READ(R.string.catalog_group_read),
+        PAGES(R.string.catalog_group_pages),
+        MARK(R.string.catalog_group_mark),
+        CONVERT(R.string.catalog_group_convert),
+        PROTECT(R.string.catalog_group_protect),
+        MAKE(R.string.catalog_group_make);
+
+        val title: String get() = Strings.get(titleRes)
     }
 
     /**
@@ -325,50 +336,54 @@ enum class ToolId(
      * verb.
      */
     val action: String
+        get() = Strings.get(actionRes)
+
+    @get:StringRes
+    val actionRes: Int
         get() = when (this) {
-            SCAN -> "Scan"
-            OCR -> "Make it searchable"
-            EXTRACT_TEXT -> "Extract the text"
-            MERGE -> "Merge into one file"
-            SPLIT -> "Split it up"
-            EXTRACT -> "Keep these pages"
-            ORGANISE -> "Save the new order"
-            IMAGES_TO_PDF -> "Make a PDF"
-            PDF_TO_IMAGES -> "Save as images"
-            COMPRESS -> "Compress it"
-            PDF_TO_OFFICE -> "Convert it"
-            OFFICE_TO_PDF -> "Make the PDF"
-            WATERMARK -> "Add the watermark"
-            PAGE_NUMBERS -> "Add the numbers"
-            SIGN -> "Place the signature"
-            ADD_TEXT -> "Write it on"
-            ADD_IMAGE -> "Place the image"
-            ANNOTATE -> "Save the marks"
-            FORMS -> "Fill it in"
-            HEADER_FOOTER -> "Add them"
-            INSERT -> "Put them in"
-            CROP -> "Crop it"
-            BACKGROUND -> "Colour the pages"
-            PAGE_LABELS -> "Label the pages"
-            BOOKMARKS -> "Write the bookmarks"
-            ATTACHMENTS -> "Do it"
-            N_UP -> "Lay it out"
-            SPLIT_BY_SIZE -> "Split by size"
-            EXTRACT_IMAGES -> "Pull the images out"
-            REDACT -> "Remove them for good"
-            METADATA -> "Save the details"
-            SET_PASSWORD -> "Protect it"
-            REMOVE_PASSWORD -> "Unlock it"
-            CREATE_FORM -> "Add the fields"
-            DIGITAL_SIGN -> "Sign it"
-            PDF_A -> "Make the archive copy"
-            EDIT_TEXT -> "Save the changes"
-            RESIZE_PHOTO -> "Resize it"
-            EDIT_IMAGES -> "Save the changes"
-            SUMMARISE -> "Pick the key points"
-            RECIPES -> "Run the recipe"
-            COMPARE -> "Compare them"
-            RENT_RECEIPTS -> "Make the receipts"
+            SCAN -> R.string.catalog_tool_scan_action
+            OCR -> R.string.catalog_tool_ocr_action
+            EXTRACT_TEXT -> R.string.catalog_tool_extract_text_action
+            MERGE -> R.string.catalog_tool_merge_action
+            SPLIT -> R.string.catalog_tool_split_action
+            EXTRACT -> R.string.catalog_tool_extract_action
+            ORGANISE -> R.string.catalog_tool_organise_action
+            IMAGES_TO_PDF -> R.string.catalog_tool_images_to_pdf_action
+            PDF_TO_IMAGES -> R.string.catalog_tool_pdf_to_images_action
+            COMPRESS -> R.string.catalog_tool_compress_action
+            PDF_TO_OFFICE -> R.string.catalog_tool_pdf_to_office_action
+            OFFICE_TO_PDF -> R.string.catalog_tool_office_to_pdf_action
+            WATERMARK -> R.string.catalog_tool_watermark_action
+            PAGE_NUMBERS -> R.string.catalog_tool_page_numbers_action
+            SIGN -> R.string.catalog_tool_sign_action
+            ADD_TEXT -> R.string.catalog_tool_add_text_action
+            ADD_IMAGE -> R.string.catalog_tool_add_image_action
+            ANNOTATE -> R.string.catalog_tool_annotate_action
+            FORMS -> R.string.catalog_tool_forms_action
+            HEADER_FOOTER -> R.string.catalog_tool_header_footer_action
+            INSERT -> R.string.catalog_tool_insert_action
+            CROP -> R.string.catalog_tool_crop_action
+            BACKGROUND -> R.string.catalog_tool_background_action
+            PAGE_LABELS -> R.string.catalog_tool_page_labels_action
+            BOOKMARKS -> R.string.catalog_tool_bookmarks_action
+            ATTACHMENTS -> R.string.catalog_tool_attachments_action
+            N_UP -> R.string.catalog_tool_n_up_action
+            SPLIT_BY_SIZE -> R.string.catalog_tool_split_by_size_action
+            EXTRACT_IMAGES -> R.string.catalog_tool_extract_images_action
+            REDACT -> R.string.catalog_tool_redact_action
+            METADATA -> R.string.catalog_tool_metadata_action
+            SET_PASSWORD -> R.string.catalog_tool_set_password_action
+            REMOVE_PASSWORD -> R.string.catalog_tool_remove_password_action
+            CREATE_FORM -> R.string.catalog_tool_create_form_action
+            DIGITAL_SIGN -> R.string.catalog_tool_digital_sign_action
+            PDF_A -> R.string.catalog_tool_pdf_a_action
+            EDIT_TEXT -> R.string.catalog_action_save_changes
+            RESIZE_PHOTO -> R.string.catalog_tool_resize_photo_action
+            EDIT_IMAGES -> R.string.catalog_action_save_changes
+            SUMMARISE -> R.string.catalog_tool_summarise_action
+            RECIPES -> R.string.catalog_tool_recipes_action
+            COMPARE -> R.string.catalog_tool_compare_action
+            RENT_RECEIPTS -> R.string.catalog_tool_rent_receipts_action
         }
 
     val acceptsMultiple: Boolean

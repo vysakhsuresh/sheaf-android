@@ -1,5 +1,7 @@
 package com.layerbit.sheaf.ops
 
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
 import kotlin.math.roundToInt
 
 /**
@@ -58,8 +60,6 @@ object Suggest {
         }
     }
 
-    private fun plural(n: Int, one: String, many: String = one + "s") = if (n == 1) "1 $one" else "$n $many"
-
     fun suggest(files: List<Facts>, max: Int = 8): List<Suggestion> {
         val out = mutableListOf<Suggestion>()
         val pdfs = files.indices.filter { files[it].kind == Kind.PDF && !files[it].unreadable }
@@ -70,17 +70,17 @@ object Suggest {
         if (locked.isNotEmpty()) {
             out += Suggestion(
                 ToolId.REMOVE_PASSWORD,
-                if (locked.size == 1) "It asks for a password: unlock it, with the password, for good"
-                else "${plural(locked.size, "file")} ask for a password: unlock them",
+                if (locked.size == 1) Strings.get(R.string.catalog_suggest_unlock_one)
+                else Strings.plural(R.plurals.catalog_suggest_unlock_many, locked.size),
                 locked, 100
             )
         }
         if (images.isNotEmpty()) {
             val n = images.size
-            out += Suggestion(ToolId.IMAGES_TO_PDF, if (n == 1) "Turn the photo into a PDF" else "Make one PDF of these $n pictures", images, 90)
+            out += Suggestion(ToolId.IMAGES_TO_PDF, if (n == 1) Strings.get(R.string.catalog_suggest_photo_one) else Strings.plural(R.plurals.catalog_suggest_photos, n), images, 90)
             out += Suggestion(
                 ToolId.RESIZE_PHOTO,
-                if (n == 1) "For an upload form? Get it under 20 KB, 50 KB or any size" else "For an upload form? Get all $n under 20 KB, 50 KB or any size",
+                if (n == 1) Strings.get(R.string.catalog_suggest_resize_one) else Strings.plural(R.plurals.catalog_suggest_resize_many, n),
                 images, 89
             )
         }
@@ -88,46 +88,46 @@ object Suggest {
             val n = office.size
             out += Suggestion(
                 ToolId.OFFICE_TO_PDF,
-                if (n == 1) "Turn the Word, Excel or text file into a PDF" else "Turn these $n Word, Excel or text files into PDFs",
+                if (n == 1) Strings.get(R.string.catalog_suggest_office_one) else Strings.plural(R.plurals.catalog_suggest_office_many, n),
                 office, 90
             )
         }
         if (pdfs.size >= 2) {
             val n = pdfs.size
             val total = pdfs.sumOf { files[it].bytes }
-            out += Suggestion(ToolId.MERGE, "Join these $n PDFs into one", pdfs, 88)
-            out += Suggestion(ToolId.COMPRESS, "Make all $n smaller (${mb(total)} together)", pdfs, if (total > BIG) 80 else 40)
-            if (n == 2) out += Suggestion(ToolId.COMPARE, "Two versions of one document? See what changed", pdfs, 55)
-            out += Suggestion(ToolId.SET_PASSWORD, "Lock all $n with a password", pdfs, 35)
-            out += Suggestion(ToolId.PDF_TO_OFFICE, "Turn all $n into Word files you can edit", pdfs, 30)
-            out += Suggestion(ToolId.PAGE_NUMBERS, "Number the pages of all $n", pdfs, 25)
+            out += Suggestion(ToolId.MERGE, Strings.plural(R.plurals.catalog_suggest_merge, n), pdfs, 88)
+            out += Suggestion(ToolId.COMPRESS, Strings.plural(R.plurals.catalog_suggest_compress_all, n, n, mb(total)), pdfs, if (total > BIG) 80 else 40)
+            if (n == 2) out += Suggestion(ToolId.COMPARE, Strings.get(R.string.catalog_suggest_compare), pdfs, 55)
+            out += Suggestion(ToolId.SET_PASSWORD, Strings.plural(R.plurals.catalog_suggest_lock_all, n), pdfs, 35)
+            out += Suggestion(ToolId.PDF_TO_OFFICE, Strings.plural(R.plurals.catalog_suggest_word_all, n), pdfs, 30)
+            out += Suggestion(ToolId.PAGE_NUMBERS, Strings.plural(R.plurals.catalog_suggest_number_all, n), pdfs, 25)
         } else if (pdfs.size == 1) {
             val i = pdfs.single()
             val f = files[i]
             val one = listOf(i)
             val pages = f.pages ?: 0
             if (f.scanned) {
-                out += Suggestion(ToolId.OCR, "It is a scan: make its words searchable and copyable", one, 85)
-                out += Suggestion(ToolId.EDIT_TEXT, "Change words on the scan: they are read first, on this phone", one, 50)
+                out += Suggestion(ToolId.OCR, Strings.get(R.string.catalog_suggest_ocr), one, 85)
+                out += Suggestion(ToolId.EDIT_TEXT, Strings.get(R.string.catalog_suggest_edit_scan), one, 50)
             }
-            if (f.forms) out += Suggestion(ToolId.FORMS, "It has fields: fill them in and save", one, 84)
-            if (f.amounts) out += Suggestion(ToolId.PDF_TO_OFFICE, "It is full of amounts: get them into a spreadsheet you can add up", one, 80, preset = PRESET_EXCEL)
-            if (f.idNumber) out += Suggestion(ToolId.REDACT, "It shows an ID number (Aadhaar or PAN): hide it for good before you share it", one, 66)
-            if (f.bytes > BIG) out += Suggestion(ToolId.COMPRESS, "It is ${mb(f.bytes)}: make it smaller", one, 82)
-            out += Suggestion(ToolId.SIGN, "Sign it", one, if (pages == 1) 75 else 60)
-            if (!f.scanned) out += Suggestion(ToolId.EDIT_TEXT, "Change words on it", one, 58)
+            if (f.forms) out += Suggestion(ToolId.FORMS, Strings.get(R.string.catalog_suggest_forms), one, 84)
+            if (f.amounts) out += Suggestion(ToolId.PDF_TO_OFFICE, Strings.get(R.string.catalog_suggest_amounts), one, 80, preset = PRESET_EXCEL)
+            if (f.idNumber) out += Suggestion(ToolId.REDACT, Strings.get(R.string.catalog_suggest_id_number), one, 66)
+            if (f.bytes > BIG) out += Suggestion(ToolId.COMPRESS, Strings.get(R.string.catalog_suggest_big, mb(f.bytes)), one, 82)
+            out += Suggestion(ToolId.SIGN, Strings.get(R.string.catalog_suggest_sign), one, if (pages == 1) 75 else 60)
+            if (!f.scanned) out += Suggestion(ToolId.EDIT_TEXT, Strings.get(R.string.catalog_suggest_edit), one, 58)
             if (pages >= 2) {
-                out += Suggestion(ToolId.ORGANISE, "Reorder, turn or delete its $pages pages", one, 57)
-                out += Suggestion(ToolId.SPLIT, "Split its $pages pages into separate files", one, 52)
-                if (!f.scanned) out += Suggestion(ToolId.SUMMARISE, "Pick out its key points", one, 47)
-                out += Suggestion(ToolId.EXTRACT, "Keep only the pages you need", one, 45)
+                out += Suggestion(ToolId.ORGANISE, Strings.plural(R.plurals.catalog_suggest_organise, pages), one, 57)
+                out += Suggestion(ToolId.SPLIT, Strings.plural(R.plurals.catalog_suggest_split, pages), one, 52)
+                if (!f.scanned) out += Suggestion(ToolId.SUMMARISE, Strings.get(R.string.catalog_suggest_key_points), one, 47)
+                out += Suggestion(ToolId.EXTRACT, Strings.get(R.string.catalog_suggest_extract), one, 45)
             }
-            if (!f.scanned) out += Suggestion(ToolId.PDF_TO_OFFICE, "Turn it into a Word file you can edit", one, 48)
-            out += Suggestion(ToolId.ANNOTATE, "Highlight, underline or add notes", one, 44)
-            if (f.bytes <= BIG) out += Suggestion(ToolId.COMPRESS, "Make it smaller", one, 40)
-            if (!f.locked) out += Suggestion(ToolId.SET_PASSWORD, "Lock it with a password", one, 38)
-            out += Suggestion(ToolId.REDACT, "Hide private details for good (Aadhaar, PAN, account numbers)", one, 30)
-            out += Suggestion(null, "Just read it", one, 20)
+            if (!f.scanned) out += Suggestion(ToolId.PDF_TO_OFFICE, Strings.get(R.string.catalog_suggest_word), one, 48)
+            out += Suggestion(ToolId.ANNOTATE, Strings.get(R.string.catalog_suggest_annotate), one, 44)
+            if (f.bytes <= BIG) out += Suggestion(ToolId.COMPRESS, Strings.get(R.string.catalog_suggest_compress), one, 40)
+            if (!f.locked) out += Suggestion(ToolId.SET_PASSWORD, Strings.get(R.string.catalog_suggest_lock), one, 38)
+            out += Suggestion(ToolId.REDACT, Strings.get(R.string.catalog_suggest_redact), one, 30)
+            out += Suggestion(null, Strings.get(R.string.catalog_suggest_read), one, 20)
         }
         return out.sortedByDescending { it.score }
             .distinctBy { it.tool?.name ?: "READ" }
@@ -139,19 +139,19 @@ object Suggest {
         val pdfs = files.filter { it.kind == Kind.PDF }
         if (pdfs.isNotEmpty() && pdfs.all { it.unreadable } && pdfs.size == files.size) {
             return if (pdfs.size == 1) {
-                "This PDF is damaged and couldn't be read. If it came by email or WhatsApp, download it again: it may have been cut short."
+                Strings.get(R.string.catalog_none_damaged_one)
             } else {
-                "These PDFs are damaged and couldn't be read. If they came by email or WhatsApp, download them again: they may have been cut short."
+                Strings.get(R.string.catalog_none_damaged_many)
             }
         }
         val extensions = files.map { it.extension }
         if (extensions.any { it in setOf("ppt", "pptx", "key", "odp") }) {
-            return "Slides cannot be turned into a PDF here yet. In PowerPoint, Keynote or Google Slides, choose Save as PDF, then open that PDF here."
+            return Strings.get(R.string.catalog_none_slides)
         }
         if (extensions.any { it in setOf("doc", "xls", "odt", "ods", "rtf") }) {
-            return "Only .docx, .xlsx, .txt, .md and .csv files can be turned into a PDF here. Save it as .docx or .xlsx (or straight as a PDF) and open that."
+            return Strings.get(R.string.catalog_none_old_office)
         }
-        return "Nothing here is a PDF, a picture or a Word or Excel file. Pick a tool from the home screen instead."
+        return Strings.get(R.string.catalog_none_nothing)
     }
 
     const val PRESET_EXCEL = "excel"

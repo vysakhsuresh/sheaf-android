@@ -1,0 +1,415 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tools: title, summary and what the button says. -->
+    <string name="catalog_tool_scan_title">Scan a document</string>
+    <string name="catalog_tool_scan_summary">Photograph pages and straighten them</string>
+    <string name="catalog_tool_scan_action">Scan</string>
+    <string name="catalog_tool_ocr_title">Make searchable</string>
+    <string name="catalog_tool_ocr_summary">Read the text in a scan so you can search and copy it</string>
+    <string name="catalog_tool_ocr_action">Make it searchable</string>
+    <string name="catalog_tool_extract_text_title">Extract text</string>
+    <string name="catalog_tool_extract_text_summary">Pull the words out of a PDF as plain text</string>
+    <string name="catalog_tool_extract_text_action">Extract the text</string>
+    <string name="catalog_tool_merge_title">Merge</string>
+    <string name="catalog_tool_merge_summary">Join several PDFs into one, in the order you choose</string>
+    <string name="catalog_tool_merge_action">Merge into one file</string>
+    <string name="catalog_tool_split_title">Split</string>
+    <string name="catalog_tool_split_summary">Break one PDF into several smaller files</string>
+    <string name="catalog_tool_split_action">Split it up</string>
+    <string name="catalog_tool_extract_title">Extract or remove pages</string>
+    <string name="catalog_tool_extract_summary">Keep only the pages you pick, or take them out</string>
+    <string name="catalog_tool_extract_action">Keep these pages</string>
+    <string name="catalog_tool_insert_title">Insert or replace pages</string>
+    <string name="catalog_tool_insert_summary">Put another PDF, or blank pages, in at a chosen page, or in place of some</string>
+    <string name="catalog_tool_insert_action">Put them in</string>
+    <string name="catalog_tool_organise_title">Organise pages</string>
+    <string name="catalog_tool_organise_summary">Reorder, rotate and delete pages</string>
+    <string name="catalog_tool_organise_action">Save the new order</string>
+    <string name="catalog_tool_images_to_pdf_title">Images to PDF</string>
+    <string name="catalog_tool_images_to_pdf_summary">Turn photos and scans into a document</string>
+    <string name="catalog_tool_images_to_pdf_action">Make a PDF</string>
+    <string name="catalog_tool_pdf_to_images_title">PDF to images</string>
+    <string name="catalog_tool_pdf_to_images_summary">Save pages as PNG or JPEG</string>
+    <string name="catalog_tool_pdf_to_images_action">Save as images</string>
+    <string name="catalog_tool_pdf_to_office_title">PDF to Word, Excel, PowerPoint, EPUB or web page</string>
+    <string name="catalog_tool_pdf_to_office_summary">Paragraphs, headings, tables and pictures, as a file you can edit or read</string>
+    <string name="catalog_tool_pdf_to_office_action">Convert it</string>
+    <string name="catalog_tool_office_to_pdf_title">Word, Excel or text to PDF</string>
+    <string name="catalog_tool_office_to_pdf_summary">A .docx, .xlsx, .txt, .md or .csv as a PDF, laid out on A4</string>
+    <string name="catalog_tool_office_to_pdf_action">Make the PDF</string>
+    <string name="catalog_tool_compress_title">Compress</string>
+    <string name="catalog_tool_compress_summary">Make a PDF smaller for email or upload, or get it under a size</string>
+    <string name="catalog_tool_compress_action">Compress it</string>
+    <string name="catalog_tool_watermark_title">Watermark</string>
+    <string name="catalog_tool_watermark_summary">Lay DRAFT or a name across every page</string>
+    <string name="catalog_tool_watermark_action">Add the watermark</string>
+    <string name="catalog_tool_page_numbers_title">Page numbers</string>
+    <string name="catalog_tool_page_numbers_summary">Number the pages, Bates style if you need it</string>
+    <string name="catalog_tool_page_numbers_action">Add the numbers</string>
+    <string name="catalog_tool_sign_title">Sign</string>
+    <string name="catalog_tool_sign_summary">Draw your signature and place it on a page</string>
+    <string name="catalog_tool_sign_action">Place the signature</string>
+    <string name="catalog_tool_annotate_title">Mark up</string>
+    <string name="catalog_tool_annotate_summary">Highlight a line, or draw on a page with your finger</string>
+    <string name="catalog_tool_annotate_action">Save the marks</string>
+    <string name="catalog_tool_forms_title">Fill in a form</string>
+    <string name="catalog_tool_forms_summary">Type into a PDF that has real form fields, and seal it</string>
+    <string name="catalog_tool_forms_action">Fill it in</string>
+    <string name="catalog_tool_header_footer_title">Header and footer</string>
+    <string name="catalog_tool_header_footer_summary">Run a line along the top or bottom of every page</string>
+    <string name="catalog_tool_header_footer_action">Add them</string>
+    <string name="catalog_tool_add_text_title">Add text</string>
+    <string name="catalog_tool_add_text_summary">Type onto a page, and cover what is there if you need to</string>
+    <string name="catalog_tool_add_text_action">Write it on</string>
+    <string name="catalog_tool_add_image_title">Add an image</string>
+    <string name="catalog_tool_add_image_summary">Put a logo, a stamp or a photo on a page</string>
+    <string name="catalog_tool_add_image_action">Place the image</string>
+    <string name="catalog_tool_crop_title">Crop pages</string>
+    <string name="catalog_tool_crop_summary">Trim the margins in millimetres, remove white edges, or change the page size</string>
+    <string name="catalog_tool_crop_action">Crop it</string>
+    <string name="catalog_tool_background_title">Page background</string>
+    <string name="catalog_tool_background_summary">Put a colour behind the pages</string>
+    <string name="catalog_tool_background_action">Colour the pages</string>
+    <string name="catalog_tool_n_up_title">Pages per sheet</string>
+    <string name="catalog_tool_n_up_summary">Put 2, 4, 6, 8, 9 or 16 pages on each sheet for printing</string>
+    <string name="catalog_tool_n_up_action">Lay it out</string>
+    <string name="catalog_tool_split_by_size_title">Split by size</string>
+    <string name="catalog_tool_split_by_size_summary">Cut a file into parts small enough to email</string>
+    <string name="catalog_tool_split_by_size_action">Split by size</string>
+    <string name="catalog_tool_extract_images_title">Extract images</string>
+    <string name="catalog_tool_extract_images_summary">Pull out the pictures already inside a document</string>
+    <string name="catalog_tool_extract_images_action">Pull the images out</string>
+    <string name="catalog_tool_page_labels_title">Page labels</string>
+    <string name="catalog_tool_page_labels_summary">Name the pages the way a reader shows them: i, ii, iii, then 1, 2, 3</string>
+    <string name="catalog_tool_page_labels_action">Label the pages</string>
+    <string name="catalog_tool_bookmarks_title">Bookmarks</string>
+    <string name="catalog_tool_bookmarks_summary">Write a table of contents into the document\'s side panel</string>
+    <string name="catalog_tool_bookmarks_action">Write the bookmarks</string>
+    <string name="catalog_tool_attachments_title">Attachments</string>
+    <string name="catalog_tool_attachments_summary">Put files inside a PDF, or take them out</string>
+    <string name="catalog_tool_attachments_action">Do it</string>
+    <string name="catalog_tool_redact_title">Remove areas</string>
+    <string name="catalog_tool_redact_summary">Take something out of a page permanently, or find and remove ID and card numbers</string>
+    <string name="catalog_tool_redact_action">Remove them for good</string>
+    <string name="catalog_tool_metadata_title">Document details</string>
+    <string name="catalog_tool_metadata_summary">Edit the details, or clean out everything a file gives away</string>
+    <string name="catalog_tool_metadata_action">Save the details</string>
+    <string name="catalog_tool_set_password_title">Add a password</string>
+    <string name="catalog_tool_set_password_summary">Encrypt a PDF so it needs a password to open, or just restrict it</string>
+    <string name="catalog_tool_set_password_action">Protect it</string>
+    <string name="catalog_tool_remove_password_title">Remove a password</string>
+    <string name="catalog_tool_remove_password_summary">Save an unlocked copy of a PDF you can open</string>
+    <string name="catalog_tool_remove_password_action">Unlock it</string>
+    <string name="catalog_tool_create_form_title">Create a form</string>
+    <string name="catalog_tool_create_form_summary">Draw text boxes, tick boxes and drop-downs on a page, for anyone to fill in</string>
+    <string name="catalog_tool_create_form_action">Add the fields</string>
+    <string name="catalog_tool_digital_sign_title">Digital signature</string>
+    <string name="catalog_tool_digital_sign_summary">Seal a PDF with your .pfx or .p12 certificate, the way Acrobat checks</string>
+    <string name="catalog_tool_digital_sign_action">Sign it</string>
+    <string name="catalog_tool_pdf_a_title">Archive copy (PDF/A)</string>
+    <string name="catalog_tool_pdf_a_summary">A PDF/A-2b copy for records offices, courts and auditors</string>
+    <string name="catalog_tool_pdf_a_action">Make the archive copy</string>
+    <string name="catalog_tool_edit_text_title">Edit text</string>
+    <string name="catalog_tool_edit_text_summary">Change words already on the page, or find and replace them</string>
+    <string name="catalog_tool_compare_title">Compare two versions</string>
+    <string name="catalog_tool_compare_summary">See what changed: new words in green, a note where words went</string>
+    <string name="catalog_tool_compare_action">Compare them</string>
+    <string name="catalog_tool_resize_photo_title">Resize photo to KB</string>
+    <string name="catalog_tool_resize_photo_summary">Get a photo or signature under 20 KB, 50 KB or whatever a form asks</string>
+    <string name="catalog_tool_resize_photo_action">Resize it</string>
+    <string name="catalog_tool_edit_images_title">Edit pictures</string>
+    <string name="catalog_tool_edit_images_summary">Move, resize, take out or swap the pictures already on a page</string>
+    <string name="catalog_tool_summarise_title">Key points</string>
+    <string name="catalog_tool_summarise_summary">The sentences that carry a document, picked on this phone</string>
+    <string name="catalog_tool_summarise_action">Pick the key points</string>
+    <string name="catalog_tool_recipes_title">Recipes</string>
+    <string name="catalog_tool_recipes_summary">Your own chain of steps - compress, number, lock - run on any number of PDFs in one tap</string>
+    <string name="catalog_tool_recipes_action">Run the recipe</string>
+    <string name="catalog_tool_rent_receipts_title">Rent receipts</string>
+    <string name="catalog_tool_rent_receipts_summary">A year of receipts for an HRA claim, ready to sign</string>
+    <string name="catalog_tool_rent_receipts_action">Make the receipts</string>
+    <string name="catalog_action_save_changes">Save the changes</string>
+
+    <string name="catalog_group_read">Read and capture</string>
+    <string name="catalog_group_pages">Pages</string>
+    <string name="catalog_group_mark">Mark up</string>
+    <string name="catalog_group_convert">Convert and print</string>
+    <string name="catalog_group_protect">Protect</string>
+    <string name="catalog_group_make">Make from scratch</string>
+
+    <!-- What to do with the files someone opened. -->
+    <string name="catalog_suggest_unlock_one">It asks for a password: unlock it, with the password, for good</string>
+    <plurals name="catalog_suggest_unlock_many">
+        <item quantity="one">%d file asks for a password: unlock it</item>
+        <item quantity="other">%d files ask for a password: unlock them</item>
+    </plurals>
+    <string name="catalog_suggest_photo_one">Turn the photo into a PDF</string>
+    <plurals name="catalog_suggest_photos">
+        <item quantity="one">Make one PDF of this %d picture</item>
+        <item quantity="other">Make one PDF of these %d pictures</item>
+    </plurals>
+    <string name="catalog_suggest_resize_one">For an upload form? Get it under 20 KB, 50 KB or any size</string>
+    <plurals name="catalog_suggest_resize_many">
+        <item quantity="one">For an upload form? Get %d under 20 KB, 50 KB or any size</item>
+        <item quantity="other">For an upload form? Get all %d under 20 KB, 50 KB or any size</item>
+    </plurals>
+    <string name="catalog_suggest_office_one">Turn the Word, Excel or text file into a PDF</string>
+    <plurals name="catalog_suggest_office_many">
+        <item quantity="one">Turn this %d Word, Excel or text file into a PDF</item>
+        <item quantity="other">Turn these %d Word, Excel or text files into PDFs</item>
+    </plurals>
+    <plurals name="catalog_suggest_merge">
+        <item quantity="one">Join this %d PDF into one</item>
+        <item quantity="other">Join these %d PDFs into one</item>
+    </plurals>
+    <plurals name="catalog_suggest_compress_all">
+        <item quantity="one">Make %1$d smaller (%2$s together)</item>
+        <item quantity="other">Make all %1$d smaller (%2$s together)</item>
+    </plurals>
+    <string name="catalog_suggest_compare">Two versions of one document? See what changed</string>
+    <plurals name="catalog_suggest_lock_all">
+        <item quantity="one">Lock %d with a password</item>
+        <item quantity="other">Lock all %d with a password</item>
+    </plurals>
+    <plurals name="catalog_suggest_word_all">
+        <item quantity="one">Turn %d into a Word file you can edit</item>
+        <item quantity="other">Turn all %d into Word files you can edit</item>
+    </plurals>
+    <plurals name="catalog_suggest_number_all">
+        <item quantity="one">Number the pages of %d</item>
+        <item quantity="other">Number the pages of all %d</item>
+    </plurals>
+    <string name="catalog_suggest_ocr">It is a scan: make its words searchable and copyable</string>
+    <string name="catalog_suggest_edit_scan">Change words on the scan: they are read first, on this phone</string>
+    <string name="catalog_suggest_forms">It has fields: fill them in and save</string>
+    <string name="catalog_suggest_amounts">It is full of amounts: get them into a spreadsheet you can add up</string>
+    <string name="catalog_suggest_id_number">It shows an ID number (Aadhaar or PAN): hide it for good before you share it</string>
+    <string name="catalog_suggest_big">It is %1$s: make it smaller</string>
+    <string name="catalog_suggest_sign">Sign it</string>
+    <string name="catalog_suggest_edit">Change words on it</string>
+    <plurals name="catalog_suggest_organise">
+        <item quantity="one">Reorder, turn or delete its %d page</item>
+        <item quantity="other">Reorder, turn or delete its %d pages</item>
+    </plurals>
+    <plurals name="catalog_suggest_split">
+        <item quantity="one">Split its %d page into separate files</item>
+        <item quantity="other">Split its %d pages into separate files</item>
+    </plurals>
+    <string name="catalog_suggest_key_points">Pick out its key points</string>
+    <string name="catalog_suggest_extract">Keep only the pages you need</string>
+    <string name="catalog_suggest_word">Turn it into a Word file you can edit</string>
+    <string name="catalog_suggest_annotate">Highlight, underline or add notes</string>
+    <string name="catalog_suggest_compress">Make it smaller</string>
+    <string name="catalog_suggest_lock">Lock it with a password</string>
+    <string name="catalog_suggest_redact">Hide private details for good (Aadhaar, PAN, account numbers)</string>
+    <string name="catalog_suggest_read">Just read it</string>
+    <string name="catalog_none_damaged_one">This PDF is damaged and couldn\'t be read. If it came by email or WhatsApp, download it again: it may have been cut short.</string>
+    <string name="catalog_none_damaged_many">These PDFs are damaged and couldn\'t be read. If they came by email or WhatsApp, download them again: they may have been cut short.</string>
+    <string name="catalog_none_slides">Slides cannot be turned into a PDF here yet. In PowerPoint, Keynote or Google Slides, choose Save as PDF, then open that PDF here.</string>
+    <string name="catalog_none_old_office">Only .docx, .xlsx, .txt, .md and .csv files can be turned into a PDF here. Save it as .docx or .xlsx (or straight as a PDF) and open that.</string>
+    <string name="catalog_none_nothing">Nothing here is a PDF, a picture or a Word or Excel file. Pick a tool from the home screen instead.</string>
+
+    <!-- Shared by the ops. -->
+    <string name="catalog_done">Done</string>
+    <string name="catalog_failed">Failed.</string>
+    <string name="catalog_unreadable">Unreadable.</string>
+    <string name="catalog_no_document">No document was selected.</string>
+    <string name="catalog_progress_page_of">Page %1$d of %2$d</string>
+    <string name="catalog_progress_reading_page">Reading page %1$d of %2$d</string>
+    <string name="catalog_progress_reading_file">Reading %1$s</string>
+    <plurals name="catalog_no_pages_matched">
+        <item quantity="one">No pages matched \"%1$s\". This document has %2$d page.</item>
+        <item quantity="other">No pages matched \"%1$s\". This document has %2$d pages.</item>
+    </plurals>
+    <plurals name="catalog_n_pages">
+        <item quantity="one">%d page</item>
+        <item quantity="other">%d pages</item>
+    </plurals>
+
+    <!-- Merge, extract, split, insert, organise. -->
+    <string name="catalog_merge_need_two">Pick at least two documents to merge.</string>
+    <string name="catalog_progress_adding">Adding %1$s</string>
+    <string name="catalog_merge_failed">Merge failed.</string>
+    <plurals name="catalog_merge_joined">
+        <item quantity="one">%d file joined</item>
+        <item quantity="other">%d files joined</item>
+    </plurals>
+    <string name="catalog_extract_title">Extract pages</string>
+    <string name="catalog_remove_title">Remove pages</string>
+    <string name="catalog_remove_every_page">That would remove every page. Leave at least one.</string>
+    <plurals name="catalog_progress_writing_pages">
+        <item quantity="one">Writing %d page</item>
+        <item quantity="other">Writing %d pages</item>
+    </plurals>
+    <string name="catalog_extract_failed">Extract failed.</string>
+    <plurals name="catalog_removed_pages">
+        <item quantity="one">Removed page %1$s; %2$d of %3$d kept</item>
+        <item quantity="other">Removed pages %1$s; %2$d of %3$d kept</item>
+    </plurals>
+    <string name="catalog_kept_pages">Kept pages %1$s of %2$d</string>
+    <plurals name="catalog_split_every_title">
+        <item quantity="one">Split every %d page</item>
+        <item quantity="other">Split every %d pages</item>
+    </plurals>
+    <string name="catalog_split_single_title">Split into single pages</string>
+    <string name="catalog_split_ranges_title">Split by ranges</string>
+    <string name="catalog_split_bookmarks_title">Split at the bookmarks</string>
+    <string name="catalog_split_no_toc">This document has no table of contents to split at. Split every N pages, or by ranges, instead.</string>
+    <string name="catalog_split_no_pages">That split produced no pages.</string>
+    <string name="catalog_split_whole">That covers the whole document, so the result would be identical to it. Use Extract pages if you want a copy.</string>
+    <string name="catalog_progress_part">Part %1$d of %2$d</string>
+    <string name="catalog_split_part_pages">Pages %1$s</string>
+    <string name="catalog_split_part_failed">This part could not be written.</string>
+    <string name="catalog_insert_title">Insert pages</string>
+    <string name="catalog_insert_need_second">Add a second document to insert, or choose how many blank pages to add.</string>
+    <string name="catalog_progress_inserting">Inserting into %1$s</string>
+    <plurals name="catalog_replace_none_typed">
+        <item quantity="one">This file has %d page; none of the pages typed are in it.</item>
+        <item quantity="other">This file has %d pages; none of the pages typed are in it.</item>
+    </plurals>
+    <string name="catalog_replace_every">That would replace every page with nothing.</string>
+    <plurals name="catalog_blank_pages">
+        <item quantity="one">%d blank page</item>
+        <item quantity="other">%d blank pages</item>
+    </plurals>
+    <plurals name="catalog_replaced_pages">
+        <item quantity="one">Replaced page %1$s with %2$s</item>
+        <item quantity="other">Replaced pages %1$s with %2$s</item>
+    </plurals>
+    <string name="catalog_put_in_at">Put %1$s in at page %2$d</string>
+    <string name="catalog_keep_one_page">A document must keep at least one page.</string>
+    <plurals name="catalog_progress_rebuilding">
+        <item quantity="one">Rebuilding %d page</item>
+        <item quantity="other">Rebuilding %d pages</item>
+    </plurals>
+    <plurals name="catalog_pages_rotated">
+        <item quantity="one">%1$d page, %2$d rotated</item>
+        <item quantity="other">%1$d pages, %2$d rotated</item>
+    </plurals>
+
+    <!-- Rent receipts, edit text, compare. -->
+    <string name="catalog_rent_need_tenant">Type the tenant\'s name.</string>
+    <string name="catalog_rent_need_owner">Type the owner\'s name.</string>
+    <string name="catalog_rent_need_address">Type the address.</string>
+    <string name="catalog_rent_need_amount">Type the monthly rent, and a number of months from 1 to 24.</string>
+    <string name="catalog_progress_receipts">Writing the receipts</string>
+    <string name="catalog_rent_failed">The receipts could not be written.</string>
+    <plurals name="catalog_rent_count">
+        <item quantity="one">%1$d receipt, %2$s</item>
+        <item quantity="other">%1$d receipts, %2$s to %3$s</item>
+    </plurals>
+    <plurals name="catalog_rent_sheets">
+        <item quantity="one">two to a page on %d page</item>
+        <item quantity="other">two to a page on %d pages</item>
+    </plurals>
+    <string name="catalog_rent_done">%1$s, %2$s: print, sign, and hand them in</string>
+    <string name="catalog_rent_done_pan">%1$s, %2$s: print, sign, and hand them in. The rent is over Rs. 1 lakh a year, so your employer will ask for the owner\'s PAN: add it and make them again</string>
+    <string name="catalog_replace_title">Replace \"%1$s\"</string>
+    <string name="catalog_replace_need_words">Type the words to find.</string>
+    <plurals name="catalog_replace_removed">
+        <item quantity="one">\"%1$s\" removed in %2$d place</item>
+        <item quantity="other">\"%1$s\" removed in %2$d places</item>
+    </plurals>
+    <plurals name="catalog_replace_changed">
+        <item quantity="one">\"%1$s\" changed to \"%2$s\" in %3$d place</item>
+        <item quantity="other">\"%1$s\" changed to \"%2$s\" in %3$d places</item>
+    </plurals>
+    <string name="catalog_compare_title">Compare</string>
+    <string name="catalog_compare_need_two">Add exactly two PDFs: the older version first, then the newer one.</string>
+    <string name="catalog_progress_reading_older">Reading page %1$d of the older file</string>
+    <string name="catalog_progress_reading_newer">Reading page %1$d of the newer file</string>
+    <string name="catalog_compare_no_words">One of these files has no words to compare, only pictures of them. Run Make searchable on it first.</string>
+    <string name="catalog_progress_comparing">Comparing the words</string>
+    <string name="catalog_compare_same">The words in these two files are the same. Any difference is in pictures or layout, which this compares by words only.</string>
+    <plurals name="catalog_compare_words">
+        <item quantity="one">%1$d word added and %2$d taken out</item>
+        <item quantity="other">%1$d words added and %2$d taken out</item>
+    </plurals>
+    <plurals name="catalog_compare_pages">
+        <item quantity="one">on %d page of the newer file</item>
+        <item quantity="other">on %d pages of the newer file</item>
+    </plurals>
+    <string name="catalog_compare_done">%1$s, %2$s: new words in green, a note where words went</string>
+
+    <!-- Conversions. -->
+    <string name="catalog_office_word">Word (.docx)</string>
+    <string name="catalog_office_excel">Excel (.xlsx)</string>
+    <string name="catalog_office_epub">EPUB book</string>
+    <string name="catalog_office_html">Web page (.html)</string>
+    <string name="catalog_office_powerpoint">PowerPoint (.pptx)</string>
+    <string name="catalog_office_word_title">PDF to Word</string>
+    <string name="catalog_office_excel_title">PDF to Excel</string>
+    <string name="catalog_office_epub_title">PDF to EPUB book</string>
+    <string name="catalog_office_html_title">PDF to Web page</string>
+    <string name="catalog_office_powerpoint_title">PDF to PowerPoint</string>
+    <string name="catalog_convert_no_words">This file has no words in it, only pictures of them. Run Make searchable on it first, then convert the result.</string>
+    <string name="catalog_progress_writing_ext">Writing the %1$s</string>
+    <plurals name="catalog_n_paragraphs">
+        <item quantity="one">%d paragraph</item>
+        <item quantity="other">%d paragraphs</item>
+    </plurals>
+    <plurals name="catalog_n_tables">
+        <item quantity="one">%d table</item>
+        <item quantity="other">%d tables</item>
+    </plurals>
+    <plurals name="catalog_n_pictures">
+        <item quantity="one">%d picture</item>
+        <item quantity="other">%d pictures</item>
+    </plurals>
+    <plurals name="catalog_convert_done">
+        <item quantity="one">%1$s from %2$d page</item>
+        <item quantity="other">%1$s from %2$d pages</item>
+    </plurals>
+    <string name="catalog_convert_done_no_words">%1$s; the pages had no words, only pictures</string>
+    <string name="catalog_convert_failed">The file could not be converted.</string>
+    <string name="catalog_write_failed">The file could not be written.</string>
+    <string name="catalog_no_pages">This document has no pages.</string>
+    <string name="catalog_progress_drawing_pages">Drawing the pages</string>
+    <string name="catalog_progress_drawing_page">Drawing page %1$d of %2$d</string>
+    <string name="catalog_slides_no_words">This file has no words in it, only pictures of them. Choose pictures of the pages, or run Make searchable first.</string>
+    <string name="catalog_progress_writing_deck">Writing the deck</string>
+    <plurals name="catalog_slides_pictures">
+        <item quantity="one">%d slide, each a picture of its page</item>
+        <item quantity="other">%d slides, each a picture of its page</item>
+    </plurals>
+    <plurals name="catalog_slides_text">
+        <item quantity="one">%d slide, each the page\'s lines as text you can edit</item>
+        <item quantity="other">%d slides, each the page\'s lines as text you can edit</item>
+    </plurals>
+    <string name="catalog_deck_failed">The deck could not be made.</string>
+    <string name="catalog_deck_write_failed">The deck could not be written.</string>
+    <string name="catalog_to_pdf_title">To PDF</string>
+    <string name="catalog_office_unsupported">Sheaf can turn .docx, .xlsx, .txt, .md and .csv files into PDFs; this is something else.</string>
+    <string name="catalog_office_empty">Nothing could be read out of this file.</string>
+    <string name="catalog_progress_laying_out">Laying out: %1$d of %2$d</string>
+    <plurals name="catalog_office_done">
+        <item quantity="one">%1$d page from %2$s; the fonts are the phone\'s, not the original\'s</item>
+        <item quantity="other">%1$d pages from %2$s; the fonts are the phone\'s, not the original\'s</item>
+    </plurals>
+    <string name="catalog_read_failed">The file could not be read.</string>
+    <string name="catalog_no_images">No images were selected.</string>
+    <string name="catalog_one_page_from">One page, from %1$s</string>
+    <string name="catalog_build_failed">Could not build the PDF.</string>
+    <plurals name="catalog_images_done">
+        <item quantity="one">%d image, one per page</item>
+        <item quantity="other">%d images, one per page</item>
+    </plurals>
+    <string name="catalog_to_images_title">PDF to images (%1$d DPI, %2$s)</string>
+    <string name="catalog_export_failed">Export failed.</string>
+    <string name="catalog_image_page">Page %1$d at %2$d DPI</string>
+
+    <!-- Key points. -->
+    <string name="catalog_keypoints_pick_one">Pick one PDF.</string>
+    <string name="catalog_progress_reading_words">Reading the words…</string>
+    <string name="catalog_keypoints_unreadable">This file couldn\'t be read.</string>
+    <string name="catalog_keypoints_no_words">This file has no words in it, only pictures of them. Run Make searchable first.</string>
+    <string name="catalog_progress_picking">Picking the key points…</string>
+    <string name="catalog_keypoints_too_few">There are too few full sentences in this document to pick from.</string>
+    <string name="catalog_keypoints_first_pages">the first %1$d of %2$d pages</string>
+    <string name="catalog_keypoints_heading">Key points of %1$s, from %2$s:</string>
+    <string name="catalog_keypoints_figures">Figures in it:</string>
+    <plurals name="catalog_keypoints_done">
+        <item quantity="one">%1$d key point from %2$s, picked on this phone; it is a sentence from the document itself</item>
+        <item quantity="other">%1$d key points from %2$s, picked on this phone; each is a sentence from the document itself</item>
+    </plurals>
+</resources>
