@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="job_channel_name">દસ્તાવેજ પર કામ ચાલુ છે</string>
+    <string name="job_channel_description">Sheaf ફાઇલ પર પ્રક્રિયા કરે ત્યારે પ્રગતિ બતાવે છે. અવાજ વિના.</string>
+    <string name="job_progress">%1$d / %2$d</string>
+
+    <!-- Long-press the launcher icon. Short labels are what fits under an icon; long labels
+         are what the launcher shows when there is room, and both are required. -->
+    <string name="shortcut_scan_short">સ્કૅન</string>
+    <string name="shortcut_scan_long">દસ્તાવેજ સ્કૅન કરો</string>
+    <string name="shortcut_merge_short">મર્જ</string>
+    <string name="shortcut_merge_long">PDF મર્જ કરો</string>
+    <string name="shortcut_compress_short">કમ્પ્રેસ</string>
+    <string name="shortcut_compress_long">PDF કમ્પ્રેસ કરો</string>
+
+    <string name="widget_quick_label">સ્કૅન કરો અને ખોલો</string>
+    <string name="widget_quick_description">એક ટૅપમાં દસ્તાવેજ સ્કૅન કરો અથવા PDF ખોલો.</string>
+    <string name="widget_recents_label">તાજેતરના દસ્તાવેજો</string>
+    <string name="widget_recents_description">તમે જે દસ્તાવેજો વાંચી રહ્યા હતા તે, દરેક જ્યાં છોડ્યું હતું ત્યાંથી માત્ર એક ટૅપ દૂર.</string>
+</resources>

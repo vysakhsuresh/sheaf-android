@@ -1,5 +1,7 @@
 package com.layerbit.sheaf.data
 
+import com.layerbit.sheaf.text.Strings
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.data.db.BookmarkDao
 import com.layerbit.sheaf.data.db.BookmarkEntity
 import kotlinx.coroutines.flow.Flow
@@ -22,7 +24,7 @@ class BookmarksRepository(private val dao: BookmarkDao) {
         BookmarkEntity(
             uri = uri,
             pageIndex = pageIndex,
-            label = label.ifBlank { "Page ${pageIndex + 1}" },
+            label = label.ifBlank { Strings.get(R.string.app_bookmark_default, pageIndex + 1) },
             createdAt = System.currentTimeMillis()
         )
     )

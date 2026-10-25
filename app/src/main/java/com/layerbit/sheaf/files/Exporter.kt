@@ -1,5 +1,7 @@
 package com.layerbit.sheaf.files
 
+import com.layerbit.sheaf.text.Strings
+import com.layerbit.sheaf.R
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
@@ -60,7 +62,7 @@ class Exporter(private val context: Context) {
     suspend fun writeTo(destination: Uri, source: SheafFile) = withContext(Dispatchers.IO) {
         val resolver: ContentResolver = context.contentResolver
         val descriptor = resolver.openFileDescriptor(destination, "wt")
-            ?: throw IOException("Could not write to the location you chose.")
+            ?: throw IOException(Strings.get(R.string.app_error_write_location))
 
         try {
             descriptor.use {
@@ -129,19 +131,13 @@ class Exporter(private val context: Context) {
         }.getOrDefault(false)
 
         val outcome = when {
-            removed && mayHaveReplaced ->
-                "$name could not be written. The incomplete file was removed, so anything it " +
-                    "replaced is gone."
-            removed -> "$name could not be written. The incomplete file was removed."
-            mayHaveReplaced ->
-                "$name could not be written. The file you chose is now incomplete and will " +
-                    "not open."
-            else ->
-                "$name could not be written. An incomplete file was left in that folder and " +
-                    "will not open."
+            removed && mayHaveReplaced -> Strings.get(R.string.app_error_write_removed_replaced, name)
+            removed -> Strings.get(R.string.app_error_write_removed, name)
+            mayHaveReplaced -> Strings.get(R.string.app_error_write_incomplete, name)
+            else -> Strings.get(R.string.app_error_write_left_behind, name)
         }
 
-        return reasonFor(cause)?.let { "$outcome $it" } ?: outcome
+        return reasonFor(cause)?.let { Strings.get(R.string.app_error_with_reason, outcome, it) } ?: outcome
     }
 
     /**
@@ -153,9 +149,9 @@ class Exporter(private val context: Context) {
      */
     private fun reasonFor(cause: Throwable?): String? = when {
         cause == null -> null
-        cause is SecurityException -> "Sheaf's permission for that folder was withdrawn."
-        cause.message?.contains("ENOSPC") == true -> "There is no space left on that storage."
-        cause.message?.contains("EROFS") == true -> "That storage is read-only."
+        cause is SecurityException -> Strings.get(R.string.app_error_permission_withdrawn)
+        cause.message?.contains("ENOSPC") == true -> Strings.get(R.string.app_error_no_space)
+        cause.message?.contains("EROFS") == true -> Strings.get(R.string.app_error_read_only)
         else -> null
     }
 
@@ -191,13 +187,13 @@ class Exporter(private val context: Context) {
      */
     suspend fun writeInto(folder: Uri, source: SheafFile): String? = withContext(Dispatchers.IO) {
         val tree = DocumentFile.fromTreeUri(context, folder)
-            ?: return@withContext "That folder is no longer available."
+            ?: return@withContext Strings.get(R.string.app_error_folder_gone)
         if (!tree.canWrite()) {
-            return@withContext "Sheaf is no longer allowed to write to that folder."
+            return@withContext Strings.get(R.string.app_error_folder_denied)
         }
 
         val target = tree.createFile(source.mimeType, source.displayName)
-            ?: return@withContext "${source.displayName} could not be created there."
+            ?: return@withContext Strings.get(R.string.app_error_create_failed, source.displayName)
 
         try {
             // A descriptor is wanted for the sync, but not at the cost of the destinations that

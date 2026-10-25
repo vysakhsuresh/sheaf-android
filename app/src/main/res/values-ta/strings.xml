@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="job_channel_name">ஓர் ஆவணத்தில் வேலை நடக்கிறது</string>
+    <string name="job_channel_description">Sheaf ஒரு ஃபைலைச் செயலாக்கும்போது முன்னேற்றத்தைக் காட்டும். ஒலி இல்லை.</string>
+    <string name="job_progress">%1$d / %2$d</string>
+
+    <!-- Long-press the launcher icon. Short labels are what fits under an icon; long labels
+         are what the launcher shows when there is room, and both are required. -->
+    <string name="shortcut_scan_short">ஸ்கேன்</string>
+    <string name="shortcut_scan_long">ஆவணத்தை ஸ்கேன் செய்</string>
+    <string name="shortcut_merge_short">இணை</string>
+    <string name="shortcut_merge_long">PDF-களை இணை</string>
+    <string name="shortcut_compress_short">சுருக்கு</string>
+    <string name="shortcut_compress_long">PDF-ஐச் சுருக்கு</string>
+
+    <string name="widget_quick_label">ஸ்கேன் செய்து திற</string>
+    <string name="widget_quick_description">ஒரே தட்டலில் ஆவணத்தை ஸ்கேன் செய்யுங்கள் அல்லது PDF-ஐத் திறங்கள்.</string>
+    <string name="widget_recents_label">சமீபத்திய ஆவணங்கள்</string>
+    <string name="widget_recents_description">நீங்கள் வாசித்துக்கொண்டிருந்த ஆவணங்கள், ஒவ்வொன்றும் விட்ட இடத்திலிருந்து ஒரே தட்டலில்.</string>
+</resources>

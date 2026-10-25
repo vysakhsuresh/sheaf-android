@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shared across the app's own screens -->
+    <string name="app_settings">ക്രമീകരണം</string>
+    <string name="app_about">വിവരം</string>
+    <string name="app_about_title">Sheaf-നെ കുറിച്ച്</string>
+    <string name="app_tagline">എല്ലാ PDF ടൂളുകളും. ഒന്നും നിങ്ങളുടെ ഫോണിന് പുറത്ത് പോകില്ല.</string>
+    <string name="app_clear">മായ്ക്കുക</string>
+    <string name="app_delete">ഇല്ലാതാക്കുക</string>
+    <string name="app_back">മടങ്ങുക</string>
+    <string name="app_continue">തുടരുക</string>
+    <string name="app_not_now">ഇപ്പോൾ വേണ്ട</string>
+    <string name="app_page_of">പേജ് %1$d / %2$d</string>
+    <plurals name="app_page_count">
+        <item quantity="one">%d പേജ്</item>
+        <item quantity="other">%d പേജുകൾ</item>
+    </plurals>
+    <plurals name="app_tool_count">
+        <item quantity="one">%d ടൂൾ</item>
+        <item quantity="other">%d ടൂളുകൾ</item>
+    </plurals>
+    <string name="app_pill_no_internet">ഇന്റർനെറ്റ് ഇല്ല</string>
+    <string name="app_pill_no_account">അക്കൗണ്ട് ഇല്ല</string>
+    <string name="app_pill_no_tracking">ട്രാക്കിംഗ് ഇല്ല</string>
+
+    <!-- Open a file -->
+    <string name="app_open_title">ഒരു ഫയൽ തുറക്കുക</string>
+    <string name="app_open_subtitle">Sheaf ഈ ഫോണിൽ തന്നെ അത് പരിശോധിച്ച് എന്തുചെയ്യാമെന്ന് നിർദ്ദേശിക്കും</string>
+
+    <!-- Home -->
+    <string name="app_home_open_pdf">ഒരു PDF തുറക്കുക</string>
+    <string name="app_home_scan">സ്കാൻ ചെയ്യുക</string>
+    <string name="app_home_open_any_title">ഏത് ടൂൾ എന്ന് ഉറപ്പില്ലേ? നിങ്ങളുടെ ഫയൽ തുറക്കൂ</string>
+    <string name="app_home_open_any_body">ഒരു PDF, ഫോട്ടോകൾ, ഒരു Word അല്ലെങ്കിൽ Excel ഫയൽ, അല്ലെങ്കിൽ ഒരു ഫോൾഡർ മുഴുവനായും: അതുകൊണ്ട് എന്തുചെയ്യാമെന്ന് Sheaf നിർദ്ദേശിക്കും, നിങ്ങളുടെ റെസിപ്പികൾ പ്രവർത്തിപ്പിക്കുകയും ചെയ്യും.</string>
+    <string name="app_home_no_match">ഇതിനോട് യോജിക്കുന്നതൊന്നുമില്ല. തിരയൽ ശൂന്യമാകുമ്പോൾ എല്ലാ ടൂളുകളും കാണിക്കും - അല്ലെങ്കിൽ എന്താണ് ഇല്ലാത്തതെന്ന് “വിവരം” സ്ക്രീനിൽ നിന്ന് ഞങ്ങളെ അറിയിക്കൂ.</string>
+    <string name="app_home_recent_tools">നിങ്ങൾ അടുത്തിടെ ഉപയോഗിച്ച ടൂളുകൾ</string>
+    <string name="app_home_pick_up">നിർത്തിയിടത്തുനിന്ന് തുടരുക</string>
+    <string name="app_home_yours">നിങ്ങളുടേത്</string>
+    <string name="app_home_pin_hint">ഒരു ടൂൾ മുകളിൽ പിൻ ചെയ്യാൻ അതിൽ ദീർഘനേരം അമർത്തുക.</string>
+    <string name="app_home_footer">സൗജന്യം, ഓഫ്‌ലൈൻ, %1$s-ൽ നിന്ന്</string>
+    <string name="app_home_pill_offline">ഓഫ്‌ലൈൻ</string>
+    <string name="app_home_pill_no_internet">ഇന്റർനെറ്റ് അനുമതി ഇല്ല</string>
+    <string name="app_home_search_hint">ടൂളുകൾ തിരയുക: ചെറുതാക്കുക, ലോക്ക്, ഒപ്പ്, ഹിന്ദി…</string>
+    <string name="app_home_pinned">പിൻ ചെയ്തവ</string>
+    <string name="app_home_remove_recent">ലിസ്റ്റിൽ നിന്ന് നീക്കം ചെയ്യുക</string>
+    <string name="app_home_recent_details">%1$s · %2$s</string>
+
+    <!-- The notification ask before the first job -->
+    <string name="app_notify_title">പുരോഗതി അറിയിപ്പുകളിൽ കാണിക്കണോ?</string>
+    <string name="app_notify_body">Sheaf വിട്ടുപോയാലും ദൈർഘ്യമേറിയ ജോലികൾ തുടരും. അവ എത്രത്തോളം പൂർത്തിയായെന്ന് ഒരു അറിയിപ്പ് കാണിക്കും.</string>
+
+    <!-- Settings -->
+    <string name="app_settings_appearance">രൂപം</string>
+    <string name="app_settings_appearance_note">ഇവയിൽ ഏത് ഓണാക്കിയാലും പേജ് എപ്പോഴും വെള്ള പേപ്പറിലാണ് കാണിക്കുക. വ്യൂവറിലെ രാത്രി നിറങ്ങൾ പേജിന്റെ നിറങ്ങൾ തന്നെ മറിച്ചിടും; അത് ഡോക്യുമെന്റിന്റെ സ്വന്തം മെനുവിലെ വേറൊരു സ്വിച്ചാണ്.</string>
+    <string name="app_settings_reading">വായന</string>
+    <string name="app_settings_keep_on">സ്ക്രീൻ ഓണാക്കി വയ്ക്കുക</string>
+    <string name="app_settings_keep_on_detail">ഒരു ഡോക്യുമെന്റ് തുറന്നിരിക്കുമ്പോൾ. സ്ക്രീനിൽ തൊടാതെ ആളുകൾ ചെയ്യുന്ന ഒരേയൊരു കാര്യം വായനയാണ്.</string>
+    <string name="app_settings_resume">നിർത്തിയിടത്ത് വീണ്ടും തുറക്കുക</string>
+    <string name="app_settings_resume_detail">ഓരോ ഡോക്യുമെന്റിലും പേജ് ഓർത്തുവയ്ക്കും. പേജ് നമ്പർ മാത്രമേ സൂക്ഷിക്കൂ, ഫയലിനുള്ളിലെ ഒന്നും സൂക്ഷിക്കില്ല.</string>
+    <string name="app_settings_badge">പേജ് കൗണ്ടർ കാണിക്കുക</string>
+    <string name="app_settings_badge_detail">പേജിന്റെ താഴെയുള്ള ബാഡ്ജ്. മറ്റൊരു പേജിലേക്ക് പോകാൻ അതിൽ ടാപ്പ് ചെയ്യുക.</string>
+    <string name="app_settings_finish">ഒരു ജോലി പൂർത്തിയാകുമ്പോൾ</string>
+    <string name="app_settings_open_result">ഫലം ഉടൻ തുറക്കുക</string>
+    <string name="app_settings_open_result_detail">പൂർത്തിയായ ഡോക്യുമെന്റ് തയ്യാറായാലുടൻ വ്യൂവറിൽ കാണിക്കും.</string>
+    <string name="app_settings_editable_marks">അടയാളങ്ങൾ എഡിറ്റ് ചെയ്യാവുന്ന അനോട്ടേഷനുകളായി സേവ് ചെയ്യുക</string>
+    <string name="app_settings_editable_marks_detail">“അടയാളപ്പെടുത്തൽ” ടൂൾ ഹൈലൈറ്റുകളും ഡ്രോയിംഗുകളും കുറിപ്പുകളും ഏത് PDF റീഡറിലും പിന്നീട് എഡിറ്റ് ചെയ്യാനോ ഇല്ലാതാക്കാനോ കഴിയുന്ന അനോട്ടേഷനുകളായി സൂക്ഷിക്കും. ഓഫാണെങ്കിൽ അവ പേജിലേക്ക് തന്നെ വരയ്ക്കും, അതിനാൽ ഉണ്ടാക്കിയതുപോലെ തന്നെ നിലനിൽക്കും. “ഒപ്പിടൽ”, “ഭാഗങ്ങൾ നീക്കൽ” എന്നിവ എപ്പോഴും പേജിലേക്ക് തന്നെ വരയ്ക്കും.</string>
+    <string name="app_settings_ask_save">ഓരോ തവണയും എവിടെ സേവ് ചെയ്യണമെന്ന് ചോദിക്കുക</string>
+    <string name="app_settings_ask_save_detail">ഓഫാണെങ്കിൽ ഫലങ്ങൾ നിങ്ങൾ തിരഞ്ഞെടുക്കുന്ന ഒരു ഫോൾഡറിലേക്ക് പോകും; അതുകൊണ്ടാണ് എക്സ്പോർട്ട് ചെയ്ത നാൽപ്പത് പേജുകൾ നാൽപ്പത് തവണയ്ക്ക് പകരം ഒറ്റ നീക്കത്തിൽ സേവ് ചെയ്യാനാകുന്നത്.</string>
+    <string name="app_settings_space">സ്റ്റോറേജും ചരിത്രവും</string>
+    <string name="app_settings_working_files">താൽക്കാലിക ഫയലുകൾ ഈ ഫോണിൽ</string>
+    <string name="app_settings_working_files_detail">സേവ് ചെയ്യാൻ കാത്തിരിക്കുന്ന ഫലങ്ങളും നിങ്ങൾ തുറന്ന ഡോക്യുമെന്റുകളുടെ പകർപ്പുകളും. Sheaf ഇവ സ്വയം കുറച്ചുകൊള്ളും; വേണ്ടത് സേവ് ചെയ്തുകഴിഞ്ഞാൽ ഇപ്പോൾ മായ്ക്കുന്നത് സുരക്ഷിതമാണ്.</string>
+    <string name="app_settings_recents">സമീപകാല ഡോക്യുമെന്റുകൾ</string>
+    <string name="app_settings_recents_detail">ഹോം സ്ക്രീനിലെ ലിസ്റ്റും ഓരോന്നിലും നിങ്ങൾ എവിടെ വരെ എത്തി എന്നതും.</string>
+    <string name="app_settings_bookmarks">അടയാളപ്പെടുത്തിയ പേജുകൾ</string>
+    <plurals name="app_settings_bookmark_count">
+        <item quantity="one">നിങ്ങളുടെ ഡോക്യുമെന്റുകളിലായി %d പേജ് സ്റ്റാർ ചെയ്തിട്ടുണ്ട്.</item>
+        <item quantity="other">നിങ്ങളുടെ ഡോക്യുമെന്റുകളിലായി %d പേജുകൾ സ്റ്റാർ ചെയ്തിട്ടുണ്ട്.</item>
+    </plurals>
+    <string name="app_settings_bookmarks_none">ഇതുവരെ ഒന്നുമില്ല. വ്യൂവറിലെ നക്ഷത്രം ഒരു പേജ് അടയാളപ്പെടുത്തും.</string>
+    <string name="app_settings_cannot">ഈ ആപ്പിന് ചെയ്യാൻ കഴിയാത്തത്</string>
+    <string name="app_settings_cannot_detail">Sheaf-ന് ഇന്റർനെറ്റ് അനുമതി ഒട്ടുമില്ല. ഇതിന് ഒരു ഡോക്യുമെന്റ് അപ്‌ലോഡ് ചെയ്യാനോ ക്രാഷ് റിപ്പോർട്ട് ചെയ്യാനോ അപ്ഡേറ്റ് പരിശോധിക്കാനോ കഴിയില്ല - വാഗ്ദാനം വിശ്വസിക്കുന്നതിന് പകരം റിപ്പോസിറ്ററിയിലെ മാനിഫെസ്റ്റ് നോക്കി നിങ്ങൾക്കിത് ഉറപ്പാക്കാം. പ്രിന്റിംഗ് പ്രവർത്തിക്കുന്നത് സിസ്റ്റത്തിന്റെ പ്രിന്റ് സേവനം ആശയവിനിമയം നടത്തുന്നതുകൊണ്ടാണ്, ഈ ആപ്പല്ല.</string>
+    <string name="app_settings_crash_log">ക്രാഷ് ലോഗ്</string>
+    <string name="app_settings_crash_none">ക്രാഷുകളൊന്നും രേഖപ്പെടുത്തിയിട്ടില്ല</string>
+    <plurals name="app_settings_crash_count">
+        <item quantity="one">%d ക്രാഷ് രേഖപ്പെടുത്തി</item>
+        <item quantity="other">%d ക്രാഷുകൾ രേഖപ്പെടുത്തി</item>
+    </plurals>
+    <string name="app_settings_crash_detail">Sheaf എപ്പോഴെങ്കിലും അപ്രതീക്ഷിതമായി അടഞ്ഞാൽ, ഒരു ചെറിയ സാങ്കേതിക ലോഗ് ഇവിടെ സൂക്ഷിക്കും. നിങ്ങളുടെ ഡോക്യുമെന്റുകളിൽ നിന്നുള്ള ഒന്നും അതിലില്ല, നിങ്ങൾ അയച്ചാൽ മാത്രമേ അത് പുറത്തുപോകൂ.</string>
+    <string name="app_settings_crash_send">ലോഗ് അയയ്ക്കുക</string>
+    <string name="app_settings_crash_chooser">ക്രാഷ് ലോഗ് അയയ്ക്കുക</string>
+    <string name="app_theme_system">സിസ്റ്റം</string>
+    <string name="app_theme_light">ലൈറ്റ്</string>
+    <string name="app_theme_dark">ഡാർക്ക്</string>
+    <string name="app_theme_match_system">സിസ്റ്റത്തിനനുസരിച്ച്</string>
+
+    <!-- About -->
+    <string name="app_about_offline_title">ഒന്നും ഈ ഫോണിന് പുറത്ത് പോകില്ല</string>
+    <string name="app_about_offline_body">Sheaf-ന് ഇന്റർനെറ്റ് ഉപയോഗിക്കാൻ അനുമതിയില്ല. നിയന്ത്രിച്ചതല്ല, ക്രമീകരണത്തിൽ ഓഫാക്കിയതുമല്ല - ആ അനുമതി ആപ്പിൽ ഇല്ലേയില്ല, അതിനാൽ ഇതിന് ഒരു നെറ്റ്‌വർക്ക് കണക്ഷൻ തുറക്കാനേ കഴിയില്ല.\n\nനിങ്ങളുടെ ഡോക്യുമെന്റുകൾ വായിക്കുന്നതും എഴുതുന്നതും ഈ ഉപകരണത്തിൽ മാത്രമാണ്, മറ്റെവിടെയുമല്ല. നിങ്ങൾക്ക് തന്നെ ഇത് പരിശോധിക്കാം: ഒരു ആപ്പ് പ്രഖ്യാപിക്കുന്ന എല്ലാ അനുമതികളും Play Store ലിസ്റ്റിംഗിൽ കാണാം, ഈ ആപ്പ് നെറ്റ്‌വർക്ക് ആക്‌സസ് ഒന്നും പ്രഖ്യാപിക്കുന്നില്ല.</string>
+    <string name="app_about_feedback_title">എന്താണ് പ്രശ്നമെന്ന് ഞങ്ങളോട് പറയൂ</string>
+    <string name="app_about_feedback_body">ക്രാഷ് റിപ്പോർട്ടിംഗ് ഇല്ല, കാരണം ക്രാഷ് റിപ്പോർട്ട് അയയ്ക്കാൻ ഇന്റർനെറ്റ് വേണം. എന്തെങ്കിലും പ്രശ്നമുണ്ടായാൽ, അത് സംഭവിച്ചപ്പോൾ നിങ്ങൾ എന്താണ് ചെയ്തുകൊണ്ടിരുന്നതെന്ന് ഞങ്ങളോട് പറയുന്നതാണ് ഏറ്റവും വേഗത്തിലുള്ള പരിഹാരം.</string>
+    <string name="app_about_email">ഞങ്ങൾക്ക് ഇമെയിൽ ചെയ്യുക</string>
+    <string name="app_about_feedback_note">ഏതെങ്കിലും ഒന്ന് തുറക്കുമ്പോൾ വിലാസം മറ്റൊരു ആപ്പിന് കൈമാറും, അത് സ്വന്തം അനുമതികളോടെ അയയ്ക്കും. Sheaf-ന് അപ്പോഴും ഒരു സോക്കറ്റ് തുറക്കാനാകില്ല, നിങ്ങളുടെ ഡോക്യുമെന്റുകളെക്കുറിച്ചുള്ള ഒന്നും അതിനൊപ്പം പോകുന്നില്ല.</string>
+    <string name="app_about_working_title">താൽക്കാലിക ഫയലുകൾ</string>
+    <string name="app_about_working_body">Sheaf ഒരു ഡോക്യുമെന്റിൽ പ്രവർത്തിക്കുന്നതിന് മുമ്പ് അതിന്റെ പകർപ്പ് എടുക്കുന്നു, അതിനാൽ നിങ്ങളുടെ ഒറിജിനലിൽ ഒരിക്കലും മാറ്റം വരില്ല. നിങ്ങൾ മായ്ക്കുന്നതുവരെ പകർപ്പുകളും ഫലങ്ങളും ആപ്പിന്റെ സ്വന്തം സ്റ്റോറേജിൽ തുടരും, അവ എവിടെയും ബാക്കപ്പ് ചെയ്യില്ല.</string>
+    <string name="app_about_cleared">മായ്ച്ചു</string>
+    <string name="app_about_clear_now">ഇപ്പോൾ മായ്ക്കുക</string>
+    <string name="app_about_working_note">നിങ്ങൾ ഇതിനകം സേവ് ചെയ്തതോ ഷെയർ ചെയ്തതോ ആയവ നിലനിൽക്കും - ഇത് Sheaf-ന്റെ സ്വന്തം താൽക്കാലിക സ്ഥലം മാത്രമേ മായ്ക്കൂ.</string>
+    <string name="app_about_free_title">സൗജന്യം, എന്നും അങ്ങനെ തന്നെ</string>
+    <string name="app_about_free_body">Sheaf-ലെ എല്ലാ ടൂളുകളും സൗജന്യമാണ്. പരസ്യങ്ങളില്ല, സബ്‌സ്ക്രിപ്ഷനില്ല, അക്കൗണ്ടില്ല, പണം ചെലവാക്കേണ്ട ഒരു സെർവറും പിന്നിലില്ല. ഇത് നിങ്ങൾക്ക് ഉപകാരപ്പെട്ടെങ്കിൽ, ഒരു കാപ്പി വാങ്ങിത്തരുന്നത് സന്തോഷം - പൂർണ്ണമായും നിങ്ങളുടെ ഇഷ്ടം.</string>
+    <string name="app_about_coffee">ഞങ്ങൾക്ക് ഒരു കാപ്പി വാങ്ങിത്തരൂ</string>
+    <string name="app_about_rate">Google Play-യിൽ Sheaf-ന് റേറ്റിംഗ് നൽകുക</string>
+    <string name="app_about_privacy">സ്വകാര്യതാ നയം</string>
+    <string name="app_about_made_by">%1$s നിർമ്മിച്ചത് · %2$s</string>
+    <string name="app_about_version">പതിപ്പ് %1$s</string>
+
+    <!-- First-launch intro -->
+    <string name="app_intro_offline_title">ഒന്നും നിങ്ങളുടെ ഫോണിന് പുറത്ത് പോകില്ല</string>
+    <string name="app_intro_offline_body">Sheaf-ന് ഇന്റർനെറ്റ് അനുമതി ഒട്ടുമില്ല. എല്ലാ ടൂളുകളും ഈ ഉപകരണത്തിൽ തന്നെ പ്രവർത്തിക്കുന്നു, അതിനാൽ ഒരു കരാറോ ബാങ്ക് സ്റ്റേറ്റ്മെന്റോ ഒരിക്കലും എവിടെയും അപ്‌ലോഡ് ചെയ്യപ്പെടില്ല.</string>
+    <string name="app_intro_free_title">എല്ലാ ടൂളുകളും സൗജന്യം</string>
+    <string name="app_intro_free_body">ലയിപ്പിക്കൽ, കംപ്രസ് ചെയ്യൽ, ഒപ്പിടൽ, സ്കാൻ, OCR, കൺവേർട്ട് ചെയ്യൽ തുടങ്ങി എല്ലാം. പരസ്യങ്ങളില്ല, അക്കൗണ്ടില്ല, സബ്‌സ്ക്രിപ്ഷനില്ല, പേജ് പരിധിയുമില്ല.</string>
+    <string name="app_intro_original_title">നിങ്ങളുടെ ഒറിജിനൽ ഫയലിൽ ഒരിക്കലും മാറ്റം വരില്ല</string>
+    <string name="app_intro_original_body">ഓരോ ടൂളും ഒരു പുതിയ ഫയൽ ഉണ്ടാക്കുന്നു, നിങ്ങൾ തിരഞ്ഞെടുത്ത ഫയൽ അതുപോലെ തന്നെ നിലനിർത്തുന്നു. ഫലം എവിടെ സേവ് ചെയ്യണമെന്ന് നിങ്ങൾ തീരുമാനിക്കും.</string>
+    <string name="app_intro_skip">ഒഴിവാക്കുക</string>
+    <string name="app_intro_position">കാർഡ് %1$d / %2$d</string>
+    <string name="app_intro_start">ആരംഭിക്കുക</string>
+    <string name="app_intro_next">അടുത്തത്</string>
+
+    <!-- Home-screen widgets -->
+    <string name="app_widget_recent_title">Sheaf-ൽ അടുത്തിടെ</string>
+    <string name="app_widget_open">തുറക്കുക</string>
+    <string name="app_widget_empty">Sheaf-ൽ നിങ്ങൾ തുറക്കുന്ന ഡോക്യുമെന്റുകൾ ഇവിടെ കാണാം.</string>
+    <string name="app_widget_recent_at_page">%1$s · പേജ് %2$d</string>
+
+    <!-- Reading and saving files -->
+    <string name="app_error_open_revoked">%1$s തുറക്കാനായില്ല. അതിന്റെ ഉടമയായ ആപ്പ് ആക്‌സസ് പിൻവലിച്ചിരിക്കാം.</string>
+    <string name="app_error_empty">%1$s ശൂന്യമാണ്.</string>
+    <string name="app_error_write_location">നിങ്ങൾ തിരഞ്ഞെടുത്ത സ്ഥലത്തേക്ക് എഴുതാനായില്ല.</string>
+    <string name="app_error_write_removed_replaced">%1$s എഴുതാനായില്ല. അപൂർണ്ണമായ ഫയൽ നീക്കം ചെയ്തു, അതിനാൽ അത് മാറ്റിസ്ഥാപിച്ച ഫയലും ഇല്ലാതായി.</string>
+    <string name="app_error_write_removed">%1$s എഴുതാനായില്ല. അപൂർണ്ണമായ ഫയൽ നീക്കം ചെയ്തു.</string>
+    <string name="app_error_write_incomplete">%1$s എഴുതാനായില്ല. നിങ്ങൾ തിരഞ്ഞെടുത്ത ഫയൽ ഇപ്പോൾ അപൂർണ്ണമാണ്, അത് തുറക്കില്ല.</string>
+    <string name="app_error_write_left_behind">%1$s എഴുതാനായില്ല. ആ ഫോൾഡറിൽ ഒരു അപൂർണ്ണ ഫയൽ ബാക്കിയുണ്ട്, അത് തുറക്കില്ല.</string>
+    <string name="app_error_with_reason">%1$s %2$s</string>
+    <string name="app_error_permission_withdrawn">ആ ഫോൾഡറിനുള്ള Sheaf-ന്റെ അനുമതി പിൻവലിച്ചു.</string>
+    <string name="app_error_no_space">ആ സ്റ്റോറേജിൽ സ്ഥലം ബാക്കിയില്ല.</string>
+    <string name="app_error_read_only">ആ സ്റ്റോറേജ് വായിക്കാൻ മാത്രമുള്ളതാണ്.</string>
+    <string name="app_error_folder_gone">ആ ഫോൾഡർ ഇപ്പോൾ ലഭ്യമല്ല.</string>
+    <string name="app_error_folder_denied">ആ ഫോൾഡറിലേക്ക് എഴുതാൻ Sheaf-ന് ഇനി അനുമതിയില്ല.</string>
+    <string name="app_error_create_failed">%1$s അവിടെ ഉണ്ടാക്കാനായില്ല.</string>
+    <string name="app_print_no_destination">ഡോക്യുമെന്റ് എഴുതാൻ ഒരിടവും ഉണ്ടായിരുന്നില്ല.</string>
+    <string name="app_print_failed">ഡോക്യുമെന്റ് പ്രിന്ററിലേക്ക് അയയ്ക്കാനായില്ല.</string>
+    <string name="app_bookmark_default">പേജ് %1$d</string>
+
+    <!-- Background jobs -->
+    <string name="app_job_done">പൂർത്തിയായി</string>
+    <string name="app_job_file_progress">ഫയൽ %1$d / %2$d · %3$s</string>
+    <string name="app_job_skipped_deadline">Android ഒരു പശ്ചാത്തല ജോലി ആറ് മണിക്കൂറിന് ശേഷം നിർത്തും, അതിനാൽ Sheaf അപ്പോൾ ചെയ്തുകൊണ്ടിരുന്ന ഫയൽ പൂർത്തിയാക്കി നിർത്തി. ഇത് വീണ്ടും പ്രവർത്തിപ്പിക്കുക.</string>
+    <string name="app_job_not_started">ഈ പ്രവർത്തനം ആരംഭിക്കാനായില്ല. വീണ്ടും ആരംഭിക്കുക.</string>
+    <string name="app_job_lost">ആപ്പ് റീസ്റ്റാർട്ട് ആയപ്പോൾ ഈ പ്രവർത്തനം നഷ്ടപ്പെട്ടു. വീണ്ടും ആരംഭിക്കുക.</string>
+    <string name="app_job_out_of_memory">ഉപകരണം നൽകുന്നതിലും കൂടുതൽ മെമ്മറി ഈ ഡോക്യുമെന്റിന് വേണ്ടിവന്നു. ഒരേസമയം കുറച്ച് പേജുകൾ മാത്രം ശ്രമിക്കുക.</string>
+    <string name="app_job_background_start">Sheaf പശ്ചാത്തലത്തിലായിരുന്നപ്പോൾ ഈ പ്രവർത്തനം ആരംഭിക്കാൻ Android അനുവദിച്ചില്ല. Sheaf തുറന്ന് വീണ്ടും ആരംഭിക്കുക.</string>
+    <string name="app_job_stopped_unexpectedly">പ്രവർത്തനം അപ്രതീക്ഷിതമായി നിന്നുപോയി.</string>
+    <string name="app_job_too_long">Android ഒരു പശ്ചാത്തല ജോലി ആറ് മണിക്കൂറിന് ശേഷം നിർത്തും, ഈ ഫയലിന് മാത്രം അതിലും കൂടുതൽ സമയം വേണ്ടിവന്നു. ചെറിയ ഭാഗങ്ങളായോ ഒരേസമയം കുറച്ച് പേജുകളുമായോ ശ്രമിക്കുക.</string>
+    <string name="app_job_stopped_by_system">പൂർത്തിയാകുന്നതിന് മുമ്പ് Android ഈ പ്രവർത്തനം നിർത്തി; സാധാരണയായി സ്റ്റോറേജ് കുറഞ്ഞതോ ഏറെ നേരം പ്രവർത്തിച്ചതോ ആണ് കാരണം. വീണ്ടും ആരംഭിക്കുക.</string>
+</resources>

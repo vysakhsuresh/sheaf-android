@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="job_channel_name">డాక్యుమెంట్‌పై పని జరుగుతోంది</string>
+    <string name="job_channel_description">Sheaf ఫైల్‌ను ప్రాసెస్ చేస్తున్నప్పుడు ప్రోగ్రెస్ చూపిస్తుంది. శబ్దం ఉండదు.</string>
+    <string name="job_progress">%2$dలో %1$d</string>
+
+    <string name="shortcut_scan_short">స్కాన్</string>
+    <string name="shortcut_scan_long">డాక్యుమెంట్‌ను స్కాన్ చేయండి</string>
+    <string name="shortcut_merge_short">విలీనం</string>
+    <string name="shortcut_merge_long">PDFలను విలీనం చేయండి</string>
+    <string name="shortcut_compress_short">కంప్రెస్</string>
+    <string name="shortcut_compress_long">PDFను కంప్రెస్ చేయండి</string>
+
+    <string name="widget_quick_label">స్కాన్ చేసి తెరవండి</string>
+    <string name="widget_quick_description">ఒకే ట్యాప్‌తో డాక్యుమెంట్‌ను స్కాన్ చేయండి లేదా PDFను తెరవండి.</string>
+    <string name="widget_recents_label">ఇటీవలి డాక్యుమెంట్‌లు</string>
+    <string name="widget_recents_description">మీరు చదువుతున్న డాక్యుమెంట్‌లు, ప్రతిదీ ఆపిన చోటు నుండి ఒక్క ట్యాప్ దూరంలో.</string>
+</resources>

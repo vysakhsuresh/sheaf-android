@@ -30,6 +30,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.ui.theme.SheafColors
 
 /**
@@ -57,7 +59,7 @@ fun SheafTopBar(
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         if (onBack != null) {
-            RoundIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", onClick = onBack)
+            RoundIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.app_back), onClick = onBack)
         }
         if (iconRes != null) {
             IconTile(iconRes = iconRes, accent = accent ?: SheafColors.Band, size = 36.dp)

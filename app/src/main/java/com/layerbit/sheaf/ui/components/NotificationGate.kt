@@ -16,6 +16,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.res.stringResource
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.SheafApplication
 import com.layerbit.sheaf.ui.theme.SheafColors
 
@@ -51,10 +53,10 @@ fun rememberNotificationGate(): (start: () -> Unit) -> Unit {
                 waiting = null
             },
             containerColor = SheafColors.Surface,
-            title = { Text("Show progress in notifications?", color = SheafColors.Text, style = MaterialTheme.typography.titleMedium) },
+            title = { Text(stringResource(R.string.app_notify_title), color = SheafColors.Text, style = MaterialTheme.typography.titleMedium) },
             text = {
                 Text(
-                    "Long jobs keep running when you leave Sheaf. A notification shows how far along they are.",
+                    stringResource(R.string.app_notify_body),
                     color = SheafColors.Muted
                 )
             },
@@ -62,14 +64,14 @@ fun rememberNotificationGate(): (start: () -> Unit) -> Unit {
                 TextButton(onClick = {
                     explaining = false
                     request.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }) { Text("Continue", color = SheafColors.BandBright) }
+                }) { Text(stringResource(R.string.app_continue), color = SheafColors.BandBright) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     explaining = false
                     waiting?.invoke()
                     waiting = null
-                }) { Text("Not now", color = SheafColors.Muted) }
+                }) { Text(stringResource(R.string.app_not_now), color = SheafColors.Muted) }
             }
         )
     }

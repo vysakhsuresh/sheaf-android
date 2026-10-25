@@ -1,5 +1,6 @@
 package com.layerbit.sheaf.ui.intro
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -26,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -36,23 +38,23 @@ import com.layerbit.sheaf.ui.components.PrimaryButton
 import com.layerbit.sheaf.ui.theme.SheafColors
 import kotlinx.coroutines.launch
 
-private data class IntroCard(val iconRes: Int, val title: String, val body: String)
+private data class IntroCard(val iconRes: Int, @StringRes val title: Int, @StringRes val body: Int)
 
 private val cards = listOf(
     IntroCard(
         R.drawable.ic_tool_lock,
-        "Nothing leaves your phone",
-        "Sheaf has no internet permission at all. Every tool runs on this device, so a contract or a bank statement is never uploaded anywhere."
+        R.string.app_intro_offline_title,
+        R.string.app_intro_offline_body
     ),
     IntroCard(
         R.drawable.ic_tool_organise,
-        "Every tool is free",
-        "Merge, compress, sign, scan, OCR, convert and the rest. No ads, no account, no subscription, and no page limits."
+        R.string.app_intro_free_title,
+        R.string.app_intro_free_body
     ),
     IntroCard(
         R.drawable.ic_tool_read,
-        "Your original is never changed",
-        "Each tool makes a new file and leaves the one you picked exactly as it was. You choose where the result is saved."
+        R.string.app_intro_original_title,
+        R.string.app_intro_original_body
     )
 )
 
@@ -75,7 +77,7 @@ fun IntroScreen(onDone: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onDone) { Text("Skip", color = SheafColors.Muted) }
+            TextButton(onClick = onDone) { Text(stringResource(R.string.app_intro_skip), color = SheafColors.Muted) }
         }
         HorizontalPager(state = pager, modifier = Modifier.weight(1f).fillMaxWidth()) { index ->
             val card = cards[index]
@@ -86,14 +88,14 @@ fun IntroScreen(onDone: () -> Unit) {
             ) {
                 IconTile(iconRes = card.iconRes, accent = SheafColors.Band, size = 88.dp, filled = true)
                 Text(
-                    card.title,
+                    stringResource(card.title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = SheafColors.Text,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 28.dp).widthIn(max = 480.dp)
                 )
                 Text(
-                    card.body,
+                    stringResource(card.body),
                     style = MaterialTheme.typography.bodyLarge,
                     color = SheafColors.Muted,
                     textAlign = TextAlign.Center,
@@ -101,11 +103,12 @@ fun IntroScreen(onDone: () -> Unit) {
                 )
             }
         }
+        val position = stringResource(R.string.app_intro_position, pager.currentPage + 1, cards.size)
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
                 .padding(vertical = 20.dp)
-                .semantics { contentDescription = "Card ${pager.currentPage + 1} of ${cards.size}" }
+                .semantics { contentDescription = position }
         ) {
             cards.indices.forEach { i ->
                 val active = i == pager.currentPage
@@ -115,7 +118,7 @@ fun IntroScreen(onDone: () -> Unit) {
             }
         }
         PrimaryButton(
-            text = if (last) "Start" else "Next",
+            text = stringResource(if (last) R.string.app_intro_start else R.string.app_intro_next),
             onClick = {
                 if (last) onDone() else scope.launch { pager.animateScrollToPage(pager.currentPage + 1) }
             },

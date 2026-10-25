@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shared across the app's own screens -->
+    <string name="app_settings">సెట్టింగ్‌లు</string>
+    <string name="app_about">పరిచయం</string>
+    <string name="app_about_title">Sheaf పరిచయం</string>
+    <string name="app_tagline">ప్రతి PDF టూల్. మీ ఫోన్ నుండి ఏదీ బయటకు వెళ్లదు.</string>
+    <string name="app_clear">క్లియర్ చేయండి</string>
+    <string name="app_delete">తొలగించండి</string>
+    <string name="app_back">వెనుకకు</string>
+    <string name="app_continue">కొనసాగించండి</string>
+    <string name="app_not_now">ఇప్పుడు కాదు</string>
+    <string name="app_page_of">%2$dలో %1$dవ పేజీ</string>
+    <plurals name="app_page_count">
+        <item quantity="one">%d పేజీ</item>
+        <item quantity="other">%d పేజీలు</item>
+    </plurals>
+    <plurals name="app_tool_count">
+        <item quantity="one">%d టూల్</item>
+        <item quantity="other">%d టూల్స్</item>
+    </plurals>
+    <string name="app_pill_no_internet">ఇంటర్నెట్ లేదు</string>
+    <string name="app_pill_no_account">ఖాతా లేదు</string>
+    <string name="app_pill_no_tracking">ట్రాకింగ్ లేదు</string>
+
+    <!-- Open a file -->
+    <string name="app_open_title">ఫైల్‌ను తెరవండి</string>
+    <string name="app_open_subtitle">Sheaf దాన్ని ఈ ఫోన్‌లోనే చూసి, ఏం చేయాలో సూచిస్తుంది</string>
+
+    <!-- Home -->
+    <string name="app_home_open_pdf">PDFను తెరవండి</string>
+    <string name="app_home_scan">స్కాన్ చేయండి</string>
+    <string name="app_home_open_any_title">ఏ టూల్ కావాలో తెలియదా? మీ ఫైల్‌ను తెరవండి</string>
+    <string name="app_home_open_any_body">PDF, ఫోటోలు, Word లేదా Excel ఫైల్, లేదా మొత్తం ఫోల్డర్: దాంతో ఏం చేయాలో Sheaf సూచిస్తుంది, మీ రెసిపీలను కూడా రన్ చేస్తుంది.</string>
+    <string name="app_home_no_match">దానికి సరిపోయేది ఏదీ లేదు. సెర్చ్ ఖాళీగా ఉన్నప్పుడు అన్ని టూల్స్ కనిపిస్తాయి - లేదా ఏం లేదో పరిచయం స్క్రీన్ నుండి మాకు చెప్పండి.</string>
+    <string name="app_home_recent_tools">మీ ఇటీవలి టూల్స్</string>
+    <string name="app_home_pick_up">ఆపిన చోటు నుండి కొనసాగించండి</string>
+    <string name="app_home_yours">మీవి</string>
+    <string name="app_home_pin_hint">టూల్‌ను పైన పిన్ చేయడానికి దాన్ని ఎక్కువసేపు నొక్కండి.</string>
+    <string name="app_home_footer">ఉచితం, ఆఫ్‌లైన్, %1$s నుండి</string>
+    <string name="app_home_pill_offline">ఆఫ్‌లైన్</string>
+    <string name="app_home_pill_no_internet">ఇంటర్నెట్ అనుమతి లేదు</string>
+    <string name="app_home_search_hint">టూల్స్‌ను వెతకండి: చిన్నదిగా చేయి, లాక్, సంతకం, హిందీ…</string>
+    <string name="app_home_pinned">పిన్ చేసినవి</string>
+    <string name="app_home_remove_recent">లిస్ట్ నుండి తీసివేయండి</string>
+    <string name="app_home_recent_details">%1$s · %2$s</string>
+
+    <!-- The notification ask before the first job -->
+    <string name="app_notify_title">నోటిఫికేషన్‌లలో ప్రోగ్రెస్ చూపించాలా?</string>
+    <string name="app_notify_body">మీరు Sheaf నుండి బయటకు వెళ్లినా పెద్ద పనులు కొనసాగుతాయి. అవి ఎంతవరకు వచ్చాయో నోటిఫికేషన్ చూపిస్తుంది.</string>
+
+    <!-- Settings -->
+    <string name="app_settings_appearance">రూపం</string>
+    <string name="app_settings_appearance_note">వీటిలో ఏది ఆన్‌లో ఉన్నా, పేజీ ఎప్పుడూ తెల్ల కాగితంపైనే కనిపిస్తుంది. వ్యూయర్‌లోని నైట్ రంగులు పేజీ రంగులనే తిరగేస్తాయి, అది డాక్యుమెంట్ సొంత మెనూలోని వేరే స్విచ్.</string>
+    <string name="app_settings_reading">చదవడం</string>
+    <string name="app_settings_keep_on">స్క్రీన్‌ను ఆన్‌లో ఉంచండి</string>
+    <string name="app_settings_keep_on_detail">డాక్యుమెంట్ తెరిచి ఉన్నంతసేపు. స్క్రీన్‌ను తాకకుండా ప్రజలు చేసే ఒకే పని చదవడం.</string>
+    <string name="app_settings_resume">ఆపిన చోటే మళ్లీ తెరవండి</string>
+    <string name="app_settings_resume_detail">ప్రతి డాక్యుమెంట్‌కు పేజీని గుర్తుంచుకుంటుంది. పేజీ నంబర్ మాత్రమే స్టోర్ అవుతుంది, ఫైల్ లోపలి ఏదీ కాదు.</string>
+    <string name="app_settings_badge">పేజీ కౌంటర్‌ను చూపించండి</string>
+    <string name="app_settings_badge_detail">పేజీ కింది భాగంలో ఉండే బ్యాడ్జ్. వేరే పేజీకి వెళ్లడానికి దాన్ని నొక్కండి.</string>
+    <string name="app_settings_finish">పని పూర్తయినప్పుడు</string>
+    <string name="app_settings_open_result">ఫలితాన్ని వెంటనే తెరవండి</string>
+    <string name="app_settings_open_result_detail">పూర్తయిన డాక్యుమెంట్ సిద్ధం కాగానే వ్యూయర్‌లో చూపిస్తుంది.</string>
+    <string name="app_settings_editable_marks">మార్కులను ఎడిట్ చేయగల యానోటేషన్‌లుగా సేవ్ చేయండి</string>
+    <string name="app_settings_editable_marks_detail">మార్క్ అప్ టూల్ హైలైట్‌లు, డ్రాయింగ్‌లు, నోట్స్‌ను ఏ PDF రీడర్‌లో అయినా తర్వాత ఎడిట్ చేయగల లేదా తొలగించగల యానోటేషన్‌లుగా ఉంచుతుంది. ఆఫ్ చేస్తే అవి పేజీలోనే గీయబడతాయి, కాబట్టి చేసినట్లే ఉంటాయి. సంతకం, ప్రాంతాలను తీసివేయి టూల్స్ ఎప్పుడూ పేజీలోనే గీస్తాయి.</string>
+    <string name="app_settings_ask_save">ప్రతిసారీ ఎక్కడ సేవ్ చేయాలో అడగండి</string>
+    <string name="app_settings_ask_save_detail">ఆఫ్ చేస్తే ఫలితాలు మీరు ఎంచుకున్న ఒకే ఫోల్డర్‌కు వెళ్తాయి, అందుకే ఎగుమతి చేసిన నలభై పేజీలను సేవ్ చేయడం నలభై సార్లు కాకుండా ఒకేసారి అవుతుంది.</string>
+    <string name="app_settings_space">స్టోరేజ్, హిస్టరీ</string>
+    <string name="app_settings_working_files">ఈ ఫోన్‌లోని వర్కింగ్ ఫైల్‌లు</string>
+    <string name="app_settings_working_files_detail">సేవ్ చేయడానికి వేచి ఉన్న ఫలితాలు, మీరు తెరిచిన డాక్యుమెంట్‌ల కాపీలు. Sheaf వీటిని తనే తగ్గిస్తుంది; మీకు కావాల్సినవి సేవ్ చేసిన తర్వాత ఇప్పుడు క్లియర్ చేయడం సురక్షితమే.</string>
+    <string name="app_settings_recents">ఇటీవలి డాక్యుమెంట్‌లు</string>
+    <string name="app_settings_recents_detail">హోమ్ స్క్రీన్‌లోని లిస్ట్, ప్రతి దాంట్లో మీరు ఎక్కడి వరకు వచ్చారో.</string>
+    <string name="app_settings_bookmarks">గుర్తు పెట్టిన పేజీలు</string>
+    <plurals name="app_settings_bookmark_count">
+        <item quantity="one">మీ డాక్యుమెంట్‌లలో %d పేజీకి స్టార్ ఇచ్చారు.</item>
+        <item quantity="other">మీ డాక్యుమెంట్‌లలో %d పేజీలకు స్టార్ ఇచ్చారు.</item>
+    </plurals>
+    <string name="app_settings_bookmarks_none">ఇంకా ఏవీ లేవు. వ్యూయర్‌లోని స్టార్ పేజీని గుర్తు పెడుతుంది.</string>
+    <string name="app_settings_cannot">ఈ యాప్ చేయలేనివి</string>
+    <string name="app_settings_cannot_detail">Sheafకు ఇంటర్నెట్ అనుమతి అసలు లేదు. ఇది డాక్యుమెంట్‌ను అప్‌లోడ్ చేయలేదు, క్రాష్‌ను రిపోర్ట్ చేయలేదు, అప్‌డేట్ కోసం చెక్ చేయలేదు - మా మాట నమ్మాల్సిన అవసరం లేకుండా, రిపోజిటరీలోని manifest ద్వారా మీరే దీన్ని ధృవీకరించవచ్చు. ప్రింటింగ్ పనిచేస్తుంది, ఎందుకంటే ఆ పని చేసేది సిస్టమ్ ప్రింట్ సర్వీస్, ఈ యాప్ కాదు.</string>
+    <string name="app_settings_crash_log">క్రాష్ లాగ్</string>
+    <string name="app_settings_crash_none">క్రాష్‌లు ఏవీ నమోదు కాలేదు</string>
+    <plurals name="app_settings_crash_count">
+        <item quantity="one">%d క్రాష్ నమోదైంది</item>
+        <item quantity="other">%d క్రాష్‌లు నమోదయ్యాయి</item>
+    </plurals>
+    <string name="app_settings_crash_detail">Sheaf ఎప్పుడైనా అనుకోకుండా మూసుకుపోతే, చిన్న టెక్నికల్ లాగ్ ఇక్కడ ఉంచబడుతుంది. అందులో మీ డాక్యుమెంట్‌ల నుండి ఏదీ ఉండదు, మీరు పంపితేనే అది పంపబడుతుంది.</string>
+    <string name="app_settings_crash_send">లాగ్‌ను పంపండి</string>
+    <string name="app_settings_crash_chooser">క్రాష్ లాగ్‌ను పంపండి</string>
+    <string name="app_theme_system">సిస్టమ్</string>
+    <string name="app_theme_light">లైట్</string>
+    <string name="app_theme_dark">డార్క్</string>
+    <string name="app_theme_match_system">సిస్టమ్ ప్రకారం</string>
+
+    <!-- About -->
+    <string name="app_about_offline_title">ఈ ఫోన్ నుండి ఏదీ బయటకు వెళ్లదు</string>
+    <string name="app_about_offline_body">Sheafకు ఇంటర్నెట్‌ను ఉపయోగించే అనుమతి లేదు. పరిమితం చేయలేదు, సెట్టింగ్‌లలో ఆఫ్ చేయలేదు - ఆ అనుమతే యాప్‌లో లేదు, కాబట్టి ప్రాసెస్ నెట్‌వర్క్ కనెక్షన్‌ను అసలు తెరవలేదు.\n\nమీ డాక్యుమెంట్‌లు ఈ పరికరంలోనే చదవబడతాయి, రాయబడతాయి, మరెక్కడా కాదు. దీన్ని మీరే చెక్ చేయవచ్చు: యాప్ ప్రకటించే ప్రతి అనుమతిని Play Store లిస్టింగ్ చూపిస్తుంది, ఈ యాప్ నెట్‌వర్క్ యాక్సెస్‌ను ప్రకటించదు.</string>
+    <string name="app_about_feedback_title">ఏం తప్పు జరిగిందో మాకు చెప్పండి</string>
+    <string name="app_about_feedback_body">క్రాష్ రిపోర్టింగ్ లేదు, ఎందుకంటే క్రాష్ రిపోర్ట్ పంపడానికి ఇంటర్నెట్ కావాలి. ఏదైనా తప్పు జరిగితే, అది జరిగినప్పుడు మీరు ఏం చేస్తున్నారో మాకు చెప్పడమే వేగవంతమైన పరిష్కారం.</string>
+    <string name="app_about_email">మాకు ఈమెయిల్ చేయండి</string>
+    <string name="app_about_feedback_note">దేన్ని తెరిచినా అడ్రస్ మరో యాప్‌కు వెళ్తుంది, అది తన సొంత అనుమతులతో పంపుతుంది. Sheaf ఇప్పటికీ సాకెట్‌ను తెరవలేదు, మీ డాక్యుమెంట్‌ల గురించి ఏదీ దాంతో వెళ్లదు.</string>
+    <string name="app_about_working_title">వర్కింగ్ ఫైల్‌లు</string>
+    <string name="app_about_working_body">Sheaf డాక్యుమెంట్‌పై పని చేసే ముందు దాన్ని కాపీ చేస్తుంది, కాబట్టి మీ ఒరిజినల్‌ను ఎప్పుడూ తాకదు. కాపీలు, ఫలితాలు మీరు క్లియర్ చేసే వరకు యాప్ సొంత స్టోరేజ్‌లో ఉంటాయి, వాటిని ఎక్కడా బ్యాకప్ చేయరు.</string>
+    <string name="app_about_cleared">క్లియర్ చేయబడింది</string>
+    <string name="app_about_clear_now">ఇప్పుడే క్లియర్ చేయండి</string>
+    <string name="app_about_working_note">మీరు ఇప్పటికే సేవ్ చేసినవి లేదా షేర్ చేసినవి అలాగే ఉంటాయి - ఇది Sheaf సొంత తాత్కాలిక స్థలాన్ని మాత్రమే క్లియర్ చేస్తుంది.</string>
+    <string name="app_about_free_title">ఉచితం, ఎప్పటికీ అలాగే</string>
+    <string name="app_about_free_body">Sheafలోని ప్రతి టూల్ ఉచితం. యాడ్‌లు లేవు, సబ్‌స్క్రిప్షన్ లేదు, ఖాతా లేదు, దీని వెనుక డబ్బు చెల్లించాల్సిన సర్వర్ కూడా లేదు. ఇది మీకు ఏదైనా ఉపయోగపడితే, ఒక కాఫీ స్వాగతం - అది పూర్తిగా మీ ఇష్టం.</string>
+    <string name="app_about_coffee">మాకు ఒక కాఫీ ఇప్పించండి</string>
+    <string name="app_about_rate">Google Playలో Sheafకు రేటింగ్ ఇవ్వండి</string>
+    <string name="app_about_privacy">గోప్యతా విధానం</string>
+    <string name="app_about_made_by">%1$s రూపొందించింది · %2$s</string>
+    <string name="app_about_version">వెర్షన్ %1$s</string>
+
+    <!-- First-launch intro -->
+    <string name="app_intro_offline_title">మీ ఫోన్ నుండి ఏదీ బయటకు వెళ్లదు</string>
+    <string name="app_intro_offline_body">Sheafకు ఇంటర్నెట్ అనుమతి అసలు లేదు. ప్రతి టూల్ ఈ పరికరంలోనే రన్ అవుతుంది, కాబట్టి ఒప్పందం గానీ బ్యాంక్ స్టేట్‌మెంట్ గానీ ఎక్కడికీ అప్‌లోడ్ కాదు.</string>
+    <string name="app_intro_free_title">ప్రతి టూల్ ఉచితం</string>
+    <string name="app_intro_free_body">విలీనం, కంప్రెస్, సంతకం, స్కాన్, OCR, మార్పిడి, ఇంకా మరెన్నో. యాడ్‌లు లేవు, ఖాతా లేదు, సబ్‌స్క్రిప్షన్ లేదు, పేజీ పరిమితులు లేవు.</string>
+    <string name="app_intro_original_title">మీ ఒరిజినల్ ఫైల్ ఎప్పుడూ మారదు</string>
+    <string name="app_intro_original_body">ప్రతి టూల్ కొత్త ఫైల్‌ను తయారు చేస్తుంది, మీరు ఎంచుకున్నదాన్ని ఉన్నది ఉన్నట్లే వదిలేస్తుంది. ఫలితం ఎక్కడ సేవ్ కావాలో మీరే ఎంచుకుంటారు.</string>
+    <string name="app_intro_skip">స్కిప్ చేయండి</string>
+    <string name="app_intro_position">%2$dలో %1$dవ కార్డ్</string>
+    <string name="app_intro_start">ప్రారంభించండి</string>
+    <string name="app_intro_next">తర్వాత</string>
+
+    <!-- Home-screen widgets -->
+    <string name="app_widget_recent_title">Sheafలో ఇటీవలివి</string>
+    <string name="app_widget_open">తెరవండి</string>
+    <string name="app_widget_empty">మీరు Sheafలో తెరిచే డాక్యుమెంట్‌లు ఇక్కడ కనిపిస్తాయి.</string>
+    <string name="app_widget_recent_at_page">%1$s · పేజీ %2$d</string>
+
+    <!-- Reading and saving files -->
+    <string name="app_error_open_revoked">%1$sను తెరవడం సాధ్యం కాలేదు. దాని యజమాని యాప్ యాక్సెస్‌ను రద్దు చేసి ఉండవచ్చు.</string>
+    <string name="app_error_empty">%1$s ఖాళీగా ఉంది.</string>
+    <string name="app_error_write_location">మీరు ఎంచుకున్న లొకేషన్‌లో రాయడం సాధ్యం కాలేదు.</string>
+    <string name="app_error_write_removed_replaced">%1$sను రాయడం సాధ్యం కాలేదు. అసంపూర్ణ ఫైల్ తీసివేయబడింది, కాబట్టి దాని స్థానంలో ఉన్న ఫైల్ కూడా పోయింది.</string>
+    <string name="app_error_write_removed">%1$sను రాయడం సాధ్యం కాలేదు. అసంపూర్ణ ఫైల్ తీసివేయబడింది.</string>
+    <string name="app_error_write_incomplete">%1$sను రాయడం సాధ్యం కాలేదు. మీరు ఎంచుకున్న ఫైల్ ఇప్పుడు అసంపూర్ణంగా ఉంది, అది తెరుచుకోదు.</string>
+    <string name="app_error_write_left_behind">%1$sను రాయడం సాధ్యం కాలేదు. ఆ ఫోల్డర్‌లో ఒక అసంపూర్ణ ఫైల్ మిగిలిపోయింది, అది తెరుచుకోదు.</string>
+    <string name="app_error_with_reason">%1$s %2$s</string>
+    <string name="app_error_permission_withdrawn">ఆ ఫోల్డర్ కోసం Sheafకు ఇచ్చిన అనుమతి ఉపసంహరించబడింది.</string>
+    <string name="app_error_no_space">ఆ స్టోరేజ్‌లో ఖాళీ స్థలం లేదు.</string>
+    <string name="app_error_read_only">ఆ స్టోరేజ్ చదవడానికి మాత్రమే.</string>
+    <string name="app_error_folder_gone">ఆ ఫోల్డర్ ఇప్పుడు అందుబాటులో లేదు.</string>
+    <string name="app_error_folder_denied">ఆ ఫోల్డర్‌లో రాయడానికి Sheafకు ఇకపై అనుమతి లేదు.</string>
+    <string name="app_error_create_failed">%1$sను అక్కడ సృష్టించడం సాధ్యం కాలేదు.</string>
+    <string name="app_print_no_destination">డాక్యుమెంట్‌ను రాయడానికి చోటు లేదు.</string>
+    <string name="app_print_failed">డాక్యుమెంట్‌ను ప్రింటర్‌కు పంపడం సాధ్యం కాలేదు.</string>
+    <string name="app_bookmark_default">పేజీ %1$d</string>
+
+    <!-- Background jobs -->
+    <string name="app_job_done">పూర్తయింది</string>
+    <string name="app_job_file_progress">ఫైల్ %1$d / %2$d · %3$s</string>
+    <string name="app_job_skipped_deadline">Android బ్యాక్‌గ్రౌండ్ పనిని ఆరు గంటల తర్వాత ఆపేస్తుంది, కాబట్టి Sheaf అప్పుడు చేస్తున్న ఫైల్‌ను పూర్తి చేసి ఆగిపోయింది. దీన్ని మళ్లీ రన్ చేయండి.</string>
+    <string name="app_job_not_started">ఈ ఆపరేషన్‌ను ప్రారంభించడం సాధ్యం కాలేదు. మళ్లీ ప్రారంభించండి.</string>
+    <string name="app_job_lost">యాప్ రీస్టార్ట్ అయినప్పుడు ఈ ఆపరేషన్ పోయింది. మళ్లీ ప్రారంభించండి.</string>
+    <string name="app_job_out_of_memory">ఈ డాక్యుమెంట్‌కు పరికరం ఇవ్వగలిగిన దానికంటే ఎక్కువ మెమరీ అవసరమైంది. ఒకేసారి తక్కువ పేజీలతో ప్రయత్నించండి.</string>
+    <string name="app_job_background_start">Sheaf బ్యాక్‌గ్రౌండ్‌లో ఉన్నప్పుడు ఈ ఆపరేషన్ ప్రారంభం కావడానికి Android అనుమతించలేదు. Sheafను తెరిచి మళ్లీ ప్రారంభించండి.</string>
+    <string name="app_job_stopped_unexpectedly">ఆపరేషన్ అనుకోకుండా ఆగిపోయింది.</string>
+    <string name="app_job_too_long">Android బ్యాక్‌గ్రౌండ్ పనిని ఆరు గంటల తర్వాత ఆపేస్తుంది, ఈ ఒక్క ఫైల్‌కే అంతకంటే ఎక్కువ సమయం పట్టింది. చిన్న భాగాలుగా, లేదా ఒకేసారి తక్కువ పేజీలతో ప్రయత్నించండి.</string>
+    <string name="app_job_stopped_by_system">ఈ ఆపరేషన్ పూర్తి కాకముందే Android దాన్ని ఆపేసింది, సాధారణంగా స్టోరేజ్ తక్కువగా ఉండటం లేదా ఎక్కువసేపు రన్ కావడం దీనికి కారణం. మళ్లీ ప్రారంభించండి.</string>
+</resources>

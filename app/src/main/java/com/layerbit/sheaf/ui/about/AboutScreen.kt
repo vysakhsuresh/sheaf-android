@@ -36,6 +36,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.BuildConfig
@@ -81,14 +83,9 @@ fun AboutScreen(modifier: Modifier = Modifier) {
                 Row(verticalAlignment = Alignment.Top) {
                     IconTile(iconRes = R.drawable.ic_tool_lock, accent = SheafColors.Done, filled = true)
                     Column(modifier = Modifier.padding(start = 12.dp)) {
-                        Text("Nothing leaves this phone", style = MaterialTheme.typography.titleMedium, color = SheafColors.Text)
+                        Text(stringResource(R.string.app_about_offline_title), style = MaterialTheme.typography.titleMedium, color = SheafColors.Text)
                         Text(
-                            text = "Sheaf does not have permission to use the internet. Not restricted, " +
-                                "not switched off in settings - the permission is absent from the app, " +
-                                "so the process cannot open a network connection at all.\n\n" +
-                                "Your documents are read and written on this device and nowhere else. " +
-                                "You can check this yourself: the Play Store listing shows every " +
-                                "permission an app declares, and this one declares no network access.",
+                            text = stringResource(R.string.app_about_offline_body),
                             style = MaterialTheme.typography.bodyMedium,
                             color = SheafColors.Muted,
                             modifier = Modifier.padding(top = 6.dp)
@@ -103,11 +100,9 @@ fun AboutScreen(modifier: Modifier = Modifier) {
                 Row(verticalAlignment = Alignment.Top) {
                     IconTile(iconRes = R.drawable.ic_tool_add_text, accent = Color(0xFF5B9DFF))
                     Column(modifier = Modifier.padding(start = 12.dp)) {
-                        Text("Tell us what went wrong", style = MaterialTheme.typography.titleMedium, color = SheafColors.Text)
+                        Text(stringResource(R.string.app_about_feedback_title), style = MaterialTheme.typography.titleMedium, color = SheafColors.Text)
                         Text(
-                            text = "There is no crash reporting, because sending a crash report would " +
-                                "need the internet. If something goes wrong, the fastest fix is to " +
-                                "tell us what you were doing when it happened.",
+                            text = stringResource(R.string.app_about_feedback_body),
                             style = MaterialTheme.typography.bodyMedium,
                             color = SheafColors.Muted,
                             modifier = Modifier.padding(top = 6.dp)
@@ -116,7 +111,7 @@ fun AboutScreen(modifier: Modifier = Modifier) {
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth().padding(top = 14.dp)) {
                     PrimaryButton(
-                        text = "Email us",
+                        text = stringResource(R.string.app_about_email),
                         icon = Icons.Filled.Email,
                         onClick = {
                             BrandLinks.sendEmail(
@@ -137,9 +132,7 @@ fun AboutScreen(modifier: Modifier = Modifier) {
                     )
                 }
                 Text(
-                    text = "Opening either hands the address to another app, which does the " +
-                        "sending under its own permissions. Sheaf still cannot open a socket, " +
-                        "and nothing about your documents travels with it.",
+                    text = stringResource(R.string.app_about_feedback_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = SheafColors.Dim,
                     modifier = Modifier.padding(top = 10.dp)
@@ -152,11 +145,9 @@ fun AboutScreen(modifier: Modifier = Modifier) {
                 Row(verticalAlignment = Alignment.Top) {
                     IconTile(iconRes = R.drawable.ic_tool_split_size, accent = Color(0xFF3ED3C0))
                     Column(modifier = Modifier.padding(start = 12.dp)) {
-                        Text("Working files", style = MaterialTheme.typography.titleMedium, color = SheafColors.Text)
+                        Text(stringResource(R.string.app_about_working_title), style = MaterialTheme.typography.titleMedium, color = SheafColors.Text)
                         Text(
-                            text = "Sheaf copies a document before working on it, so your original is " +
-                                "never touched. The copies and the results live in the app's own " +
-                                "storage until you clear them, and they are not backed up anywhere.",
+                            text = stringResource(R.string.app_about_working_body),
                             style = MaterialTheme.typography.bodyMedium,
                             color = SheafColors.Muted,
                             modifier = Modifier.padding(top = 6.dp)
@@ -165,12 +156,12 @@ fun AboutScreen(modifier: Modifier = Modifier) {
                 }
                 RowBetween(modifier = Modifier.padding(top = 14.dp)) {
                     Text(
-                        text = if (cleared) "Cleared" else formatBytes(workingBytes),
+                        text = if (cleared) stringResource(R.string.app_about_cleared) else formatBytes(workingBytes),
                         style = MaterialTheme.typography.headlineSmall,
                         color = if (cleared) SheafColors.Done else SheafColors.Text
                     )
                     SecondaryButton(
-                        text = "Clear now",
+                        text = stringResource(R.string.app_about_clear_now),
                         onClick = {
                             sheaf.workspace.clear()
                             sheaf.documentStore.clearImports()
@@ -182,8 +173,7 @@ fun AboutScreen(modifier: Modifier = Modifier) {
                     )
                 }
                 Text(
-                    text = "Anything you have already saved or shared is kept - this only " +
-                        "clears Sheaf's own scratch space.",
+                    text = stringResource(R.string.app_about_working_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = SheafColors.Dim,
                     modifier = Modifier.padding(top = 6.dp)
@@ -201,11 +191,9 @@ fun AboutScreen(modifier: Modifier = Modifier) {
                         androidx.compose.material3.Icon(Icons.Filled.Favorite, contentDescription = null, tint = SheafColors.BandBright, modifier = Modifier.size(20.dp))
                     }
                     Column(modifier = Modifier.padding(start = 12.dp)) {
-                        Text("Free, and staying that way", style = MaterialTheme.typography.titleMedium, color = SheafColors.Text)
+                        Text(stringResource(R.string.app_about_free_title), style = MaterialTheme.typography.titleMedium, color = SheafColors.Text)
                         Text(
-                            text = "Every tool in Sheaf is free. There are no ads, no subscription and " +
-                                "no account, and there is no server behind it to pay for. If it has " +
-                                "saved you something, a coffee is welcome and entirely optional.",
+                            text = stringResource(R.string.app_about_free_body),
                             style = MaterialTheme.typography.bodyMedium,
                             color = SheafColors.Muted,
                             modifier = Modifier.padding(top = 6.dp)
@@ -213,7 +201,7 @@ fun AboutScreen(modifier: Modifier = Modifier) {
                     }
                 }
                 PrimaryButton(
-                    text = "Buy us a coffee",
+                    text = stringResource(R.string.app_about_coffee),
                     onClick = { BrandLinks.openUrl(context, BrandLinks.COFFEE_URL) },
                     modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
                     tall = false
@@ -224,21 +212,21 @@ fun AboutScreen(modifier: Modifier = Modifier) {
         item {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
                 SecondaryButton(
-                    text = "Rate Sheaf on Google Play",
+                    text = stringResource(R.string.app_about_rate),
                     icon = Icons.Filled.Star,
                     onClick = { BrandLinks.openUrl(context, BrandLinks.PLAY_LISTING) },
                     modifier = Modifier.fillMaxWidth(),
                     tall = false
                 )
                 SecondaryButton(
-                    text = "Privacy policy",
+                    text = stringResource(R.string.app_about_privacy),
                     icon = Icons.Filled.Lock,
                     onClick = { BrandLinks.openUrl(context, BrandLinks.PRIVACY_URL) },
                     modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                     tall = false
                 )
                 TextButton(onClick = { BrandLinks.openUrl(context, BrandLinks.WEBSITE_URL) }) {
-                    Text("Made by ${BrandLinks.BRAND_LABEL} · ${BrandLinks.WEBSITE_URL.removePrefix("https://")}", color = SheafColors.Dim, style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.app_about_made_by, BrandLinks.BRAND_LABEL, BrandLinks.WEBSITE_URL.removePrefix("https://")), color = SheafColors.Dim, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -275,15 +263,15 @@ private fun Masthead() {
         }
         Text("Sheaf", style = MaterialTheme.typography.headlineMedium, color = SheafColors.Text, modifier = Modifier.padding(top = 12.dp))
         Text(
-            "Every PDF tool. Nothing leaves your phone.",
+            stringResource(R.string.app_tagline),
             style = MaterialTheme.typography.bodyMedium,
             color = SheafColors.Muted,
             textAlign = TextAlign.Center
         )
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 12.dp)) {
-            Pill("Version ${BuildConfig.VERSION_NAME}", SheafColors.Muted)
-            Pill("${ToolId.entries.size} tools", SheafColors.Band)
-            Pill("No internet", SheafColors.Done)
+            Pill(stringResource(R.string.app_about_version, BuildConfig.VERSION_NAME), SheafColors.Muted)
+            Pill(pluralStringResource(R.plurals.app_tool_count, ToolId.entries.size, ToolId.entries.size), SheafColors.Band)
+            Pill(stringResource(R.string.app_pill_no_internet), SheafColors.Done)
         }
         Spacer(Modifier.height(2.dp))
     }

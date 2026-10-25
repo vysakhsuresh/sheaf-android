@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shared across the app's own screens -->
+    <string name="app_settings">அமைப்புகள்</string>
+    <string name="app_about">அறிமுகம்</string>
+    <string name="app_about_title">Sheaf பற்றி</string>
+    <string name="app_tagline">எல்லா PDF கருவிகளும். எதுவும் உங்கள் மொபைலை விட்டு வெளியேறாது.</string>
+    <string name="app_clear">அழி</string>
+    <string name="app_delete">நீக்கு</string>
+    <string name="app_back">பின்செல்</string>
+    <string name="app_continue">தொடர்க</string>
+    <string name="app_not_now">இப்போது வேண்டாம்</string>
+    <string name="app_page_of">பக்கம் %1$d / %2$d</string>
+    <plurals name="app_page_count">
+        <item quantity="one">%d பக்கம்</item>
+        <item quantity="other">%d பக்கங்கள்</item>
+    </plurals>
+    <plurals name="app_tool_count">
+        <item quantity="one">%d கருவி</item>
+        <item quantity="other">%d கருவிகள்</item>
+    </plurals>
+    <string name="app_pill_no_internet">இணையம் இல்லை</string>
+    <string name="app_pill_no_account">கணக்கு இல்லை</string>
+    <string name="app_pill_no_tracking">கண்காணிப்பு இல்லை</string>
+
+    <!-- Open a file -->
+    <string name="app_open_title">ஒரு ஃபைலைத் திற</string>
+    <string name="app_open_subtitle">Sheaf இந்த மொபைலிலேயே அதைப் பார்த்து என்ன செய்யலாம் என்று பரிந்துரைக்கும்</string>
+
+    <!-- Home -->
+    <string name="app_home_open_pdf">PDF-ஐத் திற</string>
+    <string name="app_home_scan">ஸ்கேன் செய்</string>
+    <string name="app_home_open_any_title">எந்தக் கருவி என்று தெரியவில்லையா? உங்கள் ஃபைலைத் திறங்கள்</string>
+    <string name="app_home_open_any_body">ஒரு PDF, படங்கள், Word அல்லது Excel ஃபைல், அல்லது ஒரு முழு ஃபோல்டர்: அதை என்ன செய்யலாம் என்று Sheaf பரிந்துரைக்கும், உங்கள் ரெசிபிகளையும் இயக்கும்.</string>
+    <string name="app_home_no_match">இதற்குப் பொருந்துவது எதுவும் இல்லை. தேடல் காலியாக இருக்கும்போது எல்லாக் கருவிகளும் பட்டியலிடப்படும் - அல்லது என்ன விடுபட்டுள்ளது என்று “அறிமுகம்” திரையிலிருந்து எங்களிடம் சொல்லுங்கள்.</string>
+    <string name="app_home_recent_tools">நீங்கள் சமீபத்தில் பயன்படுத்திய கருவிகள்</string>
+    <string name="app_home_pick_up">விட்ட இடத்திலிருந்து தொடருங்கள்</string>
+    <string name="app_home_yours">உங்களுடையவை</string>
+    <string name="app_home_pin_hint">ஒரு கருவியை மேலே பின் செய்ய அதை நீண்ட நேரம் அழுத்துங்கள்.</string>
+    <string name="app_home_footer">இலவசம், ஆஃப்லைன், %1$s வழங்குவது</string>
+    <string name="app_home_pill_offline">ஆஃப்லைன்</string>
+    <string name="app_home_pill_no_internet">இணைய அனுமதி இல்லை</string>
+    <string name="app_home_search_hint">கருவிகளைத் தேடுக: சுருக்கு, பூட்டு, கையொப்பம், இந்தி…</string>
+    <string name="app_home_pinned">பின் செய்தவை</string>
+    <string name="app_home_remove_recent">பட்டியலிலிருந்து அகற்று</string>
+    <string name="app_home_recent_details">%1$s · %2$s</string>
+
+    <!-- The notification ask before the first job -->
+    <string name="app_notify_title">முன்னேற்றத்தை அறிவிப்புகளில் காட்டவா?</string>
+    <string name="app_notify_body">Sheaf-ஐ விட்டு வெளியேறினாலும் நீண்ட வேலைகள் தொடர்ந்து இயங்கும். அவை எவ்வளவு முடிந்துள்ளன என்பதை ஓர் அறிவிப்பு காட்டும்.</string>
+
+    <!-- Settings -->
+    <string name="app_settings_appearance">தோற்றம்</string>
+    <string name="app_settings_appearance_note">இவற்றில் எது இயக்கத்தில் இருந்தாலும் பக்கம் எப்போதும் வெள்ளைத் தாளிலேயே காட்டப்படும். வியூவரில் உள்ள இரவு வண்ணங்கள் பக்கத்தின் வண்ணங்களையே தலைகீழாக்கும், அது ஆவணத்தின் சொந்த மெனுவில் உள்ள தனி ஸ்விட்ச்.</string>
+    <string name="app_settings_reading">வாசிப்பு</string>
+    <string name="app_settings_keep_on">திரையை இயக்கத்திலேயே வைத்திரு</string>
+    <string name="app_settings_keep_on_detail">ஆவணம் திறந்திருக்கும்போது. திரையைத் தொடாமல் மக்கள் செய்யும் ஒரே விஷயம் வாசிப்புதான்.</string>
+    <string name="app_settings_resume">விட்ட இடத்திலேயே மீண்டும் திற</string>
+    <string name="app_settings_resume_detail">ஒவ்வொரு ஆவணத்திற்கும் பக்கத்தை நினைவில் வைக்கும். பக்க எண் மட்டுமே சேமிக்கப்படும், ஃபைலுக்குள் உள்ள எதுவும் அல்ல.</string>
+    <string name="app_settings_badge">பக்க எண்ணைக் காட்டு</string>
+    <string name="app_settings_badge_detail">பக்கத்தின் கீழே உள்ள பேட்ஜ். வேறு பக்கத்திற்குச் செல்ல அதைத் தட்டுங்கள்.</string>
+    <string name="app_settings_finish">ஒரு வேலை முடிந்ததும்</string>
+    <string name="app_settings_open_result">முடிவை உடனே திற</string>
+    <string name="app_settings_open_result_detail">முடிந்த ஆவணம் தயாரானதும் வியூவரில் காட்டும்.</string>
+    <string name="app_settings_editable_marks">குறிகளைத் திருத்தக்கூடிய குறிப்புரைகளாகச் சேமி</string>
+    <string name="app_settings_editable_marks_detail">“குறியிடு” கருவி ஹைலைட்டுகள், வரைபடங்கள், குறிப்புகள் ஆகியவற்றை எந்த PDF ரீடரிலும் பின்னர் திருத்தவோ நீக்கவோ கூடிய குறிப்புரைகளாக வைத்திருக்கும். முடக்கினால் அவை பக்கத்திலேயே வரையப்படும், எனவே உருவாக்கியபடியே இருக்கும். “கையொப்பமிடு”, “பகுதிகளை அகற்று” ஆகியவை எப்போதும் பக்கத்திலேயே வரையும்.</string>
+    <string name="app_settings_ask_save">ஒவ்வொரு முறையும் எங்கே சேமிப்பது எனக் கேள்</string>
+    <string name="app_settings_ask_save_detail">முடக்கினால், முடிவுகள் நீங்கள் தேர்ந்தெடுக்கும் ஒரே ஃபோல்டருக்குச் செல்லும்; அதனால்தான் ஏற்றுமதி செய்த நாற்பது பக்கங்களை நாற்பது முறைக்குப் பதிலாக ஒரே செயலில் சேமிக்க முடிகிறது.</string>
+    <string name="app_settings_space">சேமிப்பிடமும் வரலாறும்</string>
+    <string name="app_settings_working_files">தற்காலிக ஃபைல்கள் இந்த மொபைலில்</string>
+    <string name="app_settings_working_files_detail">சேமிக்கக் காத்திருக்கும் முடிவுகளும், நீங்கள் திறந்த ஆவணங்களின் நகல்களும். Sheaf இவற்றைத் தானே குறைத்துக்கொள்ளும்; வேண்டியதைச் சேமித்த பிறகு இப்போது அழிப்பது பாதுகாப்பானது.</string>
+    <string name="app_settings_recents">சமீபத்திய ஆவணங்கள்</string>
+    <string name="app_settings_recents_detail">முகப்புத் திரையில் உள்ள பட்டியலும், ஒவ்வொன்றிலும் நீங்கள் எதுவரை வந்தீர்கள் என்பதும்.</string>
+    <string name="app_settings_bookmarks">குறித்த பக்கங்கள்</string>
+    <plurals name="app_settings_bookmark_count">
+        <item quantity="one">உங்கள் ஆவணங்களில் %d பக்கம் நட்சத்திரமிடப்பட்டுள்ளது.</item>
+        <item quantity="other">உங்கள் ஆவணங்களில் %d பக்கங்கள் நட்சத்திரமிடப்பட்டுள்ளன.</item>
+    </plurals>
+    <string name="app_settings_bookmarks_none">இதுவரை எதுவும் இல்லை. வியூவரில் உள்ள நட்சத்திரம் ஒரு பக்கத்தைக் குறிக்கும்.</string>
+    <string name="app_settings_cannot">இந்த ஆப்ஸால் செய்ய முடியாதவை</string>
+    <string name="app_settings_cannot_detail">Sheaf-க்கு இணைய அனுமதி சிறிதும் இல்லை. இதனால் ஆவணத்தைப் பதிவேற்றவோ, செயலிழப்பைப் புகாரளிக்கவோ, புதுப்பிப்பைச் சரிபார்க்கவோ முடியாது - வாக்குறுதியை நம்புவதற்குப் பதிலாக, களஞ்சியத்தில் உள்ள மேனிஃபெஸ்ட்டைப் பார்த்து இதை நீங்களே உறுதிசெய்யலாம். அச்சிடுதல் வேலை செய்வதற்குக் காரணம், தொடர்புகொள்வது சிஸ்டத்தின் அச்சுச் சேவைதான், இந்த ஆப்ஸ் அல்ல.</string>
+    <string name="app_settings_crash_log">செயலிழப்புப் பதிவு</string>
+    <string name="app_settings_crash_none">செயலிழப்புகள் எதுவும் பதிவாகவில்லை</string>
+    <plurals name="app_settings_crash_count">
+        <item quantity="one">%d செயலிழப்பு பதிவானது</item>
+        <item quantity="other">%d செயலிழப்புகள் பதிவாகின</item>
+    </plurals>
+    <string name="app_settings_crash_detail">Sheaf எப்போதாவது எதிர்பாராமல் மூடினால், ஒரு சிறிய தொழில்நுட்பப் பதிவு இங்கே வைக்கப்படும். உங்கள் ஆவணங்களிலிருந்து எதுவும் அதில் இருக்காது, நீங்கள் அனுப்பினால் மட்டுமே அது அனுப்பப்படும்.</string>
+    <string name="app_settings_crash_send">பதிவை அனுப்பு</string>
+    <string name="app_settings_crash_chooser">செயலிழப்புப் பதிவை அனுப்பு</string>
+    <string name="app_theme_system">சிஸ்டம்</string>
+    <string name="app_theme_light">லைட்</string>
+    <string name="app_theme_dark">டார்க்</string>
+    <string name="app_theme_match_system">சிஸ்டத்திற்கு ஏற்ப</string>
+
+    <!-- About -->
+    <string name="app_about_offline_title">எதுவும் இந்த மொபைலை விட்டு வெளியேறாது</string>
+    <string name="app_about_offline_body">Sheaf-க்கு இணையத்தைப் பயன்படுத்த அனுமதி இல்லை. கட்டுப்படுத்தப்படவில்லை, அமைப்புகளில் முடக்கப்படவில்லை - அந்த அனுமதியே ஆப்ஸில் இல்லை, எனவே இதனால் நெட்வொர்க் இணைப்பைத் திறக்கவே முடியாது.\n\nஉங்கள் ஆவணங்கள் இந்தச் சாதனத்தில் மட்டுமே படிக்கப்பட்டு எழுதப்படுகின்றன, வேறு எங்கும் இல்லை. இதை நீங்களே சரிபார்க்கலாம்: ஒரு ஆப்ஸ் அறிவிக்கும் எல்லா அனுமதிகளையும் Play Store பக்கம் காட்டும், இந்த ஆப்ஸ் நெட்வொர்க் அணுகல் எதையும் அறிவிக்கவில்லை.</string>
+    <string name="app_about_feedback_title">என்ன தவறு நடந்தது என்று சொல்லுங்கள்</string>
+    <string name="app_about_feedback_body">செயலிழப்புப் புகாரளிப்பு இல்லை, ஏனெனில் செயலிழப்புப் புகாரை அனுப்ப இணையம் தேவை. ஏதேனும் தவறு நடந்தால், அது நடந்தபோது நீங்கள் என்ன செய்துகொண்டிருந்தீர்கள் என்று எங்களிடம் சொல்வதே விரைவான தீர்வு.</string>
+    <string name="app_about_email">எங்களுக்கு மின்னஞ்சல் அனுப்பு</string>
+    <string name="app_about_feedback_note">இவற்றில் எதைத் திறந்தாலும் முகவரி வேறொரு ஆப்ஸுக்குக் கொடுக்கப்படும், அது தன் சொந்த அனுமதிகளுடன் அனுப்பும். Sheaf-ஆல் அப்போதும் சாக்கெட்டைத் திறக்க முடியாது, உங்கள் ஆவணங்கள் பற்றிய எதுவும் அதனுடன் செல்லாது.</string>
+    <string name="app_about_working_title">தற்காலிக ஃபைல்கள்</string>
+    <string name="app_about_working_body">Sheaf ஓர் ஆவணத்தில் வேலை செய்வதற்கு முன் அதை நகலெடுக்கும், எனவே உங்கள் அசல் ஃபைல் ஒருபோதும் தொடப்படாது. நீங்கள் அழிக்கும் வரை நகல்களும் முடிவுகளும் ஆப்ஸின் சொந்தச் சேமிப்பிடத்தில் இருக்கும், அவை எங்கும் காப்புப் பிரதி எடுக்கப்படாது.</string>
+    <string name="app_about_cleared">அழிக்கப்பட்டது</string>
+    <string name="app_about_clear_now">இப்போதே அழி</string>
+    <string name="app_about_working_note">நீங்கள் ஏற்கெனவே சேமித்தவையும் பகிர்ந்தவையும் அப்படியே இருக்கும் - இது Sheaf-இன் சொந்தத் தற்காலிக இடத்தை மட்டுமே அழிக்கும்.</string>
+    <string name="app_about_free_title">இலவசம், எப்போதும் அப்படியே</string>
+    <string name="app_about_free_body">Sheaf-இல் உள்ள எல்லாக் கருவிகளும் இலவசம். விளம்பரங்கள் இல்லை, சந்தா இல்லை, கணக்கு இல்லை, பணம் செலவழிக்க வேண்டிய சர்வரும் பின்னால் இல்லை. இது உங்களுக்கு உதவியிருந்தால், ஒரு காபி வாங்கித் தருவதை வரவேற்கிறோம் - அது முழுக்க உங்கள் விருப்பம்.</string>
+    <string name="app_about_coffee">எங்களுக்கு ஒரு காபி வாங்கித் தாருங்கள்</string>
+    <string name="app_about_rate">Google Play-இல் Sheaf-ஐ மதிப்பிடுங்கள்</string>
+    <string name="app_about_privacy">தனியுரிமைக் கொள்கை</string>
+    <string name="app_about_made_by">உருவாக்கியது %1$s · %2$s</string>
+    <string name="app_about_version">பதிப்பு %1$s</string>
+
+    <!-- First-launch intro -->
+    <string name="app_intro_offline_title">எதுவும் உங்கள் மொபைலை விட்டு வெளியேறாது</string>
+    <string name="app_intro_offline_body">Sheaf-க்கு இணைய அனுமதி சிறிதும் இல்லை. எல்லாக் கருவிகளும் இந்தச் சாதனத்திலேயே இயங்கும், எனவே ஒப்பந்தமோ வங்கி அறிக்கையோ எங்கும் பதிவேற்றப்படாது.</string>
+    <string name="app_intro_free_title">எல்லாக் கருவிகளும் இலவசம்</string>
+    <string name="app_intro_free_body">இணைத்தல், சுருக்குதல், கையொப்பமிடுதல், ஸ்கேன், OCR, மாற்றுதல் மற்றும் பல. விளம்பரங்கள் இல்லை, கணக்கு இல்லை, சந்தா இல்லை, பக்க வரம்புகளும் இல்லை.</string>
+    <string name="app_intro_original_title">உங்கள் அசல் ஃபைல் ஒருபோதும் மாற்றப்படாது</string>
+    <string name="app_intro_original_body">ஒவ்வொரு கருவியும் ஒரு புதிய ஃபைலை உருவாக்கும், நீங்கள் தேர்ந்தெடுத்ததை அப்படியே விட்டுவிடும். முடிவை எங்கே சேமிப்பது என்று நீங்களே தேர்வுசெய்யலாம்.</string>
+    <string name="app_intro_skip">தவிர்</string>
+    <string name="app_intro_position">கார்டு %1$d / %2$d</string>
+    <string name="app_intro_start">தொடங்கு</string>
+    <string name="app_intro_next">அடுத்து</string>
+
+    <!-- Home-screen widgets -->
+    <string name="app_widget_recent_title">Sheaf-இல் சமீபத்தியவை</string>
+    <string name="app_widget_open">திற</string>
+    <string name="app_widget_empty">Sheaf-இல் நீங்கள் திறக்கும் ஆவணங்கள் இங்கே தோன்றும்.</string>
+    <string name="app_widget_recent_at_page">%1$s · பக்கம் %2$d</string>
+
+    <!-- Reading and saving files -->
+    <string name="app_error_open_revoked">%1$s-ஐத் திறக்க முடியவில்லை. அதற்குச் சொந்தமான ஆப்ஸ் அணுகலைத் திரும்பப் பெற்றிருக்கலாம்.</string>
+    <string name="app_error_empty">%1$s காலியாக உள்ளது.</string>
+    <string name="app_error_write_location">நீங்கள் தேர்ந்தெடுத்த இடத்தில் எழுத முடியவில்லை.</string>
+    <string name="app_error_write_removed_replaced">%1$s-ஐ எழுத முடியவில்லை. முழுமையடையாத ஃபைல் அகற்றப்பட்டது, எனவே அது மாற்றியமைத்த ஃபைலும் போய்விட்டது.</string>
+    <string name="app_error_write_removed">%1$s-ஐ எழுத முடியவில்லை. முழுமையடையாத ஃபைல் அகற்றப்பட்டது.</string>
+    <string name="app_error_write_incomplete">%1$s-ஐ எழுத முடியவில்லை. நீங்கள் தேர்ந்தெடுத்த ஃபைல் இப்போது முழுமையடையவில்லை, அது திறக்காது.</string>
+    <string name="app_error_write_left_behind">%1$s-ஐ எழுத முடியவில்லை. அந்த ஃபோல்டரில் முழுமையடையாத ஃபைல் ஒன்று விடப்பட்டுள்ளது, அது திறக்காது.</string>
+    <string name="app_error_with_reason">%1$s %2$s</string>
+    <string name="app_error_permission_withdrawn">அந்த ஃபோல்டருக்கான Sheaf-இன் அனுமதி திரும்பப் பெறப்பட்டது.</string>
+    <string name="app_error_no_space">அந்தச் சேமிப்பிடத்தில் இடம் இல்லை.</string>
+    <string name="app_error_read_only">அந்தச் சேமிப்பிடம் படிக்க மட்டுமே.</string>
+    <string name="app_error_folder_gone">அந்த ஃபோல்டர் இப்போது கிடைக்கவில்லை.</string>
+    <string name="app_error_folder_denied">அந்த ஃபோல்டரில் எழுத Sheaf-க்கு இனி அனுமதி இல்லை.</string>
+    <string name="app_error_create_failed">%1$s-ஐ அங்கே உருவாக்க முடியவில்லை.</string>
+    <string name="app_print_no_destination">ஆவணத்தை எழுத இடம் எதுவும் இல்லை.</string>
+    <string name="app_print_failed">ஆவணத்தை அச்சுப்பொறிக்கு அனுப்ப முடியவில்லை.</string>
+    <string name="app_bookmark_default">பக்கம் %1$d</string>
+
+    <!-- Background jobs -->
+    <string name="app_job_done">முடிந்தது</string>
+    <string name="app_job_file_progress">ஃபைல் %1$d / %2$d · %3$s</string>
+    <string name="app_job_skipped_deadline">Android ஒரு பின்னணி வேலையை ஆறு மணிநேரத்திற்குப் பிறகு நிறுத்திவிடும், எனவே Sheaf அப்போது செய்துகொண்டிருந்த ஃபைலை முடித்துவிட்டு நின்றது. இதை மீண்டும் இயக்குங்கள்.</string>
+    <string name="app_job_not_started">இந்தச் செயல்பாட்டைத் தொடங்க முடியவில்லை. மீண்டும் தொடங்குங்கள்.</string>
+    <string name="app_job_lost">ஆப்ஸ் மீண்டும் தொடங்கியபோது இந்தச் செயல்பாடு இழக்கப்பட்டது. மீண்டும் தொடங்குங்கள்.</string>
+    <string name="app_job_out_of_memory">சாதனம் தரக்கூடியதை விட அதிக நினைவகம் இந்த ஆவணத்திற்குத் தேவைப்பட்டது. ஒரே நேரத்தில் குறைவான பக்கங்களை முயலுங்கள்.</string>
+    <string name="app_job_background_start">Sheaf பின்னணியில் இருந்தபோது இந்தச் செயல்பாட்டைத் தொடங்க Android அனுமதிக்கவில்லை. Sheaf-ஐத் திறந்து மீண்டும் தொடங்குங்கள்.</string>
+    <string name="app_job_stopped_unexpectedly">செயல்பாடு எதிர்பாராமல் நின்றுவிட்டது.</string>
+    <string name="app_job_too_long">Android ஒரு பின்னணி வேலையை ஆறு மணிநேரத்திற்குப் பிறகு நிறுத்திவிடும், இந்த ஒரு ஃபைலுக்கே அதைவிட அதிக நேரம் தேவைப்பட்டது. சிறிய பகுதிகளாகவோ, ஒரே நேரத்தில் குறைவான பக்கங்களுடனோ முயலுங்கள்.</string>
+    <string name="app_job_stopped_by_system">முடிவதற்கு முன்பே Android இந்தச் செயல்பாட்டை நிறுத்திவிட்டது; பொதுவாகச் சேமிப்பிடம் குறைந்ததோ அதிக நேரம் இயங்கியதோ இதற்குக் காரணம். மீண்டும் தொடங்குங்கள்.</string>
+</resources>

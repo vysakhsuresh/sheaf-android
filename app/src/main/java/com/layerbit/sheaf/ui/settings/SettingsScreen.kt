@@ -7,6 +7,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.FileProvider
 import com.layerbit.sheaf.brand.BrandLinks
 import com.layerbit.sheaf.files.CrashLog
@@ -70,12 +72,10 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Section(title = "Appearance", iconRes = R.drawable.ic_tool_background, accent = Color(0xFFB08CFF)) {
+            Section(title = stringResource(R.string.app_settings_appearance), iconRes = R.drawable.ic_tool_background, accent = Color(0xFFB08CFF)) {
                 ThemePicker(selected = settings.theme, onSelect = { choice -> onChange { it.copy(theme = choice) } })
                 Text(
-                    "A page is always shown on white paper, whichever of these is on. Night " +
-                        "colours in the viewer invert the page itself, and that is a separate " +
-                        "switch in the document's own menu.",
+                    stringResource(R.string.app_settings_appearance_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = SheafColors.Dim,
                     modifier = Modifier.padding(top = 10.dp)
@@ -84,26 +84,24 @@ fun SettingsScreen(
         }
 
         item {
-            Section(title = "Reading", iconRes = R.drawable.ic_tool_read, accent = SheafColors.Band) {
+            Section(title = stringResource(R.string.app_settings_reading), iconRes = R.drawable.ic_tool_read, accent = SheafColors.Band) {
                 ToggleRow(
-                    title = "Keep the screen on",
-                    detail = "While a document is open. Reading is the one thing people do " +
-                        "without touching the screen.",
+                    title = stringResource(R.string.app_settings_keep_on),
+                    detail = stringResource(R.string.app_settings_keep_on_detail),
                     checked = settings.keepScreenOn,
                     onChange = { on -> onChange { it.copy(keepScreenOn = on) } }
                 )
                 Divider()
                 ToggleRow(
-                    title = "Reopen where I left off",
-                    detail = "Remembers the page, per document. Only the page number is " +
-                        "stored, never anything from inside the file.",
+                    title = stringResource(R.string.app_settings_resume),
+                    detail = stringResource(R.string.app_settings_resume_detail),
                     checked = settings.resumeReading,
                     onChange = { on -> onChange { it.copy(resumeReading = on) } }
                 )
                 Divider()
                 ToggleRow(
-                    title = "Show the page counter",
-                    detail = "The badge over the bottom of the page. Tap it to jump.",
+                    title = stringResource(R.string.app_settings_badge),
+                    detail = stringResource(R.string.app_settings_badge_detail),
                     checked = settings.showPageBadge,
                     onChange = { on -> onChange { it.copy(showPageBadge = on) } }
                 )
@@ -111,27 +109,24 @@ fun SettingsScreen(
         }
 
         item {
-            Section(title = "When a job finishes", iconRes = R.drawable.ic_tool_organise, accent = Color(0xFF3ED3C0)) {
+            Section(title = stringResource(R.string.app_settings_finish), iconRes = R.drawable.ic_tool_organise, accent = Color(0xFF3ED3C0)) {
                 ToggleRow(
-                    title = "Open the result straight away",
-                    detail = "Shows the finished document in the viewer as soon as it is ready.",
+                    title = stringResource(R.string.app_settings_open_result),
+                    detail = stringResource(R.string.app_settings_open_result_detail),
                     checked = settings.openResultWhenDone,
                     onChange = { on -> onChange { it.copy(openResultWhenDone = on) } }
                 )
                 Divider()
                 ToggleRow(
-                    title = "Save marks as editable annotations",
-                    detail = "Mark up keeps highlights, drawings and notes as annotations any PDF " +
-                        "reader can edit or delete later. Off draws them into the page, so they " +
-                        "stay exactly as made. Sign and Remove areas always draw into the page.",
+                    title = stringResource(R.string.app_settings_editable_marks),
+                    detail = stringResource(R.string.app_settings_editable_marks_detail),
                     checked = settings.editableMarks,
                     onChange = { on -> onChange { it.copy(editableMarks = on) } }
                 )
                 Divider()
                 ToggleRow(
-                    title = "Ask where to save every time",
-                    detail = "Off means results go to one folder you choose, which is what " +
-                        "makes saving forty exported pages one gesture instead of forty.",
+                    title = stringResource(R.string.app_settings_ask_save),
+                    detail = stringResource(R.string.app_settings_ask_save_detail),
                     checked = settings.askWhereToSave,
                     onChange = { on -> onChange { it.copy(askWhereToSave = on) } }
                 )
@@ -139,7 +134,7 @@ fun SettingsScreen(
         }
 
         item {
-            Section(title = "Space and history", iconRes = R.drawable.ic_tool_split_size, accent = Color(0xFF5B9DFF)) {
+            Section(title = stringResource(R.string.app_settings_space), iconRes = R.drawable.ic_tool_split_size, accent = Color(0xFF5B9DFF)) {
                 RowBetween {
                     Column {
                         Text(
@@ -148,17 +143,15 @@ fun SettingsScreen(
                             color = SheafColors.Text
                         )
                         Text(
-                            "of working files on this phone",
+                            stringResource(R.string.app_settings_working_files),
                             style = MaterialTheme.typography.bodySmall,
                             color = SheafColors.Dim
                         )
                     }
-                    SecondaryButton(text = "Clear", onClick = onClearWorkspace, enabled = workspaceBytes > 0, tall = false)
+                    SecondaryButton(text = stringResource(R.string.app_clear), onClick = onClearWorkspace, enabled = workspaceBytes > 0, tall = false)
                 }
                 Text(
-                    "Results waiting to be saved, and copies of documents you opened. Sheaf " +
-                        "trims these itself; clearing them now is safe once you have saved " +
-                        "what you wanted.",
+                    stringResource(R.string.app_settings_working_files_detail),
                     style = MaterialTheme.typography.bodySmall,
                     color = SheafColors.Dim,
                     modifier = Modifier.padding(top = 8.dp)
@@ -166,22 +159,22 @@ fun SettingsScreen(
                 Divider()
                 RowBetween {
                     Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                        Text("Recent documents", style = MaterialTheme.typography.bodyLarge, color = SheafColors.Text)
-                        Text("The list on the home screen, and where you got to in each.", style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
+                        Text(stringResource(R.string.app_settings_recents), style = MaterialTheme.typography.bodyLarge, color = SheafColors.Text)
+                        Text(stringResource(R.string.app_settings_recents_detail), style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
                     }
-                    SecondaryButton(text = "Clear", onClick = onClearRecents, tall = false)
+                    SecondaryButton(text = stringResource(R.string.app_clear), onClick = onClearRecents, tall = false)
                 }
                 Divider()
                 RowBetween {
                     Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                        Text("Marked pages", style = MaterialTheme.typography.bodyLarge, color = SheafColors.Text)
+                        Text(stringResource(R.string.app_settings_bookmarks), style = MaterialTheme.typography.bodyLarge, color = SheafColors.Text)
                         Text(
-                            if (bookmarkCount > 0) "$bookmarkCount ${if (bookmarkCount == 1) "page" else "pages"} starred across your documents." else "None yet. The star in the viewer marks a page.",
+                            if (bookmarkCount > 0) pluralStringResource(R.plurals.app_settings_bookmark_count, bookmarkCount, bookmarkCount) else stringResource(R.string.app_settings_bookmarks_none),
                             style = MaterialTheme.typography.bodySmall,
                             color = SheafColors.Dim
                         )
                     }
-                    SecondaryButton(text = "Clear", onClick = onClearBookmarks, enabled = bookmarkCount > 0, tall = false)
+                    SecondaryButton(text = stringResource(R.string.app_clear), onClick = onClearBookmarks, enabled = bookmarkCount > 0, tall = false)
                 }
             }
         }
@@ -195,18 +188,14 @@ fun SettingsScreen(
                 Row(verticalAlignment = Alignment.Top) {
                     IconTile(iconRes = R.drawable.ic_tool_lock, accent = SheafColors.Done, size = 40.dp)
                     Column(modifier = Modifier.padding(start = 12.dp)) {
-                        Text("What this app cannot do", style = MaterialTheme.typography.titleMedium, color = SheafColors.Text)
+                        Text(stringResource(R.string.app_settings_cannot), style = MaterialTheme.typography.titleMedium, color = SheafColors.Text)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 6.dp)) {
-                            Pill("No internet", SheafColors.Done)
-                            Pill("No account", SheafColors.Done)
-                            Pill("No tracking", SheafColors.Done)
+                            Pill(stringResource(R.string.app_pill_no_internet), SheafColors.Done)
+                            Pill(stringResource(R.string.app_pill_no_account), SheafColors.Done)
+                            Pill(stringResource(R.string.app_pill_no_tracking), SheafColors.Done)
                         }
                         Text(
-                            "Sheaf has no internet permission at all. It cannot upload a document, " +
-                                "report a crash, or check for an update - and the manifest in the " +
-                                "repository is how you can verify that rather than taking a promise " +
-                                "for it. Printing works because the system's print service does the " +
-                                "talking, not this app.",
+                            stringResource(R.string.app_settings_cannot_detail),
                             style = MaterialTheme.typography.bodySmall,
                             color = SheafColors.Muted,
                             modifier = Modifier.padding(top = 8.dp)
@@ -226,17 +215,16 @@ fun SettingsScreen(
 private fun CrashLogSection() {
     val context = LocalContext.current
     var count by remember { mutableIntStateOf(CrashLog.count(context)) }
-    Section(title = "Crash log", iconRes = R.drawable.ic_tool_attachments, accent = SheafColors.Failed) {
+    Section(title = stringResource(R.string.app_settings_crash_log), iconRes = R.drawable.ic_tool_attachments, accent = SheafColors.Failed) {
         RowBetween {
             Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                 Text(
-                    if (count == 0) "No crashes recorded" else "${if (count == 1) "1 crash" else "$count crashes"} recorded",
+                    if (count == 0) stringResource(R.string.app_settings_crash_none) else pluralStringResource(R.plurals.app_settings_crash_count, count, count),
                     style = MaterialTheme.typography.bodyLarge,
                     color = SheafColors.Text
                 )
                 Text(
-                    "If Sheaf ever closes unexpectedly, a short technical log is kept here. " +
-                        "Nothing from your documents is in it, and it is only sent if you send it.",
+                    stringResource(R.string.app_settings_crash_detail),
                     style = MaterialTheme.typography.bodySmall,
                     color = SheafColors.Dim
                 )
@@ -245,7 +233,7 @@ private fun CrashLogSection() {
         if (count > 0) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 10.dp)) {
                 SecondaryButton(
-                    text = "Send the log",
+                    text = stringResource(R.string.app_settings_crash_send),
                     onClick = {
                         val log = CrashLog.latest(context) ?: return@SecondaryButton
                         val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", log)
@@ -256,12 +244,12 @@ private fun CrashLogSection() {
                             putExtra(Intent.EXTRA_SUBJECT, "Sheaf crash log")
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
-                        runCatching { context.startActivity(Intent.createChooser(send, "Send the crash log")) }
+                        runCatching { context.startActivity(Intent.createChooser(send, context.getString(R.string.app_settings_crash_chooser))) }
                     },
                     tall = false
                 )
                 SecondaryButton(
-                    text = "Delete",
+                    text = stringResource(R.string.app_delete),
                     onClick = {
                         CrashLog.clear(context)
                         count = 0
@@ -317,9 +305,9 @@ private fun ThemePicker(selected: ThemeChoice, onSelect: (ThemeChoice) -> Unit) 
                 Swatch(choice)
                 Text(
                     when (choice) {
-                        ThemeChoice.SYSTEM -> "System"
-                        ThemeChoice.LIGHT -> "Light"
-                        ThemeChoice.DARK -> "Dark"
+                        ThemeChoice.SYSTEM -> stringResource(R.string.app_theme_system)
+                        ThemeChoice.LIGHT -> stringResource(R.string.app_theme_light)
+                        ThemeChoice.DARK -> stringResource(R.string.app_theme_dark)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (active) SheafColors.Text else SheafColors.Muted,

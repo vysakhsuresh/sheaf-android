@@ -1,5 +1,7 @@
 package com.layerbit.sheaf.files
 
+import com.layerbit.sheaf.text.Strings
+import com.layerbit.sheaf.R
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -47,11 +49,11 @@ class DocumentStore(private val context: Context) {
 
         val copied = context.contentResolver.openInputStream(uri)?.use { input ->
             FileOutputStream(target).use { output -> input.copyTo(output) }
-        } ?: throw IOException("Could not open $name. The app that owns it may have revoked access.")
+        } ?: throw IOException(Strings.get(R.string.app_error_open_revoked, name))
 
         if (copied == 0L) {
             target.delete()
-            throw IOException("$name is empty.")
+            throw IOException(Strings.get(R.string.app_error_empty, name))
         }
 
         SheafFile(
