@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  */
 @Database(
     entities = [RecentEntity::class, BookmarkEntity::class, OutputEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class SheafDatabase : RoomDatabase() {
@@ -81,6 +81,16 @@ abstract class SheafDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * The reading mode chosen per document. One nullable column, so every existing row
+         * reads as "never chosen" and opens the way it always has.
+         */
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE recents ADD COLUMN readingMode TEXT")
+            }
+        }
+
         fun get(context: Context): SheafDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
@@ -88,7 +98,7 @@ abstract class SheafDatabase : RoomDatabase() {
                     SheafDatabase::class.java,
                     "sheaf.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build().also { instance = it }
             }
     }

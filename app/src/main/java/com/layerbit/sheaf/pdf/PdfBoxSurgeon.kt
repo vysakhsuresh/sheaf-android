@@ -2873,8 +2873,11 @@ private class MatchFinder(
 /**
  * Every word on a page with its box, in the order the stripper reads them. A word is a run
  * of glyphs with no space in it; punctuation stays attached, as it does on the page.
+ *
+ * Internal rather than private because the viewer's [PdfBoxPageReader] reads words the same
+ * way, one page at a time, and two word-splitters would sooner or later disagree.
  */
-private class WordFinder(
+internal class WordFinder(
     private val pageWidth: Float,
     private val pageHeight: Float
 ) : PDFTextStripper() {

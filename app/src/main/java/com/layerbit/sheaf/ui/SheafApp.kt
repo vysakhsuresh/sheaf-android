@@ -187,6 +187,7 @@ fun SheafApp(
                     state = viewerState,
                     reading = reading,
                     renderPage = { index, width -> viewerViewModel.page(index, width) },
+                    controls = viewerViewModel,
                     onUseTool = { tool, uri -> navController.navigate(Routes.tool(tool, uri)) },
                     onBack = { navController.popBackStack() },
                     onToggleNight = viewerViewModel::toggleNightMode,
