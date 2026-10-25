@@ -36,7 +36,7 @@ android {
         // warning being accepted, not missed.
         targetSdk = 36
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -188,6 +188,14 @@ dependencies {
     // job has to survive the user switching to WhatsApp, and a foreground-service Worker is
     // the only thing on Android that reliably does.
     implementation("androidx.work:work-runtime-ktx:2.12.0")
+
+    // The Play review sheet, asked for after the third job that worked. It talks to the Play
+    // Store app over a binder, not the network, so the manifest's INTERNET strip still holds -
+    // check the merged manifest after any bump of this, as for every library.
+    implementation("com.google.android.play:review-ktx:2.0.2")
+
+    // Home-screen widgets (Scan and Open a PDF; recent documents), written in Compose terms.
+    implementation("androidx.glance:glance-appwidget:1.1.1")
 
     // Apache-2.0. Everything structural - merge, split, page tree, encryption, content
     // streams - goes through this, behind PdfSurgeon. The platform renderer stays the

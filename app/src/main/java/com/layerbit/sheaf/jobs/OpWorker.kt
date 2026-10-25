@@ -36,6 +36,51 @@ class OpWorker(
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
 
+    /** Past this, a batch finishes the file in hand and stops. Set once doWork has a job. */
+    private var softDeadline = Long.MAX_VALUE
+
+    /** Past this, even the file in hand stops, a minute before Android would stop it. */
+    private var hardDeadline = Long.MAX_VALUE
+
+    private val pastHardDeadline get() = System.currentTimeMillis() > hardDeadline
+
+    /**
+     * A batch handed to the op one file at a time, so it can stop between two of them.
+     *
+     * Progress is reported per file, the same granularity the ops' own batch loops use, with
+     * the inner label kept so a long file still shows its pages moving. Files the clock did not
+     * reach are reported as skipped with the reason, so the user knows exactly which to run
+     * again rather than finding a batch that silently came up short.
+     */
+    private suspend fun runFileByFile(
+        op: Op,
+        request: JobRunner.Request,
+        context: OpContext,
+        report: (Progress) -> Unit
+    ): List<OpOutcome> {
+        val inputs = request.inputs
+        val outcomes = mutableListOf<OpOutcome>()
+        for ((index, input) in inputs.withIndex()) {
+            if (System.currentTimeMillis() > softDeadline) {
+                inputs.drop(index).forEach { left ->
+                    outcomes += OpOutcome.Skipped(
+                        left.displayName,
+                        "Android stops a background job after six hours, so Sheaf finished the " +
+                            "file it was on and stopped. Run this one again."
+                    )
+                }
+                break
+            }
+            context.checkCancelled()
+            outcomes += op.run(listOf(input), context) { inner ->
+                val label = if (inner.label.isBlank() || inner.label == "Done") input.displayName else inner.label
+                report(Progress(index, inputs.size, "File ${index + 1} of ${inputs.size} · $label"))
+            }
+        }
+        report(Progress(inputs.size, inputs.size, "Done"))
+        return outcomes
+    }
+
     override suspend fun doWork(): Result {
         val app = applicationContext as SheafApplication
         val runner = app.jobRunner
@@ -76,6 +121,17 @@ class OpWorker(
         }
         val op = request.op
 
+        // Android 15 gives a dataSync foreground service six hours in any 24 and then stops it
+        // outright. Below 35 there is no such cap, so the budget is unlimited there.
+        val started = System.currentTimeMillis()
+        val budget = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            runner.foregroundBudget(started)
+        } else {
+            Long.MAX_VALUE / 4
+        }
+        softDeadline = started + budget
+        hardDeadline = softDeadline + (JobRunner.HARD_LIMIT_MS - JobRunner.SOFT_LIMIT_MS)
+
         val opContext = OpContext(
             workspace = app.workspace,
             engine = app.pdfEngine,
@@ -83,12 +139,16 @@ class OpWorker(
             surgeon = app.surgeon,
             ocr = app.ocr,
             passwords = request.passwords,
-            cancelled = { isStopped }
+            // The hard deadline is the last resort for one file that alone outlasts the budget:
+            // stopping it ourselves a minute early is what lets the reason be said, where the
+            // system's own stop would arrive as a kill.
+            cancelled = { isStopped || System.currentTimeMillis() > hardDeadline }
         )
 
         return try {
             runWork(runner, jobId, op, request, opContext, app.outputs)
         } finally {
+            runner.recordForegroundRun(started, System.currentTimeMillis())
             // Every exit, including the two that throw: once a terminal state is published this
             // worker will not consult the runner again, and an id left behind is one a later
             // cancel would mark - discarding the outcomes of a job that had already finished.
@@ -109,10 +169,25 @@ class OpWorker(
             setForeground(JobNotifications.foregroundInfo(applicationContext, op.title, 0, 0))
             runner.publish(JobState.Running(op.tool, op.title, 0, 0, ""))
 
-            val outcomes = op.run(request.inputs, opContext) { progress: Progress ->
+            var lastNotified = 0L
+            val report = { progress: Progress ->
                 runner.publish(
                     JobState.Running(op.tool, op.title, progress.unitsDone, progress.unitsTotal, progress.label)
                 )
+                // The notification follows along, at most once a second: the shade redraws on
+                // every update and a page-by-page OCR would otherwise post hundreds a minute.
+                val now = System.currentTimeMillis()
+                if (now - lastNotified >= 1000) {
+                    lastNotified = now
+                    setForegroundAsync(
+                        JobNotifications.foregroundInfo(applicationContext, op.title, progress.unitsDone, progress.unitsTotal)
+                    )
+                }
+            }
+            val outcomes = if (op.runsFileByFile && request.inputs.size > 1) {
+                runFileByFile(op, request, opContext, report)
+            } else {
+                op.run(request.inputs, opContext, report)
             }
             // A cancel does not always arrive as a throw. OpCancelled is a CancellationException
             // and so an Exception, which an op with a broad catch of its own can swallow before
@@ -180,6 +255,12 @@ class OpWorker(
     private fun stoppedState(runner: JobRunner, jobId: String, tool: ToolId): JobState =
         if (runner.wasCancelledByUser(jobId)) {
             JobState.Cancelled(tool)
+        } else if (pastHardDeadline) {
+            JobState.Crashed(
+                tool,
+                "Android stops a background job after six hours, and this file alone needed " +
+                    "longer. Try it in smaller parts, or with fewer pages at once."
+            )
         } else {
             JobState.Crashed(
                 tool,

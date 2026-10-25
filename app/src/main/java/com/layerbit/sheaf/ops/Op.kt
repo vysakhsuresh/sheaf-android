@@ -39,6 +39,16 @@ interface Op {
     val arity: Arity
 
     /**
+     * Whether the worker may hand this op one input at a time instead of the whole batch.
+     *
+     * True for anything that treats each input on its own, which is what lets a long batch stop
+     * cleanly between two files - Android 15 ends a data-sync foreground service at six hours,
+     * and finishing the file in hand beats losing it half-written. An op that carries state from
+     * one file into the next, like a Bates run, says false.
+     */
+    val runsFileByFile: Boolean get() = arity == Arity.EachIndependently
+
+    /**
      * Runs the operation.
      *
      * Implementations write every output through [OpContext.workspace] and must not modify any

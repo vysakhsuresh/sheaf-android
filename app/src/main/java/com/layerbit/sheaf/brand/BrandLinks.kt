@@ -21,7 +21,13 @@ object BrandLinks {
     const val COFFEE_URL = "https://www.buymeacoffee.com/layerbit"
     const val WHATSAPP_URL = "https://wa.me/916282595823"
     const val SUPPORT_EMAIL = "ceo@layerbit.co.in"
-    const val PLAY_LISTING = "https://play.google.com/store/apps/details?id=com.layerbit.sheaf"
+    /**
+     * The policy Play requires a listing to link. Its text is kept in this repository at
+     * store-assets/privacy/index.html, so what the page says changes in the same commit as
+     * anything in the app that would make it untrue.
+     */
+    const val PRIVACY_URL = "https://layerbit.co.in/sheaf/privacy"
+    const val PLAY_LISTING ="https://play.google.com/store/apps/details?id=com.layerbit.sheaf"
 
     fun openUrl(context: Context, url: String) {
         try {

@@ -65,6 +65,9 @@ class PageNumberOp(private val spec: PageNumberSpec, private val continueAcrossF
     override val title = if (spec.padTo > 0) "Bates numbers" else "Page numbers"
     override val arity = Op.Arity.EachIndependently
 
+    /** A Bates run is one sequence across the files, so it has to see them all in one call. */
+    override val runsFileByFile get() = !continueAcrossFiles
+
     override suspend fun run(
         inputs: List<SheafFile>,
         context: OpContext,

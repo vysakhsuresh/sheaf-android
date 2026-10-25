@@ -140,6 +140,28 @@ class JobRunner(private val context: Context) {
         _state.value = state
     }
 
+    /**
+     * Foreground time already spent in the last 24 hours, as (start, end) pairs.
+     *
+     * Android 15 allows a dataSync foreground service six hours in any 24, counted across every
+     * run rather than per job, so a job's budget is what the earlier ones left. Memory only:
+     * after a process death the count starts again, which errs towards running a little long
+     * and being stopped by the system - the case the per-job deadline still catches.
+     */
+    private val foregroundRuns = java.util.concurrent.ConcurrentLinkedQueue<LongArray>()
+
+    internal fun recordForegroundRun(start: Long, end: Long) {
+        foregroundRuns += longArrayOf(start, end)
+    }
+
+    /** Milliseconds a job starting at [now] may run before it must stop between files. */
+    internal fun foregroundBudget(now: Long): Long {
+        val windowStart = now - DAY_MS
+        foregroundRuns.removeIf { it[1] < windowStart }
+        val used = foregroundRuns.sumOf { it[1] - maxOf(it[0], windowStart) }
+        return (SOFT_LIMIT_MS - used).coerceAtLeast(0)
+    }
+
     companion object {
         private const val UNIQUE_WORK = "sheaf.op.chain"
         private const val TAG_JOB = "sheaf.job"
@@ -151,5 +173,16 @@ class JobRunner(private val context: Context) {
          * to be comfortably larger than one batch of queued files.
          */
         private const val MAX_REMEMBERED_CANCELS = 256
+
+        private const val DAY_MS = 24L * 60 * 60 * 1000
+
+        /**
+         * Five hours fifty-five: past this a batch finishes the file in hand and stops. Five
+         * minutes short of Android 15's six-hour cap, which is the margin for that last file.
+         */
+        internal const val SOFT_LIMIT_MS = (5L * 60 + 55) * 60 * 1000
+
+        /** The last moment before the system would end the service itself. */
+        internal const val HARD_LIMIT_MS = (5L * 60 + 59) * 60 * 1000
     }
 }

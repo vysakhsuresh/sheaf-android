@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.MaterialTheme
@@ -227,6 +228,13 @@ fun AboutScreen(modifier: Modifier = Modifier) {
                     icon = Icons.Filled.Star,
                     onClick = { BrandLinks.openUrl(context, BrandLinks.PLAY_LISTING) },
                     modifier = Modifier.fillMaxWidth(),
+                    tall = false
+                )
+                SecondaryButton(
+                    text = "Privacy policy",
+                    icon = Icons.Filled.Lock,
+                    onClick = { BrandLinks.openUrl(context, BrandLinks.PRIVACY_URL) },
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                     tall = false
                 )
                 TextButton(onClick = { BrandLinks.openUrl(context, BrandLinks.WEBSITE_URL) }) {

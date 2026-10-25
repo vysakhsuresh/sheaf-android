@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import com.layerbit.sheaf.ui.components.rememberNotificationGate
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -84,6 +85,8 @@ fun ToolRoute(
         openedResultOf = single.file.path
         onOpenResult(single)
     }
+
+    val notificationGate = rememberNotificationGate()
 
     val pickFiles = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
@@ -204,7 +207,7 @@ fun ToolRoute(
             onClearMarks = viewModel::clearMarks,
             onAddRedaction = viewModel::addRedaction,
             onClearRedactions = viewModel::clearRedactions,
-            onRun = viewModel::run,
+            onRun = { notificationGate { viewModel.run() } },
             onCancel = viewModel::cancel,
             onSave = { file ->
                 if (viewModel.askWhereToSave) {
