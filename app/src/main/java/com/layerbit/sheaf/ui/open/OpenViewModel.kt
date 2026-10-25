@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
 
 /**
  * One opened file and what was found out about it.
@@ -52,11 +54,11 @@ class OpenViewModel(app: Application) : AndroidViewModel(app) {
         if (uris.isEmpty()) return
         viewModelScope.launch {
             val total = uris.size
-            _state.update { it.copy(status = "Looking at ${plural(total, "file")} on this phone…", error = null) }
+            _state.update { it.copy(status = Strings.plural(R.plurals.reading_open_looking_at, total), error = null) }
             val problems = mutableListOf<String>()
             for ((i, uri) in uris.withIndex()) {
                 val imported = runCatching { sheaf.documentStore.import(uri) }
-                imported.exceptionOrNull()?.let { problems += it.message ?: "One file could not be read." }
+                imported.exceptionOrNull()?.let { problems += it.message ?: Strings.get(R.string.reading_open_one_unreadable) }
                 val file = imported.getOrNull() ?: continue
                 val facts = withContext(Dispatchers.IO) { factsOf(file) }
                 val thumbnail = withContext(Dispatchers.IO) { thumbnailOf(file, facts) }
@@ -64,7 +66,7 @@ class OpenViewModel(app: Application) : AndroidViewModel(app) {
                     val files = current.files + OpenedFile(file, facts, thumbnail)
                     current.copy(
                         files = files,
-                        status = if (i + 1 < total) "Looked at ${i + 1} of $total…" else current.status,
+                        status = if (i + 1 < total) Strings.get(R.string.reading_open_looked_at, i + 1, total) else current.status,
                         suggestions = Suggest.suggest(files.map { it.facts })
                     )
                 }
@@ -76,7 +78,7 @@ class OpenViewModel(app: Application) : AndroidViewModel(app) {
     /** Every file in a folder and the folders inside it, by name. Hidden files are left out. */
     fun addFolder(tree: Uri) {
         viewModelScope.launch {
-            _state.update { it.copy(status = "Looking in the folder…", error = null) }
+            _state.update { it.copy(status = Strings.get(R.string.reading_open_looking_in_folder), error = null) }
             val uris = withContext(Dispatchers.IO) {
                 val out = mutableListOf<Uri>()
                 fun walk(dir: DocumentFile, depth: Int) {
@@ -90,7 +92,7 @@ class OpenViewModel(app: Application) : AndroidViewModel(app) {
                 out
             }
             if (uris.isEmpty()) {
-                _state.update { it.copy(status = null, error = "That folder is empty.") }
+                _state.update { it.copy(status = null, error = Strings.get(R.string.reading_open_folder_empty)) }
             } else {
                 add(uris)
             }
@@ -158,8 +160,6 @@ class OpenViewModel(app: Application) : AndroidViewModel(app) {
             else -> null
         }
     }.getOrNull()
-
-    private fun plural(n: Int, one: String) = if (n == 1) "1 $one" else "$n ${one}s"
 
     private companion object {
         /** Twice the 44 dp the row draws it at on a typical phone, so it stays sharp. */

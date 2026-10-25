@@ -7,6 +7,9 @@ import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
 import android.graphics.Paint
+import androidx.annotation.StringRes
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
 import kotlin.math.hypot
 
 /**
@@ -117,15 +120,17 @@ object PageProcessor {
         return output
     }
 
-    enum class Filter(val label: String) {
+    enum class Filter(@StringRes val labelRes: Int) {
         /** Leave the photograph as it is. Right for anything with pictures on it. */
-        ORIGINAL("Photo"),
+        ORIGINAL(R.string.reading_scan_filter_photo),
 
         /** Drains the color. Kinder on file size, still shows shading. */
-        GREYSCALE("Grey"),
+        GREYSCALE(R.string.reading_scan_filter_grey),
 
         /** Hard contrast. This is the one that makes a phone photo look like a scan. */
-        DOCUMENT("Document")
+        DOCUMENT(R.string.reading_scan_filter_document);
+
+        val label: String get() = Strings.get(labelRes)
     }
 
     /** Applies [filter], returning a new bitmap. */

@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reading_mode_continuous">ಒಂದೇ ಉದ್ದ ಸ್ಕ್ರಾಲ್</string>
+    <string name="reading_mode_single">ಒಮ್ಮೆಗೆ ಒಂದು ಪುಟ</string>
+    <string name="reading_mode_two_up">ಅಕ್ಕಪಕ್ಕ ಎರಡು ಪುಟಗಳು</string>
+    <string name="reading_tint_day">ಹಗಲು</string>
+    <string name="reading_tint_sepia">ಸೆಪಿಯಾ</string>
+    <string name="reading_tint_dark_paper">ಗಾಢ ಕಾಗದ</string>
+    <string name="reading_tint_night">ರಾತ್ರಿ</string>
+
+    <string name="reading_page_n">ಪುಟ %1$d</string>
+    <string name="reading_page_not_displayed">ಪುಟ %1$d ಅನ್ನು ತೋರಿಸಲಾಗಲಿಲ್ಲ</string>
+    <string name="reading_no_app_link">ಈ ಫೋನ್‌ನಲ್ಲಿ ಆ ಲಿಂಕ್ ತೆರೆಯಬಲ್ಲ ಯಾವುದೇ ಆ್ಯಪ್ ಇಲ್ಲ.</string>
+    <string name="reading_no_text_to_select">ಈ ಪುಟದಲ್ಲಿ ಆಯ್ಕೆ ಮಾಡಲು ಪಠ್ಯವಿಲ್ಲ. ಸ್ಕ್ಯಾನ್‌ಗೆ ಮೊದಲು \"ಹುಡುಕಬಲ್ಲಂತೆ ಮಾಡಿ\" ಬಳಸಿ.</string>
+    <string name="reading_back">ಹಿಂದೆ</string>
+    <string name="reading_opening">ತೆರೆಯಲಾಗುತ್ತಿದೆ…</string>
+    <string name="reading_copy_failed">ಅದನ್ನು ನಕಲಿಸಲಾಗಲಿಲ್ಲ.</string>
+    <string name="reading_copied">ನಕಲಿಸಲಾಗಿದೆ.</string>
+    <string name="reading_no_app_define">ಈ ಫೋನ್‌ನಲ್ಲಿ ಪದಗಳ ಅರ್ಥ ನೋಡಬಲ್ಲ ಯಾವುದೇ ಆ್ಯಪ್ ಇಲ್ಲ.</string>
+    <string name="reading_no_app_translate">ಈ ಫೋನ್‌ನಲ್ಲಿ ಅನುವಾದಿಸಬಲ್ಲ ಯಾವುದೇ ಆ್ಯಪ್ ಇಲ್ಲ.</string>
+    <string name="reading_zoom_reset">%1$d%% · ಮರುಹೊಂದಿಸಿ</string>
+    <string name="reading_use_on_document">ಈ ಡಾಕ್ಯುಮೆಂಟ್‌ನಲ್ಲಿ ಬಳಸಿ</string>
+
+    <string name="reading_copy">ನಕಲಿಸಿ</string>
+    <string name="reading_share">ಹಂಚಿಕೊಳ್ಳಿ</string>
+    <string name="reading_find">ಹುಡುಕಿ</string>
+    <string name="reading_read_aloud">ಓದಿ ಹೇಳಿ</string>
+    <string name="reading_define">ಅರ್ಥ</string>
+    <string name="reading_translate">ಅನುವಾದಿಸಿ</string>
+    <string name="reading_clear_selection">ಆಯ್ಕೆಯನ್ನು ತೆರವುಗೊಳಿಸಿ</string>
+
+    <string name="reading_locked_title">ಈ ಡಾಕ್ಯುಮೆಂಟ್ ಲಾಕ್ ಆಗಿದೆ</string>
+    <string name="reading_locked_body">ಇದನ್ನು ತೆರೆಯಲು ಇದರ ಪಾಸ್‌ವರ್ಡ್ ನಮೂದಿಸಿ. ಡಾಕ್ಯುಮೆಂಟ್ ತೆರೆದಿರುವವರೆಗೆ ಮಾತ್ರ Sheaf ಪಾಸ್‌ವರ್ಡ್ ಇಟ್ಟುಕೊಳ್ಳುತ್ತದೆ.</string>
+    <string name="reading_password">ಪಾಸ್‌ವರ್ಡ್</string>
+    <string name="reading_password_wrong">ಆ ಪಾಸ್‌ವರ್ಡ್‌ನಿಂದ ಇದು ತೆರೆಯಲಿಲ್ಲ. ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
+    <string name="reading_checking">ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="reading_open">ತೆರೆಯಿರಿ</string>
+
+    <string name="reading_pages">ಪುಟಗಳು</string>
+    <string name="reading_type_page_number">ಪುಟ ಸಂಖ್ಯೆ ನಮೂದಿಸಿ</string>
+
+    <string name="reading_options_title">ಓದುವ ಆಯ್ಕೆಗಳು</string>
+    <string name="reading_layout">ಲೇಔಟ್</string>
+    <string name="reading_remembered">ಈ ಡಾಕ್ಯುಮೆಂಟ್‌ಗಾಗಿ ನೆನಪಿಟ್ಟುಕೊಳ್ಳಲಾಗಿದೆ.</string>
+    <string name="reading_paper">ಕಾಗದ</string>
+    <string name="reading_brightness">ಪ್ರಕಾಶ</string>
+    <string name="reading_percent">%1$d%%</string>
+    <string name="reading_brightness_note">ಪುಟಗಳನ್ನು ಮಾತ್ರ ಮಂದಗೊಳಿಸುತ್ತದೆ. ಫೋನ್‌ನ ಸ್ವಂತ ಪ್ರಕಾಶ ಹಾಗೆಯೇ ಇರುತ್ತದೆ.</string>
+    <string name="reading_crop_margins">ಬಿಳಿ ಅಂಚುಗಳನ್ನು ಕತ್ತರಿಸಿ</string>
+    <string name="reading_crop_margins_detail">ಪ್ರತಿ ಪುಟದ ಸುತ್ತಲಿನ ಖಾಲಿ ಅಂಚನ್ನು ತೆಗೆಯುತ್ತದೆ, ಇದರಿಂದ ಪದಗಳು ದೊಡ್ಡದಾಗಿ ಕಾಣುತ್ತವೆ.</string>
+
+    <string name="reading_page_of">ಪುಟ %1$d / %2$d</string>
+    <string name="reading_remove_mark">ಈ ಗುರುತು ತೆಗೆದುಹಾಕಿ</string>
+    <string name="reading_mark_page">ಈ ಪುಟವನ್ನು ಗುರುತಿಸಿ</string>
+    <string name="reading_more">ಇನ್ನಷ್ಟು</string>
+    <string name="reading_contents_and_marks">ಪರಿವಿಡಿ ಮತ್ತು ಗುರುತುಗಳು</string>
+    <string name="reading_comments_menu">ಕಾಮೆಂಟ್‌ಗಳು (%1$d)</string>
+    <string name="reading_go_to_page_menu">ಪುಟಕ್ಕೆ ಹೋಗಿ…</string>
+    <string name="reading_stop_reading_aloud">ಓದಿ ಹೇಳುವುದನ್ನು ನಿಲ್ಲಿಸಿ</string>
+    <string name="reading_read_aloud_from_page">ಈ ಪುಟದಿಂದ ಓದಿ ಹೇಳಿ</string>
+    <string name="reading_options_menu">ಓದುವ ಆಯ್ಕೆಗಳು…</string>
+    <string name="reading_day_colours">ಹಗಲಿನ ಬಣ್ಣಗಳು</string>
+    <string name="reading_night_colours">ರಾತ್ರಿಯ ಬಣ್ಣಗಳು</string>
+    <string name="reading_print">ಪ್ರಿಂಟ್ ಮಾಡಿ ಅಥವಾ PDF ಆಗಿ ಉಳಿಸಿ…</string>
+    <string name="reading_share_document">ಈ ಡಾಕ್ಯುಮೆಂಟ್ ಹಂಚಿಕೊಳ್ಳಿ…</string>
+    <string name="reading_use_tool">ಇದರ ಮೇಲೆ ಒಂದು ಟೂಲ್ ಬಳಸಿ</string>
+
+    <string name="reading_starting_voice">ಧ್ವನಿ ಪ್ರಾರಂಭವಾಗುತ್ತಿದೆ…</string>
+    <string name="reading_reading_page_aloud">ಪುಟ %1$d ಓದಲಾಗುತ್ತಿದೆ</string>
+    <string name="reading_stop">ನಿಲ್ಲಿಸಿ</string>
+
+    <plurals name="reading_comments">
+        <item quantity="one">%d ಕಾಮೆಂಟ್</item>
+        <item quantity="other">%d ಕಾಮೆಂಟ್‌ಗಳು</item>
+    </plurals>
+    <string name="reading_comment_on_page">ಪುಟ %1$d</string>
+
+    <string name="reading_find_hint">ಈ ಡಾಕ್ಯುಮೆಂಟ್‌ನಲ್ಲಿ ಹುಡುಕಿ</string>
+    <string name="reading_previous_match">ಹಿಂದಿನ ಹೊಂದಾಣಿಕೆ</string>
+    <string name="reading_next_match">ಮುಂದಿನ ಹೊಂದಾಣಿಕೆ</string>
+    <string name="reading_searching">ಹುಡುಕಲಾಗುತ್ತಿದೆ…</string>
+    <string name="reading_no_matches">ಯಾವ ಪುಟದಲ್ಲೂ ಅದು ಸಿಗಲಿಲ್ಲ.</string>
+    <string name="reading_match_position">ಪುಟ %1$d · ಹೊಂದಾಣಿಕೆಯಿರುವ %3$d ಪುಟಗಳಲ್ಲಿ %2$d</string>
+    <plurals name="reading_pages_count">
+        <item quantity="one">%d ಪುಟ</item>
+        <item quantity="other">%d ಪುಟಗಳು</item>
+    </plurals>
+    <string name="reading_matches_marked">ಹೊಂದಾಣಿಕೆಗಳನ್ನು ಪುಟದಲ್ಲಿ ಗುರುತಿಸಲಾಗಿದೆ. ಪಟ್ಟಿಯನ್ನು ಮತ್ತೆ ನೋಡಲು ಟ್ಯಾಪ್ ಮಾಡಿ.</string>
+    <string name="reading_page_short">ಪು. %1$d</string>
+    <plurals name="reading_matches_on_page">
+        <item quantity="one">ಈ ಪುಟದಲ್ಲಿ %d ಹೊಂದಾಣಿಕೆ</item>
+        <item quantity="other">ಈ ಪುಟದಲ್ಲಿ %d ಹೊಂದಾಣಿಕೆಗಳು</item>
+    </plurals>
+
+    <string name="reading_your_marks">ನಿಮ್ಮ ಗುರುತುಗಳು</string>
+    <string name="reading_remove">ತೆಗೆದುಹಾಕಿ</string>
+    <string name="reading_contents">ಪರಿವಿಡಿ</string>
+    <string name="reading_no_contents">ಈ ಡಾಕ್ಯುಮೆಂಟ್‌ನಲ್ಲಿ ಪರಿವಿಡಿ ಇಲ್ಲ, ಮತ್ತು ನೀವು ಇನ್ನೂ ಇದರ ಯಾವುದೇ ಪುಟವನ್ನು ಗುರುತಿಸಿಲ್ಲ. ಬಾರ್‌ನಲ್ಲಿರುವ ನಕ್ಷತ್ರ ನೀವಿರುವ ಪುಟವನ್ನು ಗುರುತಿಸುತ್ತದೆ.</string>
+
+    <string name="reading_go_to_page">ಪುಟಕ್ಕೆ ಹೋಗಿ</string>
+    <plurals name="reading_document_has_pages">
+        <item quantity="one">ಈ ಡಾಕ್ಯುಮೆಂಟ್‌ನಲ್ಲಿ %d ಪುಟವಿದೆ.</item>
+        <item quantity="other">ಈ ಡಾಕ್ಯುಮೆಂಟ್‌ನಲ್ಲಿ %d ಪುಟಗಳಿವೆ.</item>
+    </plurals>
+    <string name="reading_page_range">1 ರಿಂದ %1$d</string>
+    <string name="reading_go">ಹೋಗಿ</string>
+
+    <string name="reading_could_not_open">ಈ ಡಾಕ್ಯುಮೆಂಟ್ ತೆರೆಯಲಾಗಲಿಲ್ಲ.</string>
+    <string name="reading_no_tts">ಈ ಫೋನ್‌ನಲ್ಲಿ ಪಠ್ಯದಿಂದ ಧ್ವನಿ ಎಂಜಿನ್ ಇಲ್ಲ.</string>
+    <string name="reading_voice_stopped">ಧ್ವನಿ ನಿಂತುಹೋಯಿತು. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
+    <string name="reading_reached_end">ಕೊನೆಯನ್ನು ತಲುಪಿದೆ.</string>
+    <string name="reading_no_text_to_read">ಓದಲು ಪಠ್ಯವಿಲ್ಲ. ಸ್ಕ್ಯಾನ್ ಮಾಡಿದ ಪುಟಕ್ಕೆ ಮೊದಲು \"ಹುಡುಕಬಲ್ಲಂತೆ ಮಾಡಿ\" ಬಳಸಿ.</string>
+
+    <string name="reading_scan_mode_single">ಒಂದು ಪುಟ</string>
+    <string name="reading_scan_mode_batch">ಹಲವು ಪುಟ</string>
+    <string name="reading_scan_mode_id_card">ID ಕಾರ್ಡ್</string>
+    <string name="reading_scan_filter_photo">ಫೋಟೋ</string>
+    <string name="reading_scan_filter_grey">ಬೂದು</string>
+    <string name="reading_scan_filter_document">ಡಾಕ್ಯುಮೆಂಟ್</string>
+
+    <string name="reading_scan_photo_failed">ಫೋಟೋ ತೆಗೆಯಲಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
+    <string name="reading_scan_camera_failed">ಕ್ಯಾಮರಾ ಪ್ರಾರಂಭಿಸಲಾಗಲಿಲ್ಲ.</string>
+    <string name="reading_scan_auto_on">ಆಟೋ ಆನ್</string>
+    <string name="reading_scan_auto_off">ಆಟೋ ಆಫ್</string>
+    <string name="reading_scan_auto_description">ಪುಟ ಸ್ಥಿರವಾದಾಗ ತಾನಾಗಿಯೇ ಫೋಟೋ ತೆಗೆಯಿರಿ</string>
+    <string name="reading_scan_card_back">ಈಗ ಕಾರ್ಡ್‌ನ ಹಿಂಭಾಗ</string>
+    <string name="reading_scan_card_front">ಕಾರ್ಡ್‌ನ ಮುಂಭಾಗ</string>
+    <string name="reading_scan_fill_frame">ಫ್ರೇಮ್ ತುಂಬ ಪುಟ ಬರುವಂತೆ ಇಡಿ</string>
+    <string name="reading_scan_hold_still">ಅಲುಗಾಡದೆ ಹಿಡಿಯಿರಿ</string>
+    <string name="reading_scan_page_found">ಪುಟ ಸಿಕ್ಕಿದೆ</string>
+    <plurals name="reading_scan_kept">
+        <item quantity="one">%d ಇರಿಸಲಾಗಿದೆ</item>
+        <item quantity="other">%d ಇರಿಸಲಾಗಿದೆ</item>
+    </plurals>
+    <string name="reading_scan_saving">%1$d ಉಳಿಸಲಾಗುತ್ತಿದೆ</string>
+    <string name="reading_scan_take_picture">ಫೋಟೋ ತೆಗೆಯಿರಿ</string>
+    <string name="reading_scan_taking">ಫೋಟೋ ತೆಗೆಯಲಾಗುತ್ತಿದೆ…</string>
+    <string name="reading_scan_hold_or_tap">ಅಲುಗಾಡದೆ ಹಿಡಿಯಿರಿ, ಅಥವಾ ಸೆರೆಹಿಡಿಯಲು ಟ್ಯಾಪ್ ಮಾಡಿ</string>
+    <string name="reading_scan_tap_to_capture">ಸೆರೆಹಿಡಿಯಲು ಟ್ಯಾಪ್ ಮಾಡಿ</string>
+    <string name="reading_scan_on">ಆನ್</string>
+    <string name="reading_scan_off">ಆಫ್</string>
+
+    <string name="reading_scan_camera_needed">ಪುಟ ಸ್ಕ್ಯಾನ್ ಮಾಡಲು Sheaf ಗೆ ಕ್ಯಾಮರಾ ಬೇಕು</string>
+    <string name="reading_scan_camera_privacy">ಫೋಟೋವನ್ನು ಈ ಫೋನ್‌ನಲ್ಲೇ ಪ್ರಕ್ರಿಯೆಗೊಳಿಸಲಾಗುತ್ತದೆ, ಎಲ್ಲಿಗೂ ಕಳುಹಿಸಲಾಗುವುದಿಲ್ಲ - Sheaf ಗೆ ಇಂಟರ್ನೆಟ್ ಬಳಸುವ ಅನುಮತಿಯೇ ಇಲ್ಲ.</string>
+    <string name="reading_scan_allow_camera">ಕ್ಯಾಮರಾಗೆ ಅನುಮತಿಸಿ</string>
+    <string name="reading_scan_ready">ನಿಮ್ಮ ಸ್ಕ್ಯಾನ್ ಸಿದ್ಧವಾಗಿದೆ</string>
+    <string name="reading_scan_nothing">ಏನೂ ತಯಾರಾಗಲಿಲ್ಲ</string>
+    <string name="reading_scan_made_here">ಈ ಫೋನ್‌ನಲ್ಲೇ ತಯಾರಿಸಲಾಗಿದೆ. ಏನನ್ನೂ ಅಪ್‌ಲೋಡ್ ಮಾಡಿಲ್ಲ.</string>
+    <string name="reading_scan_try_again">ಮತ್ತೆ ಸ್ಕ್ಯಾನ್ ಮಾಡಿ ನೋಡಿ.</string>
+    <string name="reading_scan_save_share">ಇದನ್ನು ಉಳಿಸಿ ಅಥವಾ ಹಂಚಿಕೊಳ್ಳಿ</string>
+    <string name="reading_scan_something_else">ಬೇರೆ ಏನಾದರೂ ಸ್ಕ್ಯಾನ್ ಮಾಡಿ</string>
+
+    <string name="reading_scan_tag_front">ಮುಂಭಾಗ</string>
+    <string name="reading_scan_tag_back">ಹಿಂಭಾಗ</string>
+    <string name="reading_scan_tag_recrop">ಮರುಕ್ರಾಪ್</string>
+    <string name="reading_scan_tag_found">ಸಿಕ್ಕಿದೆ</string>
+    <string name="reading_scan_tag_adjust">ಹೊಂದಿಸಿ</string>
+    <string name="reading_scan_fit_card">ಮೂಲೆಗಳನ್ನು ಕಾರ್ಡ್‌ಗೆ ಹೊಂದಿಸಿ</string>
+    <string name="reading_scan_move_corners">ಮೂಲೆಗಳನ್ನು ಪುಟದ ಮೇಲೆ ಸರಿಸಿ</string>
+    <string name="reading_scan_check_corners">ಮೂಲೆಗಳು ಪುಟದ ಮೇಲಿವೆಯೇ ಎಂದು ಪರಿಶೀಲಿಸಿ</string>
+    <string name="reading_scan_drag_corners">ಮೂಲೆಗಳನ್ನು ಎಳೆದು ಪುಟದ ಮೇಲೆ ತನ್ನಿ</string>
+    <string name="reading_scan_keep_page">ಈ ಪುಟ ಇರಿಸಿ</string>
+    <string name="reading_scan_keep_front">ಮುಂಭಾಗ ಇರಿಸಿ</string>
+    <string name="reading_scan_keep_back">ಹಿಂಭಾಗ ಇರಿಸಿ</string>
+    <string name="reading_scan_next_back">ಮುಂದೆ, ಹಿಂಭಾಗ</string>
+    <string name="reading_scan_save_crop">ಕ್ರಾಪ್ ಉಳಿಸಿ</string>
+    <string name="reading_scan_retake">ಮತ್ತೆ ತೆಗೆಯಿರಿ</string>
+    <string name="reading_scan_cancel">ರದ್ದುಮಾಡಿ</string>
+    <string name="reading_scan_whole_photo">ಪೂರ್ತಿ ಫೋಟೋ</string>
+    <string name="reading_scan_captured_page">ಸೆರೆಹಿಡಿದ ಪುಟ</string>
+    <string name="reading_scan_look">ನೋಟ</string>
+
+    <plurals name="reading_scan_pages_scanned">
+        <item quantity="one">%d ಪುಟ ಸ್ಕ್ಯಾನ್ ಆಗಿದೆ</item>
+        <item quantity="other">%d ಪುಟಗಳು ಸ್ಕ್ಯಾನ್ ಆಗಿವೆ</item>
+    </plurals>
+    <string name="reading_scan_tap_to_recrop">ಮರುಕ್ರಾಪ್ ಮಾಡಲು ಪುಟವನ್ನು ಟ್ಯಾಪ್ ಮಾಡಿ</string>
+    <string name="reading_scan_thumbnail">ಸ್ಕ್ಯಾನ್ ಮಾಡಿದ ಪುಟ %1$d. ಮರುಕ್ರಾಪ್ ಮಾಡಲು ಟ್ಯಾಪ್ ಮಾಡಿ.</string>
+    <string name="reading_scan_remove_page">ಪುಟ %1$d ತೆಗೆದುಹಾಕಿ</string>
+    <string name="reading_scan_making_pdf">PDF ತಯಾರಾಗುತ್ತಿದೆ…</string>
+    <plurals name="reading_scan_saving_last">
+        <item quantity="one">ಕೊನೆಯ ಪುಟ ಉಳಿಸಲಾಗುತ್ತಿದೆ…</item>
+        <item quantity="other">ಕೊನೆಯ %d ಪುಟಗಳನ್ನು ಉಳಿಸಲಾಗುತ್ತಿದೆ…</item>
+    </plurals>
+    <plurals name="reading_scan_make_pdf">
+        <item quantity="one">ಈ ಪುಟದ PDF ಮಾಡಿ</item>
+        <item quantity="other">ಈ %d ಪುಟಗಳ PDF ಮಾಡಿ</item>
+    </plurals>
+
+    <string name="reading_scan_photo_unreadable">ಆ ಫೋಟೋವನ್ನು ಓದಲಾಗಲಿಲ್ಲ.</string>
+    <string name="reading_scan_page_not_saved">ಆ ಪುಟವನ್ನು ಉಳಿಸಲಾಗಲಿಲ್ಲ.</string>
+    <string name="reading_scan_photo_gone">ಆ ಪುಟದ ಫೋಟೋ ಈಗ ಇಲ್ಲ. ಅದನ್ನು ಮತ್ತೆ ಸ್ಕ್ಯಾನ್ ಮಾಡಿ.</string>
+    <string name="reading_scan_first">ಮೊದಲು ಒಂದು ಪುಟ ಸ್ಕ್ಯಾನ್ ಮಾಡಿ.</string>
+    <string name="reading_scan_still_saving">ಕೊನೆಯ ಪುಟ ಇನ್ನೂ ಉಳಿಸಲಾಗುತ್ತಿದೆ. ಒಂದು ಕ್ಷಣ.</string>
+
+    <plurals name="reading_open_looking_at">
+        <item quantity="one">ಈ ಫೋನ್‌ನಲ್ಲಿ %d ಫೈಲ್ ನೋಡಲಾಗುತ್ತಿದೆ…</item>
+        <item quantity="other">ಈ ಫೋನ್‌ನಲ್ಲಿ %d ಫೈಲ್‌ಗಳನ್ನು ನೋಡಲಾಗುತ್ತಿದೆ…</item>
+    </plurals>
+    <string name="reading_open_looked_at">%2$d ರಲ್ಲಿ %1$d ನೋಡಲಾಗಿದೆ…</string>
+    <string name="reading_open_one_unreadable">ಒಂದು ಫೈಲ್ ಓದಲಾಗಲಿಲ್ಲ.</string>
+    <string name="reading_open_looking_in_folder">ಫೋಲ್ಡರ್‌ನಲ್ಲಿ ನೋಡಲಾಗುತ್ತಿದೆ…</string>
+    <string name="reading_open_folder_empty">ಆ ಫೋಲ್ಡರ್ ಖಾಲಿಯಾಗಿದೆ.</string>
+
+    <string name="reading_open_pick_files">ನಿಮ್ಮ ಫೈಲ್‌ಗಳನ್ನು ಆರಿಸಿ</string>
+    <string name="reading_open_pick_files_body">PDF, ಫೋಟೋಗಳು, Word ಮತ್ತು Excel. Sheaf ಇವನ್ನು ಈ ಫೋನ್‌ನಲ್ಲೇ ನೋಡಿ ಏನು ಮಾಡಬೇಕೆಂದು ಸೂಚಿಸುತ್ತದೆ. ಏನನ್ನೂ ಅಪ್‌ಲೋಡ್ ಮಾಡುವುದಿಲ್ಲ.</string>
+    <string name="reading_open_pick_folder">ಇಡೀ ಫೋಲ್ಡರ್ ಆರಿಸಿ</string>
+    <plurals name="reading_open_your_files">
+        <item quantity="one">ನಿಮ್ಮ ಫೈಲ್</item>
+        <item quantity="other">ನಿಮ್ಮ %d ಫೈಲ್‌ಗಳು</item>
+    </plurals>
+    <plurals name="reading_open_more_files">
+        <item quantity="one">ಮತ್ತು ಇನ್ನೂ %d ಫೈಲ್</item>
+        <item quantity="other">ಮತ್ತು ಇನ್ನೂ %d ಫೈಲ್‌ಗಳು</item>
+    </plurals>
+    <plurals name="reading_open_what_to_do">
+        <item quantity="one">ಇದರೊಂದಿಗೆ ಏನು ಮಾಡಬೇಕು</item>
+        <item quantity="other">ಈ %d ರೊಂದಿಗೆ ಏನು ಮಾಡಬೇಕು</item>
+    </plurals>
+    <string name="reading_open_start_over">ಮತ್ತೆ ಪ್ರಾರಂಭಿಸಿ</string>
+    <string name="reading_open_run_recipe">ಇವುಗಳ ಮೇಲೆ ನಿಮ್ಮ ಒಂದು ರೆಸಿಪಿ ಚಲಾಯಿಸಿ</string>
+    <string name="reading_open_any_tool">ಅಥವಾ ಯಾವುದೇ ಟೂಲ್ ಆರಿಸಿ →</string>
+
+    <string name="reading_open_locked">ಲಾಕ್ ಆಗಿದೆ</string>
+    <string name="reading_open_a_scan">ಸ್ಕ್ಯಾನ್</string>
+    <string name="reading_open_a_form">ಫಾರ್ಮ್</string>
+    <string name="reading_open_unreadable">ಓದಲಾಗಲಿಲ್ಲ</string>
+    <string name="reading_open_picture">ಚಿತ್ರ</string>
+    <string name="reading_open_office">Word, Excel ಅಥವಾ ಪಠ್ಯ</string>
+    <string name="reading_open_first_page">%1$s ನ ಮೊದಲ ಪುಟ</string>
+
+    <string name="reading_open_read">ಓದಿ</string>
+    <string name="reading_open_pdf_to_excel">PDF ನಿಂದ Excel</string>
+    <string name="reading_open_pdf_to_word">PDF ನಿಂದ Word</string>
+    <string name="reading_open_office_to_pdf">Word, Excel ಅಥವಾ ಪಠ್ಯದಿಂದ PDF</string>
+</resources>

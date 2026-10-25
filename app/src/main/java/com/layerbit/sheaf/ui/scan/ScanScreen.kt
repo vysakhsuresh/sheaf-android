@@ -55,6 +55,9 @@ import com.layerbit.sheaf.ui.components.RoundIconButton
 import com.layerbit.sheaf.ui.components.SecondaryButton
 import com.layerbit.sheaf.ui.components.SectionHeading
 import com.layerbit.sheaf.ui.theme.SheafColors
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.layerbit.sheaf.R
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 
@@ -77,22 +80,27 @@ fun PageEditor(
     modifier: Modifier = Modifier
 ) {
     val purpose = editing.purpose
-    val (tag, title) = when {
-        purpose == EditPurpose.IdFront -> "Front" to "Fit the corners to the card"
-        purpose == EditPurpose.IdBack -> "Back" to "Fit the corners to the card"
+    val (tagRes, titleRes) = when {
+        purpose == EditPurpose.IdFront -> R.string.reading_scan_tag_front to R.string.reading_scan_fit_card
+        purpose == EditPurpose.IdBack -> R.string.reading_scan_tag_back to R.string.reading_scan_fit_card
         purpose is EditPurpose.Recrop && purpose.kind == PageKind.ID_CARD ->
-            (if (purpose.side == 0) "Front" else "Back") to "Fit the corners to the card"
-        purpose is EditPurpose.Recrop -> "Recrop" to "Move the corners onto the page"
-        editing.detected -> "Found" to "Check the corners are on the page"
-        else -> "Adjust" to "Drag the corners onto the page"
+            (if (purpose.side == 0) R.string.reading_scan_tag_front else R.string.reading_scan_tag_back) to R.string.reading_scan_fit_card
+        purpose is EditPurpose.Recrop -> R.string.reading_scan_tag_recrop to R.string.reading_scan_move_corners
+        editing.detected -> R.string.reading_scan_tag_found to R.string.reading_scan_check_corners
+        else -> R.string.reading_scan_tag_adjust to R.string.reading_scan_drag_corners
     }
-    val (keepLabel, discardLabel) = when (purpose) {
-        EditPurpose.NewPage -> "Keep this page" to "Retake"
-        EditPurpose.IdFront -> "Keep the front" to "Retake"
-        EditPurpose.IdBack -> "Keep the back" to "Retake"
+    val (keepRes, discardRes) = when (purpose) {
+        EditPurpose.NewPage -> R.string.reading_scan_keep_page to R.string.reading_scan_retake
+        EditPurpose.IdFront -> R.string.reading_scan_keep_front to R.string.reading_scan_retake
+        EditPurpose.IdBack -> R.string.reading_scan_keep_back to R.string.reading_scan_retake
         is EditPurpose.Recrop ->
-            (if (purpose.side + 1 < purpose.sources.size) "Next, the back" else "Save the crop") to "Cancel"
+            (if (purpose.side + 1 < purpose.sources.size) R.string.reading_scan_next_back else R.string.reading_scan_save_crop) to
+                R.string.reading_scan_cancel
     }
+    val tag = stringResource(tagRes)
+    val title = stringResource(titleRes)
+    val keepLabel = stringResource(keepRes)
+    val discardLabel = stringResource(discardRes)
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -103,7 +111,7 @@ fun PageEditor(
                 color = SheafColors.Text,
                 modifier = Modifier.padding(start = 10.dp).weight(1f)
             )
-            TextButton(onClick = onWholePhoto) { Text("Whole photo") }
+            TextButton(onClick = onWholePhoto) { Text(stringResource(R.string.reading_scan_whole_photo)) }
         }
         Spacer(Modifier.height(10.dp))
 
@@ -144,7 +152,7 @@ fun PageEditor(
 
             Image(
                 bitmap = bitmap.asImageBitmap(),
-                contentDescription = "Captured page",
+                contentDescription = stringResource(R.string.reading_scan_captured_page),
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize()
             )
@@ -244,7 +252,7 @@ fun PageEditor(
         }
 
         Spacer(Modifier.height(14.dp))
-        SectionHeading("Look")
+        SectionHeading(stringResource(R.string.reading_scan_look))
         Spacer(Modifier.height(8.dp))
         ChipRow(
             options = PageProcessor.Filter.entries.map { it to it.label },
@@ -283,8 +291,8 @@ fun ScannedPages(
             .padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            SectionHeading(if (pages.size == 1) "1 page scanned" else "${pages.size} pages scanned", modifier = Modifier.weight(1f))
-            Text("Tap a page to recrop it", style = MaterialTheme.typography.labelSmall, color = SheafColors.Dim)
+            SectionHeading(pluralStringResource(R.plurals.reading_scan_pages_scanned, pages.size, pages.size), modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.reading_scan_tap_to_recrop), style = MaterialTheme.typography.labelSmall, color = SheafColors.Dim)
         }
         Spacer(Modifier.height(10.dp))
 
@@ -293,7 +301,7 @@ fun ScannedPages(
                 Box {
                     Image(
                         bitmap = page.thumbnail.asImageBitmap(),
-                        contentDescription = "Scanned page ${index + 1}. Tap to recrop it.",
+                        contentDescription = stringResource(R.string.reading_scan_thumbnail, index + 1),
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .height(104.dp)
@@ -313,7 +321,7 @@ fun ScannedPages(
                     )
                     RoundIconButton(
                         icon = Icons.Filled.Close,
-                        contentDescription = "Remove page ${index + 1}",
+                        contentDescription = stringResource(R.string.reading_scan_remove_page, index + 1),
                         onClick = { onRemove(index) },
                         size = 24.dp,
                         modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
@@ -325,9 +333,9 @@ fun ScannedPages(
         Spacer(Modifier.height(14.dp))
         PrimaryButton(
             text = when {
-                busy -> "Making the PDF…"
-                processing > 0 -> "Saving the last ${if (processing == 1) "page" else "$processing pages"}…"
-                else -> "Make a PDF of ${if (pages.size == 1) "this page" else "these ${pages.size} pages"}"
+                busy -> stringResource(R.string.reading_scan_making_pdf)
+                processing > 0 -> pluralStringResource(R.plurals.reading_scan_saving_last, processing, processing)
+                else -> pluralStringResource(R.plurals.reading_scan_make_pdf, pages.size, pages.size)
             },
             onClick = onMakePdf,
             enabled = pages.isNotEmpty() && !busy && processing == 0,

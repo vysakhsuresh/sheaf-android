@@ -39,6 +39,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
 
@@ -198,11 +200,11 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app), ViewerControls 
             } catch (_: PdfException.PasswordRequired) {
                 _state.value = ViewerState.NeedsPassword()
             } catch (e: PdfException) {
-                _state.value = ViewerState.Failed(e.message ?: "This document could not be opened.")
+                _state.value = ViewerState.Failed(e.message ?: Strings.get(R.string.reading_could_not_open))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _state.value = ViewerState.Failed(e.message ?: "This document could not be opened.")
+                _state.value = ViewerState.Failed(e.message ?: Strings.get(R.string.reading_could_not_open))
             }
         }
     }
@@ -233,7 +235,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app), ViewerControls 
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _state.value = ViewerState.Failed(e.message ?: "This document could not be opened.")
+                _state.value = ViewerState.Failed(e.message ?: Strings.get(R.string.reading_could_not_open))
             }
         }
     }
@@ -486,7 +488,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app), ViewerControls 
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _state.value = ViewerState.Failed(e.message ?: "This document could not be opened.")
+                _state.value = ViewerState.Failed(e.message ?: Strings.get(R.string.reading_could_not_open))
             }
         }
     }
@@ -550,7 +552,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app), ViewerControls 
                     if (page >= 0) speakPage(page, takePendingWord())
                 } else {
                     _reading.value = _reading.value.copy(
-                        readAloud = ReadAloud(available = false, note = "This phone has no text-to-speech engine.")
+                        readAloud = ReadAloud(available = false, note = Strings.get(R.string.reading_no_tts))
                     )
                 }
             }
@@ -595,7 +597,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app), ViewerControls 
         override fun onStart(utteranceId: String?) = Unit
         override fun onError(utteranceId: String?) {
             _reading.value = _reading.value.copy(
-                readAloud = ReadAloud(available = true, speaking = false, note = "The voice stopped. Try again.")
+                readAloud = ReadAloud(available = true, speaking = false, note = Strings.get(R.string.reading_voice_stopped))
             )
         }
         override fun onDone(utteranceId: String?) {
@@ -607,7 +609,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app), ViewerControls 
             if (_reading.value.readAloud.speaking && page + 1 < total) {
                 speakPage(page + 1)
             } else {
-                _reading.value = _reading.value.copy(readAloud = ReadAloud(speaking = false, note = "Reached the end."))
+                _reading.value = _reading.value.copy(readAloud = ReadAloud(speaking = false, note = Strings.get(R.string.reading_reached_end)))
             }
         }
     }
@@ -640,7 +642,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app), ViewerControls 
                     speakPage(page + 1)
                 } else {
                     _reading.value = _reading.value.copy(
-                        readAloud = ReadAloud(speaking = false, note = "No text to read. A scanned page needs Make searchable first.")
+                        readAloud = ReadAloud(speaking = false, note = Strings.get(R.string.reading_no_text_to_read))
                     )
                 }
                 return@launch
@@ -846,7 +848,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app), ViewerControls 
                 sheaf.bookmarks.add(
                     uri = key,
                     pageIndex = pageIndex,
-                    label = heading ?: "Page ${pageIndex + 1}"
+                    label = heading ?: Strings.get(R.string.reading_page_n, pageIndex + 1)
                 )
             }
         }

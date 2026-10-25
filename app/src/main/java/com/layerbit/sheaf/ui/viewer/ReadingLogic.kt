@@ -3,6 +3,9 @@ package com.layerbit.sheaf.ui.viewer
 import com.layerbit.sheaf.pdf.PageArea
 import com.layerbit.sheaf.pdf.PageLink
 import com.layerbit.sheaf.pdf.PageWord
+import androidx.annotation.StringRes
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
 import kotlin.math.abs
 import kotlin.math.hypot
 
@@ -15,10 +18,12 @@ import kotlin.math.hypot
  */
 
 /** How the pages are laid out on screen. */
-enum class ReadingMode(val label: String) {
-    CONTINUOUS("One long scroll"),
-    SINGLE("A page at a time"),
-    TWO_UP("Two pages side by side");
+enum class ReadingMode(@StringRes val labelRes: Int) {
+    CONTINUOUS(R.string.reading_mode_continuous),
+    SINGLE(R.string.reading_mode_single),
+    TWO_UP(R.string.reading_mode_two_up);
+
+    val label: String get() = Strings.get(labelRes)
 
     companion object {
         /** The stored name back to a mode; anything unknown or missing is the default. */
@@ -27,11 +32,13 @@ enum class ReadingMode(val label: String) {
 }
 
 /** The colour of the paper. Night is the old photographic inversion; the others are gentler. */
-enum class PaperTint(val label: String) {
-    DAY("Day"),
-    SEPIA("Sepia"),
-    DARK_PAPER("Dark paper"),
-    NIGHT("Night");
+enum class PaperTint(@StringRes val labelRes: Int) {
+    DAY(R.string.reading_tint_day),
+    SEPIA(R.string.reading_tint_sepia),
+    DARK_PAPER(R.string.reading_tint_dark_paper),
+    NIGHT(R.string.reading_tint_night);
+
+    val label: String get() = Strings.get(labelRes)
 
     val isDark: Boolean get() = this == DARK_PAPER || this == NIGHT
 

@@ -119,6 +119,10 @@ import com.layerbit.sheaf.ui.tools.ToolPickerSheet
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
 
 /**
  * The reader: a document's pages, and everything that happens on them.
@@ -232,7 +236,7 @@ fun ViewerScreen(
                     when (val target = linkAt(links, x, y)?.target) {
                         is LinkTarget.Page -> onJump(target.index)
                         is LinkTarget.Web -> if (!TextHandoff.openLink(context, target.uri)) {
-                            note = "No app on this phone can open that link."
+                            note = Strings.get(R.string.reading_no_app_link)
                         }
                         null -> Unit
                     }
@@ -243,7 +247,7 @@ fun ViewerScreen(
                 scope.launch {
                     val words = controls.wordsOn(page)
                     if (words.isEmpty()) {
-                        note = "There is no text to select on this page. A scan needs Make searchable first."
+                        note = Strings.get(R.string.reading_no_text_to_select)
                         return@launch
                     }
                     val at = SelectionMath.wordAt(words, x, y) ?: return@launch
@@ -376,14 +380,14 @@ fun ViewerScreen(
                     .background(SheafColors.Surface)
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
-                RoundIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", onClick = onBack)
+                RoundIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.reading_back), onClick = onBack)
             }
         }
 
         Box(modifier = Modifier.weight(1f)) {
             when (state) {
                 is ViewerState.Loading ->
-                    CentredMessage("Opening…", modifier = Modifier.fillMaxSize(), showSpinner = true)
+                    CentredMessage(stringResource(R.string.reading_opening), modifier = Modifier.fillMaxSize(), showSpinner = true)
 
                 is ViewerState.NeedsPassword -> PasswordPrompt(state = state, onUnlock = controls::unlock)
 
@@ -429,8 +433,8 @@ fun ViewerScreen(
                                 SelectionBar(
                                     onCopy = {
                                         val copied = TextHandoff.copy(context, chosen.text, state.displayName)
-                                        if (!copied) note = "That could not be copied."
-                                        else if (!TextHandoff.systemConfirmsCopy) note = "Copied."
+                                        if (!copied) note = Strings.get(R.string.reading_copy_failed)
+                                        else if (!TextHandoff.systemConfirmsCopy) note = Strings.get(R.string.reading_copied)
                                         selection = null
                                     },
                                     onShare = { TextHandoff.share(context, chosen.text) },
@@ -446,10 +450,10 @@ fun ViewerScreen(
                                         selection = null
                                     },
                                     onDefine = {
-                                        if (!TextHandoff.define(context, chosen.text)) note = "No app on this phone can look words up."
+                                        if (!TextHandoff.define(context, chosen.text)) note = Strings.get(R.string.reading_no_app_define)
                                     },
                                     onTranslate = {
-                                        if (!TextHandoff.translate(context, chosen.text)) note = "No app on this phone can translate."
+                                        if (!TextHandoff.translate(context, chosen.text)) note = Strings.get(R.string.reading_no_app_translate)
                                     },
                                     onClose = { selection = null },
                                     modifier = Modifier.align(Alignment.TopCenter)
@@ -460,7 +464,7 @@ fun ViewerScreen(
                                 // A way back that does not need a second accurate pinch. Readers
                                 // zoom in to look at one figure and then want the page again.
                                 PageBadge(
-                                    label = "${(zoom * 100).toInt()}% · reset",
+                                    label = stringResource(R.string.reading_zoom_reset, (zoom * 100).toInt()),
                                     onClick = { zoom = 1f },
                                     modifier = Modifier
                                         .align(Alignment.TopEnd)
@@ -550,7 +554,7 @@ fun ViewerScreen(
 
     if (showTools && ready != null) {
         ToolPickerSheet(
-            heading = "Use on this document",
+            heading = stringResource(R.string.reading_use_on_document),
             documentName = ready.displayName,
             onDismiss = { showTools = false },
             onPick = { tool ->
@@ -667,13 +671,13 @@ private fun SelectionBar(
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        SelectionAction("Copy", onCopy)
-        SelectionAction("Share", onShare)
-        SelectionAction("Find", onFind)
-        SelectionAction("Read aloud", onReadAloud)
-        SelectionAction("Define", onDefine)
-        SelectionAction("Translate", onTranslate)
-        RoundIconButton(icon = Icons.Filled.Close, contentDescription = "Clear the selection", onClick = onClose, size = 32.dp)
+        SelectionAction(stringResource(R.string.reading_copy), onCopy)
+        SelectionAction(stringResource(R.string.reading_share), onShare)
+        SelectionAction(stringResource(R.string.reading_find), onFind)
+        SelectionAction(stringResource(R.string.reading_read_aloud), onReadAloud)
+        SelectionAction(stringResource(R.string.reading_define), onDefine)
+        SelectionAction(stringResource(R.string.reading_translate), onTranslate)
+        RoundIconButton(icon = Icons.Filled.Close, contentDescription = stringResource(R.string.reading_clear_selection), onClick = onClose, size = 32.dp)
     }
 }
 
@@ -719,9 +723,9 @@ private fun PasswordPrompt(state: ViewerState.NeedsPassword, onUnlock: (String) 
         contentAlignment = Alignment.Center
     ) {
         Column(modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth()) {
-            Text("This document is locked", style = MaterialTheme.typography.headlineSmall, color = SheafColors.Text)
+            Text(stringResource(R.string.reading_locked_title), style = MaterialTheme.typography.headlineSmall, color = SheafColors.Text)
             Text(
-                "Type its password to open it. Sheaf keeps the password only while the document is open.",
+                stringResource(R.string.reading_locked_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = SheafColors.Muted,
                 modifier = Modifier.padding(top = 6.dp)
@@ -730,7 +734,7 @@ private fun PasswordPrompt(state: ViewerState.NeedsPassword, onUnlock: (String) 
             OutlinedTextField(
                 value = typed,
                 onValueChange = { typed = it },
-                placeholder = { Text("Password", style = MaterialTheme.typography.bodyMedium) },
+                placeholder = { Text(stringResource(R.string.reading_password), style = MaterialTheme.typography.bodyMedium) },
                 singleLine = true,
                 isError = state.wrong,
                 visualTransformation = PasswordVisualTransformation(),
@@ -750,7 +754,7 @@ private fun PasswordPrompt(state: ViewerState.NeedsPassword, onUnlock: (String) 
             )
             if (state.wrong) {
                 Text(
-                    "That password did not open it. Check it and try again.",
+                    stringResource(R.string.reading_password_wrong),
                     style = MaterialTheme.typography.bodySmall,
                     color = SheafColors.Skipped,
                     modifier = Modifier.padding(top = 8.dp)
@@ -760,10 +764,10 @@ private fun PasswordPrompt(state: ViewerState.NeedsPassword, onUnlock: (String) 
             if (state.checking) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(color = SheafColors.Band, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                    Text("Checking…", style = MaterialTheme.typography.bodyMedium, color = SheafColors.Muted, modifier = Modifier.padding(start = 10.dp))
+                    Text(stringResource(R.string.reading_checking), style = MaterialTheme.typography.bodyMedium, color = SheafColors.Muted, modifier = Modifier.padding(start = 10.dp))
                 }
             } else {
-                PrimaryButton(text = "Open", enabled = typed.isNotEmpty(), onClick = submit, modifier = Modifier.fillMaxWidth())
+                PrimaryButton(text = stringResource(R.string.reading_open), enabled = typed.isNotEmpty(), onClick = submit, modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -788,8 +792,8 @@ private fun ThumbnailSheet(
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = SheafColors.Surface) {
         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
             RowBetween {
-                Text("Pages", style = MaterialTheme.typography.headlineSmall, color = SheafColors.Text)
-                TextButton(onClick = onGoToPage) { Text("Type a page number", color = SheafColors.Band) }
+                Text(stringResource(R.string.reading_pages), style = MaterialTheme.typography.headlineSmall, color = SheafColors.Text)
+                TextButton(onClick = onGoToPage) { Text(stringResource(R.string.reading_type_page_number), color = SheafColors.Band) }
             }
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 96.dp),
@@ -825,10 +829,10 @@ private fun ReadingOptionsSheet(
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = SheafColors.Surface) {
         Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
-            Text("Reading options", style = MaterialTheme.typography.headlineSmall, color = SheafColors.Text)
+            Text(stringResource(R.string.reading_options_title), style = MaterialTheme.typography.headlineSmall, color = SheafColors.Text)
             Spacer(Modifier.height(14.dp))
 
-            SectionHeading("Layout")
+            SectionHeading(stringResource(R.string.reading_layout))
             Spacer(Modifier.height(8.dp))
             ChipRow(
                 options = ReadingMode.entries.map { it to it.label },
@@ -836,14 +840,14 @@ private fun ReadingOptionsSheet(
                 onSelect = controls::setReadingMode
             )
             Text(
-                "Remembered for this document.",
+                stringResource(R.string.reading_remembered),
                 style = MaterialTheme.typography.bodySmall,
                 color = SheafColors.Dim,
                 modifier = Modifier.padding(top = 6.dp)
             )
             Spacer(Modifier.height(16.dp))
 
-            SectionHeading("Paper")
+            SectionHeading(stringResource(R.string.reading_paper))
             Spacer(Modifier.height(8.dp))
             ChipRow(
                 options = PaperTint.entries.map { it to it.label },
@@ -852,7 +856,7 @@ private fun ReadingOptionsSheet(
             )
             Spacer(Modifier.height(16.dp))
 
-            SectionHeading("Brightness")
+            SectionHeading(stringResource(R.string.reading_brightness))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Slider(
                     value = reading.brightness,
@@ -862,7 +866,7 @@ private fun ReadingOptionsSheet(
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    "${(reading.brightness * 100).roundToInt()}%",
+                    stringResource(R.string.reading_percent, (reading.brightness * 100).roundToInt()),
                     style = MaterialTheme.typography.labelLarge,
                     color = SheafColors.Muted,
                     modifier = Modifier.padding(start = 12.dp).width(44.dp),
@@ -870,17 +874,17 @@ private fun ReadingOptionsSheet(
                 )
             }
             Text(
-                "Dims the pages only. The phone's own brightness stays as it is.",
+                stringResource(R.string.reading_brightness_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = SheafColors.Dim
             )
             Spacer(Modifier.height(12.dp))
 
             ToggleRow(
-                title = "Crop white margins",
+                title = stringResource(R.string.reading_crop_margins),
                 checked = reading.cropMargins,
                 onChange = controls::setCropMargins,
-                detail = "Trims the empty border round each page, so the words come out bigger."
+                detail = stringResource(R.string.reading_crop_margins_detail)
             )
         }
     }
@@ -928,7 +932,7 @@ private fun ViewerHeader(
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         RowBetween {
-            RoundIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", onClick = onBack)
+            RoundIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.reading_back), onClick = onBack)
             Column(modifier = Modifier.weight(1f).padding(start = 10.dp)) {
                 Text(
                     text = state.displayName,
@@ -938,7 +942,7 @@ private fun ViewerHeader(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "Page ${currentPage + 1} of ${state.pageCount}",
+                    text = stringResource(R.string.reading_page_of, currentPage + 1, state.pageCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = SheafColors.Dim
                 )
@@ -947,65 +951,65 @@ private fun ViewerHeader(
                 if (canMark) {
                     RoundIconButton(
                         icon = Icons.Filled.Star,
-                        contentDescription = if (marked) "Remove this mark" else "Mark this page",
+                        contentDescription = stringResource(if (marked) R.string.reading_remove_mark else R.string.reading_mark_page),
                         onClick = onToggleBookmark,
                         tint = if (marked) SheafColors.BandBright else SheafColors.Dim
                     )
                 }
-                RoundIconButton(icon = Icons.Filled.Search, contentDescription = "Find", onClick = onSearchToggle)
+                RoundIconButton(icon = Icons.Filled.Search, contentDescription = stringResource(R.string.reading_find), onClick = onSearchToggle)
                 Box {
-                    RoundIconButton(icon = Icons.Filled.MoreVert, contentDescription = "More", onClick = { menuOpen = true })
+                    RoundIconButton(icon = Icons.Filled.MoreVert, contentDescription = stringResource(R.string.reading_more), onClick = { menuOpen = true })
                     DropdownMenu(
                         expanded = menuOpen,
                         onDismissRequest = { menuOpen = false }
                     ) {
                         if (state.pageCount > 1) {
-                            MenuRow("Pages") {
+                            MenuRow(stringResource(R.string.reading_pages)) {
                                 menuOpen = false
                                 onThumbnails()
                             }
                         }
                         if (reading.outline.isNotEmpty() || reading.bookmarks.isNotEmpty()) {
-                            MenuRow("Contents and marks") {
+                            MenuRow(stringResource(R.string.reading_contents_and_marks)) {
                                 menuOpen = false
                                 onContents()
                             }
                         }
                         if (reading.comments.isNotEmpty()) {
-                            MenuRow("Comments (${reading.comments.size})") {
+                            MenuRow(stringResource(R.string.reading_comments_menu, reading.comments.size)) {
                                 menuOpen = false
                                 onComments()
                             }
                         }
-                        MenuRow("Go to page…") {
+                        MenuRow(stringResource(R.string.reading_go_to_page_menu)) {
                             menuOpen = false
                             onGoToPage()
                         }
                         if (reading.readAloud.available) {
-                            MenuRow(if (reading.readAloud.speaking) "Stop reading aloud" else "Read aloud from this page") {
+                            MenuRow(stringResource(if (reading.readAloud.speaking) R.string.reading_stop_reading_aloud else R.string.reading_read_aloud_from_page)) {
                                 menuOpen = false
                                 if (reading.readAloud.speaking) onStopReading() else onReadAloud()
                             }
                         }
                         if (canMark) {
-                            MenuRow(if (marked) "Remove this mark" else "Mark this page") {
+                            MenuRow(stringResource(if (marked) R.string.reading_remove_mark else R.string.reading_mark_page)) {
                                 menuOpen = false
                                 onToggleBookmark()
                             }
                         }
-                        MenuRow("Reading options…") {
+                        MenuRow(stringResource(R.string.reading_options_menu)) {
                             menuOpen = false
                             onOptions()
                         }
-                        MenuRow(if (reading.nightMode) "Day colours" else "Night colours") {
+                        MenuRow(stringResource(if (reading.nightMode) R.string.reading_day_colours else R.string.reading_night_colours)) {
                             menuOpen = false
                             onToggleNight()
                         }
-                        MenuRow("Print or save as PDF…") {
+                        MenuRow(stringResource(R.string.reading_print)) {
                             menuOpen = false
                             onPrint()
                         }
-                        MenuRow("Share this document…") {
+                        MenuRow(stringResource(R.string.reading_share_document)) {
                             menuOpen = false
                             onShare()
                         }
@@ -1017,7 +1021,7 @@ private fun ViewerHeader(
         // tool sheet is offered only for documents that came in from outside.
         if (state.sourceUri.isNotEmpty()) {
             PrimaryButton(
-                text = "Use a tool on this",
+                text = stringResource(R.string.reading_use_tool),
                 onClick = onTools,
                 modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                 tall = false
@@ -1058,8 +1062,8 @@ private fun ReadAloudBar(readAloud: ReadAloud, onStop: () -> Unit) {
         }
         Text(
             text = when {
-                readAloud.starting -> "Starting the voice…"
-                readAloud.speaking -> "Reading page ${readAloud.page + 1} aloud"
+                readAloud.starting -> stringResource(R.string.reading_starting_voice)
+                readAloud.speaking -> stringResource(R.string.reading_reading_page_aloud, readAloud.page + 1)
                 else -> readAloud.note.orEmpty()
             },
             style = MaterialTheme.typography.bodyMedium,
@@ -1069,7 +1073,7 @@ private fun ReadAloudBar(readAloud: ReadAloud, onStop: () -> Unit) {
             modifier = Modifier.weight(1f)
         )
         if (readAloud.speaking) {
-            TextButton(onClick = onStop) { Text("Stop", color = SheafColors.Band) }
+            TextButton(onClick = onStop) { Text(stringResource(R.string.reading_stop), color = SheafColors.Band) }
         }
     }
 }
@@ -1084,9 +1088,10 @@ private fun CommentsSheet(
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = SheafColors.Surface) {
         Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
-            SectionHeading(if (comments.size == 1) "1 comment" else "${comments.size} comments")
+            SectionHeading(pluralStringResource(R.plurals.reading_comments, comments.size, comments.size))
             Spacer(Modifier.height(6.dp))
             comments.forEach { comment ->
+                val onPage = stringResource(R.string.reading_comment_on_page, comment.pageIndex + 1)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1097,7 +1102,7 @@ private fun CommentsSheet(
                         buildString {
                             append(comment.kind)
                             comment.author?.let { append(" · ").append(it) }
-                            append(" · page ${comment.pageIndex + 1}")
+                            append(" · ").append(onPage)
                             comment.date?.let { append(" · ").append(it) }
                         },
                         style = MaterialTheme.typography.bodySmall,
@@ -1186,7 +1191,7 @@ private fun SearchBar(
                 Icon(Icons.Filled.Search, contentDescription = null, tint = SheafColors.Dim, modifier = Modifier.size(16.dp))
                 Box(modifier = Modifier.weight(1f).padding(start = 8.dp)) {
                     if (reading.query.isEmpty()) {
-                        Text("Find in this document", style = MaterialTheme.typography.bodyMedium, color = SheafColors.Dim)
+                        Text(stringResource(R.string.reading_find_hint), style = MaterialTheme.typography.bodyMedium, color = SheafColors.Dim)
                     }
                     BasicTextField(
                         value = reading.query,
@@ -1202,20 +1207,22 @@ private fun SearchBar(
                 }
             }
             if (reading.hits.isNotEmpty()) {
-                RoundIconButton(icon = Icons.Filled.KeyboardArrowUp, contentDescription = "Previous match", onClick = { onStep(false) }, size = 36.dp)
-                RoundIconButton(icon = Icons.Filled.KeyboardArrowDown, contentDescription = "Next match", onClick = { onStep(true) }, size = 36.dp, filled = true)
+                RoundIconButton(icon = Icons.Filled.KeyboardArrowUp, contentDescription = stringResource(R.string.reading_previous_match), onClick = { onStep(false) }, size = 36.dp)
+                RoundIconButton(icon = Icons.Filled.KeyboardArrowDown, contentDescription = stringResource(R.string.reading_next_match), onClick = { onStep(true) }, size = 36.dp, filled = true)
             }
         }
 
         val status = when {
-            reading.searching -> "Searching…"
+            reading.searching -> stringResource(R.string.reading_searching)
             reading.query.isBlank() -> null
-            reading.hits.isEmpty() -> "No pages contain that."
-            reading.hitIndex >= 0 ->
-                "Page ${reading.hits[reading.hitIndex].pageIndex + 1} · " +
-                    "${reading.hitIndex + 1} of ${reading.hits.size} pages with a match"
-            reading.hits.size == 1 -> "1 page"
-            else -> "${reading.hits.size} pages"
+            reading.hits.isEmpty() -> stringResource(R.string.reading_no_matches)
+            reading.hitIndex >= 0 -> stringResource(
+                R.string.reading_match_position,
+                reading.hits[reading.hitIndex].pageIndex + 1,
+                reading.hitIndex + 1,
+                reading.hits.size
+            )
+            else -> pluralStringResource(R.plurals.reading_pages_count, reading.hits.size, reading.hits.size)
         }
         status?.let {
             Pill(
@@ -1227,7 +1234,7 @@ private fun SearchBar(
 
         if (!showResults && reading.hits.isNotEmpty()) {
             Text(
-                "Matches are marked on the page. Tap to see the list again.",
+                stringResource(R.string.reading_matches_marked),
                 style = MaterialTheme.typography.bodySmall,
                 color = SheafColors.BandBright,
                 modifier = Modifier
@@ -1251,11 +1258,11 @@ private fun SearchBar(
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.Top
                 ) {
-                    Pill("p. ${hit.pageIndex + 1}", SheafColors.Band, filled = true)
+                    Pill(stringResource(R.string.reading_page_short, hit.pageIndex + 1), SheafColors.Band, filled = true)
                     Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
                         if (hit.matchCount > 1) {
                             Text(
-                                "${hit.matchCount} matches on this page",
+                                pluralStringResource(R.plurals.reading_matches_on_page, hit.matchCount, hit.matchCount),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = SheafColors.Dim
                             )
@@ -1295,7 +1302,7 @@ private fun ContentsSheet(
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = SheafColors.Surface) {
         Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
             if (bookmarks.isNotEmpty()) {
-                SectionHeading("Your marks")
+                SectionHeading(stringResource(R.string.reading_your_marks))
                 Spacer(Modifier.height(6.dp))
                 bookmarks.forEach { mark ->
                     RowBetween {
@@ -1313,14 +1320,14 @@ private fun ContentsSheet(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                "Page ${mark.pageIndex + 1}",
+                                stringResource(R.string.reading_page_n, mark.pageIndex + 1),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = SheafColors.Dim
                             )
                         }
                         TextButton(onClick = { onRemoveBookmark(mark.pageIndex) }) {
                             Text(
-                                "Remove",
+                                stringResource(R.string.reading_remove),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = SheafColors.Dim
                             )
@@ -1331,7 +1338,7 @@ private fun ContentsSheet(
             }
 
             if (outline.isNotEmpty()) {
-                SectionHeading("Contents")
+                SectionHeading(stringResource(R.string.reading_contents))
                 Spacer(Modifier.height(6.dp))
                 outline.forEach { entry ->
                     Row(
@@ -1358,8 +1365,7 @@ private fun ContentsSheet(
                 }
             } else if (bookmarks.isEmpty()) {
                 Text(
-                    "This document has no table of contents, and you have not marked a page " +
-                        "in it yet. The star in the bar marks the page you are on.",
+                    stringResource(R.string.reading_no_contents),
                     style = MaterialTheme.typography.bodyMedium,
                     color = SheafColors.Muted
                 )
@@ -1377,13 +1383,13 @@ private fun GoToPageSheet(pageCount: Int, onDismiss: () -> Unit, onGo: (Int) -> 
 
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = SheafColors.Surface) {
         Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
-            Text("Go to page", style = MaterialTheme.typography.headlineSmall, color = SheafColors.Text)
-            Text("This document has $pageCount pages.", style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
+            Text(stringResource(R.string.reading_go_to_page), style = MaterialTheme.typography.headlineSmall, color = SheafColors.Text)
+            Text(pluralStringResource(R.plurals.reading_document_has_pages, pageCount, pageCount), style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
             Spacer(Modifier.height(14.dp))
             OutlinedTextField(
                 value = typed,
                 onValueChange = { typed = it.filter { character -> character.isDigit() }.take(6) },
-                placeholder = { Text("1 to $pageCount", style = MaterialTheme.typography.bodyMedium) },
+                placeholder = { Text(stringResource(R.string.reading_page_range, pageCount), style = MaterialTheme.typography.bodyMedium) },
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -1401,7 +1407,7 @@ private fun GoToPageSheet(pageCount: Int, onDismiss: () -> Unit, onGo: (Int) -> 
             )
             Spacer(Modifier.height(12.dp))
             PrimaryButton(
-                text = "Go",
+                text = stringResource(R.string.reading_go),
                 enabled = target != null && target in 1..pageCount,
                 onClick = { target?.let { onGo(it - 1) } },
                 modifier = Modifier.fillMaxWidth()

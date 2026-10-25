@@ -43,6 +43,8 @@ import com.layerbit.sheaf.ui.components.formatPageCount
 import com.layerbit.sheaf.ui.theme.GroupAccents
 import com.layerbit.sheaf.ui.theme.SheafColors
 import com.layerbit.sheaf.ui.tools.iconFor
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 
 /**
  * Open a file: pick anything, and Sheaf says what can be done with it.
@@ -85,9 +87,9 @@ fun OpenRoute(
                 Panel(modifier = Modifier.fillMaxWidth(), onClick = { pick.launch(arrayOf("*/*")) }, tint = SheafColors.Band, inset = 22.dp) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                         IconTile(iconRes = R.drawable.ic_tool_read, accent = SheafColors.Band, size = 52.dp, filled = true)
-                        Text("Pick your files", style = MaterialTheme.typography.titleMedium, color = SheafColors.Text, modifier = Modifier.padding(top = 12.dp))
+                        Text(stringResource(R.string.reading_open_pick_files), style = MaterialTheme.typography.titleMedium, color = SheafColors.Text, modifier = Modifier.padding(top = 12.dp))
                         Text(
-                            "PDFs, photos, Word and Excel. Sheaf looks at them on this phone and suggests what to do. Nothing is uploaded.",
+                            stringResource(R.string.reading_open_pick_files_body),
                             style = MaterialTheme.typography.bodySmall,
                             color = SheafColors.Muted,
                             modifier = Modifier.padding(top = 4.dp)
@@ -97,16 +99,16 @@ fun OpenRoute(
             }
             item {
                 TextButton(onClick = { pickFolder.launch(null) }) {
-                    Text("Pick a whole folder", color = SheafColors.Band)
+                    Text(stringResource(R.string.reading_open_pick_folder), color = SheafColors.Band)
                 }
             }
         } else {
-            item { SectionHeading(if (state.files.size == 1) "Your file" else "Your ${state.files.size} files") }
+            item { SectionHeading(pluralStringResource(R.plurals.reading_open_your_files, state.files.size, state.files.size)) }
             items(state.files.take(MAX_ROWS)) { opened -> FileRow(opened) }
             if (state.files.size > MAX_ROWS) {
                 item {
                     val more = state.files.size - MAX_ROWS
-                    Text("and $more more ${if (more == 1) "file" else "files"}", style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
+                    Text(pluralStringResource(R.plurals.reading_open_more_files, more, more), style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
                 }
             }
         }
@@ -127,10 +129,10 @@ fun OpenRoute(
             item {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
                     SectionHeading(
-                        if (state.files.size == 1) "What to do with it" else "What to do with these ${state.files.size}",
+                        pluralStringResource(R.plurals.reading_open_what_to_do, state.files.size, state.files.size),
                         modifier = Modifier.weight(1f)
                     )
-                    TextButton(onClick = viewModel::startOver) { Text("Start over", color = SheafColors.Band) }
+                    TextButton(onClick = viewModel::startOver) { Text(stringResource(R.string.reading_open_start_over), color = SheafColors.Band) }
                 }
             }
             if (state.suggestions.isEmpty() && !state.busy) {
@@ -149,7 +151,7 @@ fun OpenRoute(
             if (state.files.any { it.file.isPdf }) {
                 item {
                     SecondaryButton(
-                        text = "Run one of your recipes on them",
+                        text = stringResource(R.string.reading_open_run_recipe),
                         onClick = {
                             viewModel.handOverPdfs()
                             onRecipes()
@@ -160,7 +162,7 @@ fun OpenRoute(
                 }
             }
             item {
-                TextButton(onClick = onAllTools) { Text("Or pick any tool →", color = SheafColors.Band) }
+                TextButton(onClick = onAllTools) { Text(stringResource(R.string.reading_open_any_tool), color = SheafColors.Band) }
             }
         }
     }
@@ -169,15 +171,21 @@ fun OpenRoute(
 @Composable
 private fun FileRow(opened: OpenedFile) {
     val f = opened.facts
+    val locked = stringResource(R.string.reading_open_locked)
+    val scan = stringResource(R.string.reading_open_a_scan)
+    val form = stringResource(R.string.reading_open_a_form)
+    val unreadable = stringResource(R.string.reading_open_unreadable)
+    val picture = stringResource(R.string.reading_open_picture)
+    val office = stringResource(R.string.reading_open_office)
     val meta = buildList {
         add(formatBytes(opened.file.sizeBytes))
         f.pages?.let { add(formatPageCount(it)) }
-        if (f.locked) add("locked")
-        if (f.scanned) add("a scan")
-        if (f.forms) add("a form")
-        if (f.unreadable) add("couldn't be read")
-        if (f.kind == Suggest.Kind.IMAGE) add("picture")
-        if (f.kind == Suggest.Kind.OFFICE) add("Word, Excel or text")
+        if (f.locked) add(locked)
+        if (f.scanned) add(scan)
+        if (f.forms) add(form)
+        if (f.unreadable) add(unreadable)
+        if (f.kind == Suggest.Kind.IMAGE) add(picture)
+        if (f.kind == Suggest.Kind.OFFICE) add(office)
     }.joinToString(" · ")
     Panel(modifier = Modifier.fillMaxWidth(), inset = 12.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -187,7 +195,7 @@ private fun FileRow(opened: OpenedFile) {
                 // name from a scanner app ("Scan_20261025_0931.pdf") rarely is.
                 androidx.compose.foundation.Image(
                     bitmap = thumbnail.asImageBitmap(),
-                    contentDescription = "First page of ${opened.file.displayName}",
+                    contentDescription = stringResource(R.string.reading_open_first_page, opened.file.displayName),
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .size(width = 44.dp, height = 56.dp)
@@ -225,10 +233,10 @@ private fun SuggestionCard(suggestion: Suggest.Suggestion, onClick: () -> Unit) 
             Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
                 Text(
                     when {
-                        tool == null -> "Read"
-                        suggestion.preset == Suggest.PRESET_EXCEL -> "PDF to Excel"
-                        tool == ToolId.PDF_TO_OFFICE -> "PDF to Word"
-                        tool == ToolId.OFFICE_TO_PDF -> "Word, Excel or text to PDF"
+                        tool == null -> stringResource(R.string.reading_open_read)
+                        suggestion.preset == Suggest.PRESET_EXCEL -> stringResource(R.string.reading_open_pdf_to_excel)
+                        tool == ToolId.PDF_TO_OFFICE -> stringResource(R.string.reading_open_pdf_to_word)
+                        tool == ToolId.OFFICE_TO_PDF -> stringResource(R.string.reading_open_office_to_pdf)
                         else -> tool.title
                     },
                     style = MaterialTheme.typography.titleMedium,

@@ -71,6 +71,10 @@ import java.io.File
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import kotlin.math.min
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
 
 /**
  * What the analyser saw in one viewfinder frame.
@@ -215,7 +219,7 @@ fun Viewfinder(
                             target.delete()
                             mainExecutor.execute {
                                 capturing = false
-                                onCaptureFailedNow("The photo could not be taken. Try again.")
+                                onCaptureFailedNow(Strings.get(R.string.reading_scan_photo_failed))
                             }
                         }
                     }
@@ -311,7 +315,7 @@ fun Viewfinder(
                             }
                             capture = imageCapture
                         }.onFailure {
-                            onCaptureFailedNow("The camera could not be started.")
+                            onCaptureFailedNow(Strings.get(R.string.reading_scan_camera_failed))
                         }
                     }
                 }, ContextCompat.getMainExecutor(ctx))
@@ -384,10 +388,10 @@ fun Viewfinder(
                     OverlayChip(option.label, active = option == mode, onClick = { onMode(option) })
                 }
                 OverlayChip(
-                    text = if (autoCapture) "Auto on" else "Auto off",
+                    text = stringResource(if (autoCapture) R.string.reading_scan_auto_on else R.string.reading_scan_auto_off),
                     active = autoCapture,
                     onClick = onToggleAuto,
-                    description = "Take the picture by itself when the page is still"
+                    description = stringResource(R.string.reading_scan_auto_description)
                 )
             }
             Row(
@@ -396,15 +400,15 @@ fun Viewfinder(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val hint = when {
-                    mode == ScanMode.ID_CARD && waitingForBack -> "Now the back of the card"
-                    mode == ScanMode.ID_CARD -> "The front of the card"
-                    !pageInView -> "Fill the frame with the page"
-                    autoCapture && ready -> "Hold still"
-                    else -> "Page found"
-                }
+                    mode == ScanMode.ID_CARD && waitingForBack -> R.string.reading_scan_card_back
+                    mode == ScanMode.ID_CARD -> R.string.reading_scan_card_front
+                    !pageInView -> R.string.reading_scan_fill_frame
+                    autoCapture && ready -> R.string.reading_scan_hold_still
+                    else -> R.string.reading_scan_page_found
+                }.let { stringResource(it) }
                 Pill(hint, Color.White, filled = false)
-                if (pageCount > 0) Pill("$pageCount kept", SheafColors.BandBright, filled = true)
-                if (processing > 0) Pill("Saving $processing", Color.White, filled = false)
+                if (pageCount > 0) Pill(pluralStringResource(R.plurals.reading_scan_kept, pageCount, pageCount), SheafColors.BandBright, filled = true)
+                if (processing > 0) Pill(stringResource(R.string.reading_scan_saving, processing), Color.White, filled = false)
             }
         }
 
@@ -413,11 +417,12 @@ fun Viewfinder(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             val interaction = remember { MutableInteractionSource() }
+            val takePictureLabel = stringResource(R.string.reading_scan_take_picture)
             Box(
                 modifier = Modifier
                     .pressScale(interaction, 0.9f)
                     .size(78.dp)
-                    .semantics { contentDescription = "Take the picture"; role = Role.Button }
+                    .semantics { contentDescription = takePictureLabel; role = Role.Button }
                     .clickable(interactionSource = interaction, indication = null) {
                         val latest = detection
                         analyzer.capturedByHand(latest)
@@ -447,10 +452,10 @@ fun Viewfinder(
             }
             Text(
                 when {
-                    capturing -> "Taking the picture…"
-                    autoCapture && pageInView -> "Hold still, or tap to capture"
-                    else -> "Tap to capture"
-                },
+                    capturing -> R.string.reading_scan_taking
+                    autoCapture && pageInView -> R.string.reading_scan_hold_or_tap
+                    else -> R.string.reading_scan_tap_to_capture
+                }.let { stringResource(it) },
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.White.copy(alpha = 0.85f),
                 modifier = Modifier.padding(top = 10.dp)
@@ -486,6 +491,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCornerGuides() 
 private fun OverlayChip(text: String, active: Boolean, onClick: () -> Unit, description: String? = null) {
     val shape = RoundedCornerShape(999.dp)
     val interaction = remember { MutableInteractionSource() }
+    val onOff = stringResource(if (active) R.string.reading_scan_on else R.string.reading_scan_off)
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium,
@@ -496,7 +502,7 @@ private fun OverlayChip(text: String, active: Boolean, onClick: () -> Unit, desc
             .border(1.dp, if (active) SheafColors.Band else Color.White.copy(alpha = 0.5f), shape)
             .semantics {
                 role = Role.Button
-                stateDescription = if (active) "On" else "Off"
+                stateDescription = onOff
                 if (description != null) contentDescription = "$text. $description"
             }
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
