@@ -1,5 +1,8 @@
 package com.layerbit.sheaf.ui.tools
 
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import com.layerbit.sheaf.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -47,14 +50,11 @@ fun BookmarksEditor(
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         RowBetween {
             SectionHeading(
-                when (entries.size) {
-                    0 -> "No bookmarks yet"
-                    1 -> "1 bookmark"
-                    else -> "${entries.size} bookmarks"
-                }
+                if (entries.isEmpty()) stringResource(R.string.tools_no_bookmarks)
+                else pluralStringResource(R.plurals.tools_bookmarks, entries.size, entries.size)
             )
             if (entries.isNotEmpty()) {
-                TextButton(onClick = onClear) { Text("Clear all", color = SheafColors.Dim) }
+                TextButton(onClick = onClear) { Text(stringResource(R.string.tools_clear_all), color = SheafColors.Dim) }
             }
         }
 
@@ -62,7 +62,7 @@ fun BookmarksEditor(
             Panel(modifier = Modifier.fillMaxWidth().padding(start = (entry.depth.coerceIn(0, 4) * 16).dp)) {
                 Field(
                     value = entry.title,
-                    label = if (entry.depth > 0) "Title (nested)" else "Title",
+                    label = if (entry.depth > 0) stringResource(R.string.tools_title_nested) else stringResource(R.string.tools_title),
                     keyboardType = KeyboardType.Text,
                     onChange = { text -> onSet(index, text, null) }
                 )
@@ -71,7 +71,7 @@ fun BookmarksEditor(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Opens page", style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
+                    Text(stringResource(R.string.tools_opens_page), style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
                     Column(modifier = Modifier.width(96.dp)) {
                         Field(
                             value = (entry.pageIndex + 1).toString(),
@@ -84,34 +84,34 @@ fun BookmarksEditor(
                         )
                     }
                     pageCount?.let {
-                        Text("of $it", style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
+                        Text(stringResource(R.string.tools_of_n, it), style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
                     }
                 }
                 RowBetween(modifier = Modifier.padding(top = 2.dp)) {
                     Row {
                         TextButton(onClick = { onMove(index, index - 1) }, enabled = index > 0) {
-                            Text("Up", color = SheafColors.Muted)
+                            Text(stringResource(R.string.tools_up), color = SheafColors.Muted)
                         }
                         TextButton(onClick = { onMove(index, index + 1) }, enabled = index < entries.lastIndex) {
-                            Text("Down", color = SheafColors.Muted)
+                            Text(stringResource(R.string.tools_down), color = SheafColors.Muted)
                         }
                         TextButton(onClick = { onIndent(index, false) }, enabled = entry.depth > 0) {
-                            Text("Out", color = SheafColors.Muted)
+                            Text(stringResource(R.string.tools_out), color = SheafColors.Muted)
                         }
                         TextButton(
                             onClick = { onIndent(index, true) },
                             enabled = index > 0 && entry.depth <= entries[index - 1].depth
                         ) {
-                            Text("In", color = SheafColors.Muted)
+                            Text(stringResource(R.string.tools_in), color = SheafColors.Muted)
                         }
                     }
-                    TextButton(onClick = { onRemove(index) }) { Text("Remove", color = SheafColors.Dim) }
+                    TextButton(onClick = { onRemove(index) }) { Text(stringResource(R.string.tools_remove), color = SheafColors.Dim) }
                 }
             }
         }
 
         OutlinedButton(onClick = { onAdd(entries.lastIndex) }, modifier = Modifier.fillMaxWidth()) {
-            Text(if (entries.isEmpty()) "Add a bookmark" else "Add another", color = SheafColors.Text)
+            Text(if (entries.isEmpty()) stringResource(R.string.tools_add_bookmark) else stringResource(R.string.tools_add_another), color = SheafColors.Text)
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.layerbit.sheaf.ui.tools
 
+import com.layerbit.sheaf.text.Strings
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.ops.ToolId
 import org.json.JSONArray
 import org.json.JSONObject
@@ -30,11 +32,11 @@ object Recipes {
     val ENDS_A_RECIPE = setOf(ToolId.PDF_TO_OFFICE, ToolId.EXTRACT_TEXT)
 
     fun problemWith(name: String, steps: List<RecipeStep>): String? = when {
-        name.isBlank() -> "Give the recipe a name."
-        steps.isEmpty() -> "Add at least one step."
-        steps.map { it.tool }.distinct().size != steps.size -> "Each tool can be a step once."
+        name.isBlank() -> Strings.get(R.string.tools_recipe_no_name)
+        steps.isEmpty() -> Strings.get(R.string.tools_recipe_no_steps)
+        steps.map { it.tool }.distinct().size != steps.size -> Strings.get(R.string.tools_recipe_tool_twice)
         steps.dropLast(1).any { it.tool in ENDS_A_RECIPE } ->
-            "Turning PDFs into Word, Excel or text has to be the last step: nothing else works on those files."
+            Strings.get(R.string.tools_recipe_convert_last)
         else -> null
     }
 

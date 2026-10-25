@@ -1,5 +1,7 @@
 package com.layerbit.sheaf.ui.tools
 
+import androidx.compose.ui.res.stringResource
+import com.layerbit.sheaf.R
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -76,7 +78,7 @@ fun EffectPreview(
     onPlace: ((Float, Float) -> Unit)? = null
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        SectionHeading(if (onPlace != null) "Tap to place · page shown" else "Preview · first page")
+        SectionHeading(if (onPlace != null) stringResource(R.string.tools_preview_tap) else stringResource(R.string.tools_preview_first))
 
         Box(
             modifier = Modifier
@@ -110,10 +112,9 @@ fun EffectPreview(
                 // made under will not change on its own, so nothing is coming. Spinning here
                 // is simply untrue, and the user sits in front of it.
                 val stalled = when {
-                    locked -> "Unlock the document above to see the preview."
+                    locked -> stringResource(R.string.tools_preview_locked)
                     previewFailed ->
-                        "This page could not be drawn, so there is nothing to preview. " +
-                            "The tool will still run."
+                        stringResource(R.string.tools_preview_failed)
                     else -> null
                 }
                 if (stalled == null) {
@@ -130,7 +131,7 @@ fun EffectPreview(
             } else {
                 Image(
                     bitmap = page.asImageBitmap(),
-                    contentDescription = "Preview of the first page",
+                    contentDescription = stringResource(R.string.tools_preview_desc),
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -150,16 +151,16 @@ fun EffectPreview(
         Text(
             text = when (tool) {
                 ToolId.CROP -> if (config.cropAuto) {
-                    "White margins are found page by page when it runs; the preview cannot show them."
+                    stringResource(R.string.tools_preview_crop_auto)
                 } else {
-                    "The shaded edges are what gets trimmed away, to scale."
+                    stringResource(R.string.tools_preview_crop)
                 }
-                ToolId.BACKGROUND -> "Close to how it will look. Scanned pages are solid pictures and will not tint."
-                ToolId.WATERMARK -> "Close to how it will look. The document uses Helvetica."
-                ToolId.PAGE_NUMBERS -> "Shown on the first page that gets a number."
-                ToolId.SIGN -> "Where your signature will sit on the page you chose."
-                ToolId.ADD_IMAGE -> "Where the image will sit on the page you chose."
-                ToolId.ADD_TEXT -> "Tap the page to move the text. Helvetica, as the document uses."
+                ToolId.BACKGROUND -> stringResource(R.string.tools_preview_background)
+                ToolId.WATERMARK -> stringResource(R.string.tools_preview_watermark)
+                ToolId.PAGE_NUMBERS -> stringResource(R.string.tools_preview_numbers)
+                ToolId.SIGN -> stringResource(R.string.tools_preview_sign)
+                ToolId.ADD_IMAGE -> stringResource(R.string.tools_preview_image)
+                ToolId.ADD_TEXT -> stringResource(R.string.tools_preview_text)
                 else -> ""
             },
             style = MaterialTheme.typography.bodySmall,
@@ -313,7 +314,7 @@ private fun SignatureOverlay(config: ToolConfig, signature: Bitmap?) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 8.dp)) {
         Image(
             bitmap = signature.asImageBitmap(),
-            contentDescription = "Signature placement",
+            contentDescription = stringResource(R.string.tools_signature_placement),
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .width(maxWidth * config.signWidth)

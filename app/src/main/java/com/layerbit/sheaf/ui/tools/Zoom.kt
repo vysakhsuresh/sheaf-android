@@ -1,5 +1,8 @@
 package com.layerbit.sheaf.ui.tools
 
+import androidx.compose.ui.res.stringResource
+import com.layerbit.sheaf.text.Strings
+import com.layerbit.sheaf.R
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateCentroid
@@ -144,18 +147,21 @@ fun ZoomFrame(
 /** − 100% +, the size label going back to fit when tapped. */
 @Composable
 fun ZoomControls(state: ZoomState, modifier: Modifier = Modifier) {
+    val zoomOut = stringResource(R.string.tools_zoom_out)
+    val fitPage = stringResource(R.string.tools_fit_page)
+    val zoomIn = stringResource(R.string.tools_zoom_in)
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-        OutlinedButton(onClick = { state.step(up = false) }, enabled = state.zoomed, modifier = Modifier.semantics { contentDescription = "Zoom out" }) {
+        OutlinedButton(onClick = { state.step(up = false) }, enabled = state.zoomed, modifier = Modifier.semantics { contentDescription = zoomOut }) {
             Text("−", color = SheafColors.Text)
         }
-        TextButton(onClick = state::fit, modifier = Modifier.semantics { contentDescription = "Fit the page" }) {
+        TextButton(onClick = state::fit, modifier = Modifier.semantics { contentDescription = fitPage }) {
             Text("${(state.zoom * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium, color = SheafColors.Muted)
         }
-        OutlinedButton(onClick = { state.step(up = true) }, enabled = state.zoom < ZoomState.MAX, modifier = Modifier.semantics { contentDescription = "Zoom in" }) {
+        OutlinedButton(onClick = { state.step(up = true) }, enabled = state.zoom < ZoomState.MAX, modifier = Modifier.semantics { contentDescription = zoomIn }) {
             Text("+", color = SheafColors.Text)
         }
     }
 }
 
 /** The hint a page editor adds while zoomed. */
-const val ZOOM_HINT = " Two fingers move the page and zoom it."
+val ZOOM_HINT: String get() = " " + Strings.get(R.string.tools_zoom_hint)

@@ -1,5 +1,7 @@
 package com.layerbit.sheaf.ui.tools
 
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -273,7 +275,7 @@ fun ToolScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                             if (finished.produced.isNotEmpty()) {
                                 PrimaryButton(
-                                    text = if (finished.produced.size > 1) "Send all ${finished.produced.size}" else "Send",
+                                    text = if (finished.produced.size > 1) stringResource(R.string.tools_send_all, finished.produced.size) else stringResource(R.string.tools_send),
                                     icon = Icons.Filled.Share,
                                     onClick = { onShare(finished.produced.map { it.file }) },
                                     modifier = Modifier.weight(1f)
@@ -283,7 +285,7 @@ fun ToolScreen(
                             // picker one at a time is the thing that makes an export tool useless.
                             if (finished.produced.size > 1) {
                                 SecondaryButton(
-                                    text = "Save all",
+                                    text = stringResource(R.string.tools_save_all),
                                     onClick = { onSaveAll(finished.produced.map { it.file }) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -294,13 +296,13 @@ fun ToolScreen(
                             // what the other end wants: an upload box, an email, a chat.
                             if (finished.produced.size > 1) {
                                 SecondaryButton(
-                                    text = "Save as one ZIP",
+                                    text = stringResource(R.string.tools_save_zip),
                                     onClick = { onSaveZip(finished.produced.map { it.file }) },
                                     modifier = Modifier.weight(1f),
                                     tall = false
                                 )
                             }
-                            SecondaryButton(text = "Done", onClick = onDone, modifier = Modifier.weight(1f), tall = false)
+                            SecondaryButton(text = stringResource(R.string.tools_done), onClick = onDone, modifier = Modifier.weight(1f), tall = false)
                         }
                     }
                 }
@@ -321,7 +323,7 @@ fun ToolScreen(
             }
 
             else -> {
-                item { SectionHeading(if (tool.acceptsMultiple) "Files" else "File") }
+                item { SectionHeading(if (tool.acceptsMultiple) stringResource(R.string.tools_files) else stringResource(R.string.tools_file)) }
 
                 val movable = tool.acceptsMultiple && state.documents.size > 1 &&
                     tool != ToolId.DIGITAL_SIGN && tool != ToolId.ADD_IMAGE
@@ -341,16 +343,16 @@ fun ToolScreen(
                         thumb = state.fileThumbs[doc.file.file.path],
                         canReorder = movable,
                         role = when {
-                            tool == ToolId.DIGITAL_SIGN && doc.file.isPdf -> "The PDF"
-                            tool == ToolId.DIGITAL_SIGN -> "Certificate"
-                            tool == ToolId.COMPARE && index == 0 -> "Older version"
-                            tool == ToolId.COMPARE && index == 1 -> "Newer version"
-                            tool == ToolId.ADD_IMAGE && doc.file.isImage -> "The image"
-                            tool == ToolId.ADD_IMAGE && doc.file.isPdf -> "The PDF"
-                            tool == ToolId.ATTACHMENTS && index == 0 -> "The PDF"
-                            tool == ToolId.ATTACHMENTS -> "To attach"
-                            tool == ToolId.INSERT && index == 0 -> "Being added to"
-                            tool == ToolId.INSERT -> "Goes in"
+                            tool == ToolId.DIGITAL_SIGN && doc.file.isPdf -> stringResource(R.string.tools_role_pdf)
+                            tool == ToolId.DIGITAL_SIGN -> stringResource(R.string.tools_role_certificate)
+                            tool == ToolId.COMPARE && index == 0 -> stringResource(R.string.tools_role_older)
+                            tool == ToolId.COMPARE && index == 1 -> stringResource(R.string.tools_role_newer)
+                            tool == ToolId.ADD_IMAGE && doc.file.isImage -> stringResource(R.string.tools_role_image)
+                            tool == ToolId.ADD_IMAGE && doc.file.isPdf -> stringResource(R.string.tools_role_pdf)
+                            tool == ToolId.ATTACHMENTS && index == 0 -> stringResource(R.string.tools_role_pdf)
+                            tool == ToolId.ATTACHMENTS -> stringResource(R.string.tools_role_attach)
+                            tool == ToolId.INSERT && index == 0 -> stringResource(R.string.tools_role_added_to)
+                            tool == ToolId.INSERT -> stringResource(R.string.tools_role_goes_in)
                             else -> null
                         },
                         isFirst = index == 0,
@@ -401,7 +403,7 @@ fun ToolScreen(
                 if (movable) {
                     item {
                         Text(
-                            "Hold a file to drag it into order, or use its arrows.",
+                            stringResource(R.string.tools_drag_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = SheafColors.Dim
                         )
@@ -411,10 +413,10 @@ fun ToolScreen(
                 item {
                     val empty = state.documents.isEmpty()
                     val label = when {
-                        empty && tool.input == ToolId.InputKind.IMAGES -> "Choose images"
-                        empty -> "Choose a file"
-                        tool.acceptsMultiple -> "Add another"
-                        else -> "Choose a different file"
+                        empty && tool.input == ToolId.InputKind.IMAGES -> stringResource(R.string.tools_choose_images)
+                        empty -> stringResource(R.string.tools_choose_file)
+                        tool.acceptsMultiple -> stringResource(R.string.tools_add_another)
+                        else -> stringResource(R.string.tools_choose_different)
                     }
                     if (empty) {
                         // An empty tool screen's whole job is this one tap, so it is drawn as
@@ -435,13 +437,13 @@ fun ToolScreen(
                                 )
                                 Text(
                                     when (tool.input) {
-                                        ToolId.InputKind.IMAGES -> "Photos and scans, as many as you like"
-                                        ToolId.InputKind.SEVERAL_PDFS -> "One PDF, or several"
-                                        ToolId.InputKind.PDF_AND_FILES -> "The PDF first, then the files to put in it"
-                                        ToolId.InputKind.PDF_AND_IMAGE -> "The PDF, then the image"
-                                        ToolId.InputKind.PDF_AND_CERT -> "The PDF, then your .pfx or .p12"
-                                        ToolId.InputKind.OFFICE -> ".docx, .xlsx, .txt, .md or .csv"
-                                        else -> "It is never changed; the result is a new file"
+                                        ToolId.InputKind.IMAGES -> stringResource(R.string.tools_input_images)
+                                        ToolId.InputKind.SEVERAL_PDFS -> stringResource(R.string.tools_input_several)
+                                        ToolId.InputKind.PDF_AND_FILES -> stringResource(R.string.tools_input_pdf_files)
+                                        ToolId.InputKind.PDF_AND_IMAGE -> stringResource(R.string.tools_input_pdf_image)
+                                        ToolId.InputKind.PDF_AND_CERT -> stringResource(R.string.tools_input_pdf_cert)
+                                        ToolId.InputKind.OFFICE -> stringResource(R.string.tools_input_office)
+                                        else -> stringResource(R.string.tools_input_default)
                                     },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = SheafColors.Muted,
@@ -465,7 +467,7 @@ fun ToolScreen(
                 ) {
                     item {
                         TextButton(onClick = onPickFolder) {
-                            Text("Pick a whole folder", color = SheafColors.Band, style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.tools_pick_folder), color = SheafColors.Band, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
@@ -500,7 +502,7 @@ fun ToolScreen(
                         item {
                             TextButton(onClick = onKeepSignature) {
                                 Text(
-                                    "Keep this signature for next time",
+                                    stringResource(R.string.tools_keep_signature),
                                     color = SheafColors.Band,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
@@ -546,7 +548,7 @@ fun ToolScreen(
                     }
                 } else if (tool == ToolId.FORMS && state.documents.isNotEmpty()) {
                     if (!state.formRead) {
-                        item { Hint("Looking for form fields…") }
+                        item { Hint(stringResource(R.string.tools_looking_fields)) }
                     } else if (state.formFields.isEmpty()) {
                         item { NoFormFields() }
                     } else {
@@ -570,7 +572,7 @@ fun ToolScreen(
                             item {
                                 TextButton(onClick = onKeepAnswers) {
                                     Text(
-                                        "Keep these answers for next time",
+                                        stringResource(R.string.tools_keep_answers),
                                         color = SheafColors.Band,
                                         style = MaterialTheme.typography.bodyMedium
                                     )
@@ -609,7 +611,7 @@ fun ToolScreen(
                     }
                 } else if (tool == ToolId.BOOKMARKS && state.documents.isNotEmpty()) {
                     if (!state.outlineRead) {
-                        item { Hint("Reading the bookmarks…") }
+                        item { Hint(stringResource(R.string.tools_reading_bookmarks)) }
                     } else {
                         item {
                             BookmarksEditor(
@@ -690,7 +692,7 @@ fun ToolScreen(
                             onClear = { onClearFields(state.canvasPage) },
                             boxColour = SheafColors.Band.copy(alpha = 0.22f),
                             labels = onThisPage.map { it.value.name },
-                            emptyHint = "Drag a box where a field should go",
+                            emptyHint = stringResource(R.string.tools_new_field_hint),
                             onSharpen = onSharpen
                         )
                     }
@@ -773,9 +775,7 @@ fun ToolScreen(
                     }
                     item {
                         Hint(
-                            "Nothing else on the page changes. A picture taken out is no longer drawn, " +
-                                "but its data may still be inside the file: for something private, use " +
-                                "Remove areas. A picture that is part of a scan cannot be edited on its own."
+                            stringResource(R.string.tools_pictures_note)
                         )
                     }
                 } else if (tool == ToolId.REDACT && state.pageOrder.isNotEmpty()) {
@@ -911,7 +911,7 @@ fun ToolScreen(
     // second range out of the file just split, are both things people want next.
     chaining?.let { file ->
         ToolPickerSheet(
-            heading = "Use another tool on this",
+            heading = stringResource(R.string.tools_use_another),
             documentName = file.displayName,
             onDismiss = { chaining = null },
             onPick = { next ->
@@ -1010,13 +1010,14 @@ private fun RunningPanel(running: JobState.Running, onCancel: () -> Unit) {
             // to find this line. Announced in tenths: page by page would be a stream of speech
             // over whatever the user moved on to.
             val tenth = (running.fraction * 10).toInt() * 10
+            val said = stringResource(R.string.tools_progress_said, running.opTitle, tenth)
             Text(
-                "${running.unitsDone} of ${running.unitsTotal}",
+                stringResource(R.string.tools_progress_count, running.unitsDone, running.unitsTotal),
                 style = MaterialTheme.typography.bodySmall,
                 color = SheafColors.Dim,
                 modifier = Modifier.padding(top = 6.dp).semantics {
                     liveRegion = LiveRegionMode.Polite
-                    contentDescription = "${running.opTitle}: $tenth percent done"
+                    contentDescription = said
                 }
             )
         } else {
@@ -1028,12 +1029,12 @@ private fun RunningPanel(running: JobState.Running, onCancel: () -> Unit) {
             )
         }
         Text(
-            "Keeps going if you switch to another app.",
+            stringResource(R.string.tools_keeps_going),
             style = MaterialTheme.typography.bodySmall,
             color = SheafColors.Dim,
             modifier = Modifier.padding(top = 10.dp)
         )
-        SecondaryButton(text = "Cancel", onClick = onCancel, modifier = Modifier.padding(top = 12.dp), tall = false)
+        SecondaryButton(text = stringResource(R.string.tools_cancel), onClick = onCancel, modifier = Modifier.padding(top = 12.dp), tall = false)
     }
 }
 
@@ -1041,10 +1042,10 @@ private fun RunningPanel(running: JobState.Running, onCancel: () -> Unit) {
 private fun ResultSummary(finished: JobState.Finished) {
     val nothing = finished.produced.isEmpty() && finished.failed.isNotEmpty()
     val text = when {
-        nothing -> "Nothing was produced"
-        finished.allSucceeded && finished.produced.size == 1 -> "Your file is ready"
-        finished.allSucceeded -> "${finished.produced.size} files are ready"
-        else -> "${finished.produced.size} of ${finished.outcomes.size} finished"
+        nothing -> stringResource(R.string.tools_result_nothing)
+        finished.allSucceeded && finished.produced.size == 1 -> stringResource(R.string.tools_result_one)
+        finished.allSucceeded -> pluralStringResource(R.plurals.tools_result_many, finished.produced.size, finished.produced.size)
+        else -> stringResource(R.string.tools_result_some, finished.produced.size, finished.outcomes.size)
     }
     val accent = if (nothing) SheafColors.Failed else SheafColors.Done
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
@@ -1069,7 +1070,7 @@ private fun ResultSummary(finished: JobState.Finished) {
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive }
             )
             Text(
-                if (nothing) "What went wrong is listed below." else "Nothing was uploaded. The original is untouched.",
+                if (nothing) stringResource(R.string.tools_result_failed_hint) else stringResource(R.string.tools_result_ok_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = SheafColors.Dim
             )
@@ -1105,7 +1106,7 @@ private fun ResultRow(
             if (preview is ResultPreview.Pdf) {
                 Image(
                     bitmap = preview.firstPage.asImageBitmap(),
-                    contentDescription = "First page of ${file.displayName}",
+                    contentDescription = stringResource(R.string.tools_first_page_of, file.displayName),
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .size(width = 52.dp, height = 70.dp)
@@ -1151,14 +1152,14 @@ private fun ResultRow(
                     // copying the whole document and hunting through it afterwards.
                     SelectionContainer {
                         Text(
-                            preview.content.ifBlank { "(nothing was found)" },
+                            preview.content.ifBlank { stringResource(R.string.tools_nothing_found) },
                             style = MaterialTheme.typography.bodySmall,
                             color = SheafColors.Muted
                         )
                     }
                 }
                 TextButton(onClick = { onCopy(preview.content) }) {
-                    Text("Copy text", color = SheafColors.Band)
+                    Text(stringResource(R.string.tools_copy_text), color = SheafColors.Band)
                 }
             }
 
@@ -1184,12 +1185,12 @@ private fun ResultRow(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (file.isPdf) {
-                    SecondaryButton(text = "Open", onClick = onOpen, tall = false)
+                    SecondaryButton(text = stringResource(R.string.tools_open), onClick = onOpen, tall = false)
                     // The chain. Without this, compressing something you just merged means
                     // saving it, leaving, and finding the same file again in the picker.
-                    SecondaryButton(text = "Then…", onClick = onChain, tall = false)
+                    SecondaryButton(text = stringResource(R.string.tools_then), onClick = onChain, tall = false)
                 }
-                PrimaryButton(text = "Save", onClick = onSave, tall = false)
+                PrimaryButton(text = stringResource(R.string.tools_save), onClick = onSave, tall = false)
             }
         }
     }
@@ -1236,7 +1237,7 @@ private fun ActionBar(label: String, enabled: Boolean, busy: Boolean, reason: St
             )
         }
         PrimaryButton(
-            text = if (busy) "Reading the file…" else label,
+            text = if (busy) stringResource(R.string.tools_reading_file) else label,
             onClick = onRun,
             enabled = enabled && !busy,
             modifier = Modifier.fillMaxWidth()
@@ -1290,11 +1291,11 @@ private fun DocumentRow(
                     role?.let { append(it).append(" · ") }
                     doc.pageCount?.let { append(formatPageCount(it)).append(" · ") }
                     append(formatBytes(doc.file.sizeBytes))
-                    if (doc.encrypted && !doc.needsPassword) append(" · protected")
+                    if (doc.encrypted && !doc.needsPassword) append(" · ").append(stringResource(R.string.tools_protected))
                 }
                 Text(detail, style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
             }
-            RoundIconButton(icon = Icons.Filled.Close, contentDescription = "Remove", onClick = onRemove, size = 32.dp)
+            RoundIconButton(icon = Icons.Filled.Close, contentDescription = stringResource(R.string.tools_remove), onClick = onRemove, size = 32.dp)
         }
 
         doc.unreadableReason?.let {
@@ -1304,7 +1305,7 @@ private fun DocumentRow(
         if (doc.needsPassword) {
             Spacer(Modifier.height(8.dp))
             Text(
-                "This document is password-protected.",
+                stringResource(R.string.tools_password_protected),
                 style = MaterialTheme.typography.bodySmall,
                 color = SheafColors.Skipped
             )
@@ -1317,8 +1318,8 @@ private fun DocumentRow(
 
         if (canReorder) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 10.dp)) {
-                SecondaryButton(text = "Up", onClick = onUp, enabled = !isFirst, tall = false, icon = Icons.Filled.KeyboardArrowUp)
-                SecondaryButton(text = "Down", onClick = onDown, enabled = !isLast, tall = false, icon = Icons.Filled.KeyboardArrowDown)
+                SecondaryButton(text = stringResource(R.string.tools_up), onClick = onUp, enabled = !isFirst, tall = false, icon = Icons.Filled.KeyboardArrowUp)
+                SecondaryButton(text = stringResource(R.string.tools_down), onClick = onDown, enabled = !isLast, tall = false, icon = Icons.Filled.KeyboardArrowDown)
             }
         }
     }
@@ -1345,55 +1346,54 @@ private fun FindSensitivePanel(
     onFind: () -> Unit
 ) {
     Panel(modifier = Modifier.fillMaxWidth()) {
-        SectionHeading("Find and mark")
+        SectionHeading(stringResource(R.string.tools_find_mark))
         Text(
-            "Finds these in the text and marks each one for removal, so an ID scan or a " +
-                "statement can be shared without the numbers on it.",
+            stringResource(R.string.tools_find_mark_hint),
             style = MaterialTheme.typography.bodySmall,
             color = SheafColors.Dim,
             modifier = Modifier.padding(top = 2.dp, bottom = 6.dp)
         )
         com.layerbit.sheaf.ui.components.ToggleRow(
-            title = "Aadhaar numbers",
+            title = stringResource(R.string.tools_aadhaar),
             checked = config.findAadhaar,
             onChange = { on -> onChange { it.copy(findAadhaar = on) } }
         )
         com.layerbit.sheaf.ui.components.ToggleRow(
-            title = "PAN numbers",
+            title = stringResource(R.string.tools_pan),
             checked = config.findPan,
             onChange = { on -> onChange { it.copy(findPan = on) } }
         )
         com.layerbit.sheaf.ui.components.ToggleRow(
-            title = "Phone numbers",
+            title = stringResource(R.string.tools_phone),
             checked = config.findPhone,
             onChange = { on -> onChange { it.copy(findPhone = on) } }
         )
         com.layerbit.sheaf.ui.components.ToggleRow(
-            title = "Email addresses",
+            title = stringResource(R.string.tools_email),
             checked = config.findEmail,
             onChange = { on -> onChange { it.copy(findEmail = on) } }
         )
         com.layerbit.sheaf.ui.components.ToggleRow(
-            title = "Card numbers",
+            title = stringResource(R.string.tools_card),
             checked = config.findCard,
             onChange = { on -> onChange { it.copy(findCard = on) } }
         )
         Spacer(Modifier.height(6.dp))
         Field(
             value = config.findText,
-            label = "Or any words or number",
+            label = stringResource(R.string.tools_find_any),
             keyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
             onChange = { text -> onChange { it.copy(findText = text) } }
         )
         RowBetween(modifier = Modifier.padding(top = 6.dp)) {
             Text(
-                report ?: if (finding) "Looking…" else "",
+                report ?: if (finding) stringResource(R.string.tools_looking) else "",
                 style = MaterialTheme.typography.bodySmall,
                 color = SheafColors.Done,
                 modifier = Modifier.weight(1f).padding(end = 8.dp)
             )
             OutlinedButton(onClick = onFind, enabled = !finding) {
-                Text("Find and mark", color = SheafColors.Band)
+                Text(stringResource(R.string.tools_find_mark), color = SheafColors.Band)
             }
         }
     }
@@ -1407,12 +1407,12 @@ private fun NewFieldsList(
     onRemove: (Int) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SectionHeading(if (fields.size == 1) "1 field" else "${fields.size} fields")
+        SectionHeading(pluralStringResource(R.plurals.tools_fields, fields.size, fields.size))
         fields.forEachIndexed { index, field ->
             Panel(modifier = Modifier.fillMaxWidth()) {
                 Field(
                     value = field.name,
-                    label = "Name · page ${field.pageIndex + 1}",
+                    label = stringResource(R.string.tools_field_name_page, field.pageIndex + 1),
                     keyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
                     onChange = { text -> onSet(index, text, null, null) }
                 )
@@ -1426,14 +1426,14 @@ private fun NewFieldsList(
                     Spacer(Modifier.height(6.dp))
                     Field(
                         value = field.options.joinToString(", "),
-                        label = "Choices, separated by commas",
+                        label = stringResource(R.string.tools_field_choices),
                         keyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
                         onChange = { text -> onSet(index, null, null, text) }
                     )
                 }
                 RowBetween(modifier = Modifier.padding(top = 2.dp)) {
                     Spacer(Modifier.height(1.dp))
-                    TextButton(onClick = { onRemove(index) }) { Text("Remove", color = SheafColors.Dim) }
+                    TextButton(onClick = { onRemove(index) }) { Text(stringResource(R.string.tools_remove), color = SheafColors.Dim) }
                 }
             }
         }
@@ -1448,7 +1448,7 @@ private fun SavedAnswers(
     onForget: (java.io.File) -> Unit
 ) {
     Panel(modifier = Modifier.fillMaxWidth()) {
-        SectionHeading("Answers you kept")
+        SectionHeading(stringResource(R.string.tools_answers_kept))
         files.forEach { file ->
             RowBetween(modifier = Modifier.padding(top = 4.dp)) {
                 Text(
@@ -1459,8 +1459,8 @@ private fun SavedAnswers(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-                TextButton(onClick = { onUse(file) }) { Text("Use", color = SheafColors.Band) }
-                TextButton(onClick = { onForget(file) }) { Text("Forget", color = SheafColors.Dim) }
+                TextButton(onClick = { onUse(file) }) { Text(stringResource(R.string.tools_use), color = SheafColors.Band) }
+                TextButton(onClick = { onForget(file) }) { Text(stringResource(R.string.tools_forget), color = SheafColors.Dim) }
             }
         }
     }
@@ -1476,10 +1476,9 @@ private fun AttachmentsPanel(
     Panel(modifier = Modifier.fillMaxWidth()) {
         SectionHeading(
             when {
-                !read -> "Looking inside…"
-                attachments.isEmpty() -> "Nothing attached yet"
-                attachments.size == 1 -> "1 file inside"
-                else -> "${attachments.size} files inside"
+                !read -> stringResource(R.string.tools_looking_inside)
+                attachments.isEmpty() -> stringResource(R.string.tools_nothing_attached)
+                else -> pluralStringResource(R.plurals.tools_files_inside, attachments.size, attachments.size)
             }
         )
         attachments.forEach { attachment ->
@@ -1497,7 +1496,7 @@ private fun AttachmentsPanel(
         }
         if (extras.isNotEmpty()) {
             Text(
-                "To add: " + extras.joinToString(", "),
+                stringResource(R.string.tools_to_add, extras.joinToString(", ")),
                 style = MaterialTheme.typography.bodySmall,
                 color = SheafColors.Done,
                 modifier = Modifier.padding(top = 8.dp)
@@ -1509,8 +1508,8 @@ private fun AttachmentsPanel(
 @Composable
 private fun PasswordPrompt(value: String, onChange: (String) -> Unit, onSubmit: () -> Unit) {
     Column {
-        PasswordField(value = value, label = "Password", onChange = onChange)
-        TextButton(onClick = onSubmit) { Text("Unlock", color = SheafColors.Band) }
+        PasswordField(value = value, label = stringResource(R.string.tools_password), onChange = onChange)
+        TextButton(onClick = onSubmit) { Text(stringResource(R.string.tools_unlock), color = SheafColors.Band) }
     }
 }
 
@@ -1533,10 +1532,10 @@ private fun OrganisePanel(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         RowBetween {
-            SectionHeading("${state.pageOrder.size} pages")
+            SectionHeading(pluralStringResource(R.plurals.tools_pages, state.pageOrder.size, state.pageOrder.size))
             if (state.selectedPages.isNotEmpty()) {
                 Text(
-                    "${state.selectedPages.size} selected",
+                    pluralStringResource(R.plurals.tools_selected, state.selectedPages.size, state.selectedPages.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = SheafColors.BandBright
                 )
@@ -1565,9 +1564,7 @@ private fun OrganisePanel(
 
         if (state.thumbnailsCapped) {
             Hint(
-                "Only the first pages are shown as pictures - a few hundred thumbnails is " +
-                    "more memory than this app is allowed. The rest are still here and keep " +
-                    "their place in the order."
+                stringResource(R.string.tools_thumbs_limit_order)
             )
         }
 
@@ -1575,11 +1572,11 @@ private fun OrganisePanel(
             OutlinedButton(
                 onClick = { onRotate(90) },
                 enabled = state.selectedPages.isNotEmpty()
-            ) { Text("Rotate", color = SheafColors.Text) }
+            ) { Text(stringResource(R.string.tools_rotate), color = SheafColors.Text) }
             OutlinedButton(
                 onClick = onDelete,
                 enabled = state.selectedPages.isNotEmpty()
-            ) { Text("Delete", color = SheafColors.Failed) }
+            ) { Text(stringResource(R.string.tools_delete), color = SheafColors.Failed) }
             // Nothing here has been written yet - the whole screen is a plan - so stepping
             // back is just the previous plan, and deleting the wrong page costs a tap.
             OutlinedButton(
@@ -1587,7 +1584,7 @@ private fun OrganisePanel(
                 enabled = state.canUndoPageEdit
             ) {
                 Text(
-                    "Undo",
+                    stringResource(R.string.tools_undo),
                     color = if (state.canUndoPageEdit) SheafColors.Text else SheafColors.Dim
                 )
             }
@@ -1609,7 +1606,7 @@ private fun SavedSignatures(
     onForget: (java.io.File) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionHeading("Your signatures")
+        SectionHeading(stringResource(R.string.tools_your_signatures))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             files.forEach { file ->
                 val bitmap = remember(file.path, file.lastModified()) {
@@ -1628,7 +1625,7 @@ private fun SavedSignatures(
                         if (bitmap != null) {
                             Image(
                                 bitmap = bitmap.asImageBitmap(),
-                                contentDescription = "A signature you kept",
+                                contentDescription = stringResource(R.string.tools_kept_signature),
                                 contentScale = ContentScale.Fit,
                                 modifier = Modifier.fillMaxSize().padding(4.dp)
                             )
@@ -1636,7 +1633,7 @@ private fun SavedSignatures(
                     }
                     TextButton(onClick = { onForget(file) }) {
                         Text(
-                            "Forget",
+                            stringResource(R.string.tools_forget),
                             style = MaterialTheme.typography.bodySmall,
                             color = SheafColors.Dim
                         )
@@ -1666,17 +1663,17 @@ private fun PageChooser(
         RowBetween {
             SectionHeading(
                 if (state.selectedPages.isEmpty()) {
-                    "Tap the pages to keep"
+                    stringResource(R.string.tools_tap_pages_keep)
                 } else {
-                    "${state.selectedPages.size} of ${state.pageOrder.size} pages"
+                    pluralStringResource(R.plurals.tools_pages_of, state.pageOrder.size, state.selectedPages.size, state.pageOrder.size)
                 }
             )
             Row {
                 TextButton(onClick = onAll) {
-                    Text("All", style = MaterialTheme.typography.bodySmall, color = SheafColors.Muted)
+                    Text(stringResource(R.string.tools_all), style = MaterialTheme.typography.bodySmall, color = SheafColors.Muted)
                 }
                 TextButton(onClick = onNone) {
-                    Text("None", style = MaterialTheme.typography.bodySmall, color = SheafColors.Muted)
+                    Text(stringResource(R.string.tools_none), style = MaterialTheme.typography.bodySmall, color = SheafColors.Muted)
                 }
             }
         }
@@ -1704,9 +1701,7 @@ private fun PageChooser(
 
         if (state.thumbnailsCapped) {
             Hint(
-                "Only the first pages are shown as pictures - a few hundred thumbnails is " +
-                    "more memory than this app is allowed. The rest are still here, numbered " +
-                    "and tappable, and typing a range covers them too."
+                stringResource(R.string.tools_thumbs_limit_pick)
             )
         }
     }
@@ -1742,7 +1737,7 @@ private fun PageThumb(
             if (thumb != null) {
                 Image(
                     bitmap = thumb.asImageBitmap(),
-                    contentDescription = "Page ${pageIndex + 1}",
+                    contentDescription = stringResource(R.string.tools_page_n, pageIndex + 1),
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .fillMaxSize()

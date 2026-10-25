@@ -1,5 +1,7 @@
 package com.layerbit.sheaf.ui.tools
 
+import androidx.compose.ui.res.stringResource
+import com.layerbit.sheaf.R
 import android.graphics.Bitmap
 import android.graphics.Typeface
 import androidx.compose.foundation.Canvas
@@ -76,9 +78,9 @@ fun EditTextCanvas(
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(onClick = { onPage(pageIndex - 1) }, enabled = pageIndex > 0) { Text("Previous", color = SheafColors.Muted) }
-            Text("Page ${pageIndex + 1} of $pageCount", style = MaterialTheme.typography.bodyMedium, color = SheafColors.Text)
-            OutlinedButton(onClick = { onPage(pageIndex + 1) }, enabled = pageIndex < pageCount - 1) { Text("Next", color = SheafColors.Muted) }
+            OutlinedButton(onClick = { onPage(pageIndex - 1) }, enabled = pageIndex > 0) { Text(stringResource(R.string.tools_previous), color = SheafColors.Muted) }
+            Text(stringResource(R.string.tools_page_of, pageIndex + 1, pageCount), style = MaterialTheme.typography.bodyMedium, color = SheafColors.Text)
+            OutlinedButton(onClick = { onPage(pageIndex + 1) }, enabled = pageIndex < pageCount - 1) { Text(stringResource(R.string.tools_next), color = SheafColors.Muted) }
         }
         val zoom = rememberZoomState(Unit)
         ZoomControls(zoom, Modifier.padding(top = 4.dp))
@@ -155,15 +157,15 @@ fun EditTextCanvas(
         }
 
         val hint = when {
-            editable == null -> "Reading the page…"
-            editable.scanned && lines.isEmpty() && reading -> "Reading the words on this page…"
+            editable == null -> stringResource(R.string.tools_edit_reading_page)
+            editable.scanned && lines.isEmpty() && reading -> stringResource(R.string.tools_edit_reading_words)
             editable.scanned && lines.isEmpty() ->
-                "This page is a picture of paper, from a scanner or a camera. Tap Read the words on this page, then tap a line to change it."
+                stringResource(R.string.tools_edit_scanned_unread)
             editable.scanned ->
-                "Tap a line to change it. Only the words you change are painted over; the rest stays as scanned. They were read from a picture, so check names and numbers."
+                stringResource(R.string.tools_edit_scanned)
             lines.isEmpty() ->
-                "This page has no text to change: its words may be drawn as shapes. Write on it with Add text, or take something out with Remove areas."
-            else -> "Tap any words on the page to change them. Everything you can change is outlined, cell by cell in a table."
+                stringResource(R.string.tools_edit_no_text)
+            else -> stringResource(R.string.tools_edit_hint)
         }
         Text(hint, style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim, modifier = Modifier.padding(top = 10.dp))
 
@@ -172,14 +174,14 @@ fun EditTextCanvas(
                 if (reading) {
                     CircularProgressIndicator(color = SheafColors.Band, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
                 } else {
-                    SecondaryButton(text = "Read the words on this page", onClick = onRead, tall = false, modifier = Modifier.weight(1f))
+                    SecondaryButton(text = stringResource(R.string.tools_ocr_read), onClick = onRead, tall = false, modifier = Modifier.weight(1f))
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 6.dp)) {
                 for (s in OcrScript.entries) {
                     val on = s == script
                     OutlinedButton(onClick = { onScript(s) }) {
-                        Text(if (s == OcrScript.LATIN) "English letters" else "Hindi, Marathi", color = if (on) SheafColors.Band else SheafColors.Muted)
+                        Text(if (s == OcrScript.LATIN) stringResource(R.string.tools_script_latin) else stringResource(R.string.tools_script_devanagari), color = if (on) SheafColors.Band else SheafColors.Muted)
                     }
                 }
             }
@@ -188,13 +190,13 @@ fun EditTextCanvas(
         if (selected != null && selectedText != null) {
             Field(
                 value = selectedText,
-                label = "The line you tapped",
+                label = stringResource(R.string.tools_line_tapped),
                 keyboardType = KeyboardType.Text,
                 onChange = onText
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
-                SecondaryButton(text = "Put it back as it was", onClick = onUndo, tall = false)
-                SecondaryButton(text = "Done with this line", onClick = { onSelect(null) }, tall = false)
+                SecondaryButton(text = stringResource(R.string.tools_put_back), onClick = onUndo, tall = false)
+                SecondaryButton(text = stringResource(R.string.tools_done_line), onClick = { onSelect(null) }, tall = false)
             }
         }
     }
@@ -214,12 +216,12 @@ fun ReplacePanel(
     onReplace: () -> Unit
 ) {
     Panel(modifier = Modifier.fillMaxWidth(), inset = 14.dp) {
-        SectionHeading("Find and replace")
-        Field(value = find, label = "Find", keyboardType = KeyboardType.Text, onChange = onFind)
-        Field(value = with, label = "Replace with (leave empty to delete it)", keyboardType = KeyboardType.Text, onChange = onWith)
-        ToggleRow(title = "Match capitals exactly", checked = matchCase, onChange = onMatchCase)
+        SectionHeading(stringResource(R.string.tools_find_replace))
+        Field(value = find, label = stringResource(R.string.tools_find), keyboardType = KeyboardType.Text, onChange = onFind)
+        Field(value = with, label = stringResource(R.string.tools_replace_with), keyboardType = KeyboardType.Text, onChange = onWith)
+        ToggleRow(title = stringResource(R.string.tools_match_case), checked = matchCase, onChange = onMatchCase)
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-            SecondaryButton(text = "Replace everywhere", onClick = onReplace, enabled = !busy && find.isNotBlank(), tall = false)
+            SecondaryButton(text = stringResource(R.string.tools_replace_everywhere), onClick = onReplace, enabled = !busy && find.isNotBlank(), tall = false)
             if (busy) CircularProgressIndicator(color = SheafColors.Band, strokeWidth = 2.dp, modifier = Modifier.padding(start = 10.dp).size(18.dp))
         }
         status?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = SheafColors.Muted, modifier = Modifier.padding(top = 6.dp)) }

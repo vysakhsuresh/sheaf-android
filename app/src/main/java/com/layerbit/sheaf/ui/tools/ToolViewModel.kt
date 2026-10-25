@@ -1,5 +1,8 @@
 package com.layerbit.sheaf.ui.tools
 
+import com.layerbit.sheaf.text.Strings
+import com.layerbit.sheaf.R
+import androidx.annotation.StringRes
 import android.app.Application
 import android.content.Intent
 import android.graphics.Bitmap
@@ -187,7 +190,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
     fun addLocalDocument(path: String) {
         val source = java.io.File(path)
         if (!source.isFile) {
-            _state.update { it.copy(error = "That result is no longer available.") }
+            _state.update { it.copy(error = Strings.get(R.string.tools_result_gone)) }
             return
         }
 
@@ -206,7 +209,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             }
 
             if (copied == null) {
-                _state.update { it.copy(busy = false, error = "That result could not be read.") }
+                _state.update { it.copy(busy = false, error = Strings.get(R.string.tools_result_unreadable)) }
                 return@launch
             }
 
@@ -256,7 +259,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 } catch (e: Exception) {
                     // Say which one failed. "Could not add file" when four were picked leaves
                     // the user to work out which by elimination.
-                    failure = e.message ?: "One of those files could not be read."
+                    failure = e.message ?: Strings.get(R.string.tools_files_unreadable)
                 }
             }
 
@@ -356,17 +359,17 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             }
             _state.update { it.copy(busy = false) }
             if (wanted.isEmpty()) {
-                val what = when (tool.input) {
-                    ToolId.InputKind.IMAGES -> "a picture"
-                    ToolId.InputKind.OFFICE -> "a Word, Excel or text file"
-                    else -> "a PDF"
+                val nothing = when (tool.input) {
+                    ToolId.InputKind.IMAGES -> Strings.get(R.string.tools_folder_no_pictures)
+                    ToolId.InputKind.OFFICE -> Strings.get(R.string.tools_folder_no_office)
+                    else -> Strings.get(R.string.tools_folder_no_pdfs)
                 }
-                _state.update { it.copy(error = "Nothing in that folder is $what.") }
+                _state.update { it.copy(error = nothing) }
                 return@launch
             }
             if (skipped > 0) {
                 _state.update {
-                    it.copy(notice = "${wanted.size} from the folder; $skipped other ${if (skipped == 1) "file was" else "files were"} left out.")
+                    it.copy(notice = Strings.plural(R.plurals.tools_folder_skipped, skipped, wanted.size, skipped))
                 }
             }
             addDocuments(wanted)
@@ -400,7 +403,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 tool == ToolId.ADD_IMAGE
             return@withContext SelectedDoc(
                 file = file,
-                unreadableReason = if (wanted) null else "This is an image, and this tool needs a PDF."
+                unreadableReason = if (wanted) null else Strings.get(R.string.tools_image_not_pdf)
             )
         }
         if (!file.isPdf) {
@@ -409,15 +412,15 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             if (tool == ToolId.OFFICE_TO_PDF) {
                 return@withContext SelectedDoc(
                     file = file,
-                    unreadableReason = if (file.isOffice) null else "Sheaf can turn .docx, .xlsx, .txt, .md and .csv files into PDFs; this is something else."
+                    unreadableReason = if (file.isOffice) null else Strings.get(R.string.tools_not_office)
                 )
             }
             return@withContext SelectedDoc(
                 file = file,
                 unreadableReason = if (tool?.input == ToolId.InputKind.IMAGES) {
-                    "This is not an image."
+                    Strings.get(R.string.tools_not_image)
                 } else {
-                    "This is not a PDF."
+                    Strings.get(R.string.tools_not_pdf)
                 }
             )
         }
@@ -452,7 +455,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         } catch (_: PdfException.PasswordRequired) {
             SelectedDoc(file = file, encrypted = true, needsPassword = true)
         } catch (e: Exception) {
-            SelectedDoc(file = file, unreadableReason = e.message ?: "This file could not be read.")
+            SelectedDoc(file = file, unreadableReason = e.message ?: Strings.get(R.string.tools_file_unreadable))
         }
     }
 
@@ -522,7 +525,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                             unreadableReason = null
                         )
                     },
-                    onFailure = { list[index].copy(unreadableReason = "That password did not open it.") }
+                    onFailure = { list[index].copy(unreadableReason = Strings.get(R.string.tools_wrong_password)) }
                 )
                 current.copy(documents = list, pageOrder = emptyList())
             }
@@ -736,7 +739,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             val remaining = current.pageOrder.filterNot { it in current.selectedPages }
             // A document with no pages is not a document. Refuse rather than produce one.
             if (remaining.isEmpty()) {
-                return@update current.copy(error = "A document has to keep at least one page.")
+                return@update current.copy(error = Strings.get(R.string.tools_keep_one_page))
             }
             current.copy(
                 pageOrder = remaining,
@@ -783,7 +786,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         val tool = current.tool ?: return
         val ready = current.documents.filter { it.isReady }
         if (ready.isEmpty() && tool.input != ToolId.InputKind.NONE) {
-            _state.update { it.copy(error = "Add a file first.") }
+            _state.update { it.copy(error = Strings.get(R.string.tools_add_file_first)) }
             return
         }
 
@@ -829,7 +832,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             ToolId.EXTRACT_TEXT -> ExtractTextOp(config.pageSpec.takeIf { it.isNotBlank() })
             ToolId.SCAN -> {
                 // The scanner has its own screen; it never reaches the generic tool flow.
-                _state.update { it.copy(error = "Open the scanner from the home screen.") }
+                _state.update { it.copy(error = Strings.get(R.string.tools_scanner_from_home)) }
                 return null
             }
             ToolId.WATERMARK -> WatermarkOp(
@@ -883,7 +886,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             ToolId.SIGN -> {
                 val signature = state.signatureFile
                 if (signature == null) {
-                    _state.update { it.copy(error = "Draw your signature first.") }
+                    _state.update { it.copy(error = Strings.get(R.string.tools_draw_signature_first)) }
                     return null
                 }
                 SignOp(
@@ -991,11 +994,11 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             )
             ToolId.SET_PASSWORD -> {
                 if (!config.restrictOnly && config.newPassword.isBlank()) {
-                    _state.update { it.copy(error = "Choose a password first.") }
+                    _state.update { it.copy(error = Strings.get(R.string.tools_choose_password_first)) }
                     return null
                 }
                 if (!config.restrictOnly && config.newPassword != config.confirmPassword) {
-                    _state.update { it.copy(error = "The two passwords do not match.") }
+                    _state.update { it.copy(error = Strings.get(R.string.tools_passwords_differ)) }
                     return null
                 }
                 SetPasswordOp(
@@ -1014,7 +1017,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             ToolId.RECIPES -> {
                 val recipe = state.recipes.firstOrNull { it.id == state.recipeId }
                 if (recipe == null) {
-                    _state.update { it.copy(error = "Choose a recipe, or make one.") }
+                    _state.update { it.copy(error = Strings.get(R.string.tools_choose_recipe)) }
                     return null
                 }
                 val steps = recipe.steps.map { step ->
@@ -1174,15 +1177,15 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             var firstProblem: String? = null
             for (file in files) {
                 val problem = runCatching { sheaf.exporter.writeInto(folder, file) }
-                    .getOrElse { it.message ?: "${file.displayName} could not be written." }
+                    .getOrElse { it.message ?: Strings.get(R.string.tools_file_not_written, file.displayName) }
                 if (problem == null) saved += 1 else if (firstProblem == null) firstProblem = problem
             }
             onDone(
                 when {
                     firstProblem != null && saved == 0 -> firstProblem
-                    firstProblem != null -> "Saved $saved of ${files.size}. $firstProblem"
-                    saved == 1 -> "Saved ${files.first().displayName}"
-                    else -> "Saved $saved files"
+                    firstProblem != null -> Strings.get(R.string.tools_saved_some, saved, files.size, firstProblem)
+                    saved == 1 -> Strings.get(R.string.tools_saved_one, files.first().displayName)
+                    else -> Strings.plural(R.plurals.tools_saved_files, saved)
                 }
             )
         }
@@ -1284,7 +1287,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val kept = withContext(Dispatchers.IO) { sheaf.signatures.keep(drawn) }
             if (kept == null) {
-                _state.update { it.copy(error = "That signature could not be kept.") }
+                _state.update { it.copy(error = Strings.get(R.string.tools_signature_not_kept)) }
             } else {
                 _state.update { it.copy(savedSignatures = sheaf.signatures.list(), error = null) }
             }
@@ -1307,7 +1310,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 }.getOrNull()
             }
             if (copy == null) {
-                _state.update { it.copy(error = "That signature could not be read.") }
+                _state.update { it.copy(error = Strings.get(R.string.tools_signature_unreadable)) }
             } else {
                 setSignature(copy)
             }
@@ -1494,16 +1497,17 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         val doc = _state.value.documents.firstOrNull() ?: return
         val config = _state.value.config
         val patterns = buildList {
-            if (config.findAadhaar) add(Triple("Aadhaar numbers", AADHAAR, { s: String -> true }))
-            if (config.findPan) add(Triple("PAN numbers", PAN, { s: String -> true }))
-            if (config.findPhone) add(Triple("phone numbers", PHONE, { s: String -> s.count { it.isDigit() } in 10..13 }))
-            if (config.findEmail) add(Triple("email addresses", EMAIL, { s: String -> true }))
-            if (config.findCard) add(Triple("card numbers", CARD, { s: String -> luhn(s) }))
+            // Each kind says its own count, so "1 PAN number" and "3 PAN numbers" are both whole.
+            if (config.findAadhaar) add(Triple({ n: Int -> Strings.plural(R.plurals.tools_found_aadhaar, n) }, AADHAAR, { s: String -> true }))
+            if (config.findPan) add(Triple({ n: Int -> Strings.plural(R.plurals.tools_found_pan, n) }, PAN, { s: String -> true }))
+            if (config.findPhone) add(Triple({ n: Int -> Strings.plural(R.plurals.tools_found_phone, n) }, PHONE, { s: String -> s.count { it.isDigit() } in 10..13 }))
+            if (config.findEmail) add(Triple({ n: Int -> Strings.plural(R.plurals.tools_found_email, n) }, EMAIL, { s: String -> true }))
+            if (config.findCard) add(Triple({ n: Int -> Strings.plural(R.plurals.tools_found_card, n) }, CARD, { s: String -> luhn(s) }))
             val typed = config.findText.trim()
-            if (typed.isNotEmpty()) add(Triple("\"$typed\"", Regex(Regex.escape(typed), RegexOption.IGNORE_CASE), { s: String -> true }))
+            if (typed.isNotEmpty()) add(Triple({ n: Int -> Strings.plural(R.plurals.tools_found_typed, n, n, typed) }, Regex(Regex.escape(typed), RegexOption.IGNORE_CASE), { s: String -> true }))
         }
         if (patterns.isEmpty()) {
-            _state.update { it.copy(findReport = "Choose what to look for first.") }
+            _state.update { it.copy(findReport = Strings.get(R.string.tools_find_choose)) }
             return
         }
         _state.update { it.copy(finding = true, findReport = null) }
@@ -1521,7 +1525,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 for ((label, byPage) in found) {
                     val n = byPage.values.sumOf { it.size }
                     if (n == 0) continue
-                    counts += if (n == 1) "1 ${label.removeSuffix("es").takeIf { label.endsWith("sses") } ?: label.removeSuffix("s")}" else "$n $label"
+                    counts += label(n)
                     for ((page, areas) in byPage) {
                         val existing = redactions[page].orEmpty()
                         // The same area found twice - a number that matches two patterns - is
@@ -1535,10 +1539,9 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     redactions = redactions,
                     finding = false,
                     findReport = if (counts.isEmpty()) {
-                        "Nothing found. A scanned page has no text to search; run Make searchable first."
+                        Strings.get(R.string.tools_find_nothing)
                     } else {
-                        "Marked " + counts.joinToString(", ") + " on " +
-                            (if (pages.size == 1) "1 page" else "${pages.size} pages") + ". Tap Remove to take them out."
+                        Strings.get(R.string.tools_find_marked, counts.joinToString(", "), Strings.plural(R.plurals.tools_pages, pages.size))
                     }
                 )
             }
@@ -1570,10 +1573,10 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             val kind = current.config.fieldKind
             val n = current.newFields.count { it.kind == kind } + 1
             val name = when (kind) {
-                NewField.Kind.TEXT -> "Text $n"
-                NewField.Kind.MULTILINE -> "Paragraph $n"
-                NewField.Kind.CHECK -> "Tick $n"
-                NewField.Kind.CHOICE -> "Choice $n"
+                NewField.Kind.TEXT -> Strings.get(R.string.tools_field_text, n)
+                NewField.Kind.MULTILINE -> Strings.get(R.string.tools_field_paragraph, n)
+                NewField.Kind.CHECK -> Strings.get(R.string.tools_field_tick, n)
+                NewField.Kind.CHOICE -> Strings.get(R.string.tools_field_choice, n)
             }
             current.copy(newFields = current.newFields + NewField(kind, name, page, area), error = null)
         }
@@ -1645,7 +1648,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
             val matching = values.filterKeys { it in names }
             current.copy(
                 formValues = current.formValues + matching,
-                error = if (matching.isEmpty()) "None of those answers fit this form's fields." else null
+                error = if (matching.isEmpty()) Strings.get(R.string.tools_answers_dont_fit) else null
             )
         }
     }
@@ -1707,7 +1710,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
     fun addRecipeStep(tool: ToolId) {
         _state.update { current ->
             val draft = current.draft ?: return@update current
-            if (draft.steps.any { it.tool == tool }) return@update current.copy(recipeProblem = "${tool.title} is already a step.")
+            if (draft.steps.any { it.tool == tool }) return@update current.copy(recipeProblem = Strings.get(R.string.tools_recipe_step_twice, tool.title))
             val steps = draft.steps + RecipeStep(tool, ToolConfig.defaultFor(tool))
             current.copy(draft = draft.copy(steps = steps), draftStep = steps.lastIndex, recipeProblem = null)
         }
@@ -1737,7 +1740,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
     fun saveRecipe() {
         val draft = _state.value.draft ?: return
         val problem = Recipes.problemWith(draft.name.trim(), draft.steps)
-            ?: draft.steps.firstNotNullOfOrNull { step -> stepProblem(step)?.let { "${step.tool.title}: $it" } }
+            ?: draft.steps.firstNotNullOfOrNull { step -> stepProblem(step)?.let { Strings.get(R.string.tools_recipe_step_problem, step.tool.title, it) } }
         if (problem != null) {
             _state.update { it.copy(recipeProblem = problem) }
             return
@@ -1753,7 +1756,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     draft = null,
                     draftStep = null,
                     recipeProblem = null,
-                    error = if (kept) null else "The recipe could not be kept on this phone; it works until you leave this screen."
+                    error = if (kept) null else Strings.get(R.string.tools_recipe_not_kept)
                 )
             }
         }
@@ -1872,13 +1875,13 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                             readingScan = false,
                             editPages = current.editPages + (page to found),
                             error = if (found.lines.isEmpty()) {
-                                "No words could be read on this page: it may be handwritten, or too faint. Write on it with Add text instead."
+                                Strings.get(R.string.tools_ocr_nothing)
                             } else {
                                 null
                             }
                         )
                     },
-                    onFailure = { current.copy(readingScan = false, error = "The words on this page could not be read.") }
+                    onFailure = { current.copy(readingScan = false, error = Strings.get(R.string.tools_ocr_failed)) }
                 )
             }
         }
@@ -1912,13 +1915,13 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         val doc = _state.value.documents.firstOrNull() ?: return
         val find = _state.value.config.findText.trim()
         if (find.isEmpty()) {
-            _state.update { it.copy(replaceStatus = "Type what to find.") }
+            _state.update { it.copy(replaceStatus = Strings.get(R.string.tools_replace_type_find)) }
             return
         }
         val with = _state.value.config.replaceText.trim()
         val matchCase = _state.value.config.matchCase
         val pageCount = _state.value.pageOrder.size
-        _state.update { it.copy(replacing = true, replaceStatus = "Looking through the pages…") }
+        _state.update { it.copy(replacing = true, replaceStatus = Strings.get(R.string.tools_replace_looking)) }
         viewModelScope.launch {
             val input = PdfInput(doc.file.file, doc.password)
             val missing = (0 until pageCount).filter { it !in _state.value.editPages }
@@ -1969,11 +1972,10 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                     lineEdits = all,
                     replacing = false,
                     replaceStatus = if (places == 0) {
-                        "\"$find\" isn't in the text of this document." +
-                            (if (unread) " Scanned pages have to be read first: open one and tap Read the words on this page." else "")
+                        if (unread) Strings.get(R.string.tools_replace_not_found_unread, find)
+                        else Strings.get(R.string.tools_replace_not_found, find)
                     } else {
-                        "Changed in $places ${if (places == 1) "place" else "places"}, on ${touched.size} " +
-                            "${if (touched.size == 1) "page" else "pages"}. Each is outlined on its page; tap one to adjust it."
+                        Strings.get(R.string.tools_replace_changed, Strings.plural(R.plurals.tools_places, places), Strings.plural(R.plurals.tools_pages, touched.size))
                     }
                 )
             }
@@ -2026,7 +2028,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         val state = _state.value
         val index = state.selectedPicture
         if (index == null) {
-            _state.update { it.copy(error = "Tap a picture on the page first, then choose the new one.") }
+            _state.update { it.copy(error = Strings.get(R.string.tools_pick_picture_first)) }
             return
         }
         val page = state.canvasPage
@@ -2043,7 +2045,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 }.getOrNull()
             }
             if (loaded == null) {
-                _state.update { it.copy(error = "That picture couldn't be read. Try a JPEG or PNG.") }
+                _state.update { it.copy(error = Strings.get(R.string.tools_picture_unreadable)) }
                 return@launch
             }
             changePicture(page, index) { it.copy(removed = false, replacement = loaded.first, replacementBitmap = loaded.second) }
@@ -2099,14 +2101,14 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         val mark = when (config.markupTool) {
             ToolConfig.MarkupTool.NOTE -> {
                 if (config.markupText.isBlank()) {
-                    _state.update { it.copy(error = "Type what the note should say first.") }
+                    _state.update { it.copy(error = Strings.get(R.string.tools_note_empty)) }
                     return
                 }
                 PageMark.Note(at, config.markupText.trim(), config.markupColour, config.noteSize)
             }
             ToolConfig.MarkupTool.STAMP -> {
                 if (config.stampText.isBlank()) {
-                    _state.update { it.copy(error = "Type what the stamp should say first.") }
+                    _state.update { it.copy(error = Strings.get(R.string.tools_stamp_empty)) }
                     return
                 }
                 PageMark.Stamp(at, config.stampText.trim(), config.markupColour)
@@ -2339,86 +2341,86 @@ data class ToolUiState(
      */
     val blockedReason: String?
         get() = when {
-            tool == null -> "No tool selected."
+            tool == null -> Strings.get(R.string.tools_block_no_tool)
             busy -> null
             tool == ToolId.RENT_RECEIPTS -> when {
-                config.tenant.isBlank() -> "Type the tenant's name."
-                config.landlord.isBlank() -> "Type the owner's name."
-                config.rentAddress.isBlank() -> "Type the address of the property."
-                config.rent <= 0 -> "Type the monthly rent."
+                config.tenant.isBlank() -> Strings.get(R.string.tools_block_tenant)
+                config.landlord.isBlank() -> Strings.get(R.string.tools_block_owner)
+                config.rentAddress.isBlank() -> Strings.get(R.string.tools_block_address)
+                config.rent <= 0 -> Strings.get(R.string.tools_block_rent)
                 else -> null
             }
             tool == ToolId.OFFICE_TO_PDF && documents.any { it.file.isPdf } ->
-                "This one is already a PDF. Pick a Word, Excel or text file."
+                Strings.get(R.string.tools_block_already_pdf)
             documents.isEmpty() -> if (tool.input == ToolId.InputKind.IMAGES) {
-                "Choose at least one image."
+                Strings.get(R.string.tools_block_one_image)
             } else {
-                "Choose a file."
+                Strings.get(R.string.tools_block_choose_file)
             }
             documents.any { !it.isReady } ->
                 documents.firstNotNullOfOrNull { it.unreadableReason }
-                    ?: "One file still needs its password."
-            tool == ToolId.MERGE && documents.size < 2 -> "Merging needs at least two files."
-            tool == ToolId.RECIPES && recipes.none { it.id == recipeId } -> "Choose a recipe, or make one."
+                    ?: Strings.get(R.string.tools_block_password_needed)
+            tool == ToolId.MERGE && documents.size < 2 -> Strings.get(R.string.tools_block_merge_two)
+            tool == ToolId.RECIPES && recipes.none { it.id == recipeId } -> Strings.get(R.string.tools_choose_recipe)
             tool == ToolId.RECIPES && recipes.first { it.id == recipeId }.needsPassword && config.newPassword.isBlank() ->
-                "Type the password to lock them with."
-            tool == ToolId.EDIT_IMAGES && pictureEdits().isEmpty() -> "Move, take out or replace a picture first."
-            tool == ToolId.RESIZE_PHOTO && config.photoKb < 2 -> "Type a size of at least 2 KB."
+                Strings.get(R.string.tools_block_lock_password)
+            tool == ToolId.EDIT_IMAGES && pictureEdits().isEmpty() -> Strings.get(R.string.tools_block_pictures)
+            tool == ToolId.RESIZE_PHOTO && config.photoKb < 2 -> Strings.get(R.string.tools_block_photo_kb)
             tool == ToolId.RESIZE_PHOTO && config.photoMode == ToolConfig.PhotoMode.EXACT &&
                 (config.photoWidth !in 16..4096 || config.photoHeight !in 16..4096) ->
-                "Type a width and a height between 16 and 4096 pixels."
+                Strings.get(R.string.tools_block_photo_size)
             tool == ToolId.COMPARE && documents.size != 2 ->
-                if (documents.size < 2) "Add the newer version as the second file." else "Compare takes exactly two files: the older, then the newer."
-            tool == ToolId.EDIT_TEXT && lineEdits.values.all { it.isEmpty() } -> "Tap a line of text and change it."
-            tool == ToolId.EDIT_TEXT && textEdits().isEmpty() -> "Change the words first."
-            tool == ToolId.SIGN && signatureFile == null -> "Draw your signature above."
+                if (documents.size < 2) Strings.get(R.string.tools_block_compare_newer) else Strings.get(R.string.tools_block_compare_two)
+            tool == ToolId.EDIT_TEXT && lineEdits.values.all { it.isEmpty() } -> Strings.get(R.string.tools_block_edit_line)
+            tool == ToolId.EDIT_TEXT && textEdits().isEmpty() -> Strings.get(R.string.tools_block_edit_words)
+            tool == ToolId.SIGN && signatureFile == null -> Strings.get(R.string.tools_block_signature)
             tool == ToolId.ANNOTATE && marks.values.all { it.isEmpty() } ->
-                "Highlight a line or draw on the page."
+                Strings.get(R.string.tools_block_markup)
             tool == ToolId.REDACT && redactions.values.all { it.isEmpty() } ->
-                "Drag a box over what should be removed."
-            tool == ToolId.ADD_TEXT && config.noteText.isBlank() -> "Type the text to add."
+                Strings.get(R.string.tools_block_redact)
+            tool == ToolId.ADD_TEXT && config.noteText.isBlank() -> Strings.get(R.string.tools_block_note)
             tool == ToolId.HEADER_FOOTER &&
                 config.headerText.isBlank() && config.footerText.isBlank() ->
-                "Type a header or a footer."
+                Strings.get(R.string.tools_block_header)
             tool == ToolId.INSERT && documents.size < 2 && config.blankPages <= 0 ->
-                "Add the PDF to insert, or choose how many blank pages to add."
+                Strings.get(R.string.tools_block_insert)
             tool == ToolId.INSERT && config.replacePages && config.replaceSpec.isBlank() ->
-                "Type the pages to replace."
-            tool == ToolId.CREATE_FORM && newFields.isEmpty() -> "Drag a box on the page where a field should go."
-            tool == ToolId.CREATE_FORM && newFields.any { it.name.isBlank() } -> "Give every field a name."
-            tool == ToolId.DIGITAL_SIGN && documents.none { it.file.isPdf } -> "Choose the PDF first."
-            tool == ToolId.DIGITAL_SIGN && documents.none { !it.file.isPdf } -> "Add your certificate file (.pfx or .p12)."
-            tool == ToolId.DIGITAL_SIGN && documents.count { it.file.isPdf } > 1 -> "Sign one PDF at a time."
-            tool == ToolId.ADD_IMAGE && documents.none { it.file.isPdf } -> "Choose the PDF first."
-            tool == ToolId.ADD_IMAGE && documents.none { it.file.isImage } -> "Add the image to put on the page."
+                Strings.get(R.string.tools_block_replace_pages)
+            tool == ToolId.CREATE_FORM && newFields.isEmpty() -> Strings.get(R.string.tools_block_new_field)
+            tool == ToolId.CREATE_FORM && newFields.any { it.name.isBlank() } -> Strings.get(R.string.tools_block_field_names)
+            tool == ToolId.DIGITAL_SIGN && documents.none { it.file.isPdf } -> Strings.get(R.string.tools_block_pdf_first)
+            tool == ToolId.DIGITAL_SIGN && documents.none { !it.file.isPdf } -> Strings.get(R.string.tools_block_cert)
+            tool == ToolId.DIGITAL_SIGN && documents.count { it.file.isPdf } > 1 -> Strings.get(R.string.tools_block_sign_one)
+            tool == ToolId.ADD_IMAGE && documents.none { it.file.isPdf } -> Strings.get(R.string.tools_block_pdf_first)
+            tool == ToolId.ADD_IMAGE && documents.none { it.file.isImage } -> Strings.get(R.string.tools_block_image)
             tool == ToolId.ATTACHMENTS && !documents.first().file.isPdf ->
-                "The first file has to be the PDF. Remove the others and pick it first."
+                Strings.get(R.string.tools_block_pdf_first_file)
             tool == ToolId.ATTACHMENTS && !config.extractAttachments && documents.size < 2 ->
-                "Add the files to put inside it."
+                Strings.get(R.string.tools_block_attach_files)
             tool == ToolId.ATTACHMENTS && config.extractAttachments && attachmentsRead && attachments.isEmpty() ->
-                "This document has no files attached to it."
-            tool == ToolId.BOOKMARKS && !outlineRead -> "Reading the bookmarks…"
+                Strings.get(R.string.tools_block_no_attachments)
+            tool == ToolId.BOOKMARKS && !outlineRead -> Strings.get(R.string.tools_reading_bookmarks)
             tool == ToolId.BOOKMARKS && outline.isNotEmpty() && outline.all { it.title.isBlank() } ->
-                "Give the bookmarks a title."
-            tool == ToolId.FORMS && !formRead -> "Reading the form…"
+                Strings.get(R.string.tools_block_bookmark_titles)
+            tool == ToolId.FORMS && !formRead -> Strings.get(R.string.tools_block_reading_form)
             tool == ToolId.FORMS && formFields.isEmpty() ->
-                "This document has no form fields. Use Add text to write on it instead."
+                Strings.get(R.string.tools_block_no_form)
             tool == ToolId.FORMS && formValues.values.none { it.isNotBlank() } ->
-                "Fill in at least one field."
+                Strings.get(R.string.tools_block_fill_one)
             tool == ToolId.WATERMARK && config.watermarkText.isBlank() ->
-                "Type the watermark text."
+                Strings.get(R.string.tools_block_watermark)
             tool == ToolId.SET_PASSWORD && config.restrictOnly &&
                 config.allowPrinting && config.allowCopying && config.allowChanges ->
-                "Choose at least one thing to restrict."
+                Strings.get(R.string.tools_block_restrict)
             tool == ToolId.SET_PASSWORD && !config.restrictOnly && config.newPassword.isBlank() ->
-                "Choose a password."
+                Strings.get(R.string.tools_block_password)
             tool == ToolId.SET_PASSWORD && !config.restrictOnly && config.newPassword != config.confirmPassword ->
-                "The two passwords do not match."
+                Strings.get(R.string.tools_passwords_differ)
             tool == ToolId.EXTRACT && config.pageSpec.isBlank() ->
-                if (config.removePages) "Tap the pages to remove, or type them." else "Tap the pages to keep, or type them."
+                if (config.removePages) Strings.get(R.string.tools_block_pages_remove) else Strings.get(R.string.tools_block_pages_keep)
             tool == ToolId.CROP && !config.cropAuto && config.resizeTo == null &&
                 config.cropTopMm == 0f && config.cropRightMm == 0f && config.cropBottomMm == 0f && config.cropLeftMm == 0f ->
-                "Choose how much to trim, or a page size."
+                Strings.get(R.string.tools_block_crop)
             else -> null
         }
 
@@ -2593,27 +2595,38 @@ data class ToolConfig(
 ) {
     enum class SplitMode { EVERY_N, EACH_PAGE, RANGES, AT_BOOKMARKS }
 
-    enum class PhotoMode(val label: String) {
-        KEEP("Keep its shape"),
-        PASSPORT("Passport photo, 3.5 × 4.5 cm"),
-        EXACT("Width × height in pixels")
+    enum class PhotoMode(@StringRes val labelRes: Int) {
+        KEEP(R.string.tools_photo_keep),
+        PASSPORT(R.string.tools_photo_passport),
+        EXACT(R.string.tools_photo_exact);
+
+        val label: String get() = Strings.get(labelRes)
     }
 
     /** What Document details does: edit the fields, blank them, or clean everything hidden. */
     enum class MetaMode { EDIT, STRIP, CLEAN }
 
     /** The mark-up kit. [drags] marks are dragged out; [taps] marks are put down with a tap. */
-    enum class MarkupTool(val label: String, val drags: Boolean, val taps: Boolean) {
-        HIGHLIGHT("Highlight", true, false),
-        PEN("Draw", false, false),
-        UNDERLINE("Underline", true, false),
-        STRIKETHROUGH("Strike through", true, false),
-        BOX("Box", true, false),
-        CIRCLE("Circle", true, false),
-        LINE("Line", true, false),
-        ARROW("Arrow", true, false),
-        NOTE("Note", false, true),
-        STAMP("Stamp", false, true);
+    /** [addRes] is TalkBack's action that puts one down; [hintRes] says how to make one. */
+    enum class MarkupTool(
+        @StringRes val labelRes: Int,
+        @StringRes val addRes: Int,
+        @StringRes val hintRes: Int,
+        val drags: Boolean,
+        val taps: Boolean
+    ) {
+        HIGHLIGHT(R.string.tools_markup_highlight, R.string.tools_markup_highlight_add, R.string.tools_markup_highlight_hint, true, false),
+        PEN(R.string.tools_markup_pen, R.string.tools_markup_pen_add, R.string.tools_markup_pen_hint, false, false),
+        UNDERLINE(R.string.tools_markup_underline, R.string.tools_markup_underline_add, R.string.tools_markup_underline_hint, true, false),
+        STRIKETHROUGH(R.string.tools_markup_strikethrough, R.string.tools_markup_strikethrough_add, R.string.tools_markup_strikethrough_hint, true, false),
+        BOX(R.string.tools_markup_box, R.string.tools_markup_box_add, R.string.tools_markup_box_hint, true, false),
+        CIRCLE(R.string.tools_markup_circle, R.string.tools_markup_circle_add, R.string.tools_markup_circle_hint, true, false),
+        LINE(R.string.tools_markup_line, R.string.tools_markup_line_add, R.string.tools_markup_line_hint, true, false),
+        ARROW(R.string.tools_markup_arrow, R.string.tools_markup_arrow_add, R.string.tools_markup_arrow_hint, true, false),
+        NOTE(R.string.tools_markup_note, R.string.tools_markup_note_add, R.string.tools_markup_note_hint, false, true),
+        STAMP(R.string.tools_markup_stamp, R.string.tools_markup_stamp_add, R.string.tools_markup_stamp_hint, false, true);
+
+        val label: String get() = Strings.get(labelRes)
 
         /** Highlight has its own pale palette; everything else is drawn in ink. */
         val usesInk: Boolean get() = this != HIGHLIGHT
