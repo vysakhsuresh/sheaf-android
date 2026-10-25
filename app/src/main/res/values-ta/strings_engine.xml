@@ -8,7 +8,7 @@
     <string name="engine_failed">தோல்வியடைந்தது.</string>
     <string name="engine_done">முடிந்தது</string>
     <string name="engine_unreadable">படிக்க முடியவில்லை.</string>
-    <string name="engine_list_separator">, </string>
+    <string name="engine_list_separator">", "</string>
     <plurals name="engine_count_pages">
         <item quantity="one">%d பக்கம்</item>
         <item quantity="other">%d பக்கங்கள்</item>
@@ -141,7 +141,7 @@
     <string name="engine_withheld_printing">அச்சிடுதல்</string>
     <string name="engine_withheld_copying">உரையை நகலெடுத்தல்</string>
     <string name="engine_withheld_changes">மாற்றங்கள்</string>
-    <string name="engine_list_or"> அல்லது </string>
+    <string name="engine_list_or">" அல்லது "</string>
     <string name="engine_password_empty">முதலில் கடவுச்சொல்லை உள்ளிடவும்.</string>
     <string name="engine_restrict_nothing">கட்டுப்படுத்த குறைந்தது ஒன்றைத் தேர்ந்தெடுக்கவும்.</string>
     <string name="engine_restricted_detail">கடவுச்சொல் இல்லாமல் திறக்கும்; %1$s அனுமதிக்க வேண்டாம் என ரீடர்களிடம் கேட்கும்</string>
@@ -301,8 +301,8 @@
         <item quantity="one">%d ஸ்கிரிப்ட் அல்லது செயல்</item>
         <item quantity="other">%d ஸ்கிரிப்டுகளும் செயல்களும்</item>
     </plurals>
-    <string name="engine_list_and"> மற்றும் </string>
-    <string name="engine_clause_separator">; </string>
+    <string name="engine_list_and">" மற்றும் "</string>
+    <string name="engine_clause_separator">"; "</string>
     <string name="engine_pdfa_taken_out">தரநிலை கோருவதால், %1$s அகற்றப்பட்டன</string>
     <string name="engine_pdfa_unlocked">காப்பகங்கள் யார் வேண்டுமானாலும் திறக்கும்படி இருக்க வேண்டும் என்பதால், கடவுச்சொல் நீக்கப்பட்டது</string>
     <plurals name="engine_pdfa_fonts_missing">
@@ -368,7 +368,7 @@
     <string name="engine_photo_dims_passport">பாஸ்போர்ட் வடிவம், %1$d × %2$d px</string>
     <string name="engine_photo_made_smaller">, பொருந்துவதற்காகச் சிறிதாக்கப்பட்டது (முன்பு %1$d × %2$d)</string>
     <string name="engine_photo_made_smaller_than">, பொருந்துவதற்காக %1$d × %2$d-ஐ விடச் சிறிதாக்கப்பட்டது</string>
-    <string name="engine_photo_it_was"> (முன்பு %1$d × %2$d)</string>
+    <string name="engine_photo_it_was">" (முன்பு %1$d × %2$d)"</string>
     <string name="engine_photo_not_enlarged">, %1$d × %2$d ஆகப் பெரிதாக்கப்படவில்லை: புகைப்படத்தில் அவ்வளவு பிக்சல்கள் இல்லை</string>
     <string name="engine_photo_turned_upright">, நேராகத் திருப்பப்பட்டது</string>
     <string name="engine_photo_now_jpeg">, இப்போது JPEG</string>

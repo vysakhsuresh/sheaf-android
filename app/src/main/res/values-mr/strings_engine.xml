@@ -8,7 +8,7 @@
     <string name="engine_failed">अयशस्वी.</string>
     <string name="engine_done">पूर्ण</string>
     <string name="engine_unreadable">वाचता येत नाही.</string>
-    <string name="engine_list_separator">, </string>
+    <string name="engine_list_separator">", "</string>
     <plurals name="engine_count_pages">
         <item quantity="one">%d पान</item>
         <item quantity="other">%d पाने</item>
@@ -141,7 +141,7 @@
     <string name="engine_withheld_printing">प्रिंट</string>
     <string name="engine_withheld_copying">मजकूर कॉपी</string>
     <string name="engine_withheld_changes">बदल</string>
-    <string name="engine_list_or"> किंवा </string>
+    <string name="engine_list_or">" किंवा "</string>
     <string name="engine_password_empty">आधी पासवर्ड टाका.</string>
     <string name="engine_restrict_nothing">निर्बंध घालण्यासाठी किमान एक गोष्ट निवडा.</string>
     <string name="engine_restricted_detail">पासवर्डशिवाय उघडते; वाचकांना %1$s करू न देण्याची विनंती करते</string>
@@ -301,8 +301,8 @@
         <item quantity="one">%d स्क्रिप्ट किंवा क्रिया</item>
         <item quantity="other">%d स्क्रिप्ट्स आणि क्रिया</item>
     </plurals>
-    <string name="engine_list_and"> आणि </string>
-    <string name="engine_clause_separator">; </string>
+    <string name="engine_list_and">" आणि "</string>
+    <string name="engine_clause_separator">"; "</string>
     <string name="engine_pdfa_taken_out">मानकानुसार काढले: %1$s</string>
     <string name="engine_pdfa_unlocked">पासवर्ड काढला, कारण संग्रह प्रत कोणालाही उघडता यायला हवी</string>
     <plurals name="engine_pdfa_fonts_missing">
@@ -368,7 +368,7 @@
     <string name="engine_photo_dims_passport">पासपोर्ट आकार, %1$d × %2$d px</string>
     <string name="engine_photo_made_smaller">, बसवण्यासाठी लहान केला (आधी %1$d × %2$d होता)</string>
     <string name="engine_photo_made_smaller_than">, बसवण्यासाठी %1$d × %2$d पेक्षा लहान केला</string>
-    <string name="engine_photo_it_was"> (आधी %1$d × %2$d होता)</string>
+    <string name="engine_photo_it_was">" (आधी %1$d × %2$d होता)"</string>
     <string name="engine_photo_not_enlarged">, %1$d × %2$d पर्यंत मोठा केला नाही: फोटोमध्ये कमी पिक्सेल आहेत</string>
     <string name="engine_photo_turned_upright">, सरळ केला</string>
     <string name="engine_photo_now_jpeg">, आता JPEG आहे</string>

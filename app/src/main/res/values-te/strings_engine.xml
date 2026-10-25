@@ -8,7 +8,7 @@
     <string name="engine_failed">విఫలమైంది.</string>
     <string name="engine_done">పూర్తయింది</string>
     <string name="engine_unreadable">చదవడం సాధ్యం కాదు.</string>
-    <string name="engine_list_separator">, </string>
+    <string name="engine_list_separator">", "</string>
     <plurals name="engine_count_pages">
         <item quantity="one">%d పేజీ</item>
         <item quantity="other">%d పేజీలు</item>
@@ -141,7 +141,7 @@
     <string name="engine_withheld_printing">ప్రింట్ చేయడం</string>
     <string name="engine_withheld_copying">టెక్స్ట్ కాపీ చేయడం</string>
     <string name="engine_withheld_changes">మార్పులు చేయడం</string>
-    <string name="engine_list_or"> లేదా </string>
+    <string name="engine_list_or">" లేదా "</string>
     <string name="engine_password_empty">ముందుగా పాస్‌వర్డ్‌ను ఎంటర్ చేయండి.</string>
     <string name="engine_restrict_nothing">పరిమితం చేయడానికి కనీసం ఒక దాన్ని ఎంచుకోండి.</string>
     <string name="engine_restricted_detail">పాస్‌వర్డ్ లేకుండా తెరుచుకుంటుంది; %1$s అనుమతించవద్దని రీడర్‌లను కోరుతుంది</string>
@@ -301,8 +301,8 @@
         <item quantity="one">%d స్క్రిప్ట్ లేదా యాక్షన్</item>
         <item quantity="other">%d స్క్రిప్ట్‌లు, యాక్షన్‌లు</item>
     </plurals>
-    <string name="engine_list_and"> మరియు </string>
-    <string name="engine_clause_separator">; </string>
+    <string name="engine_list_and">" మరియు "</string>
+    <string name="engine_clause_separator">"; "</string>
     <string name="engine_pdfa_taken_out">ప్రమాణం కోరినట్లుగా %1$s తీసివేయబడ్డాయి</string>
     <string name="engine_pdfa_unlocked">ఆర్కైవ్‌లు అందరికీ తెరుచుకోవాలి కాబట్టి పాస్‌వర్డ్ తీసివేయబడింది</string>
     <plurals name="engine_pdfa_fonts_missing">
@@ -368,7 +368,7 @@
     <string name="engine_photo_dims_passport">పాస్‌పోర్ట్ ఆకారం, %1$d × %2$d px</string>
     <string name="engine_photo_made_smaller">, సరిపోయేలా చిన్నదిగా చేయబడింది (ఇంతకు ముందు %1$d × %2$d)</string>
     <string name="engine_photo_made_smaller_than">, సరిపోయేలా %1$d × %2$d కంటే చిన్నదిగా చేయబడింది</string>
-    <string name="engine_photo_it_was"> (ఇంతకు ముందు %1$d × %2$d)</string>
+    <string name="engine_photo_it_was">" (ఇంతకు ముందు %1$d × %2$d)"</string>
     <string name="engine_photo_not_enlarged">, %1$d × %2$dకి పెద్దది చేయలేదు: ఫోటోలో అన్ని పిక్సెల్‌లు లేవు</string>
     <string name="engine_photo_turned_upright">, నిటారుగా తిప్పబడింది</string>
     <string name="engine_photo_now_jpeg">, ఇప్పుడు JPEG</string>

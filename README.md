@@ -254,6 +254,7 @@ answer for compression and is the one most likely to be reached for by accident.
 | **P5** | 0.5.0 | ✅ Reader-grade viewer, forms, insert, header/footer, settings, light theme. |
 | **P6** | 0.6.0 | ✅ The Foolscap set: page labels, bookmarks, attachments, background, clean hidden data, restrict-only, replace pages, measured split by size, millimetre and automatic crop, n-up grids, Bates across files, ZIP export. |
 | **P7** | 0.7.0 | ✅ Foolscap's October set and past it: Edit text, Edit pictures, Resize photo to KB, Key points, Recipes, Open a file, every script on the page, zoom in the editors, drag to order, compress through pictures. |
+| **P8** | 1.0.0 | ✅ Pre-release. Viewer: select and copy, links, unlock in place, page grid, single-page and two-up modes, sepia/dark paper, brightness, margin crop, keyboard. Scanner: live edge detection, auto-capture, batch and ID card modes, shadow removal and deskew, recrop. Editable annotations, stylus pressure and palm rejection. Nine languages (English, Hindi, Malayalam, Tamil, Telugu, Kannada, Bengali, Marathi, Gujarati). Tablet layouts, TalkBack actions, large text. Intro, review ask, widgets, crash log, notification ask, six-hour job cap, share-in for photos and Office files. |
 
 Each phase has an exit gate. P0's was: open a 500-page document, scroll it end to end at 60 fps,
 close it, and return to a flat heap. P1's is: every tool produces a file that opens correctly in
@@ -314,6 +315,21 @@ it properly, comparing `CompilationMode.None` against `Partial` over ten cold it
 ```
 
 Until someone runs that and writes the number down, treat the startup win as unproven.
+
+## Releasing
+
+- **Version:** `versionName` 1.0.0, `versionCode` 1. Every upload to Play needs a higher
+  `versionCode` than the last, so it goes up by one each time.
+- **Signing:** `keystore.properties` (git-ignored, see the `.example`) points at the Sheaf
+  upload key, `sheaf-release.jks`, alias `sheaf`, kept outside this repository. Play App
+  Signing holds the real app-signing key, so a lost upload key is a reset request, not a lost app.
+- **Build:** `./gradlew :app:bundleRelease`. `lintVitalRelease` runs first and fails the build
+  on anything fatal; `app/lint-baseline.xml` records the warnings already accepted (none today).
+- **16 KB pages:** the only native code is ML Kit's OCR (`text-recognition` and
+  `text-recognition-devanagari` 16.0.1, the newest on Google Maven). Check every bundle with
+  `bundletool build-apks --mode=universal`, unzip, and `zipalign -c -P 16 -v 4` on the APK.
+- **Listing:** text, Console answers and graphics are in `store-assets/`; the privacy policy
+  page is `store-assets/privacy/index.html`, to be served at layerbit.co.in/sheaf/privacy.
 
 ## Icon
 

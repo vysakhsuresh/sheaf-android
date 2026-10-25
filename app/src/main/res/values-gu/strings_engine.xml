@@ -8,7 +8,7 @@
     <string name="engine_failed">નિષ્ફળ.</string>
     <string name="engine_done">થઈ ગયું</string>
     <string name="engine_unreadable">વાંચી શકાતું નથી.</string>
-    <string name="engine_list_separator">, </string>
+    <string name="engine_list_separator">", "</string>
     <plurals name="engine_count_pages">
         <item quantity="one">%d પેજ</item>
         <item quantity="other">%d પેજ</item>
@@ -141,7 +141,7 @@
     <string name="engine_withheld_printing">પ્રિન્ટ કરવાની</string>
     <string name="engine_withheld_copying">લખાણ કૉપિ કરવાની</string>
     <string name="engine_withheld_changes">ફેરફાર કરવાની</string>
-    <string name="engine_list_or"> અથવા </string>
+    <string name="engine_list_or">" અથવા "</string>
     <string name="engine_password_empty">પહેલાં પાસવર્ડ દાખલ કરો.</string>
     <string name="engine_restrict_nothing">પ્રતિબંધ મૂકવા માટે ઓછામાં ઓછી એક વસ્તુ પસંદ કરો.</string>
     <string name="engine_restricted_detail">પાસવર્ડ વિના ખૂલે છે; વાંચનારને %1$s મંજૂરી ન આપવા કહે છે</string>
@@ -301,8 +301,8 @@
         <item quantity="one">%d સ્ક્રિપ્ટ અથવા ઍક્શન</item>
         <item quantity="other">%d સ્ક્રિપ્ટ અને ઍક્શન</item>
     </plurals>
-    <string name="engine_list_and"> અને </string>
-    <string name="engine_clause_separator">; </string>
+    <string name="engine_list_and">" અને "</string>
+    <string name="engine_clause_separator">"; "</string>
     <string name="engine_pdfa_taken_out">ધોરણ મુજબ %1$s કાઢી નાખ્યાં</string>
     <string name="engine_pdfa_unlocked">પાસવર્ડ કાઢી નાખ્યો, કારણ કે આર્કાઇવ દરેક માટે ખૂલવું જોઈએ</string>
     <plurals name="engine_pdfa_fonts_missing">
@@ -368,7 +368,7 @@
     <string name="engine_photo_dims_passport">પાસપોર્ટ આકાર, %1$d × %2$d px</string>
     <string name="engine_photo_made_smaller">, બંધબેસે તે માટે નાનું કર્યું (પહેલાં %1$d × %2$d હતું)</string>
     <string name="engine_photo_made_smaller_than">, બંધબેસે તે માટે %1$d × %2$d થી નાનું કર્યું</string>
-    <string name="engine_photo_it_was"> (પહેલાં %1$d × %2$d હતું)</string>
+    <string name="engine_photo_it_was">" (પહેલાં %1$d × %2$d હતું)"</string>
     <string name="engine_photo_not_enlarged">, %1$d × %2$d સુધી મોટું કર્યું નથી: ફોટામાં ઓછા પિક્સેલ છે</string>
     <string name="engine_photo_turned_upright">, સીધું કર્યું</string>
     <string name="engine_photo_now_jpeg">, હવે JPEG છે</string>

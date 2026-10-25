@@ -8,7 +8,7 @@
     <string name="engine_failed">പരാജയപ്പെട്ടു.</string>
     <string name="engine_done">പൂർത്തിയായി</string>
     <string name="engine_unreadable">വായിക്കാനാകുന്നില്ല.</string>
-    <string name="engine_list_separator">, </string>
+    <string name="engine_list_separator">", "</string>
     <plurals name="engine_count_pages">
         <item quantity="one">%d പേജ്</item>
         <item quantity="other">%d പേജുകൾ</item>
@@ -141,7 +141,7 @@
     <string name="engine_withheld_printing">പ്രിന്റിംഗ്</string>
     <string name="engine_withheld_copying">ടെക്സ്റ്റ് പകർത്തൽ</string>
     <string name="engine_withheld_changes">മാറ്റങ്ങൾ</string>
-    <string name="engine_list_or"> അല്ലെങ്കിൽ </string>
+    <string name="engine_list_or">" അല്ലെങ്കിൽ "</string>
     <string name="engine_password_empty">ആദ്യം ഒരു പാസ്‌വേഡ് നൽകുക.</string>
     <string name="engine_restrict_nothing">നിയന്ത്രിക്കാൻ ഒരെണ്ണമെങ്കിലും തിരഞ്ഞെടുക്കുക.</string>
     <string name="engine_restricted_detail">പാസ്‌വേഡില്ലാതെ തുറക്കും; %1$s അനുവദിക്കരുതെന്ന് റീഡറുകളോട് ആവശ്യപ്പെടുന്നു</string>
@@ -301,8 +301,8 @@
         <item quantity="one">%d സ്ക്രിപ്റ്റ് അല്ലെങ്കിൽ ആക്ഷൻ</item>
         <item quantity="other">%d സ്ക്രിപ്റ്റുകളും ആക്ഷനുകളും</item>
     </plurals>
-    <string name="engine_list_and"> കൂടാതെ </string>
-    <string name="engine_clause_separator">; </string>
+    <string name="engine_list_and">" കൂടാതെ "</string>
+    <string name="engine_clause_separator">"; "</string>
     <string name="engine_pdfa_taken_out">സ്റ്റാൻഡേർഡ് ആവശ്യപ്പെടുന്നതുപോലെ %1$s നീക്കം ചെയ്തു</string>
     <string name="engine_pdfa_unlocked">ആർക്കൈവുകൾ ആർക്കും തുറക്കാനാകണം എന്നതിനാൽ പാസ്‌വേഡ് നീക്കി</string>
     <plurals name="engine_pdfa_fonts_missing">
@@ -368,7 +368,7 @@
     <string name="engine_photo_dims_passport">പാസ്‌പോർട്ട് ആകൃതി, %1$d × %2$d px</string>
     <string name="engine_photo_made_smaller">, യോജിക്കാൻ ചെറുതാക്കി (മുമ്പ് %1$d × %2$d ആയിരുന്നു)</string>
     <string name="engine_photo_made_smaller_than">, യോജിക്കാൻ %1$d × %2$d-നേക്കാൾ ചെറുതാക്കി</string>
-    <string name="engine_photo_it_was"> (മുമ്പ് %1$d × %2$d ആയിരുന്നു)</string>
+    <string name="engine_photo_it_was">" (മുമ്പ് %1$d × %2$d ആയിരുന്നു)"</string>
     <string name="engine_photo_not_enlarged">, %1$d × %2$d ആയി വലുതാക്കിയില്ല: ഫോട്ടോയിൽ അത്രയും പിക്സലുകളില്ല</string>
     <string name="engine_photo_turned_upright">, നേരെയാക്കി</string>
     <string name="engine_photo_now_jpeg">, ഇപ്പോൾ JPEG ആണ്</string>

@@ -8,7 +8,7 @@
     <string name="engine_failed">ವಿಫಲವಾಗಿದೆ.</string>
     <string name="engine_done">ಮುಗಿದಿದೆ</string>
     <string name="engine_unreadable">ಓದಲಾಗುತ್ತಿಲ್ಲ.</string>
-    <string name="engine_list_separator">, </string>
+    <string name="engine_list_separator">", "</string>
     <plurals name="engine_count_pages">
         <item quantity="one">%d ಪುಟ</item>
         <item quantity="other">%d ಪುಟಗಳು</item>
@@ -141,7 +141,7 @@
     <string name="engine_withheld_printing">ಮುದ್ರಣ</string>
     <string name="engine_withheld_copying">ಪಠ್ಯ ನಕಲು</string>
     <string name="engine_withheld_changes">ಬದಲಾವಣೆಗಳು</string>
-    <string name="engine_list_or"> ಅಥವಾ </string>
+    <string name="engine_list_or">" ಅಥವಾ "</string>
     <string name="engine_password_empty">ಮೊದಲು ಪಾಸ್‌ವರ್ಡ್ ನಮೂದಿಸಿ.</string>
     <string name="engine_restrict_nothing">ನಿರ್ಬಂಧಿಸಲು ಕನಿಷ್ಠ ಒಂದನ್ನು ಆಯ್ಕೆಮಾಡಿ.</string>
     <string name="engine_restricted_detail">ಪಾಸ್‌ವರ್ಡ್ ಇಲ್ಲದೆ ತೆರೆಯುತ್ತದೆ; %1$s ಅನುಮತಿಸದಂತೆ ರೀಡರ್‌ಗಳನ್ನು ಕೇಳುತ್ತದೆ</string>
@@ -301,8 +301,8 @@
         <item quantity="one">%d ಸ್ಕ್ರಿಪ್ಟ್ ಅಥವಾ ಕ್ರಿಯೆ</item>
         <item quantity="other">%d ಸ್ಕ್ರಿಪ್ಟ್‌ಗಳು ಮತ್ತು ಕ್ರಿಯೆಗಳು</item>
     </plurals>
-    <string name="engine_list_and"> ಮತ್ತು </string>
-    <string name="engine_clause_separator">; </string>
+    <string name="engine_list_and">" ಮತ್ತು "</string>
+    <string name="engine_clause_separator">"; "</string>
     <string name="engine_pdfa_taken_out">ಮಾನದಂಡದ ಪ್ರಕಾರ %1$s ತೆಗೆದುಹಾಕಲಾಗಿದೆ</string>
     <string name="engine_pdfa_unlocked">ಪಾಸ್‌ವರ್ಡ್ ತೆಗೆದುಹಾಕಲಾಗಿದೆ, ಏಕೆಂದರೆ ಆರ್ಕೈವ್‌ಗಳು ಯಾರಿಗಾದರೂ ತೆರೆಯಬೇಕು</string>
     <plurals name="engine_pdfa_fonts_missing">
@@ -368,7 +368,7 @@
     <string name="engine_photo_dims_passport">ಪಾಸ್‌ಪೋರ್ಟ್ ಆಕಾರ, %1$d × %2$d px</string>
     <string name="engine_photo_made_smaller">, ಹೊಂದುವಂತೆ ಚಿಕ್ಕದಾಗಿಸಲಾಗಿದೆ (ಮೊದಲು %1$d × %2$d ಇತ್ತು)</string>
     <string name="engine_photo_made_smaller_than">, ಹೊಂದುವಂತೆ %1$d × %2$d ಗಿಂತ ಚಿಕ್ಕದಾಗಿಸಲಾಗಿದೆ</string>
-    <string name="engine_photo_it_was"> (ಮೊದಲು %1$d × %2$d ಇತ್ತು)</string>
+    <string name="engine_photo_it_was">" (ಮೊದಲು %1$d × %2$d ಇತ್ತು)"</string>
     <string name="engine_photo_not_enlarged">, %1$d × %2$d ಗೆ ದೊಡ್ಡದಾಗಿಸಿಲ್ಲ: ಫೋಟೋದಲ್ಲಿ ಕಡಿಮೆ ಪಿಕ್ಸೆಲ್‌ಗಳಿವೆ</string>
     <string name="engine_photo_turned_upright">, ನೇರವಾಗಿ ತಿರುಗಿಸಲಾಗಿದೆ</string>
     <string name="engine_photo_now_jpeg">, ಈಗ JPEG ಆಗಿದೆ</string>

@@ -8,7 +8,7 @@
     <string name="engine_failed">Failed.</string>
     <string name="engine_done">Done</string>
     <string name="engine_unreadable">Unreadable.</string>
-    <string name="engine_list_separator">, </string>
+    <string name="engine_list_separator">", "</string>
     <plurals name="engine_count_pages">
         <item quantity="one">%d page</item>
         <item quantity="other">%d pages</item>
@@ -141,7 +141,7 @@
     <string name="engine_withheld_printing">printing</string>
     <string name="engine_withheld_copying">copying text</string>
     <string name="engine_withheld_changes">changes</string>
-    <string name="engine_list_or"> or </string>
+    <string name="engine_list_or">" or "</string>
     <string name="engine_password_empty">Enter a password first.</string>
     <string name="engine_restrict_nothing">Choose at least one thing to restrict.</string>
     <string name="engine_restricted_detail">Opens without a password; asks readers not to allow %1$s</string>
@@ -301,8 +301,8 @@
         <item quantity="one">%d script or action</item>
         <item quantity="other">%d scripts and actions</item>
     </plurals>
-    <string name="engine_list_and"> and </string>
-    <string name="engine_clause_separator">; </string>
+    <string name="engine_list_and">" and "</string>
+    <string name="engine_clause_separator">"; "</string>
     <string name="engine_pdfa_taken_out">%1$s taken out, as the standard asks</string>
     <string name="engine_pdfa_unlocked">the password is gone, as archives must open for anyone</string>
     <plurals name="engine_pdfa_fonts_missing">
@@ -368,7 +368,7 @@
     <string name="engine_photo_dims_passport">passport shape, %1$d × %2$d px</string>
     <string name="engine_photo_made_smaller">, made smaller to fit (it was %1$d × %2$d)</string>
     <string name="engine_photo_made_smaller_than">, made smaller than %1$d × %2$d to fit</string>
-    <string name="engine_photo_it_was"> (it was %1$d × %2$d)</string>
+    <string name="engine_photo_it_was">" (it was %1$d × %2$d)"</string>
     <string name="engine_photo_not_enlarged">, not enlarged to %1$d × %2$d: the photo has fewer pixels</string>
     <string name="engine_photo_turned_upright">, turned upright</string>
     <string name="engine_photo_now_jpeg">, now a JPEG</string>
