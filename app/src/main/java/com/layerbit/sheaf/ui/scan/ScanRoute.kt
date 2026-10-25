@@ -124,6 +124,7 @@ fun ScanRoute(
                 captureTarget = viewModel::captureTarget,
                 onCaptured = viewModel::captured,
                 onCaptureFailed = viewModel::captureFailed,
+                tracker = viewModel.autoTracker,
                 modifier = Modifier.weight(1f)
             )
         }

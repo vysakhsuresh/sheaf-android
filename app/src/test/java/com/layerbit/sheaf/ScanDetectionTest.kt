@@ -243,6 +243,42 @@ class ScanDetectionTest {
         assertEquals(2, fires)
     }
 
+    @Test fun autoCaptureIgnoresExposureSettling() {
+        val t = AutoCaptureTracker()
+        val pattern = IntArray(64) { if (it % 3 == 0) 80 else 150 }
+        var time = 0L
+        var fires = 0
+        while (time <= 5000) {
+            // The same scene getting brighter and more contrasty as exposure settles.
+            val gain = 1f + time / 10000f
+            val sig = IntArray(64) { (pattern[it] * gain).toInt() + 10 }
+            if (t.update(quad(), sig, time).fire) fires++
+            time += 33
+        }
+        assertEquals(1, fires)
+    }
+
+    @Test fun autoCaptureRearmsWhenThePageIsTakenAway() {
+        val t = AutoCaptureTracker()
+        var time = 0L
+        val fireTimes = mutableListOf<Long>()
+        while (time <= 5000) {
+            // Away for a second from 1.5 s, then the next sheet in the same place.
+            val q = if (time in 1500..2500) null else quad()
+            if (t.update(q, null, time).fire) fireTimes += time
+            time += 33
+        }
+        assertEquals(2, fireTimes.size)
+        assertTrue(fireTimes[1] > 3500)
+    }
+
+    @Test fun autoCaptureDoesNotRetakeAfterAHandCapture() {
+        val t = AutoCaptureTracker()
+        t.captured(quad(), null, 0L)
+        var time = 0L
+        while (time <= 4000) { assertFalse(t.update(quad(), null, time).fire); time += 33 }
+    }
+
     @Test fun autoCaptureIgnoresSmallPages() {
         val t = AutoCaptureTracker()
         val small = Quad(floatArrayOf(0.4f, 0.4f, 0.6f, 0.4f, 0.6f, 0.6f, 0.4f, 0.6f))

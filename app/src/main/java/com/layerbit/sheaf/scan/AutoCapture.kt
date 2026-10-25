@@ -8,11 +8,14 @@ package com.layerbit.sheaf.scan
  * it fires. A hand still moving into place resets the clock, which is what stops the shutter
  * going off mid-gesture.
  *
- * After firing it will not fire again until something has changed - the page left the frame,
- * moved, or what is printed on it changed (a page turned, the next sheet laid down). Without
- * that, holding the phone over one page would photograph it every second.
+ * After firing it will not fire again until something has changed - the page left the frame
+ * for a moment, moved, or what is on it changed (a page turned, the next sheet laid down) -
+ * and never sooner than [cooldownMs]. Without that, holding the phone over one page would
+ * photograph it every second. The state outlives the viewfinder on purpose: coming back from
+ * the corner editor with the same page still under the camera must not take it again.
  *
  * Pure state and arithmetic, with time passed in, so a test can drive it frame by frame.
+ * Not thread-safe; the caller serialises access.
  */
 class AutoCaptureTracker(
     private val holdMs: Long = 1000L,
@@ -20,8 +23,11 @@ class AutoCaptureTracker(
     private val minArea: Float = 0.18f,
     /** A frame or two without a detection is noise, not the page leaving. */
     private val graceMs: Long = 300L,
-    /** Mean brightness change, in levels, that counts as a different page. */
-    private val newPageDifference: Float = 7f
+    /** How long the page must be gone to count as taken away. */
+    private val goneMs: Long = 700L,
+    private val cooldownMs: Long = 1500L,
+    /** Change in the brightness pattern, in [PageDetector.signatureDistance] units, that counts as a different page. */
+    private val newPageDifference: Float = 14f
 ) {
     data class Status(
         /** 0 when nothing is steady, rising to 1 as the hold completes. */
@@ -34,18 +40,19 @@ class AutoCaptureTracker(
     private var anchorTime = 0L
     private var lastSeen = Long.MIN_VALUE
     private var armed = true
+    private var firedAt = Long.MIN_VALUE
     private var firedQuad: Quad? = null
     private var firedSignature: IntArray? = null
     private var lostSince = Long.MIN_VALUE
+    private var changed = false
 
     fun update(quad: Quad?, signature: IntArray?, nowMs: Long): Status {
         if (!armed) {
-            if (shouldRearm(quad, signature, nowMs)) {
-                armed = true
-                anchor = null
-            } else {
-                return IDLE
-            }
+            // The change is noted whenever it happens, but only acted on after the cooldown.
+            if (!changed) changed = noticeChange(quad, signature, nowMs)
+            if (!changed || nowMs - firedAt < cooldownMs) return IDLE
+            armed = true
+            anchor = null
         }
 
         if (quad == null || quad.area() < minArea) {
@@ -66,11 +73,7 @@ class AutoCaptureTracker(
 
         val progress = progress(nowMs)
         if (progress >= 1f) {
-            armed = false
-            firedQuad = quad
-            firedSignature = signature?.copyOf()
-            lostSince = Long.MIN_VALUE
-            anchor = null
+            disarm(quad, signature, nowMs)
             return Status(1f, true)
         }
         return Status(progress, false)
@@ -80,34 +83,29 @@ class AutoCaptureTracker(
      * Called after a picture is taken by hand, so auto-capture does not take the same page
      * again a moment later.
      */
-    fun captured(quad: Quad?, signature: IntArray?) {
+    fun captured(quad: Quad?, signature: IntArray?, nowMs: Long) = disarm(quad, signature, nowMs)
+
+    private fun disarm(quad: Quad?, signature: IntArray?, nowMs: Long) {
         armed = false
+        changed = false
+        firedAt = nowMs
         firedQuad = quad
         firedSignature = signature?.copyOf()
         lostSince = Long.MIN_VALUE
         anchor = null
     }
 
-    fun reset() {
-        armed = true
-        anchor = null
-        firedQuad = null
-        firedSignature = null
-    }
-
-    private fun shouldRearm(quad: Quad?, signature: IntArray?, nowMs: Long): Boolean {
+    private fun noticeChange(quad: Quad?, signature: IntArray?, nowMs: Long): Boolean {
         if (quad == null) {
             if (lostSince == Long.MIN_VALUE) lostSince = nowMs
-            return nowMs - lostSince > graceMs
+            return nowMs - lostSince > goneMs
         }
         lostSince = Long.MIN_VALUE
         val before = firedQuad ?: return true
         if (quad.maxCornerDistance(before) > tolerance * 2f) return true
         val oldSignature = firedSignature
-        if (signature != null && oldSignature != null &&
+        return signature != null && oldSignature != null &&
             PageDetector.signatureDistance(signature, oldSignature) > newPageDifference
-        ) return true
-        return false
     }
 
     private fun progress(nowMs: Long): Float =

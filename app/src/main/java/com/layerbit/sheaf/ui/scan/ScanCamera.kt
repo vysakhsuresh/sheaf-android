@@ -102,12 +102,13 @@ class DetectionFrame(
  */
 class PageAnalyzer(
     private val mainExecutor: Executor,
+    /** Held by the screen, not the analyser, so it remembers the last capture across viewfinders. */
+    private val tracker: AutoCaptureTracker,
     private val onFrame: (DetectionFrame) -> Unit
 ) : ImageAnalysis.Analyzer {
 
     private val detector = PageDetector()
     private val sampler = LumaSampler(maxSide = 320)
-    private val tracker = AutoCaptureTracker()
     private var plane = ByteArray(0)
     private val signature = IntArray(64)
 
@@ -152,7 +153,7 @@ class PageAnalyzer(
 
     /** A picture was taken by hand: do not take the same page again a moment later. */
     fun capturedByHand(frame: DetectionFrame?) {
-        synchronized(tracker) { tracker.captured(frame?.quad, frame?.signature) }
+        synchronized(tracker) { tracker.captured(frame?.quad, frame?.signature, System.currentTimeMillis()) }
     }
 }
 
@@ -174,6 +175,7 @@ fun Viewfinder(
     captureTarget: () -> File,
     onCaptured: (File, Quad?) -> Unit,
     onCaptureFailed: (String) -> Unit,
+    tracker: AutoCaptureTracker,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -224,7 +226,7 @@ fun Viewfinder(
     val takePictureNow by rememberUpdatedState(takePicture)
 
     val analyzer = remember {
-        PageAnalyzer(mainExecutor) { frame ->
+        PageAnalyzer(mainExecutor, tracker) { frame ->
             detection = frame
             if (frame.fire) takePictureNow(frame)
         }

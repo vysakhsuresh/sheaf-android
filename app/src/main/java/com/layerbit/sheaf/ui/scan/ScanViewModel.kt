@@ -13,6 +13,7 @@ import com.layerbit.sheaf.jobs.belongsTo
 import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.ops.ImagesToPdfOp
 import com.layerbit.sheaf.pdf.PageSpec
+import com.layerbit.sheaf.scan.AutoCaptureTracker
 import com.layerbit.sheaf.scan.PageProcessor
 import com.layerbit.sheaf.scan.Quad
 import kotlinx.coroutines.Dispatchers
@@ -76,6 +77,13 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
     val jobState: StateFlow<JobState> = sheaf.jobRunner.state
         .map { job -> if (job.belongsTo(ToolId.IMAGES_TO_PDF)) job else JobState.Idle }
         .stateIn(viewModelScope, SharingStarted.Eagerly, JobState.Idle)
+
+    /**
+     * Auto-capture's memory of the last photo. Kept here rather than in the viewfinder, which
+     * is rebuilt every time the corner editor closes - a fresh one would see the page just
+     * kept still lying under the camera and take it again.
+     */
+    val autoTracker = AutoCaptureTracker()
 
     fun toggleAutoCapture() = sheaf.settings.update { it.copy(autoCapture = !it.autoCapture) }
 

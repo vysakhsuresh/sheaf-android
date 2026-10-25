@@ -606,10 +606,24 @@ class PageDetector {
             for (i in 0 until 64) if (counts[i] > 0) out[i] /= counts[i]
         }
 
-        /** Mean absolute difference between two signatures, in brightness levels. */
+        /**
+         * How different two signatures' patterns are, ignoring overall brightness and contrast.
+         *
+         * Each is shifted to a mean of zero and scaled to a spread of 32 before comparing, so
+         * the camera settling its exposure - which brightens or darkens the whole frame - does
+         * not read as a new page. Unrelated patterns come out at about 40; the same scene with
+         * a tremor, a few.
+         */
         fun signatureDistance(a: IntArray, b: IntArray): Float {
-            var sum = 0
-            for (i in 0 until 64) sum += abs(a[i] - b[i])
+            val ma = a.average().toFloat()
+            val mb = b.average().toFloat()
+            var da = 0f
+            var db = 0f
+            for (i in 0 until 64) { da += abs(a[i] - ma); db += abs(b[i] - mb) }
+            val sa = 32f / maxOf(da / 64f, 4f)
+            val sb = 32f / maxOf(db / 64f, 4f)
+            var sum = 0f
+            for (i in 0 until 64) sum += abs((a[i] - ma) * sa - (b[i] - mb) * sb)
             return sum / 64f
         }
     }
