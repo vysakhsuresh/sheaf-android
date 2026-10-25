@@ -39,6 +39,7 @@ class SheafSettings(context: Context) {
             .putStringSet(KEY_FAVOURITES, updated.favouriteTools)
             .putString(KEY_SAVE_FOLDER, updated.saveFolder)
             .putString(KEY_RECENT_TOOLS, updated.recentTools.joinToString(","))
+            .putBoolean(KEY_AUTO_CAPTURE, updated.autoCapture)
             .apply()
         _state.value = updated
     }
@@ -67,7 +68,8 @@ class SheafSettings(context: Context) {
             askWhereToSave = prefs.getBoolean(KEY_CONFIRM_SAVE, true),
             favouriteTools = prefs.getStringSet(KEY_FAVOURITES, emptySet()).orEmpty(),
             saveFolder = prefs.getString(KEY_SAVE_FOLDER, null),
-            recentTools = prefs.getString(KEY_RECENT_TOOLS, null).orEmpty().split(",").filter { it.matches(Regex("[A-Z_]+")) }
+            recentTools = prefs.getString(KEY_RECENT_TOOLS, null).orEmpty().split(",").filter { it.matches(Regex("[A-Z_]+")) },
+            autoCapture = prefs.getBoolean(KEY_AUTO_CAPTURE, true)
         )
     }
 
@@ -81,6 +83,7 @@ class SheafSettings(context: Context) {
         const val KEY_FAVOURITES = "favouriteTools"
         const val KEY_SAVE_FOLDER = "saveFolder"
         const val KEY_RECENT_TOOLS = "recentTools"
+        const val KEY_AUTO_CAPTURE = "autoCapture"
         const val MAX_RECENT_TOOLS = 6
     }
 }
@@ -114,7 +117,9 @@ data class Settings(
     /**
      * The tools opened lately, newest first, at most six. Tool names only: never a file.
      */
-    val recentTools: List<String> = emptyList()
+    val recentTools: List<String> = emptyList(),
+    /** The scanner takes the picture itself once a page is held still in the frame. */
+    val autoCapture: Boolean = true
 )
 
 enum class ThemeChoice(val label: String) {
