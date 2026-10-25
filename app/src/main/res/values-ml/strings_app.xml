@@ -164,4 +164,6 @@
     <string name="app_settings_language">ഭാഷ</string>
     <string name="app_settings_language_detail">Sheaf നിങ്ങളുടെ ഫോണിന്റെ ഭാഷ പിന്തുടരുന്നു. Sheaf-ന് മാത്രമായി മറ്റൊരു ഭാഷ തിരഞ്ഞെടുക്കാം.</string>
     <string name="app_settings_language_choose">തിരഞ്ഞെടുക്കുക</string>
+    <string name="app_settings_lively">ജീവനുള്ള ഐക്കണുകൾ</string>
+    <string name="app_settings_lively_detail">ഓരോ ടൂളിന്റെയും ഐക്കൺ ഇടയ്ക്കിടെ ചെറുതായി ചലിക്കും. Android-ലെ ആനിമേഷനുകൾ ഓഫാണെങ്കിൽ ഇതും തനിയെ ഓഫാകും.</string>
 </resources>

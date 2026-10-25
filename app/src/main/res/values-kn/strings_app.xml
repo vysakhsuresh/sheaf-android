@@ -164,4 +164,6 @@
     <string name="app_settings_language">ಭಾಷೆ</string>
     <string name="app_settings_language_detail">Sheaf ನಿಮ್ಮ ಫೋನ್‌ನ ಭಾಷೆಯನ್ನು ಅನುಸರಿಸುತ್ತದೆ. Sheaf ಗೆ ಮಾತ್ರ ಬೇರೆ ಭಾಷೆಯನ್ನು ಆಯ್ಕೆ ಮಾಡಬಹುದು.</string>
     <string name="app_settings_language_choose">ಆಯ್ಕೆಮಾಡಿ</string>
+    <string name="app_settings_lively">ಜೀವಂತ ಐಕಾನ್‌ಗಳು</string>
+    <string name="app_settings_lively_detail">ಪ್ರತಿ ಟೂಲ್‌ನ ಐಕಾನ್ ಆಗಾಗ ಸ್ವಲ್ಪ ಚಲಿಸುತ್ತದೆ. Android ಆನಿಮೇಷನ್‌ಗಳು ಆಫ್ ಆಗಿದ್ದರೆ ಇದೂ ತಾನಾಗಿಯೇ ಆಫ್ ಆಗುತ್ತದೆ.</string>
 </resources>

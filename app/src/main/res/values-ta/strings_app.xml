@@ -164,4 +164,6 @@
     <string name="app_settings_language">மொழி</string>
     <string name="app_settings_language_detail">Sheaf உங்கள் ஃபோனின் மொழியைப் பின்பற்றுகிறது. Sheaf-க்கு மட்டும் வேறு மொழியைத் தேர்வுசெய்யலாம்.</string>
     <string name="app_settings_language_choose">தேர்வுசெய்</string>
+    <string name="app_settings_lively">உயிரோட்டமான ஐகான்கள்</string>
+    <string name="app_settings_lively_detail">ஒவ்வொரு கருவியின் ஐகானும் அவ்வப்போது சிறிது அசையும். Android அனிமேஷன்கள் முடக்கப்பட்டால் இதுவும் தானாக முடங்கும்.</string>
 </resources>

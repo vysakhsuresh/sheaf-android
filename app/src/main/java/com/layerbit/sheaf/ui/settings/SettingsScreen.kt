@@ -74,6 +74,12 @@ fun SettingsScreen(
         item {
             Section(title = stringResource(R.string.app_settings_appearance), iconRes = R.drawable.ic_tool_background, accent = Color(0xFFB08CFF)) {
                 ThemePicker(selected = settings.theme, onSelect = { choice -> onChange { it.copy(theme = choice) } })
+                ToggleRow(
+                    title = stringResource(R.string.app_settings_lively),
+                    detail = stringResource(R.string.app_settings_lively_detail),
+                    checked = settings.livelyIcons,
+                    onChange = { on -> onChange { it.copy(livelyIcons = on) } }
+                )
                 Text(
                     stringResource(R.string.app_settings_appearance_note),
                     style = MaterialTheme.typography.bodySmall,

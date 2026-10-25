@@ -164,4 +164,6 @@
     <string name="app_settings_language">भाषा</string>
     <string name="app_settings_language_detail">Sheaf तुमच्या फोनची भाषा वापरते. फक्त Sheaf साठी वेगळी भाषा निवडू शकता.</string>
     <string name="app_settings_language_choose">निवडा</string>
+    <string name="app_settings_lively">जिवंत आयकॉन</string>
+    <string name="app_settings_lively_detail">प्रत्येक टूलचा आयकॉन अधूनमधून थोडी हालचाल करतो. Android चे ॲनिमेशन बंद असल्यास हेही आपोआप बंद होते.</string>
 </resources>

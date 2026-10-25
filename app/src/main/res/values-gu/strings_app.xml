@@ -164,4 +164,6 @@
     <string name="app_settings_language">ભાષા</string>
     <string name="app_settings_language_detail">Sheaf તમારા ફોનની ભાષા અનુસરે છે. ફક્ત Sheaf માટે અલગ ભાષા પસંદ કરી શકો છો.</string>
     <string name="app_settings_language_choose">પસંદ કરો</string>
+    <string name="app_settings_lively">જીવંત આઇકન</string>
+    <string name="app_settings_lively_detail">દરેક ટૂલનો આઇકન વચ્ચે-વચ્ચે થોડો હલે છે. Android ના એનિમેશન બંધ હોય તો આ પણ આપમેળે બંધ થઈ જાય છે.</string>
 </resources>

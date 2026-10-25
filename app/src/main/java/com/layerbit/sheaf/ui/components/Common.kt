@@ -263,26 +263,35 @@ fun IconTile(
     accent: Color,
     modifier: Modifier = Modifier,
     size: androidx.compose.ui.unit.Dp = 40.dp,
-    filled: Boolean = false
+    filled: Boolean = false,
+    /** Off for a tile that should stay still, such as one inside a list that scrolls fast. */
+    lively: Boolean = true
 ) {
+    // The drawing's own movement - see Lively.kt. Seeded by the drawing, so one tool moves at
+    // the same moment wherever it appears and different tools take turns.
+    val motion = if (lively) motionFor(iconRes) else Motion.NONE
+    val seed = livelySeed(iconRes)
+    val shape = RoundedCornerShape(size * 0.3f)
     Box(
         modifier = modifier
             .size(size)
+            .clip(shape)
             .background(
                 if (filled) {
                     Brush.linearGradient(listOf(accent, accent.copy(alpha = 0.75f)))
                 } else {
                     Brush.linearGradient(listOf(accent.copy(alpha = 0.22f), accent.copy(alpha = 0.12f)))
                 },
-                RoundedCornerShape(size * 0.3f)
-            ),
+                shape
+            )
+            .livelyTile(motion, seed, if (filled) Color.White else accent),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             painter = painterResource(iconRes),
             contentDescription = null,
             tint = if (filled) Color.White else accent,
-            modifier = Modifier.size(size * 0.5f)
+            modifier = Modifier.size(size * 0.5f).lively(motion, seed)
         )
     }
 }

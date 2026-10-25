@@ -118,7 +118,7 @@ fun RoundIconButton(
     ) {
         val colour = if (filled) SheafColors.OnBand else tint
         if (icon != null) {
-            Icon(icon, contentDescription = null, tint = colour, modifier = Modifier.size(size * 0.5f))
+            Icon(icon, contentDescription = null, tint = colour, modifier = Modifier.size(size * 0.5f).lively(motionFor(icon), livelySeed(icon.name)))
         } else if (iconRes != null) {
             Icon(painterResource(iconRes), contentDescription = null, tint = colour, modifier = Modifier.size(size * 0.5f))
         }

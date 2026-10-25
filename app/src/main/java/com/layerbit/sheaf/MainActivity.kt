@@ -128,6 +128,8 @@ class MainActivity : ComponentActivity() {
                         target = dropTarget
                     )
                 ) {
+                    // One slow clock for every lively icon in the app; see ui/components/Lively.kt.
+                    com.layerbit.sheaf.ui.components.ProvideLivelyClock(enabled = settings.livelyIcons) {
                     SheafApp(
                         recentsFlow = sheaf.recents.observe(),
                         bookmarkCountFlow = sheaf.bookmarks.observeCount(),
@@ -141,6 +143,7 @@ class MainActivity : ComponentActivity() {
                         onOpenRecentUri = { open(Uri.parse(it)) },
                         onForgetRecent = { uri -> lifecycleScope.launch { sheaf.recents.forget(uri) } }
                     )
+                    }
                 }
             }
         }

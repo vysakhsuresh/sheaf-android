@@ -164,4 +164,6 @@
     <string name="app_settings_language">Language</string>
     <string name="app_settings_language_detail">Sheaf follows your phone\'s language. You can pick a different one just for Sheaf.</string>
     <string name="app_settings_language_choose">Choose</string>
+    <string name="app_settings_lively">Lively icons</string>
+    <string name="app_settings_lively_detail">Each tool\'s icon makes a small movement now and then. Turned off by itself when Android\'s animations are off.</string>
 </resources>

@@ -164,4 +164,6 @@
     <string name="app_settings_language">ভাষা</string>
     <string name="app_settings_language_detail">Sheaf আপনার ফোনের ভাষা অনুসরণ করে। শুধু Sheaf-এর জন্য অন্য ভাষা বেছে নিতে পারেন।</string>
     <string name="app_settings_language_choose">বেছে নিন</string>
+    <string name="app_settings_lively">প্রাণবন্ত আইকন</string>
+    <string name="app_settings_lively_detail">প্রতিটি টুলের আইকন মাঝে মাঝে একটু নড়ে ওঠে। Android-এর অ্যানিমেশন বন্ধ থাকলে এটিও নিজে থেকেই বন্ধ থাকে।</string>
 </resources>

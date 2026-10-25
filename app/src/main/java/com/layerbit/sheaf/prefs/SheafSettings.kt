@@ -44,6 +44,7 @@ class SheafSettings(context: Context) {
             .putString(KEY_RECENT_TOOLS, updated.recentTools.joinToString(","))
             .putBoolean(KEY_EDITABLE_MARKS, updated.editableMarks)
             .putBoolean(KEY_AUTO_CAPTURE, updated.autoCapture)
+            .putBoolean(KEY_LIVELY_ICONS, updated.livelyIcons)
             .apply()
         _state.value = updated
     }
@@ -74,7 +75,8 @@ class SheafSettings(context: Context) {
             saveFolder = prefs.getString(KEY_SAVE_FOLDER, null),
             recentTools = prefs.getString(KEY_RECENT_TOOLS, null).orEmpty().split(",").filter { it.matches(Regex("[A-Z_]+")) },
             editableMarks = prefs.getBoolean(KEY_EDITABLE_MARKS, false),
-            autoCapture = prefs.getBoolean(KEY_AUTO_CAPTURE, true)
+            autoCapture = prefs.getBoolean(KEY_AUTO_CAPTURE, true),
+            livelyIcons = prefs.getBoolean(KEY_LIVELY_ICONS, true)
         )
     }
 
@@ -90,6 +92,7 @@ class SheafSettings(context: Context) {
         const val KEY_RECENT_TOOLS = "recentTools"
         const val KEY_EDITABLE_MARKS = "editableMarks"
         const val KEY_AUTO_CAPTURE = "autoCapture"
+        const val KEY_LIVELY_ICONS = "livelyIcons"
         const val MAX_RECENT_TOOLS = 6
     }
 }
@@ -132,7 +135,9 @@ data class Settings(
      */
     val editableMarks: Boolean = false,
     /** The scanner takes the picture itself once a page is held still in the frame. */
-    val autoCapture: Boolean = true
+    val autoCapture: Boolean = true,
+    /** Tool icons make their small movement now and then. Off keeps every icon still. */
+    val livelyIcons: Boolean = true
 )
 
 enum class ThemeChoice(@StringRes val labelRes: Int) {
