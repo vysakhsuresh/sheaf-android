@@ -1,5 +1,7 @@
 package com.layerbit.sheaf.ops
 
+import androidx.annotation.StringRes
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.convert.FlowFromPages
 import com.layerbit.sheaf.convert.PptxWriter
 import com.layerbit.sheaf.convert.SlideSpec
@@ -12,17 +14,20 @@ import com.layerbit.sheaf.pdf.PageSelection
 import com.layerbit.sheaf.pdf.PageSpec
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
+import com.layerbit.sheaf.text.Strings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
 /** What PDF to Office can make. */
-enum class OfficeTarget(val label: String, val extension: String, val mimeType: String, val step: String) {
-    WORD("Word (.docx)", "docx", Writers.MIME_DOCX, "word"),
-    EXCEL("Excel (.xlsx)", "xlsx", Writers.MIME_XLSX, "excel"),
-    EPUB("EPUB book", "epub", Writers.MIME_EPUB, "epub"),
-    HTML("Web page (.html)", "html", Writers.MIME_HTML, "html"),
-    POWERPOINT("PowerPoint (.pptx)", "pptx", PptxWriter.MIME_PPTX, "powerpoint")
+enum class OfficeTarget(@StringRes val labelRes: Int, @StringRes val titleRes: Int, val extension: String, val mimeType: String, val step: String) {
+    WORD(R.string.catalog_office_word, R.string.catalog_office_word_title, "docx", Writers.MIME_DOCX, "word"),
+    EXCEL(R.string.catalog_office_excel, R.string.catalog_office_excel_title, "xlsx", Writers.MIME_XLSX, "excel"),
+    EPUB(R.string.catalog_office_epub, R.string.catalog_office_epub_title, "epub", Writers.MIME_EPUB, "epub"),
+    HTML(R.string.catalog_office_html, R.string.catalog_office_html_title, "html", Writers.MIME_HTML, "html"),
+    POWERPOINT(R.string.catalog_office_powerpoint, R.string.catalog_office_powerpoint_title, "pptx", PptxWriter.MIME_PPTX, "powerpoint");
+
+    val label: String get() = Strings.get(labelRes)
 }
 
 /**
@@ -36,7 +41,7 @@ enum class OfficeTarget(val label: String, val extension: String, val mimeType: 
 class PdfToOfficeOp(private val target: OfficeTarget, private val withPictures: Boolean = true) : Op {
 
     override val tool = ToolId.PDF_TO_OFFICE
-    override val title = "PDF to ${target.label.substringBefore(" (")}"
+    override val title = Strings.get(target.titleRes)
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -47,7 +52,7 @@ class PdfToOfficeOp(private val target: OfficeTarget, private val withPictures: 
         val outcomes = mutableListOf<OpOutcome>()
         inputs.forEachIndexed { index, input ->
             context.checkCancelled()
-            onProgress(Progress(index, inputs.size, "Reading ${input.displayName}"))
+            onProgress(Progress(index, inputs.size, Strings.get(R.string.catalog_progress_reading_file, input.displayName)))
             val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
             val output = context.workspace.newOutput(input.baseName, target.step, target.extension)
             if (target == OfficeTarget.POWERPOINT) {
@@ -57,7 +62,7 @@ class PdfToOfficeOp(private val target: OfficeTarget, private val withPictures: 
             outcomes += try {
                 val pages = context.surgeon.pageLines(pdfInput) { done, total ->
                     context.checkCancelled()
-                    onProgress(Progress(index, inputs.size, "Reading page $done of $total"))
+                    onProgress(Progress(index, inputs.size, Strings.get(R.string.catalog_progress_reading_page, done, total)))
                 }
                 val words = pages.sumOf { lines -> lines.sumOf { it.text.length } }
                 var flow = FlowFromPages.build(input.baseName, pages)
@@ -88,10 +93,10 @@ class PdfToOfficeOp(private val target: OfficeTarget, private val withPictures: 
                     output.delete()
                     OpOutcome.Failed(
                         input.displayName,
-                        "This file has no words in it, only pictures of them. Run Make searchable on it first, then convert the result."
+                        Strings.get(R.string.catalog_convert_no_words)
                     )
                 } else {
-                    onProgress(Progress(index, inputs.size, "Writing the ${target.extension}"))
+                    onProgress(Progress(index, inputs.size, Strings.get(R.string.catalog_progress_writing_ext, target.extension)))
                     when (target) {
                         OfficeTarget.WORD -> Writers.docx(flow, output)
                         OfficeTarget.EXCEL -> Writers.xlsx(flow, output)
@@ -103,24 +108,26 @@ class PdfToOfficeOp(private val target: OfficeTarget, private val withPictures: 
                     val tables = flow.blocks.count { it is Block.Table }
                     OpOutcome.Produced(
                         SheafFile(output, "${input.baseName}.${target.extension}", SheafFile.Origin.Derived(target.step), target.mimeType),
-                        buildString {
-                            append("$paragraphs ${if (paragraphs == 1) "paragraph" else "paragraphs"}")
-                            if (tables > 0) append(", $tables ${if (tables == 1) "table" else "tables"}")
-                            if (pictures > 0) append(", $pictures ${if (pictures == 1) "picture" else "pictures"}")
-                            append(" from ${pages.size} ${if (pages.size == 1) "page" else "pages"}")
-                            if (words == 0) append("; the pages had no words, only pictures")
+                        run {
+                            val made = listOfNotNull(
+                                Strings.plural(R.plurals.catalog_n_paragraphs, paragraphs),
+                                if (tables > 0) Strings.plural(R.plurals.catalog_n_tables, tables) else null,
+                                if (pictures > 0) Strings.plural(R.plurals.catalog_n_pictures, pictures) else null
+                            ).joinToString(", ")
+                            val done = Strings.plural(R.plurals.catalog_convert_done, pages.size, made, pages.size)
+                            if (words == 0) Strings.get(R.string.catalog_convert_done_no_words, done) else done
                         }
                     )
                 }
             } catch (e: PdfException) {
                 output.delete()
-                OpOutcome.Failed(input.displayName, e.message ?: "The file could not be converted.")
+                OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.catalog_convert_failed))
             } catch (e: Exception) {
                 output.delete()
-                OpOutcome.Failed(input.displayName, e.message ?: "The file could not be written.")
+                OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.catalog_write_failed))
             }
         }
-        onProgress(Progress(inputs.size, inputs.size, "Done"))
+        onProgress(Progress(inputs.size, inputs.size, Strings.get(R.string.catalog_done)))
         outcomes
     }
 
@@ -132,15 +139,15 @@ class PdfToOfficeOp(private val target: OfficeTarget, private val withPictures: 
         var dir: File? = null
         return try {
             val info = context.surgeon.inspect(pdfInput)
-            if (info.pageCount == 0) throw PdfException.Refused("This document has no pages.")
+            if (info.pageCount == 0) throw PdfException.Refused(Strings.get(R.string.catalog_no_pages))
             val sizes = info.pageSizes
             val specs = if (withPictures) {
-                step("Drawing the pages")
+                step(Strings.get(R.string.catalog_progress_drawing_pages))
                 val folder = File(context.workspace.newOutput(input.baseName, "slides", "dir").path).also { it.mkdirs() }
                 dir = folder
                 val files = context.surgeon.pdfToImages(pdfInput, (0 until info.pageCount).toList(), SLIDE_DPI, ImageFormat.JPEG, folder, "page") { done, total ->
                     context.checkCancelled()
-                    step("Drawing page $done of $total")
+                    step(Strings.get(R.string.catalog_progress_drawing_page, done, total))
                 }
                 files.mapIndexed { i, file ->
                     val size = sizes.getOrNull(i) ?: sizes.first()
@@ -149,29 +156,28 @@ class PdfToOfficeOp(private val target: OfficeTarget, private val withPictures: 
             } else {
                 val pages = context.surgeon.pageLines(pdfInput) { done, total ->
                     context.checkCancelled()
-                    step("Reading page $done of $total")
+                    step(Strings.get(R.string.catalog_progress_reading_page, done, total))
                 }
                 if (pages.all { lines -> lines.all { it.text.isBlank() } }) {
-                    throw PdfException.Refused("This file has no words in it, only pictures of them. Choose pictures of the pages, or run Make searchable first.")
+                    throw PdfException.Refused(Strings.get(R.string.catalog_slides_no_words))
                 }
                 pages.mapIndexed { i, lines ->
                     val size = sizes.getOrNull(i) ?: sizes.first()
                     SlideSpec(size.widthPoints, size.heightPoints, null, lines)
                 }
             }
-            step("Writing the deck")
+            step(Strings.get(R.string.catalog_progress_writing_deck))
             PptxWriter.write(input.baseName, specs, output)
             OpOutcome.Produced(
                 SheafFile(output, "${input.baseName}.pptx", SheafFile.Origin.Derived("powerpoint"), PptxWriter.MIME_PPTX),
-                "${specs.size} ${if (specs.size == 1) "slide" else "slides"}, " +
-                    if (withPictures) "each a picture of its page" else "each the page's lines as text you can edit"
+                Strings.plural(if (withPictures) R.plurals.catalog_slides_pictures else R.plurals.catalog_slides_text, specs.size)
             )
         } catch (e: PdfException) {
             output.delete()
-            OpOutcome.Failed(input.displayName, e.message ?: "The deck could not be made.")
+            OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.catalog_deck_failed))
         } catch (e: Exception) {
             output.delete()
-            OpOutcome.Failed(input.displayName, e.message ?: "The deck could not be written.")
+            OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.catalog_deck_write_failed))
         } finally {
             dir?.listFiles()?.forEach { it.delete() }
             dir?.delete()
@@ -209,7 +215,7 @@ class PdfToOfficeOp(private val target: OfficeTarget, private val withPictures: 
 class OfficeToPdfOp : Op {
 
     override val tool = ToolId.OFFICE_TO_PDF
-    override val title = "To PDF"
+    override val title = Strings.get(R.string.catalog_to_pdf_title)
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -220,29 +226,29 @@ class OfficeToPdfOp : Op {
         val outcomes = mutableListOf<OpOutcome>()
         inputs.forEachIndexed { index, input ->
             context.checkCancelled()
-            onProgress(Progress(index, inputs.size, "Reading ${input.displayName}"))
+            onProgress(Progress(index, inputs.size, Strings.get(R.string.catalog_progress_reading_file, input.displayName)))
             val output = context.workspace.newOutput(input.baseName, "from-office")
             outcomes += try {
                 val flow = Readers.forFile(input.file, input.displayName)
-                    ?: throw IllegalArgumentException("Sheaf can turn .docx, .xlsx, .txt, .md and .csv files into PDFs; this is something else.")
-                if (flow.blocks.isEmpty()) throw IllegalArgumentException("Nothing could be read out of this file.")
+                    ?: throw IllegalArgumentException(Strings.get(R.string.catalog_office_unsupported))
+                if (flow.blocks.isEmpty()) throw IllegalArgumentException(Strings.get(R.string.catalog_office_empty))
                 val pages = context.surgeon.layoutFlow(flow, output) { done, total ->
                     context.checkCancelled()
-                    onProgress(Progress(index, inputs.size, "Laying out: $done of $total"))
+                    onProgress(Progress(index, inputs.size, Strings.get(R.string.catalog_progress_laying_out, done, total)))
                 }
                 OpOutcome.Produced(
                     SheafFile(output, "${input.baseName}.pdf", SheafFile.Origin.Derived("from-office")),
-                    "$pages ${if (pages == 1) "page" else "pages"} from ${input.displayName}; the fonts are the phone's, not the original's"
+                    Strings.plural(R.plurals.catalog_office_done, pages, pages, input.displayName)
                 )
             } catch (e: PdfException) {
                 output.delete()
-                OpOutcome.Failed(input.displayName, e.message ?: "The file could not be converted.")
+                OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.catalog_convert_failed))
             } catch (e: Exception) {
                 output.delete()
-                OpOutcome.Failed(input.displayName, e.message ?: "The file could not be read.")
+                OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.catalog_read_failed))
             }
         }
-        onProgress(Progress(inputs.size, inputs.size, "Done"))
+        onProgress(Progress(inputs.size, inputs.size, Strings.get(R.string.catalog_done)))
         outcomes
     }
 }
@@ -256,7 +262,7 @@ class ImagesToPdfOp(
 ) : Op {
 
     override val tool = ToolId.IMAGES_TO_PDF
-    override val title = "Images to PDF"
+    override val title = Strings.get(R.string.catalog_tool_images_to_pdf_title)
     override val arity = Op.Arity.Together(min = 1)
 
     override suspend fun run(
@@ -265,7 +271,7 @@ class ImagesToPdfOp(
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         if (inputs.isEmpty()) {
-            return@withContext listOf(OpOutcome.Failed("", "No images were selected."))
+            return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.catalog_no_images)))
         }
 
         if (separate && inputs.size > 1) {
@@ -278,14 +284,14 @@ class ImagesToPdfOp(
                     context.surgeon.imagesToPdf(listOf(image.file), spec, output)
                     OpOutcome.Produced(
                         SheafFile(output, "${image.baseName}.pdf", SheafFile.Origin.Derived("from-images")),
-                        "One page, from ${image.displayName}"
+                        Strings.get(R.string.catalog_one_page_from, image.displayName)
                     )
                 } catch (e: PdfException) {
                     output.delete()
-                    OpOutcome.Failed(image.displayName, e.message ?: "Could not build the PDF.")
+                    OpOutcome.Failed(image.displayName, e.message ?: Strings.get(R.string.catalog_build_failed))
                 }
             }
-            onProgress(Progress(inputs.size, inputs.size, "Done"))
+            onProgress(Progress(inputs.size, inputs.size, Strings.get(R.string.catalog_done)))
             return@withContext outcomes
         }
 
@@ -299,17 +305,17 @@ class ImagesToPdfOp(
                 output = output
             ) { done, total ->
                 context.checkCancelled()
-                onProgress(Progress(done, total, "Page $done of $total"))
+                onProgress(Progress(done, total, Strings.get(R.string.catalog_progress_page_of, done, total)))
             }
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed(name, e.message ?: "Could not build the PDF."))
+            return@withContext listOf(OpOutcome.Failed(name, e.message ?: Strings.get(R.string.catalog_build_failed)))
         }
 
         listOf(
             OpOutcome.Produced(
                 SheafFile(output, "$name.pdf", SheafFile.Origin.Derived("from-images")),
-                "${inputs.size} ${if (inputs.size == 1) "image" else "images"}, one per page"
+                Strings.plural(R.plurals.catalog_images_done, inputs.size)
             )
         )
     }
@@ -329,7 +335,7 @@ class PdfToImagesOp(
 ) : Op {
 
     override val tool = ToolId.PDF_TO_IMAGES
-    override val title = "PDF to images ($dpi DPI, ${format.name})"
+    override val title = Strings.get(R.string.catalog_to_images_title, dpi, format.name)
     override val arity = Op.Arity.ExactlyOne
 
     override suspend fun run(
@@ -338,13 +344,13 @@ class PdfToImagesOp(
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val input = inputs.firstOrNull()
-            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.catalog_no_document)))
 
         val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
         val info = try {
             context.surgeon.inspect(pdfInput)
         } catch (e: PdfException) {
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Unreadable."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.catalog_unreadable)))
         }
 
         val pages = if (pageSpec.isNullOrBlank()) {
@@ -356,7 +362,7 @@ class PdfToImagesOp(
             return@withContext listOf(
                 OpOutcome.Failed(
                     input.displayName,
-                    "No pages matched \"$pageSpec\". This document has ${info.pageCount} pages."
+                    Strings.plural(R.plurals.catalog_no_pages_matched, info.pageCount, pageSpec.orEmpty(), info.pageCount)
                 )
             )
         }
@@ -377,11 +383,11 @@ class PdfToImagesOp(
                 baseName = input.baseName
             ) { done, total ->
                 context.checkCancelled()
-                onProgress(Progress(done, total, "Page $done of $total"))
+                onProgress(Progress(done, total, Strings.get(R.string.catalog_progress_page_of, done, total)))
             }
         } catch (e: PdfException) {
             dir.deleteRecursively()
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Export failed."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.catalog_export_failed)))
         }
 
         files.mapIndexed { position, file ->
@@ -392,7 +398,7 @@ class PdfToImagesOp(
                     origin = SheafFile.Origin.Derived("images"),
                     mimeType = format.mimeType
                 ),
-                "Page ${pages.getOrNull(position)?.plus(1) ?: position + 1} at $dpi DPI"
+                Strings.get(R.string.catalog_image_page, pages.getOrNull(position)?.plus(1) ?: position + 1, dpi)
             )
         }
     }

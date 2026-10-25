@@ -1,8 +1,10 @@
 package com.layerbit.sheaf.ops
 
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
+import com.layerbit.sheaf.text.Strings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.ln
@@ -25,7 +27,7 @@ import kotlin.math.sqrt
 class KeyPointsOp : Op {
 
     override val tool = ToolId.SUMMARISE
-    override val title = "Key points"
+    override val title = Strings.get(R.string.catalog_tool_summarise_title)
     override val arity = Op.Arity.ExactlyOne
 
     override suspend fun run(
@@ -33,44 +35,45 @@ class KeyPointsOp : Op {
         context: OpContext,
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
-        val input = inputs.firstOrNull() ?: return@withContext listOf(OpOutcome.Failed("", "Pick one PDF."))
+        val input = inputs.firstOrNull() ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.catalog_keypoints_pick_one)))
         val pdf = PdfInput(input.file, context.passwords[input.file.path])
-        onProgress(Progress(0, 2, "Reading the words…"))
+        onProgress(Progress(0, 2, Strings.get(R.string.catalog_progress_reading_words)))
         val pages = try {
             val count = context.surgeon.inspect(pdf).pageCount
             context.surgeon.extractText(pdf, (0 until min(count, MAX_PAGES)).toList()) to count
         } catch (e: PdfException) {
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "This file couldn't be read."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.catalog_keypoints_unreadable)))
         }
         context.checkCancelled()
         val (byPage, total) = pages
         val text = (0 until min(total, MAX_PAGES)).joinToString("\n\n") { byPage[it].orEmpty() }.trim()
         if (text.isBlank()) {
             return@withContext listOf(
-                OpOutcome.Failed(input.displayName, "This file has no words in it, only pictures of them. Run Make searchable first.")
+                OpOutcome.Failed(input.displayName, Strings.get(R.string.catalog_keypoints_no_words))
             )
         }
-        onProgress(Progress(1, 2, "Picking the key points…"))
+        onProgress(Progress(1, 2, Strings.get(R.string.catalog_progress_picking)))
         val summary = KeyPoints.of(text)
         if (summary.points.isEmpty()) {
-            return@withContext listOf(OpOutcome.Failed(input.displayName, "There are too few full sentences in this document to pick from."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, Strings.get(R.string.catalog_keypoints_too_few)))
         }
-        val read = if (total > MAX_PAGES) "the first $MAX_PAGES of $total pages" else if (total == 1) "1 page" else "$total pages"
+        val read = if (total > MAX_PAGES) Strings.get(R.string.catalog_keypoints_first_pages, MAX_PAGES, total)
+            else Strings.plural(R.plurals.catalog_n_pages, total)
         val body = buildString {
-            append("Key points of ").append(input.displayName).append(", from ").append(read).append(":\n\n")
+            append(Strings.get(R.string.catalog_keypoints_heading, input.displayName, read)).append("\n\n")
             summary.points.forEach { append("• ").append(it).append("\n\n") }
             if (summary.figures.isNotEmpty()) {
-                append("Figures in it:\n")
+                append(Strings.get(R.string.catalog_keypoints_figures)).append('\n')
                 summary.figures.forEach { append("• ").append(it).append('\n') }
             }
         }.trim() + "\n"
         val output = context.workspace.newOutput("${input.baseName} (key points)", "key-points", "txt")
         output.writeText(body)
-        onProgress(Progress(2, 2, "Done"))
+        onProgress(Progress(2, 2, Strings.get(R.string.catalog_done)))
         listOf(
             OpOutcome.Produced(
                 SheafFile(output, "${input.baseName} (key points).txt", SheafFile.Origin.Derived("key-points"), SheafFile.MIME_TEXT),
-                "${summary.points.size} key points from $read, picked on this phone; each is a sentence from the document itself"
+                Strings.plural(R.plurals.catalog_keypoints_done, summary.points.size, summary.points.size, read)
             )
         )
     }

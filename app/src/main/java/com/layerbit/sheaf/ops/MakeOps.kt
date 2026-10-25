@@ -1,5 +1,6 @@
 package com.layerbit.sheaf.ops
 
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.pdf.PageArea
 import com.layerbit.sheaf.pdf.PageMark
@@ -8,6 +9,7 @@ import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
 import com.layerbit.sheaf.pdf.PlacedWord
 import com.layerbit.sheaf.pdf.ReceiptSpec
+import com.layerbit.sheaf.text.Strings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Calendar
@@ -42,7 +44,7 @@ data class RentReceipts(
 class RentReceiptsOp(private val spec: RentReceipts) : Op {
 
     override val tool = ToolId.RENT_RECEIPTS
-    override val title = "Rent receipts"
+    override val title = Strings.get(R.string.catalog_tool_rent_receipts_title)
     override val arity = Op.Arity.Together(min = 0)
 
     override suspend fun run(
@@ -51,17 +53,17 @@ class RentReceiptsOp(private val spec: RentReceipts) : Op {
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val missing = when {
-            spec.tenant.isBlank() -> "the tenant's name"
-            spec.landlord.isBlank() -> "the owner's name"
-            spec.address.isBlank() -> "the address"
+            spec.tenant.isBlank() -> R.string.catalog_rent_need_tenant
+            spec.landlord.isBlank() -> R.string.catalog_rent_need_owner
+            spec.address.isBlank() -> R.string.catalog_rent_need_address
             else -> null
         }
-        if (missing != null) return@withContext listOf(OpOutcome.Failed("", "Type $missing."))
+        if (missing != null) return@withContext listOf(OpOutcome.Failed("", Strings.get(missing)))
         if (spec.rent <= 0 || spec.months !in 1..24) {
-            return@withContext listOf(OpOutcome.Failed("", "Type the monthly rent, and a number of months from 1 to 24."))
+            return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.catalog_rent_need_amount)))
         }
 
-        onProgress(Progress(0, 1, "Writing the receipts"))
+        onProgress(Progress(0, 1, Strings.get(R.string.catalog_progress_receipts)))
         val amount = "Rs. ${indianGrouping(spec.rent)} (${amountInWords(spec.rent)})"
         val receipts = (0 until spec.months).map { i ->
             val month = monthName(spec.startYear, spec.startMonth, i)
@@ -90,22 +92,20 @@ class RentReceiptsOp(private val spec: RentReceipts) : Op {
             context.surgeon.writeReceipts(receipts, output)
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed("", e.message ?: "The receipts could not be written."))
+            return@withContext listOf(OpOutcome.Failed("", e.message ?: Strings.get(R.string.catalog_rent_failed)))
         }
-        onProgress(Progress(1, 1, "Done"))
+        onProgress(Progress(1, 1, Strings.get(R.string.catalog_done)))
 
         // Employers ask for the owner's PAN once the rent passes a lakh a year (the HRA rule).
-        val panNote = if (spec.pan.isBlank() && spec.rent * 12 > 100_000) {
-            ". The rent is over Rs. 1 lakh a year, so your employer will ask for the owner's PAN: add it and make them again"
-        } else {
-            ""
-        }
+        val askPan = spec.pan.isBlank() && spec.rent * 12 > 100_000
         listOf(
             OpOutcome.Produced(
                 SheafFile(output, "$name.pdf", SheafFile.Origin.Derived("receipts")),
-                "${spec.months} ${if (spec.months == 1) "receipt" else "receipts"}, $first" +
-                    (if (spec.months > 1) " to $last" else "") +
-                    ", two to a page on $pages ${if (pages == 1) "page" else "pages"}: print, sign, and hand them in$panNote"
+                Strings.get(
+                    if (askPan) R.string.catalog_rent_done_pan else R.string.catalog_rent_done,
+                    Strings.plural(R.plurals.catalog_rent_count, spec.months, spec.months, first, last),
+                    Strings.plural(R.plurals.catalog_rent_sheets, pages)
+                )
             )
         )
     }
@@ -196,7 +196,7 @@ class ReplaceTextOp(
 ) : Op {
 
     override val tool = ToolId.EDIT_TEXT
-    override val title = "Replace \"$find\""
+    override val title = Strings.get(R.string.catalog_replace_title, find)
     override val arity = Op.Arity.ExactlyOne
 
     override suspend fun run(
@@ -205,9 +205,9 @@ class ReplaceTextOp(
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val input = inputs.firstOrNull()
-            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.catalog_no_document)))
         val needle = find.trim()
-        if (needle.isEmpty()) return@withContext listOf(OpOutcome.Failed(input.displayName, "Type the words to find."))
+        if (needle.isEmpty()) return@withContext listOf(OpOutcome.Failed(input.displayName, Strings.get(R.string.catalog_replace_need_words)))
 
         val pattern = if (matchCase) Regex(Regex.escape(needle)) else Regex(Regex.escape(needle), RegexOption.IGNORE_CASE)
         val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
@@ -215,19 +215,19 @@ class ReplaceTextOp(
         val changed = try {
             context.surgeon.replaceText(pdfInput, pattern, replacement.trim(), output) { done, total ->
                 context.checkCancelled()
-                onProgress(Progress(done, total, "Page $done of $total"))
+                onProgress(Progress(done, total, Strings.get(R.string.catalog_progress_page_of, done, total)))
             }
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Failed."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.catalog_failed)))
         }
         listOf(
             OpOutcome.Produced(
                 SheafFile(output, "${input.baseName} edited.pdf", SheafFile.Origin.Derived("edited")),
                 if (replacement.isBlank()) {
-                    "\"$needle\" removed in $changed ${if (changed == 1) "place" else "places"}"
+                    Strings.plural(R.plurals.catalog_replace_removed, changed, needle, changed)
                 } else {
-                    "\"$needle\" changed to \"${replacement.trim()}\" in $changed ${if (changed == 1) "place" else "places"}"
+                    Strings.plural(R.plurals.catalog_replace_changed, changed, needle, replacement.trim(), changed)
                 }
             )
         )
@@ -244,7 +244,7 @@ class ReplaceTextOp(
 class CompareOp : Op {
 
     override val tool = ToolId.COMPARE
-    override val title = "Compare"
+    override val title = Strings.get(R.string.catalog_compare_title)
     override val arity = Op.Arity.Together(min = 2)
 
     override suspend fun run(
@@ -253,7 +253,7 @@ class CompareOp : Op {
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         if (inputs.size != 2) {
-            return@withContext listOf(OpOutcome.Failed("", "Add exactly two PDFs: the older version first, then the newer one."))
+            return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.catalog_compare_need_two)))
         }
         val (older, newer) = inputs
         val olderInput = PdfInput(older.file, context.passwords[older.file.path])
@@ -264,25 +264,25 @@ class CompareOp : Op {
         try {
             a = context.surgeon.placedWords(olderInput) { done, total ->
                 context.checkCancelled()
-                onProgress(Progress(done, total * 2, "Reading page $done of the older file"))
+                onProgress(Progress(done, total * 2, Strings.get(R.string.catalog_progress_reading_older, done)))
             }
             b = context.surgeon.placedWords(newerInput) { done, total ->
                 context.checkCancelled()
-                onProgress(Progress(total + done, total * 2, "Reading page $done of the newer file"))
+                onProgress(Progress(total + done, total * 2, Strings.get(R.string.catalog_progress_reading_newer, done)))
             }
         } catch (e: PdfException) {
-            return@withContext listOf(OpOutcome.Failed(newer.displayName, e.message ?: "Unreadable."))
+            return@withContext listOf(OpOutcome.Failed(newer.displayName, e.message ?: Strings.get(R.string.catalog_unreadable)))
         }
         if (a.isEmpty() || b.isEmpty()) {
             return@withContext listOf(
                 OpOutcome.Failed(
                     newer.displayName,
-                    "One of these files has no words to compare, only pictures of them. Run Make searchable on it first."
+                    Strings.get(R.string.catalog_compare_no_words)
                 )
             )
         }
 
-        onProgress(Progress(0, 1, "Comparing the words"))
+        onProgress(Progress(0, 1, Strings.get(R.string.catalog_progress_comparing)))
         val changes = WordDiff.diff(a.map { it.text }, b.map { it.text })
 
         val added = mutableListOf<PlacedWord>()
@@ -323,7 +323,7 @@ class CompareOp : Op {
             return@withContext listOf(
                 OpOutcome.Skipped(
                     newer.displayName,
-                    "The words in these two files are the same. Any difference is in pictures or layout, which this compares by words only."
+                    Strings.get(R.string.catalog_compare_same)
                 )
             )
         }
@@ -342,14 +342,17 @@ class CompareOp : Op {
             context.surgeon.annotate(newerInput, marks, output) { _, _ -> context.checkCancelled() }
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed(newer.displayName, e.message ?: "Failed."))
+            return@withContext listOf(OpOutcome.Failed(newer.displayName, e.message ?: Strings.get(R.string.catalog_failed)))
         }
         val pages = marks.keys.size
         listOf(
             OpOutcome.Produced(
                 SheafFile(output, "${newer.baseName} compared.pdf", SheafFile.Origin.Derived("compared")),
-                "${added.size} ${if (added.size == 1) "word" else "words"} added and $removed taken out, on " +
-                    "$pages ${if (pages == 1) "page" else "pages"} of the newer file: new words in green, a note where words went"
+                Strings.get(
+                    R.string.catalog_compare_done,
+                    Strings.plural(R.plurals.catalog_compare_words, added.size, added.size, removed),
+                    Strings.plural(R.plurals.catalog_compare_pages, pages)
+                )
             )
         )
     }

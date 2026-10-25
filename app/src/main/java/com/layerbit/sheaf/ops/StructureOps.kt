@@ -1,10 +1,12 @@
 package com.layerbit.sheaf.ops
 
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.pdf.PageSelection
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
 import kotlinx.coroutines.Dispatchers
+import com.layerbit.sheaf.text.Strings
 import kotlinx.coroutines.withContext
 
 /**
@@ -20,7 +22,7 @@ import kotlinx.coroutines.withContext
 class MergeOp(private val outputName: String? = null) : Op {
 
     override val tool = ToolId.MERGE
-    override val title = "Merge"
+    override val title = Strings.get(R.string.catalog_tool_merge_title)
     override val arity = Op.Arity.Together(min = 2)
 
     override suspend fun run(
@@ -29,7 +31,7 @@ class MergeOp(private val outputName: String? = null) : Op {
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         if (inputs.size < 2) {
-            return@withContext listOf(OpOutcome.Failed("", "Pick at least two documents to merge."))
+            return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.catalog_merge_need_two)))
         }
 
         val name = outputName ?: "${inputs.first().baseName} + ${inputs.size - 1} more"
@@ -41,17 +43,17 @@ class MergeOp(private val outputName: String? = null) : Op {
                 output = output
             ) { done, total ->
                 context.checkCancelled()
-                onProgress(Progress(done, total, "Adding ${inputs.getOrNull(done - 1)?.displayName ?: ""}"))
+                onProgress(Progress(done, total, Strings.get(R.string.catalog_progress_adding, inputs.getOrNull(done - 1)?.displayName ?: "")))
             }
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed(name, e.message ?: "Merge failed."))
+            return@withContext listOf(OpOutcome.Failed(name, e.message ?: Strings.get(R.string.catalog_merge_failed)))
         }
 
         listOf(
             OpOutcome.Produced(
                 SheafFile(output, "$name.pdf", SheafFile.Origin.Derived("merged")),
-                "${inputs.size} files joined"
+                Strings.plural(R.plurals.catalog_merge_joined, inputs.size)
             )
         )
     }
@@ -67,7 +69,7 @@ class MergeOp(private val outputName: String? = null) : Op {
 class ExtractPagesOp(private val spec: String, private val remove: Boolean = false) : Op {
 
     override val tool = ToolId.EXTRACT
-    override val title = if (remove) "Remove pages" else "Extract pages"
+    override val title = Strings.get(if (remove) R.string.catalog_remove_title else R.string.catalog_extract_title)
     override val arity = Op.Arity.ExactlyOne
 
     override suspend fun run(
@@ -76,13 +78,13 @@ class ExtractPagesOp(private val spec: String, private val remove: Boolean = fal
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val input = inputs.firstOrNull()
-            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.catalog_no_document)))
 
         val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
         val info = try {
             context.surgeon.inspect(pdfInput)
         } catch (e: PdfException) {
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Unreadable."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.catalog_unreadable)))
         }
 
         val named = PageSelection.parse(spec, info.pageCount)
@@ -90,7 +92,7 @@ class ExtractPagesOp(private val spec: String, private val remove: Boolean = fal
             return@withContext listOf(
                 OpOutcome.Failed(
                     input.displayName,
-                    "No pages matched \"$spec\". This document has ${info.pageCount} pages."
+                    Strings.plural(R.plurals.catalog_no_pages_matched, info.pageCount, spec, info.pageCount)
                 )
             )
         }
@@ -98,21 +100,21 @@ class ExtractPagesOp(private val spec: String, private val remove: Boolean = fal
         val pages = if (remove) PageSelection.invert(named, info.pageCount) else named
         if (pages.isEmpty()) {
             return@withContext listOf(
-                OpOutcome.Failed(input.displayName, "That would remove every page. Leave at least one.")
+                OpOutcome.Failed(input.displayName, Strings.get(R.string.catalog_remove_every_page))
             )
         }
 
-        onProgress(Progress(0, 1, "Writing ${pages.size} pages"))
+        onProgress(Progress(0, 1, Strings.plural(R.plurals.catalog_progress_writing_pages, pages.size)))
         val output = context.workspace.newOutput(input.baseName, "pages")
 
         try {
             context.surgeon.extractPages(pdfInput, pages, emptyMap(), output)
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Extract failed."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.catalog_extract_failed)))
         }
 
-        onProgress(Progress(1, 1, "Done"))
+        onProgress(Progress(1, 1, Strings.get(R.string.catalog_done)))
         listOf(
             OpOutcome.Produced(
                 SheafFile(
@@ -122,9 +124,9 @@ class ExtractPagesOp(private val spec: String, private val remove: Boolean = fal
                     SheafFile.Origin.Derived("pages")
                 ),
                 if (remove) {
-                    "Removed ${if (named.size == 1) "page" else "pages"} ${PageSelection.describe(named)}; ${pages.size} of ${info.pageCount} kept"
+                    Strings.plural(R.plurals.catalog_removed_pages, named.size, PageSelection.describe(named), pages.size, info.pageCount)
                 } else {
-                    "Kept pages ${PageSelection.describe(pages)} of ${info.pageCount}"
+                    Strings.get(R.string.catalog_kept_pages, PageSelection.describe(pages), info.pageCount)
                 }
             )
         )
@@ -156,10 +158,10 @@ class SplitOp(private val mode: Mode) : Op {
 
     override val tool = ToolId.SPLIT
     override val title = when (mode) {
-        is Mode.EveryNPages -> "Split every ${mode.size} pages"
-        Mode.EachPage -> "Split into single pages"
-        is Mode.Ranges -> "Split by ranges"
-        Mode.AtBookmarks -> "Split at the bookmarks"
+        is Mode.EveryNPages -> Strings.plural(R.plurals.catalog_split_every_title, mode.size)
+        Mode.EachPage -> Strings.get(R.string.catalog_split_single_title)
+        is Mode.Ranges -> Strings.get(R.string.catalog_split_ranges_title)
+        Mode.AtBookmarks -> Strings.get(R.string.catalog_split_bookmarks_title)
     }
     override val arity = Op.Arity.ExactlyOne
 
@@ -169,13 +171,13 @@ class SplitOp(private val mode: Mode) : Op {
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val input = inputs.firstOrNull()
-            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.catalog_no_document)))
 
         val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
         val info = try {
             context.surgeon.inspect(pdfInput)
         } catch (e: PdfException) {
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Unreadable."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.catalog_unreadable)))
         }
 
         val groups: List<List<Int>> = when (mode) {
@@ -196,8 +198,7 @@ class SplitOp(private val mode: Mode) : Op {
                     return@withContext listOf(
                         OpOutcome.Failed(
                             input.displayName,
-                            "This document has no table of contents to split at. Split every " +
-                                "N pages, or by ranges, instead."
+                            Strings.get(R.string.catalog_split_no_toc)
                         )
                     )
                 }
@@ -214,7 +215,7 @@ class SplitOp(private val mode: Mode) : Op {
 
         if (groups.isEmpty()) {
             return@withContext listOf(
-                OpOutcome.Failed(input.displayName, "That split produced no pages.")
+                OpOutcome.Failed(input.displayName, Strings.get(R.string.catalog_split_no_pages))
             )
         }
         // One group is only a problem when it is the WHOLE document. Splitting a 3-page file
@@ -224,8 +225,7 @@ class SplitOp(private val mode: Mode) : Op {
             return@withContext listOf(
                 OpOutcome.Failed(
                     input.displayName,
-                    "That covers the whole document, so the result would be identical to it. " +
-                        "Use Extract pages if you want a copy."
+                    Strings.get(R.string.catalog_split_whole)
                 )
             )
         }
@@ -233,7 +233,7 @@ class SplitOp(private val mode: Mode) : Op {
         val outcomes = mutableListOf<OpOutcome>()
         groups.forEachIndexed { index, pages ->
             context.checkCancelled()
-            onProgress(Progress(index, groups.size, "Part ${index + 1} of ${groups.size}"))
+            onProgress(Progress(index, groups.size, Strings.get(R.string.catalog_progress_part, index + 1, groups.size)))
 
             val partName = "${input.baseName} part ${index + 1}"
             val output = context.workspace.newOutput(partName, "split")
@@ -241,14 +241,14 @@ class SplitOp(private val mode: Mode) : Op {
                 context.surgeon.extractPages(pdfInput, pages, emptyMap(), output)
                 OpOutcome.Produced(
                     SheafFile(output, "$partName.pdf", SheafFile.Origin.Derived("split")),
-                    "Pages ${PageSelection.describe(pages)}"
+                    Strings.get(R.string.catalog_split_part_pages, PageSelection.describe(pages))
                 )
             } catch (e: PdfException) {
                 output.delete()
-                OpOutcome.Failed(partName, e.message ?: "This part could not be written.")
+                OpOutcome.Failed(partName, e.message ?: Strings.get(R.string.catalog_split_part_failed))
             }
         }
-        onProgress(Progress(groups.size, groups.size, "Done"))
+        onProgress(Progress(groups.size, groups.size, Strings.get(R.string.catalog_done)))
         outcomes
     }
 }
@@ -280,7 +280,7 @@ class InsertPagesOp(
 ) : Op {
 
     override val tool = ToolId.INSERT
-    override val title = "Insert pages"
+    override val title = Strings.get(R.string.catalog_insert_title)
 
     // Together rather than ExactlyOne: the second file is not another job, it is part of this
     // one, and the two are read in the same pass.
@@ -292,19 +292,19 @@ class InsertPagesOp(
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val base = inputs.firstOrNull()
-            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.catalog_no_document)))
         val insert = inputs.getOrNull(1)
 
         if (insert == null && blankPages <= 0) {
             return@withContext listOf(
                 OpOutcome.Failed(
                     base.displayName,
-                    "Add a second document to insert, or choose how many blank pages to add."
+                    Strings.get(R.string.catalog_insert_need_second)
                 )
             )
         }
 
-        onProgress(Progress(0, 1, "Inserting into ${base.displayName}"))
+        onProgress(Progress(0, 1, Strings.get(R.string.catalog_progress_inserting, base.displayName)))
         val replacing = replaceSpec.isNotBlank()
         val step = if (replacing) "replaced" else "inserted"
         val output = context.workspace.newOutput(base.baseName, step)
@@ -314,16 +314,16 @@ class InsertPagesOp(
             val total = try {
                 context.surgeon.inspect(baseInput).pageCount
             } catch (e: PdfException) {
-                return@withContext listOf(OpOutcome.Failed(base.displayName, e.message ?: "Unreadable."))
+                return@withContext listOf(OpOutcome.Failed(base.displayName, e.message ?: Strings.get(R.string.catalog_unreadable)))
             }
             val pages = PageSelection.parse(replaceSpec, total)
             if (pages.isEmpty()) {
                 return@withContext listOf(
-                    OpOutcome.Failed(base.displayName, "This file has $total pages; none of the pages typed are in it.")
+                    OpOutcome.Failed(base.displayName, Strings.plural(R.plurals.catalog_replace_none_typed, total))
                 )
             }
             if (pages.size >= total && insert == null && blankPages <= 0) {
-                return@withContext listOf(OpOutcome.Failed(base.displayName, "That would replace every page with nothing."))
+                return@withContext listOf(OpOutcome.Failed(base.displayName, Strings.get(R.string.catalog_replace_every)))
             }
             pages
         } else {
@@ -341,12 +341,12 @@ class InsertPagesOp(
             )
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed(base.displayName, e.message ?: "Failed."))
+            return@withContext listOf(OpOutcome.Failed(base.displayName, e.message ?: Strings.get(R.string.catalog_failed)))
         }
 
-        onProgress(Progress(1, 1, "Done"))
+        onProgress(Progress(1, 1, Strings.get(R.string.catalog_done)))
         val what = if (insert != null) insert.displayName else {
-            if (blankPages == 1) "1 blank page" else "$blankPages blank pages"
+            Strings.plural(R.plurals.catalog_blank_pages, blankPages)
         }
         listOf(
             OpOutcome.Produced(
@@ -356,9 +356,9 @@ class InsertPagesOp(
                     SheafFile.Origin.Derived(step)
                 ),
                 if (replacing) {
-                    "Replaced ${if (replace.size == 1) "page" else "pages"} ${PageSelection.describe(replace)} with $what"
+                    Strings.plural(R.plurals.catalog_replaced_pages, replace.size, PageSelection.describe(replace), what)
                 } else {
-                    "Put $what in at page $atPage"
+                    Strings.get(R.string.catalog_put_in_at, what, atPage)
                 }
             )
         )
@@ -371,7 +371,7 @@ class OrganiseOp(
 ) : Op {
 
     override val tool = ToolId.ORGANISE
-    override val title = "Organise pages"
+    override val title = Strings.get(R.string.catalog_tool_organise_title)
     override val arity = Op.Arity.ExactlyOne
 
     override suspend fun run(
@@ -380,15 +380,15 @@ class OrganiseOp(
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val input = inputs.firstOrNull()
-            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.catalog_no_document)))
 
         if (order.isEmpty()) {
             return@withContext listOf(
-                OpOutcome.Failed(input.displayName, "A document must keep at least one page.")
+                OpOutcome.Failed(input.displayName, Strings.get(R.string.catalog_keep_one_page))
             )
         }
 
-        onProgress(Progress(0, 1, "Rebuilding ${order.size} pages"))
+        onProgress(Progress(0, 1, Strings.plural(R.plurals.catalog_progress_rebuilding, order.size)))
         val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
         val output = context.workspace.newOutput(input.baseName, "organised")
 
@@ -396,15 +396,15 @@ class OrganiseOp(
             context.surgeon.extractPages(pdfInput, order, rotations, output)
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Failed."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.catalog_failed)))
         }
 
-        onProgress(Progress(1, 1, "Done"))
+        onProgress(Progress(1, 1, Strings.get(R.string.catalog_done)))
         listOf(
             OpOutcome.Produced(
                 SheafFile(output, "${input.baseName} organised.pdf", SheafFile.Origin.Derived("organised")),
-                "${order.size} pages" +
-                    if (rotations.isNotEmpty()) ", ${rotations.size} rotated" else ""
+                if (rotations.isEmpty()) Strings.plural(R.plurals.catalog_n_pages, order.size)
+                else Strings.plural(R.plurals.catalog_pages_rotated, order.size, order.size, rotations.size)
             )
         )
     }
