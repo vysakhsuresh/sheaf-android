@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Panel headings -->
+    <string name="options_about_this_tool">About this tool</string>
+    <string name="options_heading">Options</string>
+
+    <!-- Shared labels -->
+    <string name="options_pages">Pages</string>
+    <string name="options_page">Page</string>
+    <string name="options_format">Format</string>
+    <string name="options_empty_every_page">Leave empty for every page</string>
+    <string name="options_empty_whole_doc">Leave empty for the whole document</string>
+    <string name="options_page_spec_hint">Type page numbers like 1-3, 7, 12-</string>
+    <plurals name="options_page_spec_with_count">
+        <item quantity="one">%1$s. This document has %2$d page.</item>
+        <item quantity="other">%1$s. This document has %2$d pages.</item>
+    </plurals>
+    <string name="options_less">Less</string>
+    <string name="options_more">More</string>
+    <string name="options_password">Password</string>
+    <string name="options_under">Under</string>
+    <string name="options_any_size_mb">Or any size, in MB</string>
+    <string name="options_any_size_kb">Or any size, in KB</string>
+    <string name="options_size">Size</string>
+    <string name="options_small">Small</string>
+    <string name="options_medium">Medium</string>
+    <string name="options_large">Large</string>
+    <string name="options_normal">Normal</string>
+    <string name="options_none">None</string>
+    <string name="options_colour">Colour</string>
+    <string name="options_where">Where</string>
+    <string name="options_where_on_page">Where on the page</string>
+    <string name="options_start_at">Start at</string>
+    <string name="options_size_letter">Letter</string>
+    <string name="options_size_legal">Legal</string>
+
+    <!-- Positions -->
+    <string name="options_top">Top</string>
+    <string name="options_top_left">Top left</string>
+    <string name="options_top_right">Top right</string>
+    <string name="options_bottom">Bottom</string>
+    <string name="options_bottom_left">Bottom left</string>
+    <string name="options_bottom_right">Bottom right</string>
+    <string name="options_bottom_centre">Bottom centre</string>
+    <string name="options_left">Left</string>
+    <string name="options_right">Right</string>
+    <string name="options_middle">Middle</string>
+    <string name="options_centre">Centre</string>
+
+    <!-- Colours -->
+    <string name="options_black">Black</string>
+    <string name="options_grey">Grey</string>
+    <string name="options_red">Red</string>
+    <string name="options_blue">Blue</string>
+    <string name="options_green">Green</string>
+    <string name="options_pink">Pink</string>
+    <string name="options_yellow">Yellow</string>
+    <string name="options_cream">Cream</string>
+    <string name="options_sepia">Sepia</string>
+    <string name="options_dark">Dark</string>
+
+    <!-- Extract pages -->
+    <string name="options_extract_keep">Keep these pages</string>
+    <string name="options_extract_remove">Remove these pages</string>
+    <string name="options_extract_pages_keep">Pages to keep</string>
+    <string name="options_extract_pages_remove">Pages to remove</string>
+
+    <!-- Split -->
+    <string name="options_split_how">How to split</string>
+    <string name="options_split_every_n">Every N pages</string>
+    <string name="options_split_single">Single pages</string>
+    <string name="options_split_ranges">By ranges</string>
+    <string name="options_split_bookmarks">At the bookmarks</string>
+    <string name="options_split_pages_per_file">Pages per file</string>
+    <string name="options_split_one_per_range">One file per range</string>
+    <string name="options_split_ranges_hint">Separate the files with commas: 1-3, 4-8, 9-</string>
+    <string name="options_split_bookmarks_hint">One file per top-level entry in the document\'s own table of contents, which is the natural way to break up a scanned book or a bundle of statements. Documents without one say so rather than guessing.</string>
+
+    <!-- PDF to images -->
+    <string name="options_resolution">Resolution</string>
+    <string name="options_dpi_screen">96 · screen</string>
+    <string name="options_dpi_good">200 · good</string>
+    <string name="options_dpi_print">300 · print</string>
+
+    <!-- Images to PDF -->
+    <string name="options_page_size">Page size</string>
+    <string name="options_size_fit">Fit the image</string>
+    <string name="options_output">Output</string>
+    <string name="options_one_pdf">One PDF, a page per image</string>
+    <string name="options_pdf_per_image">A PDF per image</string>
+    <string name="options_margin">Margin</string>
+    <string name="options_narrow">Narrow</string>
+    <string name="options_wide">Wide</string>
+
+    <!-- PDF to Office -->
+    <string name="options_make_a">Make a</string>
+    <string name="options_office_pictures">Pictures of the pages</string>
+    <string name="options_office_editable">Editable text</string>
+    <string name="options_office_bring_pictures">Bring the pictures along</string>
+    <string name="options_office_word_hint">Paragraphs, headings, lists and tables, with Word\'s own styles, so the navigation pane works and the text reflows when edited. A PDF holds lines, not paragraphs, so this is reconstruction: check a long document after.</string>
+    <string name="options_office_excel_hint">One sheet per page. Lines that line up in columns become cells; a number stays a number so sums work. Best on statements and tables.</string>
+    <string name="options_office_epub_hint">A reflowing book for e-readers, cut into chapters at the headings.</string>
+    <string name="options_office_html_hint">One self-contained web page, pictures included, that opens in any browser.</string>
+    <string name="options_office_pptx_hint">One slide per page, in the page\'s own shape: a picture of each page, exactly as it looks, or its lines as text boxes you can edit.</string>
+    <string name="options_office_scanned_hint">Scanned pages have no words until Make searchable has read them.</string>
+
+    <!-- Office to PDF -->
+    <string name="options_office_to_pdf_hint">Paragraphs, headings, lists and tables come through, laid out on A4 in the phone\'s own fonts - Hindi, Tamil, Malayalam and the rest included, where the phone has the font. Shapes, text boxes and tracked changes do not.</string>
+
+    <!-- Compress -->
+    <string name="options_compress_level">Pick a level</string>
+    <string name="options_compress_size">Get under a size</string>
+    <string name="options_compress_size_hint">The levels are tried lightest first and the first that fits is kept. If none fits, you get the smallest and are told; Split by size can then cut it into parts that do.</string>
+    <string name="options_compress_pictures">Let pages become pictures if that is what it takes</string>
+    <string name="options_compress_pictures_hint">Only when no level gets under the size. Each page becomes one picture that looks the same; its words are kept underneath, so search and copy still work.</string>
+    <string name="options_compress_how_hard">How hard to squeeze</string>
+    <string name="options_compress_hint">Sheaf shrinks the images inside a document and leaves text untouched, so text stays sharp and selectable. A document with no scanned pages will barely change.</string>
+    <string name="options_check_size">Check the size first</string>
+    <string name="options_check_trying">Trying it…</string>
+    <string name="options_check_failed">That could not be measured. Running it will still tell you.</string>
+    <string name="options_check_same">%1$s - already as small as it goes at this level, so the original would be kept.</string>
+    <string name="options_check_result">%1$s to %2$s - %3$d%% smaller.</string>
+
+    <!-- Set password -->
+    <string name="options_pw_open">Password to open</string>
+    <string name="options_pw_restrict">Restrict only, no password</string>
+    <string name="options_pw_again">Type it again</string>
+    <string name="options_pw_hint">Sheaf encrypts with AES-256 and does not keep the password anywhere. If you forget it, the document cannot be opened again - not by us either.</string>
+    <string name="options_pw_restrict_hint">The file opens without a password. It is encrypted with a key nobody is given, so the restrictions below cannot be lifted by typing one.</string>
+    <string name="options_pw_reader_may">What a reader may do</string>
+    <string name="options_allow_printing">Allow printing</string>
+    <string name="options_allow_copying">Allow copying text</string>
+    <string name="options_allow_changes">Allow changes</string>
+    <string name="options_pw_request_restrict">These three are a request, not a lock. The PDF standard asks readers to honour them and most do, but a reader that ignores them can. Anyone who can open the file can print it to a new one.</string>
+    <string name="options_pw_request_lock">These three are a request, not a lock. The PDF standard asks readers to honour them and most do, but a reader that ignores them can. The encryption is the part that actually holds.</string>
+
+    <!-- Merge, remove password -->
+    <string name="options_merge_hint">Files are joined top to bottom. Use the arrows to reorder them.</string>
+    <string name="options_remove_pw_hint">You need the document\'s password. Sheaf opens it the way any reader would and saves an unlocked copy - it cannot recover a password you do not have.</string>
+
+    <!-- OCR -->
+    <string name="options_ocr_language">Language of the pages</string>
+    <string name="options_ocr_hint">Sheaf reads the words in a scan and lays them invisibly over the page, so the document looks exactly the same but you can search, select and copy it. Both models are inside the app; nothing is downloaded. This is the slowest tool here - expect around a second a page - and it keeps running if you switch to another app.</string>
+
+    <!-- Resize photo -->
+    <string name="options_photo_min_hint">Whatever the form asks for, at least 2 KB.</string>
+    <string name="options_pixels">Pixels</string>
+    <string name="options_photo_keep_hint">As many pixels as it has, unless it needs fewer to fit.</string>
+    <string name="options_photo_passport_hint">413 × 531 pixels (300 dpi), cut from the middle to that shape.</string>
+    <string name="options_width_px">Width (px)</string>
+    <string name="options_height_px">Height (px)</string>
+    <string name="options_photo_exact_hint">Cut from the middle to that shape, then made exactly that size.</string>
+    <string name="options_photo_hint">Each picture comes out as a JPEG under the size you choose, as sharp as that allows. Here 1 KB is 1,000 bytes, so it is under the limit however the form counts. The phone\'s hidden details, its location too, are left out.</string>
+
+    <!-- Edit text -->
+    <string name="options_edit_text_hint">The old words are painted over in the page\'s own colour and the new ones written in their place: in the document\'s own font where it can be, otherwise the nearest built-in one, and squeezed a little to stay inside a table cell. Hindi, Malayalam and every other script the phone shows can be typed. On a scan, only the words you change are repainted. The old words stay inside the file underneath, so anyone who copies the text can still find them: to take words out for good, use Remove areas.</string>
+
+    <!-- Create form -->
+    <string name="options_form_next_box">The next box you drag becomes a</string>
+    <string name="options_create_form_hint">Drag a box on the page above where each field should go, then name it in the list. The result is a real PDF form: anyone can fill it in, in any reader, and Fill in a form here seals the answers.</string>
+
+    <!-- Digital signature -->
+    <string name="options_cert_password">Certificate password</string>
+    <string name="options_sign_reason">Reason (optional): \"I approve this document\"</string>
+    <string name="options_sign_place">Place (optional)</string>
+    <string name="options_on_the_page">On the page</string>
+    <string name="options_sign_show_box">Show a signature box</string>
+    <string name="options_sign_invisible">Sign invisibly</string>
+    <string name="options_sign_last">On the last page</string>
+    <string name="options_sign_first">On the first page</string>
+    <string name="options_digital_sign_hint">Pick the PDF, then your certificate: a .pfx or .p12 from your bank, your employer or a signing service. The signature is the kind every reader\'s panel checks. The certificate and its password are used for this run and kept nowhere. This is not the same as Sign, which draws a picture of a signature.</string>
+
+    <!-- PDF/A, compare -->
+    <string name="options_pdfa_hint">PDF/A-2b is what records offices, courts and auditors ask for: a file that will open the same way in twenty years. The copy gets a colour profile, archive details and no scripts, attachments or password. A font the file uses but does not carry is the one thing that cannot be fixed here, and the result says if so.</string>
+    <string name="options_compare_hint">Add the older version first and the newer one second. The newer one comes back marked: new words highlighted in green, and a note wherever words were taken out saying what they were. Words only - a changed picture or layout is not seen.</string>
+
+    <!-- Rent receipts -->
+    <string name="options_rent_tenant">Tenant\'s name (you)</string>
+    <string name="options_rent_owner">Owner\'s name</string>
+    <string name="options_rent_address">Address of the property</string>
+    <string name="options_rent_monthly">Monthly rent, in rupees</string>
+    <string name="options_rent_first_month">First month</string>
+    <string name="options_year">Year</string>
+    <string name="options_rent_how_many">How many months</string>
+    <string name="options_rent_paid_by">Paid by</string>
+    <string name="options_rent_bank">Bank transfer</string>
+    <string name="options_rent_cash">Cash</string>
+    <string name="options_rent_cheque">Cheque</string>
+    <string name="options_rent_pan">Owner\'s PAN (needed over Rs. 1 lakh a year)</string>
+    <string name="options_rent_hint">One receipt a month, two to a page, with the amount in words as a receipt writes it. Print, get them signed by the owner, and hand them in with your HRA claim. Nothing typed here is kept or sent anywhere.</string>
+
+    <!-- Watermark -->
+    <string name="options_watermark_text">Watermark text</string>
+    <string name="options_layout">Layout</string>
+    <string name="options_strength">Strength</string>
+    <string name="options_light">Light</string>
+    <string name="options_strong">Strong</string>
+    <string name="options_watermark_hint">Sized to the page, so DRAFT and CONFIDENTIAL both cross it; longer text is shrunk to fit.</string>
+
+    <!-- Page numbers -->
+    <string name="options_page_numbers">Page numbers</string>
+    <string name="options_bates_numbers">Bates numbers</string>
+    <string name="options_bates_prefix">Prefix, such as ACME-</string>
+    <string name="options_digits">Digits</string>
+    <string name="options_bates_hint">One unbroken run across every file given, in the order they are listed: the second file carries on from where the first ended.</string>
+    <string name="options_leave_unnumbered">Leave this many pages unnumbered</string>
+
+    <!-- Crop -->
+    <string name="options_crop_mm">Trim by millimetres</string>
+    <string name="options_crop_auto">Remove white margins</string>
+    <string name="options_crop_auto_hint">Each page is trimmed to just outside its words and pictures, with 2 mm of white kept. A page with nothing to find is left alone.</string>
+    <string name="options_crop_mm_each">Millimetres off each edge</string>
+    <string name="options_mm_top">Top, mm</string>
+    <string name="options_mm_right">Right, mm</string>
+    <string name="options_mm_bottom">Bottom, mm</string>
+    <string name="options_mm_left">Left, mm</string>
+    <string name="options_crop_measured_hint">Measured on the page as you read it, whichever way it is stored.</string>
+    <string name="options_crop_then">Then put every page on</string>
+    <string name="options_leave_as_is">Leave as it is</string>
+    <string name="options_crop_scale_up">Scale small pages up to fit</string>
+    <string name="options_crop_keep_size">Keep small pages their real size</string>
+    <string name="options_crop_hint">Cropping hides the margins rather than deleting them, which is how every PDF reader works. To take something out of a page for good, use Remove areas.</string>
+
+    <!-- Background -->
+    <string name="options_background_hint">Drawn behind what is already on the page, so the text stays on top. A scanned page is one solid picture, so a colour will not show through it. Dark leaves black type unreadable; it is for pages of white type or pictures.</string>
+
+    <!-- Page labels -->
+    <string name="options_labels_set">Set the labels</string>
+    <string name="options_labels_remove">Remove the labels</string>
+    <string name="options_labels_remove_hint">Readers go back to counting from the first page.</string>
+    <string name="options_labels_front">Front matter pages (cover, contents)</string>
+    <string name="options_labels_front_style">Front matter style</string>
+    <string name="options_labels_rest">Then the rest</string>
+    <string name="options_starting_at">Starting at</string>
+    <string name="options_labels_prefix">Prefix, such as A- (optional)</string>
+    <string name="options_labels_hint">Labels change what a reader shows in its page box, not what is printed on the page. A report whose page 1 is the ninth sheet is the reason: with labels, typing 57 goes to 57. For numbers on the page itself, use Page numbers.</string>
+
+    <!-- Bookmarks, attachments -->
+    <string name="options_bookmarks_hint">Bookmarks are the table of contents a reader shows in its side panel. Edit the list above: a title and the page it opens. Indent an entry to nest it under the one before.</string>
+    <string name="options_attach_put">Put files inside</string>
+    <string name="options_attach_take">Take the files out</string>
+    <string name="options_attach_take_hint">Every file inside the document comes out as its own result, as it was.</string>
+    <string name="options_attach_put_hint">The first file is the PDF. Everything added after it is carried inside the copy byte for byte and never opened - a spreadsheet, a photo, another PDF. Readers list them in their attachments panel.</string>
+
+    <!-- Sign, add image -->
+    <string name="options_sign_hint">This draws your signature into the page, the same as printing, signing and scanning it back. It is not a cryptographic digital signature.</string>
+    <string name="options_width_share">Width, as a share of the page</string>
+    <string name="options_full_width">Full width</string>
+    <string name="options_add_image_hint">Pick the PDF, then the image: PNG, JPEG or WebP. It is drawn into the page, so the next reader cannot drag it off.</string>
+
+    <!-- Add text -->
+    <string name="options_what_to_write">What to write</string>
+    <string name="options_big">Big</string>
+    <string name="options_ink">Ink</string>
+    <string name="options_already_there">What is already there</string>
+    <string name="options_write_over">Write over it</string>
+    <string name="options_cover_first">Cover it first</string>
+    <string name="options_add_text_hint">Tap the page below to choose where the text goes. Covering paints white over the old text rather than deleting it, so it is a correction, not a redaction - use Remove areas when something has to be gone for good.</string>
+
+    <!-- Header and footer -->
+    <string name="options_along_top">Along the top</string>
+    <string name="options_along_bottom">Along the bottom</string>
+    <string name="options_header_hint">Four things are filled in as each page is stamped: {page} the page number, {total} how many there are, {date} today, and {name} the document\'s name. \"Confidential - {date}\" works, so does \"{name} - page {page} of {total}\".</string>
+    <string name="options_leave_unstamped">Leave this many pages unstamped</string>
+
+    <!-- Insert -->
+    <string name="options_insert_hint">The first file is the document being added to. Add a second file and its pages go in; add nothing and you get blank pages instead.</string>
+    <string name="options_insert_at">Insert at page</string>
+    <string name="options_insert_blank_heading">Blank pages, if no second file</string>
+    <string name="options_insert_or_replace">Or replace pages</string>
+    <string name="options_insert_beside">Insert beside</string>
+    <string name="options_insert_replace">Replace these pages</string>
+    <string name="options_insert_pages_replace">Pages to replace</string>
+    <string name="options_insert_replace_hint">The new pages go in where the first of these was</string>
+
+    <!-- Annotate -->
+    <string name="options_finger">What your finger does</string>
+    <string name="options_note_says">What the note says</string>
+    <string name="options_stamp_says">What it says</string>
+    <string name="options_own_word">Or your own word</string>
+    <string name="options_thickness">Thickness</string>
+    <string name="options_thin">Thin</string>
+    <string name="options_thick">Thick</string>
+    <string name="options_tap_page">Tap the page where it should go.</string>
+    <string name="options_drag_page">Drag across the page.</string>
+    <string name="options_draw_finger">Draw with your finger.</string>
+    <string name="options_annotate_hint">Marks are drawn into the page rather than added as notes, so they are still there in any other reader - and cannot be peeled off again. The document you chose is never changed either way.</string>
+
+    <!-- Forms -->
+    <string name="options_form_editable">Leave it editable</string>
+    <string name="options_form_seal">Seal the answers in</string>
+    <string name="options_form_seal_hint">Sealing draws the answers into the page and removes the fields, so nobody can retype them. It cannot be undone, and the editable original is untouched - Sheaf never writes to the file you chose.</string>
+    <string name="options_form_editable_hint">The result stays a form, so the answers can be changed later by anyone who opens it.</string>
+
+    <!-- N-up, split by size -->
+    <string name="options_per_sheet">Pages per sheet</string>
+    <string name="options_sheet">Sheet</string>
+    <string name="options_nup_hint">The sheet is turned whichever way shows the pages biggest: two upright pages side by side on a sideways sheet, two wide slides one above the other.</string>
+    <string name="options_each_part_under">Each part under</string>
+    <string name="options_split_size_hint">Each part is measured by saving it, so none comes out over the limit - except a single page that is bigger than the limit on its own, which becomes its own part and is marked.</string>
+
+    <!-- Metadata -->
+    <string name="options_meta_edit">Edit the details</string>
+    <string name="options_meta_clean">Clean hidden data</string>
+    <string name="options_meta_blank">Blank the details</string>
+    <string name="options_meta_strip_hint">Clears the title, author, subject, keywords, the app that made it and the dates. A scanner writes its make and model into a PDF; a word processor writes the name it is licensed to.</string>
+    <string name="options_meta_clean_hint">Takes out what a file gives away before it is sent: the details and their hidden XMP copy, page thumbnails and private editing data, and whichever of these you choose. The result says what was found.</string>
+    <string name="options_clean_scripts">Scripts and open actions</string>
+    <string name="options_clean_attachments">Attached files</string>
+    <string name="options_clean_comments">Comments and notes</string>
+    <plurals name="options_meta_batch_hint">
+        <item quantity="one">For all %1$d files: a box you fill is set on every one; a box left empty keeps each file\'s own.</item>
+        <item quantity="other">For all %1$d files: a box you fill is set on every one; a box left empty keeps each file\'s own.</item>
+    </plurals>
+    <string name="options_meta_single_hint">These are the document\'s current details. Edit whichever you want to change; an empty box clears it.</string>
+    <string name="options_title">Title</string>
+    <string name="options_author">Author</string>
+    <string name="options_subject">Subject</string>
+    <string name="options_keywords">Keywords</string>
+
+    <!-- Extract images, redact, summarise -->
+    <string name="options_extract_images_hint">This pulls out the pictures already inside the document at their original size. For pictures of the pages themselves, use PDF to images.</string>
+    <string name="options_redact_hint">Draw a box over anything that should go. The marked pages are rebuilt as images, so what was underneath is genuinely gone rather than covered - and those pages stop being selectable text. Other pages are untouched.</string>
+    <string name="options_summarise_hint">Picks the sentences that carry the document, and lists the amounts, dates and percentages in it. Every point is a sentence from the document itself, so each can be found again in the original. Worked out on this phone; nothing is sent anywhere. A scan needs Make searchable first. Translation needs a language model this app does not download, so it is not offered.</string>
+</resources>

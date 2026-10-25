@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Panel headings -->
+    <string name="options_about_this_tool">આ ટૂલ વિશે</string>
+    <string name="options_heading">વિકલ્પો</string>
+
+    <!-- Shared labels -->
+    <string name="options_pages">પેજ</string>
+    <string name="options_page">પેજ</string>
+    <string name="options_format">ફૉર્મેટ</string>
+    <string name="options_empty_every_page">બધા પેજ માટે ખાલી રાખો</string>
+    <string name="options_empty_whole_doc">આખા દસ્તાવેજ માટે ખાલી રાખો</string>
+    <string name="options_page_spec_hint">પેજ નંબર આ રીતે લખો: 1-3, 7, 12-</string>
+    <plurals name="options_page_spec_with_count">
+        <item quantity="one">%1$s. આ દસ્તાવેજમાં %2$d પેજ છે.</item>
+        <item quantity="other">%1$s. આ દસ્તાવેજમાં %2$d પેજ છે.</item>
+    </plurals>
+    <string name="options_less">ઓછું</string>
+    <string name="options_more">વધુ</string>
+    <string name="options_password">પાસવર્ડ</string>
+    <string name="options_under">આનાથી ઓછું</string>
+    <string name="options_any_size_mb">અથવા કોઈ પણ સાઇઝ, MB માં</string>
+    <string name="options_any_size_kb">અથવા કોઈ પણ સાઇઝ, KB માં</string>
+    <string name="options_size">સાઇઝ</string>
+    <string name="options_small">નાનું</string>
+    <string name="options_medium">મધ્યમ</string>
+    <string name="options_large">મોટું</string>
+    <string name="options_normal">સામાન્ય</string>
+    <string name="options_none">કોઈ નહીં</string>
+    <string name="options_colour">રંગ</string>
+    <string name="options_where">ક્યાં</string>
+    <string name="options_where_on_page">પેજ પર ક્યાં</string>
+    <string name="options_start_at">અહીંથી શરૂ કરો</string>
+    <string name="options_size_letter">લેટર</string>
+    <string name="options_size_legal">લીગલ</string>
+
+    <!-- Positions -->
+    <string name="options_top">ઉપર</string>
+    <string name="options_top_left">ઉપર ડાબે</string>
+    <string name="options_top_right">ઉપર જમણે</string>
+    <string name="options_bottom">નીચે</string>
+    <string name="options_bottom_left">નીચે ડાબે</string>
+    <string name="options_bottom_right">નીચે જમણે</string>
+    <string name="options_bottom_centre">નીચે વચ્ચે</string>
+    <string name="options_left">ડાબે</string>
+    <string name="options_right">જમણે</string>
+    <string name="options_middle">વચ્ચે</string>
+    <string name="options_centre">મધ્યમાં</string>
+
+    <!-- Colours -->
+    <string name="options_black">કાળો</string>
+    <string name="options_grey">રાખોડી</string>
+    <string name="options_red">લાલ</string>
+    <string name="options_blue">વાદળી</string>
+    <string name="options_green">લીલો</string>
+    <string name="options_pink">ગુલાબી</string>
+    <string name="options_yellow">પીળો</string>
+    <string name="options_cream">ક્રીમ</string>
+    <string name="options_sepia">સેપિયા</string>
+    <string name="options_dark">ડાર્ક</string>
+
+    <!-- Extract pages -->
+    <string name="options_extract_keep">આ પેજ રાખો</string>
+    <string name="options_extract_remove">આ પેજ કાઢી નાખો</string>
+    <string name="options_extract_pages_keep">રાખવાના પેજ</string>
+    <string name="options_extract_pages_remove">કાઢવાના પેજ</string>
+
+    <!-- Split -->
+    <string name="options_split_how">કેવી રીતે વિભાજિત કરવું</string>
+    <string name="options_split_every_n">દર N પેજે</string>
+    <string name="options_split_single">એક-એક પેજ</string>
+    <string name="options_split_ranges">શ્રેણી મુજબ</string>
+    <string name="options_split_bookmarks">બુકમાર્ક મુજબ</string>
+    <string name="options_split_pages_per_file">ફાઇલ દીઠ પેજ</string>
+    <string name="options_split_one_per_range">દરેક શ્રેણી માટે એક ફાઇલ</string>
+    <string name="options_split_ranges_hint">ફાઇલોને અલ્પવિરામથી અલગ કરો: 1-3, 4-8, 9-</string>
+    <string name="options_split_bookmarks_hint">દસ્તાવેજની પોતાની અનુક્રમણિકાની દરેક મુખ્ય એન્ટ્રી માટે એક ફાઇલ. સ્કૅન કરેલું પુસ્તક કે સ્ટેટમેન્ટનો સંગ્રહ વિભાજિત કરવાની આ સૌથી સહજ રીત છે. જે દસ્તાવેજમાં અનુક્રમણિકા ન હોય, ત્યાં અનુમાન લગાવવાને બદલે એમ જણાવવામાં આવે છે.</string>
+
+    <!-- PDF to images -->
+    <string name="options_resolution">રિઝોલ્યુશન</string>
+    <string name="options_dpi_screen">96 · સ્ક્રીન</string>
+    <string name="options_dpi_good">200 · સારું</string>
+    <string name="options_dpi_print">300 · પ્રિન્ટ</string>
+
+    <!-- Images to PDF -->
+    <string name="options_page_size">પેજની સાઇઝ</string>
+    <string name="options_size_fit">છબી જેટલું</string>
+    <string name="options_output">આઉટપુટ</string>
+    <string name="options_one_pdf">એક PDF, દરેક છબી માટે એક પેજ</string>
+    <string name="options_pdf_per_image">દરેક છબી માટે એક PDF</string>
+    <string name="options_margin">માર્જિન</string>
+    <string name="options_narrow">સાંકડું</string>
+    <string name="options_wide">પહોળું</string>
+
+    <!-- PDF to Office -->
+    <string name="options_make_a">બનાવો</string>
+    <string name="options_office_pictures">પેજની છબીઓ</string>
+    <string name="options_office_editable">ફેરફાર કરી શકાય તેવો ટેક્સ્ટ</string>
+    <string name="options_office_bring_pictures">છબીઓ પણ સાથે લો</string>
+    <string name="options_office_word_hint">ફકરા, મથાળાં, સૂચિઓ અને કોષ્ટકો, Word ની પોતાની સ્ટાઇલ સાથે, જેથી નેવિગેશન પેન કામ કરે અને ફેરફાર કરતાં ટેક્સ્ટ આપમેળે ગોઠવાય. PDF માં ફકરા નહીં, લીટીઓ હોય છે, એટલે આ ફરીથી રચના છે: લાંબો દસ્તાવેજ પછીથી તપાસી લો.</string>
+    <string name="options_office_excel_hint">દરેક પેજ માટે એક શીટ. કૉલમમાં ગોઠવાયેલી લીટીઓ સેલ બને છે; સંખ્યા સંખ્યા જ રહે છે, જેથી સરવાળા કામ કરે. સ્ટેટમેન્ટ અને કોષ્ટકો માટે શ્રેષ્ઠ.</string>
+    <string name="options_office_epub_hint">ઈ-રીડર માટે આપમેળે ગોઠવાતું પુસ્તક, મથાળાં મુજબ પ્રકરણોમાં વહેંચાયેલું.</string>
+    <string name="options_office_html_hint">છબીઓ સહિત એક સંપૂર્ણ વેબ પેજ, જે કોઈ પણ બ્રાઉઝરમાં ખૂલે છે.</string>
+    <string name="options_office_pptx_hint">દરેક પેજ માટે એક સ્લાઇડ, પેજના પોતાના આકારમાં: દરેક પેજની બરાબર તેવી જ છબી, અથવા તેની લીટીઓ ફેરફાર કરી શકાય તેવાં ટેક્સ્ટ બૉક્સ તરીકે.</string>
+    <string name="options_office_scanned_hint">સ્કૅન કરેલાં પેજમાં શબ્દો ત્યાં સુધી નથી હોતા જ્યાં સુધી શોધી શકાય તેવું બનાવો તેમને વાંચે નહીં.</string>
+
+    <!-- Office to PDF -->
+    <string name="options_office_to_pdf_hint">ફકરા, મથાળાં, સૂચિઓ અને કોષ્ટકો આવી જાય છે, A4 પર ફોનના પોતાના ફોન્ટમાં ગોઠવાઈને - ફોનમાં ફોન્ટ હોય ત્યાં હિન્દી, તમિલ, મલયાલમ અને બાકીની ભાષાઓ પણ. આકારો, ટેક્સ્ટ બૉક્સ અને ટ્રૅક કરેલા ફેરફારો નથી આવતા.</string>
+
+    <!-- Compress -->
+    <string name="options_compress_level">સ્તર પસંદ કરો</string>
+    <string name="options_compress_size">ચોક્કસ સાઇઝથી નાનું કરો</string>
+    <string name="options_compress_size_hint">સ્તરો સૌથી હળવાથી શરૂ કરીને અજમાવવામાં આવે છે અને જે પહેલું ફિટ થાય તે રાખવામાં આવે છે. કોઈ ફિટ ન થાય, તો તમને સૌથી નાનું મળે છે અને જણાવવામાં આવે છે; પછી સાઇઝ મુજબ વિભાજિત કરો તેને ફિટ થાય તેવા ભાગોમાં કાપી શકે છે.</string>
+    <string name="options_compress_pictures">જરૂર પડે તો પેજને છબી બનવા દો</string>
+    <string name="options_compress_pictures_hint">ફક્ત ત્યારે જ, જ્યારે કોઈ સ્તર સાઇઝથી નીચે ન લાવે. દરેક પેજ એક જ દેખાતી છબી બને છે; તેના શબ્દો નીચે રાખવામાં આવે છે, જેથી શોધ અને કૉપિ હજી પણ કામ કરે.</string>
+    <string name="options_compress_how_hard">કેટલું દબાવવું</string>
+    <string name="options_compress_hint">Sheaf દસ્તાવેજની અંદરની છબીઓ નાની કરે છે અને ટેક્સ્ટને અડકતું નથી, જેથી ટેક્સ્ટ સ્પષ્ટ અને પસંદ કરી શકાય તેવો રહે. સ્કૅન કરેલાં પેજ વિનાનો દસ્તાવેજ ભાગ્યે જ બદલાશે.</string>
+    <string name="options_check_size">પહેલાં સાઇઝ તપાસો</string>
+    <string name="options_check_trying">અજમાવી રહ્યાં છીએ…</string>
+    <string name="options_check_failed">આ માપી શકાયું નહીં. ચલાવશો તો પણ તમને જણાવવામાં આવશે.</string>
+    <string name="options_check_same">%1$s - આ સ્તરે પહેલેથી જ સૌથી નાનું છે, એટલે મૂળ ફાઇલ જ રાખવામાં આવશે.</string>
+    <string name="options_check_result">%1$s થી %2$s - %3$d%% નાનું.</string>
+
+    <!-- Set password -->
+    <string name="options_pw_open">ખોલવા માટેનો પાસવર્ડ</string>
+    <string name="options_pw_restrict">ફક્ત પ્રતિબંધ, પાસવર્ડ નહીં</string>
+    <string name="options_pw_again">ફરીથી લખો</string>
+    <string name="options_pw_hint">Sheaf AES-256 થી એન્ક્રિપ્ટ કરે છે અને પાસવર્ડ ક્યાંય સાચવતું નથી. તમે તે ભૂલી જાઓ, તો દસ્તાવેજ ફરી ખોલી શકાશે નહીં - અમારાથી પણ નહીં.</string>
+    <string name="options_pw_restrict_hint">ફાઇલ પાસવર્ડ વિના ખૂલે છે. તે એવી કી વડે એન્ક્રિપ્ટ થયેલી છે જે કોઈને આપવામાં આવતી નથી, એટલે નીચેના પ્રતિબંધો કંઈ લખીને હટાવી શકાતા નથી.</string>
+    <string name="options_pw_reader_may">વાચક શું કરી શકે</string>
+    <string name="options_allow_printing">પ્રિન્ટ કરવાની મંજૂરી આપો</string>
+    <string name="options_allow_copying">ટેક્સ્ટ કૉપિ કરવાની મંજૂરી આપો</string>
+    <string name="options_allow_changes">ફેરફારોની મંજૂરી આપો</string>
+    <string name="options_pw_request_restrict">આ ત્રણ વિનંતી છે, તાળું નહીં. PDF ધોરણ રીડર ઍપને તેનું પાલન કરવા કહે છે અને મોટા ભાગની કરે છે, પણ જે રીડર તેને અવગણે તે કરી શકે છે. જે કોઈ ફાઇલ ખોલી શકે, તે તેને નવી ફાઇલમાં પ્રિન્ટ કરી શકે છે.</string>
+    <string name="options_pw_request_lock">આ ત્રણ વિનંતી છે, તાળું નહીં. PDF ધોરણ રીડર ઍપને તેનું પાલન કરવા કહે છે અને મોટા ભાગની કરે છે, પણ જે રીડર તેને અવગણે તે કરી શકે છે. ખરેખર રક્ષણ આપતો ભાગ એન્ક્રિપ્શન છે.</string>
+
+    <!-- Merge, remove password -->
+    <string name="options_merge_hint">ફાઇલો ઉપરથી નીચેના ક્રમમાં જોડાય છે. ક્રમ બદલવા માટે તીરનો ઉપયોગ કરો.</string>
+    <string name="options_remove_pw_hint">તમારે દસ્તાવેજનો પાસવર્ડ જોઈશે. Sheaf તેને કોઈ પણ રીડરની જેમ ખોલે છે અને અનલૉક કરેલી કૉપિ સાચવે છે - તમારી પાસે ન હોય તેવો પાસવર્ડ તે પાછો મેળવી શકતું નથી.</string>
+
+    <!-- OCR -->
+    <string name="options_ocr_language">પેજની ભાષા</string>
+    <string name="options_ocr_hint">Sheaf સ્કૅનમાંના શબ્દો વાંચે છે અને તેમને પેજ પર અદૃશ્ય રીતે ગોઠવે છે, જેથી દસ્તાવેજ બરાબર તેવો જ દેખાય પણ તમે તેમાં શોધી, પસંદ કરી અને કૉપિ કરી શકો. બંને મૉડલ ઍપમાં જ છે; કંઈ ડાઉનલોડ થતું નથી. આ અહીંનું સૌથી ધીમું ટૂલ છે - પેજ દીઠ લગભગ એક સેકન્ડ લાગે છે - અને તમે બીજી ઍપ પર જાઓ તો પણ તે ચાલુ રહે છે.</string>
+
+    <!-- Resize photo -->
+    <string name="options_photo_min_hint">ફૉર્મ જે માગે તે, ઓછામાં ઓછું 2 KB.</string>
+    <string name="options_pixels">પિક્સેલ</string>
+    <string name="options_photo_keep_hint">તેમાં જેટલા પિક્સેલ છે તેટલા જ, સિવાય કે ફિટ થવા માટે ઓછા જોઈએ.</string>
+    <string name="options_photo_passport_hint">413 × 531 પિક્સેલ (300 dpi), વચ્ચેથી તે આકારમાં કાપેલું.</string>
+    <string name="options_width_px">પહોળાઈ (px)</string>
+    <string name="options_height_px">ઊંચાઈ (px)</string>
+    <string name="options_photo_exact_hint">વચ્ચેથી તે આકારમાં કાપીને, પછી બરાબર તે સાઇઝનું બનાવેલું.</string>
+    <string name="options_photo_hint">દરેક છબી તમે પસંદ કરેલી સાઇઝથી ઓછી JPEG તરીકે મળે છે, શક્ય તેટલી સ્પષ્ટ. અહીં 1 KB એટલે 1,000 બાઇટ, એટલે ફૉર્મ ગમે તે રીતે ગણે, તે મર્યાદાથી ઓછું જ રહે છે. ફોનની છુપી વિગતો, સ્થાન સહિત, કાઢી નાખવામાં આવે છે.</string>
+
+    <!-- Edit text -->
+    <string name="options_edit_text_hint">જૂના શબ્દો પર પેજના પોતાના રંગથી રંગ કરવામાં આવે છે અને તેમની જગ્યાએ નવા લખવામાં આવે છે: શક્ય હોય ત્યાં દસ્તાવેજના પોતાના ફોન્ટમાં, નહીંતર સૌથી નજીકના બિલ્ટ-ઇન ફોન્ટમાં, અને કોષ્ટકના સેલમાં રહે તે માટે થોડા સાંકડા કરીને. હિન્દી, મલયાલમ અને ફોન બતાવે તે દરેક લિપિમાં લખી શકાય છે. સ્કૅન પર, ફક્ત તમે બદલેલા શબ્દો જ ફરી રંગાય છે. જૂના શબ્દો ફાઇલની અંદર નીચે રહે છે, એટલે જે કોઈ ટેક્સ્ટ કૉપિ કરે તે તેમને શોધી શકે છે: શબ્દો કાયમ માટે કાઢવા, ભાગ દૂર કરો નો ઉપયોગ કરો.</string>
+
+    <!-- Create form -->
+    <string name="options_form_next_box">તમે આગળ જે બૉક્સ ખેંચશો તે આ બનશે:</string>
+    <string name="options_create_form_hint">ઉપરના પેજ પર જ્યાં દરેક ફીલ્ડ જોઈએ ત્યાં બૉક્સ ખેંચો, પછી સૂચિમાં તેને નામ આપો. પરિણામ સાચું PDF ફૉર્મ છે: કોઈ પણ તેને કોઈ પણ રીડરમાં ભરી શકે છે, અને અહીંનું ફૉર્મ ભરો જવાબોને સીલ કરે છે.</string>
+
+    <!-- Digital signature -->
+    <string name="options_cert_password">પ્રમાણપત્રનો પાસવર્ડ</string>
+    <string name="options_sign_reason">કારણ (વૈકલ્પિક): \"હું આ દસ્તાવેજને મંજૂરી આપું છું\"</string>
+    <string name="options_sign_place">સ્થળ (વૈકલ્પિક)</string>
+    <string name="options_on_the_page">પેજ પર</string>
+    <string name="options_sign_show_box">સહીનું બૉક્સ બતાવો</string>
+    <string name="options_sign_invisible">અદૃશ્ય રીતે સહી કરો</string>
+    <string name="options_sign_last">છેલ્લા પેજ પર</string>
+    <string name="options_sign_first">પહેલા પેજ પર</string>
+    <string name="options_digital_sign_hint">પહેલાં PDF પસંદ કરો, પછી તમારું પ્રમાણપત્ર: તમારી બૅન્ક, તમારા એમ્પ્લોયર કે સહી સેવા તરફથી મળેલી .pfx અથવા .p12 ફાઇલ. આ સહી એવી છે જે દરેક રીડરની પેનલ તપાસે છે. પ્રમાણપત્ર અને તેનો પાસવર્ડ ફક્ત આ વખતે વપરાય છે અને ક્યાંય સાચવવામાં આવતા નથી. આ સહી કરો જેવું નથી, જે સહીનું ચિત્ર દોરે છે.</string>
+
+    <!-- PDF/A, compare -->
+    <string name="options_pdfa_hint">રેકોર્ડ ઑફિસ, કોર્ટ અને ઑડિટર PDF/A-2b માગે છે: એવી ફાઇલ જે વીસ વર્ષ પછી પણ એ જ રીતે ખૂલે. કૉપિમાં કલર પ્રોફાઇલ અને આર્કાઇવની વિગતો ઉમેરાય છે, અને સ્ક્રિપ્ટ, જોડાણો કે પાસવર્ડ રહેતાં નથી. ફાઇલ જે ફોન્ટ વાપરે પણ સાથે ન રાખે, તે એકમાત્ર વસ્તુ અહીં સુધારી શકાતી નથી, અને એવું હોય તો પરિણામમાં જણાવાય છે.</string>
+    <string name="options_compare_hint">જૂનું વર્ઝન પહેલાં અને નવું બીજું ઉમેરો. નવું વર્ઝન નિશાનીઓ સાથે પાછું મળે છે: નવા શબ્દો લીલા રંગે હાઇલાઇટ થાય છે, અને જ્યાં શબ્દો કાઢી નાખ્યા હોય ત્યાં તે કયા હતા તે જણાવતી નોંધ હોય છે. ફક્ત શબ્દો - બદલાયેલી છબી કે લેઆઉટ દેખાતાં નથી.</string>
+
+    <!-- Rent receipts -->
+    <string name="options_rent_tenant">ભાડૂઆતનું નામ (તમે)</string>
+    <string name="options_rent_owner">માલિકનું નામ</string>
+    <string name="options_rent_address">મિલકતનું સરનામું</string>
+    <string name="options_rent_monthly">માસિક ભાડું, રૂપિયામાં</string>
+    <string name="options_rent_first_month">પહેલો મહિનો</string>
+    <string name="options_year">વર્ષ</string>
+    <string name="options_rent_how_many">કેટલા મહિના</string>
+    <string name="options_rent_paid_by">ચુકવણીની રીત</string>
+    <string name="options_rent_bank">બૅન્ક ટ્રાન્સફર</string>
+    <string name="options_rent_cash">રોકડ</string>
+    <string name="options_rent_cheque">ચેક</string>
+    <string name="options_rent_pan">માલિકનો PAN (વર્ષે ₹1 લાખથી વધુ હોય તો જરૂરી)</string>
+    <string name="options_rent_hint">દર મહિને એક રસીદ, એક પેજ પર બે, રકમ શબ્દોમાં, જેમ રસીદમાં લખાય છે. પ્રિન્ટ કરો, માલિકની સહી લો અને તમારા HRA દાવા સાથે જમા કરો. અહીં લખેલું કંઈ પણ સાચવવામાં કે ક્યાંય મોકલવામાં આવતું નથી.</string>
+
+    <!-- Watermark -->
+    <string name="options_watermark_text">વૉટરમાર્કનો ટેક્સ્ટ</string>
+    <string name="options_layout">લેઆઉટ</string>
+    <string name="options_strength">ઘટ્ટતા</string>
+    <string name="options_light">હળવું</string>
+    <string name="options_strong">ઘટ્ટ</string>
+    <string name="options_watermark_hint">પેજના માપ મુજબ, જેથી DRAFT અને CONFIDENTIAL બંને પેજને પાર કરે; લાંબો ટેક્સ્ટ ફિટ થવા નાનો કરવામાં આવે છે.</string>
+
+    <!-- Page numbers -->
+    <string name="options_page_numbers">પેજ નંબર</string>
+    <string name="options_bates_numbers">Bates નંબર</string>
+    <string name="options_bates_prefix">પ્રીફિક્સ, જેમ કે ACME-</string>
+    <string name="options_digits">અંકો</string>
+    <string name="options_bates_hint">આપેલી બધી ફાઇલોમાં, સૂચિના ક્રમમાં, એક સળંગ ક્રમ: બીજી ફાઇલ ત્યાંથી આગળ વધે છે જ્યાં પહેલી પૂરી થઈ.</string>
+    <string name="options_leave_unnumbered">આટલાં પેજને નંબર વિના રાખો</string>
+
+    <!-- Crop -->
+    <string name="options_crop_mm">મિલીમીટરમાં કાપો</string>
+    <string name="options_crop_auto">સફેદ માર્જિન દૂર કરો</string>
+    <string name="options_crop_auto_hint">દરેક પેજ તેના શબ્દો અને છબીઓની બરાબર બહાર સુધી કાપવામાં આવે છે, 2 mm સફેદ જગ્યા રાખીને. જે પેજ પર કંઈ ન મળે તેને જેમ છે તેમ રાખવામાં આવે છે.</string>
+    <string name="options_crop_mm_each">દરેક કિનારેથી મિલીમીટર</string>
+    <string name="options_mm_top">ઉપર, mm</string>
+    <string name="options_mm_right">જમણે, mm</string>
+    <string name="options_mm_bottom">નીચે, mm</string>
+    <string name="options_mm_left">ડાબે, mm</string>
+    <string name="options_crop_measured_hint">તમે પેજ જે રીતે વાંચો છો તે રીતે માપેલું, ભલે તે ગમે તે રીતે સંગ્રહિત હોય.</string>
+    <string name="options_crop_then">પછી દરેક પેજને આના પર મૂકો</string>
+    <string name="options_leave_as_is">જેમ છે તેમ રાખો</string>
+    <string name="options_crop_scale_up">નાનાં પેજ ફિટ થાય તેટલાં મોટાં કરો</string>
+    <string name="options_crop_keep_size">નાનાં પેજ તેમની મૂળ સાઇઝમાં રાખો</string>
+    <string name="options_crop_hint">ક્રૉપ કરવાથી માર્જિન કાઢી નાખવાને બદલે છુપાવાય છે, દરેક PDF રીડર આ રીતે જ કામ કરે છે. પેજમાંથી કંઈક કાયમ માટે કાઢવા, ભાગ દૂર કરો નો ઉપયોગ કરો.</string>
+
+    <!-- Background -->
+    <string name="options_background_hint">પેજ પર પહેલેથી જે છે તેની પાછળ દોરવામાં આવે છે, જેથી ટેક્સ્ટ ઉપર રહે. સ્કૅન કરેલું પેજ એક જ ઘન છબી હોય છે, એટલે તેમાંથી રંગ દેખાશે નહીં. ડાર્ક રંગથી કાળા અક્ષરો વાંચી શકાતા નથી; તે સફેદ અક્ષરો કે છબીઓવાળાં પેજ માટે છે.</string>
+
+    <!-- Page labels -->
+    <string name="options_labels_set">લેબલ સેટ કરો</string>
+    <string name="options_labels_remove">લેબલ દૂર કરો</string>
+    <string name="options_labels_remove_hint">રીડર ફરી પહેલા પેજથી ગણવા લાગે છે.</string>
+    <string name="options_labels_front">શરૂઆતનાં પેજ (કવર, અનુક્રમણિકા)</string>
+    <string name="options_labels_front_style">શરૂઆતનાં પેજની સ્ટાઇલ</string>
+    <string name="options_labels_rest">પછી બાકીનાં</string>
+    <string name="options_starting_at">આનાથી શરૂ</string>
+    <string name="options_labels_prefix">પ્રીફિક્સ, જેમ કે A- (વૈકલ્પિક)</string>
+    <string name="options_labels_hint">લેબલ રીડરના પેજ બૉક્સમાં શું દેખાય તે બદલે છે, પેજ પર શું છપાયેલું છે તે નહીં. જે રિપોર્ટનું પેજ 1 નવમું પાનું હોય, તેના માટે આ ઉપયોગી છે: લેબલ સાથે, 57 લખવાથી 57 પર જવાય છે. પેજ પર જ નંબર માટે, પેજ નંબર નો ઉપયોગ કરો.</string>
+
+    <!-- Bookmarks, attachments -->
+    <string name="options_bookmarks_hint">બુકમાર્ક એ અનુક્રમણિકા છે જે રીડર તેની સાઇડ પેનલમાં બતાવે છે. ઉપરની સૂચિમાં ફેરફાર કરો: શીર્ષક અને તે જે પેજ ખોલે છે. કોઈ એન્ટ્રીને આગળની એન્ટ્રી હેઠળ મૂકવા તેને ઇન્ડેન્ટ કરો.</string>
+    <string name="options_attach_put">અંદર ફાઇલો મૂકો</string>
+    <string name="options_attach_take">ફાઇલો બહાર કાઢો</string>
+    <string name="options_attach_take_hint">દસ્તાવેજની અંદરની દરેક ફાઇલ જેવી હતી તેવી જ, અલગ પરિણામ તરીકે બહાર આવે છે.</string>
+    <string name="options_attach_put_hint">પહેલી ફાઇલ PDF છે. તેના પછી ઉમેરેલું બધું કૉપિની અંદર બાઇટે બાઇટ જેમનું તેમ રાખવામાં આવે છે અને ક્યારેય ખોલવામાં આવતું નથી - સ્પ્રેડશીટ, ફોટો, બીજી PDF. રીડર તેમને તેમની જોડાણ પેનલમાં બતાવે છે.</string>
+
+    <!-- Sign, add image -->
+    <string name="options_sign_hint">આ તમારી સહી પેજમાં દોરે છે, જાણે પ્રિન્ટ કરીને, સહી કરીને પાછું સ્કૅન કર્યું હોય. આ ક્રિપ્ટોગ્રાફિક ડિજિટલ સહી નથી.</string>
+    <string name="options_width_share">પહોળાઈ, પેજના ભાગ તરીકે</string>
+    <string name="options_full_width">પૂરી પહોળાઈ</string>
+    <string name="options_add_image_hint">પહેલાં PDF પસંદ કરો, પછી છબી: PNG, JPEG અથવા WebP. તે પેજમાં દોરવામાં આવે છે, એટલે આગળનો વાચક તેને ખેંચીને હટાવી શકતો નથી.</string>
+
+    <!-- Add text -->
+    <string name="options_what_to_write">શું લખવું</string>
+    <string name="options_big">મોટું</string>
+    <string name="options_ink">શાહી</string>
+    <string name="options_already_there">પહેલેથી જે છે</string>
+    <string name="options_write_over">તેના પર લખો</string>
+    <string name="options_cover_first">પહેલાં ઢાંકો</string>
+    <string name="options_add_text_hint">ટેક્સ્ટ ક્યાં મૂકવો તે પસંદ કરવા નીચેના પેજ પર ટૅપ કરો. ઢાંકવાથી જૂના ટેક્સ્ટ પર સફેદ રંગ થાય છે, તે કાઢી નખાતો નથી, એટલે આ સુધારો છે, રીડૅક્શન નહીં - કંઈક કાયમ માટે કાઢવું હોય ત્યારે ભાગ દૂર કરો નો ઉપયોગ કરો.</string>
+
+    <!-- Header and footer -->
+    <string name="options_along_top">ઉપરની બાજુએ</string>
+    <string name="options_along_bottom">નીચેની બાજુએ</string>
+    <string name="options_header_hint">દરેક પેજ પર છાપ મારતી વખતે ચાર વસ્તુઓ ભરાય છે: {page} પેજ નંબર, {total} કુલ પેજ, {date} આજની તારીખ, અને {name} દસ્તાવેજનું નામ. \"Confidential - {date}\" ચાલે છે, અને \"{name} - પેજ {page} / {total}\" પણ.</string>
+    <string name="options_leave_unstamped">આટલાં પેજ પર છાપ ન મારો</string>
+
+    <!-- Insert -->
+    <string name="options_insert_hint">પહેલી ફાઇલ એ દસ્તાવેજ છે જેમાં ઉમેરવાનું છે. બીજી ફાઇલ ઉમેરો તો તેનાં પેજ અંદર જાય છે; કંઈ ન ઉમેરો તો તેના બદલે ખાલી પેજ મળે છે.</string>
+    <string name="options_insert_at">આ પેજ પર દાખલ કરો</string>
+    <string name="options_insert_blank_heading">ખાલી પેજ, જો બીજી ફાઇલ ન હોય તો</string>
+    <string name="options_insert_or_replace">અથવા પેજ બદલો</string>
+    <string name="options_insert_beside">બાજુમાં દાખલ કરો</string>
+    <string name="options_insert_replace">આ પેજ બદલો</string>
+    <string name="options_insert_pages_replace">બદલવાનાં પેજ</string>
+    <string name="options_insert_replace_hint">નવાં પેજ ત્યાં જાય છે જ્યાં આમાંનું પહેલું હતું</string>
+
+    <!-- Annotate -->
+    <string name="options_finger">તમારી આંગળી શું કરે</string>
+    <string name="options_note_says">નોંધમાં શું લખવું</string>
+    <string name="options_stamp_says">તેમાં શું લખેલું હોય</string>
+    <string name="options_own_word">અથવા તમારો પોતાનો શબ્દ</string>
+    <string name="options_thickness">જાડાઈ</string>
+    <string name="options_thin">પાતળું</string>
+    <string name="options_thick">જાડું</string>
+    <string name="options_tap_page">જ્યાં મૂકવું હોય ત્યાં પેજ પર ટૅપ કરો.</string>
+    <string name="options_drag_page">પેજ પર આંગળી ખેંચો.</string>
+    <string name="options_draw_finger">તમારી આંગળીથી દોરો.</string>
+    <string name="options_annotate_hint">નિશાનીઓ નોંધ તરીકે ઉમેરવાને બદલે પેજમાં દોરવામાં આવે છે, એટલે તે બીજા કોઈ પણ રીડરમાં પણ દેખાય છે - અને ફરી ઉખાડી શકાતી નથી. તમે પસંદ કરેલો દસ્તાવેજ કોઈ પણ રીતે ક્યારેય બદલાતો નથી.</string>
+
+    <!-- Forms -->
+    <string name="options_form_editable">ફેરફાર કરી શકાય તેવું રાખો</string>
+    <string name="options_form_seal">જવાબો સીલ કરો</string>
+    <string name="options_form_seal_hint">સીલ કરવાથી જવાબો પેજમાં દોરાય છે અને ફીલ્ડ દૂર થાય છે, જેથી કોઈ તેમને ફરી લખી ન શકે. આ પાછું વાળી શકાતું નથી, અને ફેરફાર કરી શકાય તેવું મૂળ જેમનું તેમ રહે છે - Sheaf તમે પસંદ કરેલી ફાઇલમાં ક્યારેય લખતું નથી.</string>
+    <string name="options_form_editable_hint">પરિણામ ફૉર્મ જ રહે છે, એટલે જે કોઈ તેને ખોલે તે પછીથી જવાબો બદલી શકે છે.</string>
+
+    <!-- N-up, split by size -->
+    <string name="options_per_sheet">શીટ દીઠ પેજ</string>
+    <string name="options_sheet">શીટ</string>
+    <string name="options_nup_hint">શીટને એ દિશામાં ફેરવવામાં આવે છે જેમાં પેજ સૌથી મોટાં દેખાય: આડી શીટ પર બે ઊભાં પેજ બાજુબાજુમાં, બે પહોળી સ્લાઇડ એકની ઉપર એક.</string>
+    <string name="options_each_part_under">દરેક ભાગ આનાથી ઓછો</string>
+    <string name="options_split_size_hint">દરેક ભાગ સાચવીને માપવામાં આવે છે, એટલે કોઈ પણ મર્યાદાથી વધુ નથી આવતો - સિવાય કે એવું એક પેજ જે એકલું જ મર્યાદાથી મોટું હોય; તે પોતાનો અલગ ભાગ બને છે અને તેના પર નિશાની કરવામાં આવે છે.</string>
+
+    <!-- Metadata -->
+    <string name="options_meta_edit">વિગતોમાં ફેરફાર કરો</string>
+    <string name="options_meta_clean">છુપો ડેટા સાફ કરો</string>
+    <string name="options_meta_blank">વિગતો ખાલી કરો</string>
+    <string name="options_meta_strip_hint">શીર્ષક, લેખક, વિષય, કીવર્ડ, તેને બનાવનારી ઍપ અને તારીખો સાફ કરે છે. સ્કૅનર PDF માં પોતાની કંપની અને મૉડલ લખે છે; વર્ડ પ્રોસેસર જેના નામે લાઇસન્સ હોય તે નામ લખે છે.</string>
+    <string name="options_meta_clean_hint">ફાઇલ મોકલતાં પહેલાં તે જે છતું કરે તે કાઢી નાખે છે: વિગતો અને તેમની છુપી XMP કૉપિ, પેજ થંબનેલ અને ખાનગી એડિટિંગ ડેટા, અને આમાંથી તમે જે પસંદ કરો તે. પરિણામમાં શું મળ્યું તે જણાવાય છે.</string>
+    <string name="options_clean_scripts">સ્ક્રિપ્ટ અને ખૂલતી વખતની ક્રિયાઓ</string>
+    <string name="options_clean_attachments">જોડેલી ફાઇલો</string>
+    <string name="options_clean_comments">ટિપ્પણીઓ અને નોંધો</string>
+    <plurals name="options_meta_batch_hint">
+        <item quantity="one">બધી %1$d ફાઇલ માટે: તમે ભરેલું બૉક્સ દરેકમાં સેટ થાય છે; ખાલી રાખેલું બૉક્સ દરેક ફાઇલની પોતાની વિગત રાખે છે.</item>
+        <item quantity="other">બધી %1$d ફાઇલો માટે: તમે ભરેલું બૉક્સ દરેકમાં સેટ થાય છે; ખાલી રાખેલું બૉક્સ દરેક ફાઇલની પોતાની વિગત રાખે છે.</item>
+    </plurals>
+    <string name="options_meta_single_hint">આ દસ્તાવેજની હાલની વિગતો છે. જે બદલવું હોય તેમાં ફેરફાર કરો; ખાલી બૉક્સ તે વિગત સાફ કરે છે.</string>
+    <string name="options_title">શીર્ષક</string>
+    <string name="options_author">લેખક</string>
+    <string name="options_subject">વિષય</string>
+    <string name="options_keywords">કીવર્ડ</string>
+
+    <!-- Extract images, redact, summarise -->
+    <string name="options_extract_images_hint">આ દસ્તાવેજની અંદર પહેલેથી રહેલી છબીઓ તેમની મૂળ સાઇઝમાં બહાર કાઢે છે. પેજની જ છબીઓ માટે, PDF થી છબીઓ નો ઉપયોગ કરો.</string>
+    <string name="options_redact_hint">જે કાઢવું હોય તેના પર બૉક્સ દોરો. નિશાની કરેલાં પેજ છબી તરીકે ફરી બનાવવામાં આવે છે, એટલે નીચે જે હતું તે ઢંકાવાને બદલે ખરેખર દૂર થાય છે - અને તે પેજનો ટેક્સ્ટ પસંદ કરી શકાતો નથી. બાકીનાં પેજ જેમનાં તેમ રહે છે.</string>
+    <string name="options_summarise_hint">દસ્તાવેજનો સાર ધરાવતાં વાક્યો પસંદ કરે છે, અને તેમાંની રકમો, તારીખો અને ટકાવારીની સૂચિ બનાવે છે. દરેક મુદ્દો દસ્તાવેજનું જ વાક્ય છે, એટલે દરેક મૂળમાં ફરી શોધી શકાય છે. આ ફોન પર જ ગણતરી થાય છે; કંઈ ક્યાંય મોકલાતું નથી. સ્કૅન માટે પહેલાં શોધી શકાય તેવું બનાવો જરૂરી છે. અનુવાદ માટે એવું લેંગ્વેજ મૉડલ જોઈએ જે આ ઍપ ડાઉનલોડ કરતી નથી, એટલે તે આપવામાં આવતું નથી.</string>
+</resources>
