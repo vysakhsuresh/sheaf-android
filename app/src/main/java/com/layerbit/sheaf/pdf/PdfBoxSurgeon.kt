@@ -34,7 +34,15 @@ import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import com.tom_roush.pdfbox.pdmodel.graphics.form.PDFormXObject
+import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotation
+import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLine
+import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationMarkup
+import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationSquareCircle
+import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationTextMarkup
 import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAppearanceStream
+import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDBorderStyleDictionary
+import com.tom_roush.pdfbox.pdmodel.graphics.color.PDColor
+import com.tom_roush.pdfbox.pdmodel.graphics.color.PDDeviceRGB
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
 import com.tom_roush.pdfbox.rendering.PDFRenderer
@@ -1406,6 +1414,7 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         input: PdfInput,
         marks: Map<Int, List<PageMark>>,
         output: File,
+        editable: Boolean,
         onProgress: (Int, Int) -> Unit
     ) = withDocument(input) { doc ->
         val marked = marks.filterValues { it.isNotEmpty() }
@@ -1419,6 +1428,12 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
             if (index !in 0 until doc.numberOfPages) continue
             val page = doc.getPage(index)
             val shown = ShownPage(page)
+            if (editable) {
+                addEditableMarks(doc, page, shown, list)
+                done += 1
+                onProgress(done, total)
+                continue
+            }
             // Every mark is worked out in the space the reader sees, with the page's own turn
             // and crop origin applied once, which is what makes a mark land correctly on a
             // page that is stored sideways.
@@ -1605,6 +1620,146 @@ class PdfBoxSurgeon(private val scratchDir: File? = null) : PdfSurgeon {
         }
 
         lettering.use { doc.save(output) }
+    }
+
+    /**
+     * The marks as annotations rather than ink in the page.
+     *
+     * Every coordinate goes through [ShownPage], the same as the flattened path, so a mark on
+     * a page stored sideways lands where the reader put it. Each annotation is given its
+     * appearance stream here: a reader that only paints appearances - most mobile ones - would
+     * otherwise show nothing at all. A mark whose appearance cannot be built still goes in,
+     * because the reader that can draw it from its dictionary is the one that will edit it.
+     */
+    private fun addEditableMarks(doc: PDDocument, page: PDPage, shown: ShownPage, list: List<PageMark>) {
+        val annotations = page.annotations
+        fun at(p: PagePoint): Pair<Float, Float> = shown.pointAt(p.x * shown.width, p.y * shown.height)
+        fun colourOf(mark: PageMark) = PDColor(
+            floatArrayOf(
+                ((mark.colour shr 16) and 0xFF) / 255f,
+                ((mark.colour shr 8) and 0xFF) / 255f,
+                (mark.colour and 0xFF) / 255f
+            ),
+            PDDeviceRGB.INSTANCE
+        )
+        fun border(width: Float) = PDBorderStyleDictionary().apply { this.width = width }
+        fun rectAround(points: List<Pair<Float, Float>>, pad: Float): PDRectangle {
+            val minX = points.minOf { it.first } - pad
+            val minY = points.minOf { it.second } - pad
+            val maxX = points.maxOf { it.first } + pad
+            val maxY = points.maxOf { it.second } + pad
+            return PDRectangle(minX, minY, maxX - minX, maxY - minY)
+        }
+        /** Quad points in the order PDF wants: upper left, upper right, lower left, lower right. */
+        fun quadOf(area: PageArea): FloatArray {
+            val (ulx, uly) = shown.pointAt(area.left * shown.width, area.top * shown.height)
+            val (urx, ury) = shown.pointAt((area.left + area.width) * shown.width, area.top * shown.height)
+            val (llx, lly) = shown.pointAt(area.left * shown.width, (area.top + area.height) * shown.height)
+            val (lrx, lry) = shown.pointAt((area.left + area.width) * shown.width, (area.top + area.height) * shown.height)
+            return floatArrayOf(ulx, uly, urx, ury, llx, lly, lrx, lry)
+        }
+        fun areaRect(area: PageArea) = shown.storedRect(area.left, area.top, area.left + area.width, area.top + area.height)
+
+        for (mark in list) {
+            val annotation: PDAnnotation = when (mark) {
+                is PageMark.Highlight -> PDAnnotationTextMarkup(PDAnnotationTextMarkup.SUB_TYPE_HIGHLIGHT).apply {
+                    rectangle = areaRect(mark.area)
+                    quadPoints = quadOf(mark.area)
+                    color = colourOf(mark)
+                    constantOpacity = HIGHLIGHT_ALPHA
+                }
+
+                is PageMark.Ink -> {
+                    if (mark.points.size < 2) continue
+                    val width = mark.widthPoints.coerceIn(0.3f, 24f)
+                    val points = mark.points.map(::at)
+                    PDAnnotationMarkup().apply {
+                        cosObject.setName(COSName.SUBTYPE, PDAnnotationMarkup.SUB_TYPE_INK)
+                        rectangle = rectAround(points, width)
+                        inkList = arrayOf(points.flatMap { listOf(it.first, it.second) }.toFloatArray())
+                        color = colourOf(mark)
+                        borderStyle = border(width)
+                    }
+                }
+
+                is PageMark.Shape -> when (mark.kind) {
+                    PageMark.Shape.Kind.UNDERLINE, PageMark.Shape.Kind.STRIKETHROUGH ->
+                        PDAnnotationTextMarkup(
+                            if (mark.kind == PageMark.Shape.Kind.UNDERLINE) PDAnnotationTextMarkup.SUB_TYPE_UNDERLINE
+                            else PDAnnotationTextMarkup.SUB_TYPE_STRIKEOUT
+                        ).apply {
+                            rectangle = areaRect(mark.area)
+                            quadPoints = quadOf(mark.area)
+                            color = colourOf(mark)
+                        }
+
+                    PageMark.Shape.Kind.BOX, PageMark.Shape.Kind.CIRCLE ->
+                        PDAnnotationSquareCircle(
+                            if (mark.kind == PageMark.Shape.Kind.BOX) PDAnnotationSquareCircle.SUB_TYPE_SQUARE
+                            else PDAnnotationSquareCircle.SUB_TYPE_CIRCLE
+                        ).apply {
+                            rectangle = areaRect(mark.area)
+                            color = colourOf(mark)
+                            borderStyle = border(mark.widthPoints.coerceIn(0.3f, 12f))
+                        }
+                }
+
+                is PageMark.Line -> {
+                    val (x1, y1) = at(mark.from)
+                    val (x2, y2) = at(mark.to)
+                    val width = mark.widthPoints.coerceIn(0.3f, 12f)
+                    PDAnnotationLine().apply {
+                        line = floatArrayOf(x1, y1, x2, y2)
+                        rectangle = rectAround(listOf(x1 to y1, x2 to y2), width * 6f)
+                        color = colourOf(mark)
+                        interiorColor = colourOf(mark)
+                        borderStyle = border(width)
+                        if (mark.arrow) endPointEndingStyle = PDAnnotationLine.LE_CLOSED_ARROW
+                    }
+                }
+
+                is PageMark.Note, is PageMark.Stamp -> {
+                    val stamp = mark is PageMark.Stamp
+                    val text = (if (mark is PageMark.Note) mark.text else (mark as PageMark.Stamp).text.uppercase()).trim()
+                    if (text.isEmpty()) continue
+                    val anchor = if (mark is PageMark.Note) mark.at else (mark as PageMark.Stamp).at
+                    val size = if (mark is PageMark.Note) mark.sizePoints.coerceIn(MIN_NOTE_POINTS, MAX_NOTE_POINTS)
+                    else (minOf(shown.width, shown.height) * 0.045f).coerceIn(10f, 28f)
+                    // Sized from a plain estimate of the text: the reader reflows free text to
+                    // its own box anyway, so the box only has to be roomy enough to start with.
+                    val lines = text.split('\n')
+                    val boxWidth = (lines.maxOf { it.length } * size * 0.55f + size).coerceAtMost(shown.width * 0.6f)
+                    val boxHeight = lines.size * size * LINE_SPACING + size * 0.6f
+                    val left = (anchor.x * shown.width).coerceIn(0f, (shown.width - boxWidth).coerceAtLeast(0f))
+                    val top = (anchor.y * shown.height).coerceIn(0f, (shown.height - boxHeight).coerceAtLeast(0f))
+                    val r = ((mark.colour shr 16) and 0xFF) / 255f
+                    val g = ((mark.colour shr 8) and 0xFF) / 255f
+                    val b = (mark.colour and 0xFF) / 255f
+                    PDAnnotationMarkup().apply {
+                        cosObject.setName(COSName.SUBTYPE, PDAnnotationMarkup.SUB_TYPE_FREETEXT)
+                        rectangle = shown.storedRect(
+                            left / shown.width, top / shown.height,
+                            (left + boxWidth) / shown.width, (top + boxHeight) / shown.height
+                        )
+                        contents = text
+                        defaultAppearance = "/Helv ${"%.1f".format(java.util.Locale.US, size)} Tf $r $g $b rg"
+                        // A note keeps its pale card; a stamp is a coloured frame on nothing.
+                        if (!stamp) color = PDColor(floatArrayOf(1f, 0.97f, 0.78f), PDDeviceRGB.INSTANCE)
+                        borderStyle = border(if (stamp) size * 0.12f else 0.6f)
+                        if (shown.rotation != 0) cosObject.setInt(COSName.ROTATE, shown.rotation)
+                    }
+                }
+            }
+            annotation.page = page
+            annotation.isPrinted = true
+            if (annotation is PDAnnotationMarkup) {
+                annotation.creationDate = java.util.Calendar.getInstance()
+                annotation.titlePopup = "Sheaf"
+                runCatching { annotation.constructAppearances(doc) }
+            }
+            annotations.add(annotation)
+        }
+        page.annotations = annotations
     }
 
     /** An ellipse inside the box, as four Bezier curves; PDF has no circle operator. */

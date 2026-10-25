@@ -927,7 +927,7 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
                 values = state.formValues,
                 flatten = config.flattenForm
             )
-            ToolId.ANNOTATE -> AnnotateOp(state.marks)
+            ToolId.ANNOTATE -> AnnotateOp(state.marks, editable = sheaf.settings.current.editableMarks)
             ToolId.REDACT -> RedactOp(state.redactions)
             ToolId.N_UP -> NUpOp(config.perSheet, config.nUpPaper)
             ToolId.SPLIT_BY_SIZE -> SplitBySizeOp(config.partMb.toLong() * 1024 * 1024)

@@ -329,8 +329,16 @@ class AddImageOp(private val anchor: ImageStamp.Anchor, private val widthFractio
  *
  * The cost is that the marks cannot be peeled off again, and the UI says so. The document the
  * user chose is untouched either way: this writes a new one.
+ *
+ * [editable] is the exception the user can choose in Settings ("Save marks as editable
+ * annotations"): the marks go in as real annotations with their own appearances, for people
+ * who will keep working on the document in Acrobat or another reader.
  */
-class AnnotateOp(private val marks: Map<Int, List<PageMark>>) : Op {
+class AnnotateOp(
+    private val marks: Map<Int, List<PageMark>>,
+    /** Write the marks as annotations other readers can edit, rather than into the page. */
+    private val editable: Boolean = false
+) : Op {
 
     override val tool = ToolId.ANNOTATE
     override val title = "Mark up"
@@ -353,10 +361,10 @@ class AnnotateOp(private val marks: Map<Int, List<PageMark>>) : Op {
         val output = context.workspace.newOutput(input.baseName, "marked")
 
         try {
-            context.surgeon.annotate(pdfInput, marks, output) { done, total ->
+            context.surgeon.annotate(pdfInput, marks, output, editable = editable, onProgress = { done, total ->
                 context.checkCancelled()
                 onProgress(Progress(done, total, "Drawing on page $done of $total"))
-            }
+            })
         } catch (e: PdfException) {
             output.delete()
             return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Failed."))

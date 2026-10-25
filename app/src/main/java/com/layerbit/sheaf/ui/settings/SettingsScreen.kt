@@ -120,6 +120,15 @@ fun SettingsScreen(
                 )
                 Divider()
                 ToggleRow(
+                    title = "Save marks as editable annotations",
+                    detail = "Mark up keeps highlights, drawings and notes as annotations any PDF " +
+                        "reader can edit or delete later. Off draws them into the page, so they " +
+                        "stay exactly as made. Sign and Remove areas always draw into the page.",
+                    checked = settings.editableMarks,
+                    onChange = { on -> onChange { it.copy(editableMarks = on) } }
+                )
+                Divider()
+                ToggleRow(
                     title = "Ask where to save every time",
                     detail = "Off means results go to one folder you choose, which is what " +
                         "makes saving forty exported pages one gesture instead of forty.",

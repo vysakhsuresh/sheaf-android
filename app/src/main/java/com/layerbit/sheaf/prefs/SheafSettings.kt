@@ -39,6 +39,7 @@ class SheafSettings(context: Context) {
             .putStringSet(KEY_FAVOURITES, updated.favouriteTools)
             .putString(KEY_SAVE_FOLDER, updated.saveFolder)
             .putString(KEY_RECENT_TOOLS, updated.recentTools.joinToString(","))
+            .putBoolean(KEY_EDITABLE_MARKS, updated.editableMarks)
             .apply()
         _state.value = updated
     }
@@ -67,7 +68,8 @@ class SheafSettings(context: Context) {
             askWhereToSave = prefs.getBoolean(KEY_CONFIRM_SAVE, true),
             favouriteTools = prefs.getStringSet(KEY_FAVOURITES, emptySet()).orEmpty(),
             saveFolder = prefs.getString(KEY_SAVE_FOLDER, null),
-            recentTools = prefs.getString(KEY_RECENT_TOOLS, null).orEmpty().split(",").filter { it.matches(Regex("[A-Z_]+")) }
+            recentTools = prefs.getString(KEY_RECENT_TOOLS, null).orEmpty().split(",").filter { it.matches(Regex("[A-Z_]+")) },
+            editableMarks = prefs.getBoolean(KEY_EDITABLE_MARKS, false)
         )
     }
 
@@ -81,6 +83,7 @@ class SheafSettings(context: Context) {
         const val KEY_FAVOURITES = "favouriteTools"
         const val KEY_SAVE_FOLDER = "saveFolder"
         const val KEY_RECENT_TOOLS = "recentTools"
+        const val KEY_EDITABLE_MARKS = "editableMarks"
         const val MAX_RECENT_TOOLS = 6
     }
 }
@@ -114,7 +117,14 @@ data class Settings(
     /**
      * The tools opened lately, newest first, at most six. Tool names only: never a file.
      */
-    val recentTools: List<String> = emptyList()
+    val recentTools: List<String> = emptyList(),
+    /**
+     * Mark up writes highlights, ink, shapes and notes as annotations another reader can
+     * still edit or delete, instead of drawing them into the page. Off by default, because a
+     * mark that someone else's app can quietly remove is not what most people sending a
+     * marked-up document expect. Sign and Remove areas always flatten, whatever this says.
+     */
+    val editableMarks: Boolean = false
 )
 
 enum class ThemeChoice(val label: String) {

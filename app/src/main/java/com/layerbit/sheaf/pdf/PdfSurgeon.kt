@@ -198,6 +198,13 @@ interface PdfSurgeon {
         input: PdfInput,
         marks: Map<Int, List<PageMark>>,
         output: File,
+        /**
+         * Write the marks as PDF annotations (highlight, ink, square, circle, line, free text)
+         * that any reader can still edit or delete, rather than into the page content. Each
+         * carries its own appearance stream, so it looks the same in a reader that does not
+         * draw annotations itself.
+         */
+        editable: Boolean = false,
         onProgress: (Int, Int) -> Unit = { _, _ -> }
     )
 
