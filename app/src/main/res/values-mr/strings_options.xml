@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Panel headings -->
+    <string name="options_about_this_tool">या टूलविषयी</string>
+    <string name="options_heading">पर्याय</string>
+
+    <!-- Shared labels -->
+    <string name="options_pages">पेज</string>
+    <string name="options_page">पेज</string>
+    <string name="options_format">फॉरमॅट</string>
+    <string name="options_empty_every_page">सर्व पेजसाठी रिकामे ठेवा</string>
+    <string name="options_empty_whole_doc">संपूर्ण दस्तऐवजासाठी रिकामे ठेवा</string>
+    <string name="options_page_spec_hint">पेज क्रमांक असे टाइप करा: 1-3, 7, 12-</string>
+    <plurals name="options_page_spec_with_count">
+        <item quantity="one">%1$s. या दस्तऐवजात %2$d पेज आहे.</item>
+        <item quantity="other">%1$s. या दस्तऐवजात %2$d पेज आहेत.</item>
+    </plurals>
+    <string name="options_less">कमी</string>
+    <string name="options_more">अधिक</string>
+    <string name="options_password">पासवर्ड</string>
+    <string name="options_under">यापेक्षा कमी</string>
+    <string name="options_any_size_mb">किंवा कोणताही आकार, MB मध्ये</string>
+    <string name="options_any_size_kb">किंवा कोणताही आकार, KB मध्ये</string>
+    <string name="options_size">आकार</string>
+    <string name="options_small">लहान</string>
+    <string name="options_medium">मध्यम</string>
+    <string name="options_large">मोठा</string>
+    <string name="options_normal">सामान्य</string>
+    <string name="options_none">काहीही नाही</string>
+    <string name="options_colour">रंग</string>
+    <string name="options_where">कुठे</string>
+    <string name="options_where_on_page">पेजवर कुठे</string>
+    <string name="options_start_at">येथून सुरू करा</string>
+    <string name="options_size_letter">लेटर</string>
+    <string name="options_size_legal">लीगल</string>
+
+    <!-- Positions -->
+    <string name="options_top">वर</string>
+    <string name="options_top_left">वर डावीकडे</string>
+    <string name="options_top_right">वर उजवीकडे</string>
+    <string name="options_bottom">खाली</string>
+    <string name="options_bottom_left">खाली डावीकडे</string>
+    <string name="options_bottom_right">खाली उजवीकडे</string>
+    <string name="options_bottom_centre">खाली मध्यभागी</string>
+    <string name="options_left">डावीकडे</string>
+    <string name="options_right">उजवीकडे</string>
+    <string name="options_middle">मध्यभागी</string>
+    <string name="options_centre">मध्यभागी</string>
+
+    <!-- Colours -->
+    <string name="options_black">काळा</string>
+    <string name="options_grey">राखाडी</string>
+    <string name="options_red">लाल</string>
+    <string name="options_blue">निळा</string>
+    <string name="options_green">हिरवा</string>
+    <string name="options_pink">गुलाबी</string>
+    <string name="options_yellow">पिवळा</string>
+    <string name="options_cream">क्रीम</string>
+    <string name="options_sepia">सेपिया</string>
+    <string name="options_dark">गडद</string>
+
+    <!-- Extract pages -->
+    <string name="options_extract_keep">ही पेज ठेवा</string>
+    <string name="options_extract_remove">ही पेज काढा</string>
+    <string name="options_extract_pages_keep">ठेवायची पेज</string>
+    <string name="options_extract_pages_remove">काढायची पेज</string>
+
+    <!-- Split -->
+    <string name="options_split_how">कसे विभाजित करायचे</string>
+    <string name="options_split_every_n">दर N पेजनी</string>
+    <string name="options_split_single">एकेक पेज</string>
+    <string name="options_split_ranges">रेंजनुसार</string>
+    <string name="options_split_bookmarks">बुकमार्कनुसार</string>
+    <string name="options_split_pages_per_file">प्रति फाइल पेज</string>
+    <string name="options_split_one_per_range">प्रत्येक रेंजसाठी एक फाइल</string>
+    <string name="options_split_ranges_hint">फाइल स्वल्पविरामाने वेगळ्या करा: 1-3, 4-8, 9-</string>
+    <string name="options_split_bookmarks_hint">दस्तऐवजाच्या स्वतःच्या अनुक्रमणिकेतील प्रत्येक मुख्य नोंदीसाठी एक फाइल. स्कॅन केलेले पुस्तक किंवा स्टेटमेंटचा गठ्ठा वेगळा करण्याचा हा सोपा मार्ग आहे. ज्या दस्तऐवजांत अनुक्रमणिका नाही, त्यांच्याबाबत अंदाज न लावता तसे सांगितले जाते.</string>
+
+    <!-- PDF to images -->
+    <string name="options_resolution">रिझोल्यूशन</string>
+    <string name="options_dpi_screen">96 · स्क्रीन</string>
+    <string name="options_dpi_good">200 · चांगले</string>
+    <string name="options_dpi_print">300 · प्रिंट</string>
+
+    <!-- Images to PDF -->
+    <string name="options_page_size">पेजचा आकार</string>
+    <string name="options_size_fit">इमेजइतका</string>
+    <string name="options_output">आउटपुट</string>
+    <string name="options_one_pdf">एक PDF, प्रत्येक इमेजसाठी एक पेज</string>
+    <string name="options_pdf_per_image">प्रत्येक इमेजसाठी एक PDF</string>
+    <string name="options_margin">समास</string>
+    <string name="options_narrow">अरुंद</string>
+    <string name="options_wide">रुंद</string>
+
+    <!-- PDF to Office -->
+    <string name="options_make_a">काय बनवायचे</string>
+    <string name="options_office_pictures">पेजची चित्रे</string>
+    <string name="options_office_editable">संपादित करता येणारा मजकूर</string>
+    <string name="options_office_bring_pictures">चित्रेही सोबत आणा</string>
+    <string name="options_office_word_hint">परिच्छेद, शीर्षके, याद्या आणि टेबल, Word च्या स्वतःच्या स्टाइलसह; त्यामुळे नेव्हिगेशन पेन चालते आणि संपादन केल्यावर मजकूर पुन्हा जुळवला जातो. PDF मध्ये परिच्छेद नसून ओळी असतात, त्यामुळे ही पुनर्रचना आहे: मोठा दस्तऐवज नंतर एकदा तपासा.</string>
+    <string name="options_office_excel_hint">प्रत्येक पेजसाठी एक शीट. स्तंभांमध्ये जुळणाऱ्या ओळी सेल बनतात; संख्या संख्याच राहते, त्यामुळे बेरीज चालते. स्टेटमेंट आणि टेबलसाठी सर्वोत्तम.</string>
+    <string name="options_office_epub_hint">ई-रीडरसाठी रिफ्लो होणारे पुस्तक, शीर्षकांनुसार प्रकरणांत विभागलेले.</string>
+    <string name="options_office_html_hint">चित्रांसह एकच स्वयंपूर्ण वेब पेज, जे कोणत्याही ब्राउझरमध्ये उघडते.</string>
+    <string name="options_office_pptx_hint">प्रत्येक पेजसाठी एक स्लाइड, पेजच्याच आकारात: प्रत्येक पेजचे जसेच्या तसे चित्र, किंवा त्याच्या ओळी संपादित करता येणाऱ्या टेक्स्ट बॉक्समध्ये.</string>
+    <string name="options_office_scanned_hint">शोधण्यायोग्य बनवा वापरून वाचेपर्यंत स्कॅन केलेल्या पेजमध्ये शब्द नसतात.</string>
+
+    <!-- Office to PDF -->
+    <string name="options_office_to_pdf_hint">परिच्छेद, शीर्षके, याद्या आणि टेबल येतात, A4 वर फोनच्या स्वतःच्या फॉन्टमध्ये मांडले जातात - फोनमध्ये फॉन्ट असल्यास हिंदी, तमिळ, मल्याळम आणि इतर भाषाही. आकार, टेक्स्ट बॉक्स आणि ट्रॅक केलेले बदल येत नाहीत.</string>
+
+    <!-- Compress -->
+    <string name="options_compress_level">स्तर निवडा</string>
+    <string name="options_compress_size">ठरावीक आकारापेक्षा कमी करा</string>
+    <string name="options_compress_size_hint">सर्वात हलक्या स्तरापासून प्रयत्न केला जातो आणि जो प्रथम बसतो तो ठेवला जातो. कोणताच बसला नाही, तर सर्वात लहान फाइल मिळते आणि तसे सांगितले जाते; मग आकारानुसार विभाजित करा वापरून ती बसतील असे भाग करता येतात.</string>
+    <string name="options_compress_pictures">गरज पडल्यास पेजची चित्रे बनू द्या</string>
+    <string name="options_compress_pictures_hint">कोणताच स्तर आकाराखाली येत नसेल तेव्हाच. प्रत्येक पेज तसेच दिसणारे एक चित्र बनते; त्याचे शब्द खाली राखले जातात, त्यामुळे शोध आणि कॉपी चालतात.</string>
+    <string name="options_compress_how_hard">किती कॉम्प्रेस करायचे</string>
+    <string name="options_compress_hint">Sheaf दस्तऐवजातील इमेज लहान करते आणि मजकुराला हात लावत नाही, त्यामुळे मजकूर स्पष्ट आणि निवडण्यायोग्य राहतो. स्कॅन केलेली पेज नसलेल्या दस्तऐवजात फारसा फरक पडणार नाही.</string>
+    <string name="options_check_size">आधी आकार तपासा</string>
+    <string name="options_check_trying">प्रयत्न करत आहे…</string>
+    <string name="options_check_failed">हे मोजता आले नाही. चालवल्यावर तरीही कळेल.</string>
+    <string name="options_check_same">%1$s - या स्तरावर आधीच शक्य तितकी लहान आहे, त्यामुळे मूळ फाइल ठेवली जाईल.</string>
+    <string name="options_check_result">%1$s वरून %2$s - %3$d%% लहान.</string>
+
+    <!-- Set password -->
+    <string name="options_pw_open">उघडण्यासाठी पासवर्ड</string>
+    <string name="options_pw_restrict">फक्त निर्बंध, पासवर्ड नाही</string>
+    <string name="options_pw_again">पुन्हा टाइप करा</string>
+    <string name="options_pw_hint">Sheaf AES-256 ने एन्क्रिप्ट करते आणि पासवर्ड कुठेही ठेवत नाही. तुम्ही तो विसरल्यास दस्तऐवज पुन्हा उघडता येणार नाही - आम्हालाही नाही.</string>
+    <string name="options_pw_restrict_hint">फाइल पासवर्डशिवाय उघडते. ती अशा कीने एन्क्रिप्ट केलेली असते जी कोणालाही दिली जात नाही, त्यामुळे खालील निर्बंध काहीही टाइप करून काढता येत नाहीत.</string>
+    <string name="options_pw_reader_may">वाचक काय करू शकतो</string>
+    <string name="options_allow_printing">प्रिंट करू द्या</string>
+    <string name="options_allow_copying">मजकूर कॉपी करू द्या</string>
+    <string name="options_allow_changes">बदल करू द्या</string>
+    <string name="options_pw_request_restrict">हे तीन पर्याय म्हणजे विनंती आहे, कुलूप नाही. PDF मानक वाचकांना यांचे पालन करायला सांगते आणि बहुतेक करतात, पण दुर्लक्ष करणारा वाचक करू शकतो. फाइल उघडू शकणारा कोणीही ती नवीन फाइलमध्ये प्रिंट करू शकतो.</string>
+    <string name="options_pw_request_lock">हे तीन पर्याय म्हणजे विनंती आहे, कुलूप नाही. PDF मानक वाचकांना यांचे पालन करायला सांगते आणि बहुतेक करतात, पण दुर्लक्ष करणारा वाचक करू शकतो. खरे संरक्षण एन्क्रिप्शनच देते.</string>
+
+    <!-- Merge, remove password -->
+    <string name="options_merge_hint">फाइल वरून खाली क्रमाने जोडल्या जातात. क्रम बदलण्यासाठी बाण वापरा.</string>
+    <string name="options_remove_pw_hint">तुम्हाला दस्तऐवजाचा पासवर्ड लागेल. Sheaf तो कोणत्याही वाचकाप्रमाणे उघडते आणि अनलॉक केलेली प्रत सेव्ह करते - तुमच्याकडे नसलेला पासवर्ड ते शोधू शकत नाही.</string>
+
+    <!-- OCR -->
+    <string name="options_ocr_language">पेजची भाषा</string>
+    <string name="options_ocr_hint">Sheaf स्कॅनमधील शब्द वाचते आणि ते पेजवर अदृश्यपणे ठेवते, त्यामुळे दस्तऐवज अगदी तसाच दिसतो पण तुम्ही शोधू, निवडू आणि कॉपी करू शकता. दोन्ही मॉडेल अ‍ॅपमध्येच आहेत; काहीही डाउनलोड होत नाही. हे येथील सर्वात संथ टूल आहे - प्रति पेज सुमारे एक सेकंद लागतो - आणि तुम्ही दुसऱ्या अ‍ॅपवर गेलात तरी चालू राहते.</string>
+
+    <!-- Resize photo -->
+    <string name="options_photo_min_hint">फॉर्म जे मागेल ते, किमान 2 KB.</string>
+    <string name="options_pixels">पिक्सेल</string>
+    <string name="options_photo_keep_hint">जितके पिक्सेल आहेत तितके, बसवण्यासाठी कमी लागत नसतील तर.</string>
+    <string name="options_photo_passport_hint">413 × 531 पिक्सेल (300 dpi), मध्यभागातून त्या आकारात कापलेले.</string>
+    <string name="options_width_px">रुंदी (px)</string>
+    <string name="options_height_px">उंची (px)</string>
+    <string name="options_photo_exact_hint">मध्यभागातून त्या आकारात कापले जाते, मग अगदी त्याच आकाराचे केले जाते.</string>
+    <string name="options_photo_hint">प्रत्येक चित्र तुम्ही निवडलेल्या आकारापेक्षा कमी JPEG म्हणून, शक्य तितके स्पष्ट मिळते. येथे 1 KB म्हणजे 1,000 बाइट, त्यामुळे फॉर्म कसाही मोजो, ते मर्यादेखालीच असते. फोनचे लपलेले तपशील, स्थानासह, वगळले जातात.</string>
+
+    <!-- Edit text -->
+    <string name="options_edit_text_hint">जुन्या शब्दांवर पेजच्याच रंगाने रंग दिला जातो आणि त्यांच्या जागी नवीन शब्द लिहिले जातात: शक्य तिथे दस्तऐवजाच्याच फॉन्टमध्ये, नाहीतर सर्वात जवळच्या अंगभूत फॉन्टमध्ये, आणि टेबलच्या सेलमध्ये बसावेत म्हणून थोडे आकुंचित करून. हिंदी, मल्याळम आणि फोन दाखवणारी प्रत्येक लिपी टाइप करता येते. स्कॅनवर फक्त तुम्ही बदललेले शब्दच पुन्हा रंगवले जातात. जुने शब्द फाइलमध्ये खाली राहतात, त्यामुळे मजकूर कॉपी करणाऱ्याला ते सापडू शकतात: शब्द कायमचे काढण्यासाठी भाग काढा वापरा.</string>
+
+    <!-- Create form -->
+    <string name="options_form_next_box">तुम्ही ओढलेला पुढील बॉक्स असेल:</string>
+    <string name="options_create_form_hint">प्रत्येक फील्ड जिथे हवे तिथे वरील पेजवर बॉक्स ओढा, मग यादीत त्याला नाव द्या. परिणाम खरा PDF फॉर्म असतो: कोणीही कोणत्याही वाचकात तो भरू शकतो, आणि येथील फॉर्म भरा उत्तरे पक्की करते.</string>
+
+    <!-- Digital signature -->
+    <string name="options_cert_password">प्रमाणपत्राचा पासवर्ड</string>
+    <string name="options_sign_reason">कारण (पर्यायी): \"मी या दस्तऐवजास मंजुरी देतो\"</string>
+    <string name="options_sign_place">ठिकाण (पर्यायी)</string>
+    <string name="options_on_the_page">पेजवर</string>
+    <string name="options_sign_show_box">स्वाक्षरी बॉक्स दाखवा</string>
+    <string name="options_sign_invisible">अदृश्य स्वाक्षरी करा</string>
+    <string name="options_sign_last">शेवटच्या पेजवर</string>
+    <string name="options_sign_first">पहिल्या पेजवर</string>
+    <string name="options_digital_sign_hint">PDF निवडा, मग तुमचे प्रमाणपत्र: तुमच्या बँकेकडून, नियोक्त्याकडून किंवा स्वाक्षरी सेवेकडून मिळालेली .pfx किंवा .p12 फाइल. ही स्वाक्षरी प्रत्येक वाचकाच्या पॅनेलमध्ये तपासली जाणारी प्रकारची आहे. प्रमाणपत्र आणि त्याचा पासवर्ड फक्त या वेळेसाठी वापरले जातात आणि कुठेही ठेवले जात नाहीत. हे स्वाक्षरी करा पेक्षा वेगळे आहे, जे स्वाक्षरीचे चित्र काढते.</string>
+
+    <!-- PDF/A, compare -->
+    <string name="options_pdfa_hint">रेकॉर्ड कार्यालये, न्यायालये आणि लेखापरीक्षक PDF/A-2b मागतात: वीस वर्षांनंतरही तशीच उघडणारी फाइल. प्रतीला कलर प्रोफाइल आणि संग्रह तपशील मिळतात, आणि स्क्रिप्ट, जोडलेल्या फाइल किंवा पासवर्ड नसतो. फाइल वापरते पण सोबत बाळगत नाही असा फॉन्ट ही एकमेव गोष्ट येथे दुरुस्त करता येत नाही, आणि तसे असल्यास परिणामात सांगितले जाते.</string>
+    <string name="options_compare_hint">आधी जुनी आवृत्ती आणि नंतर नवीन जोडा. नवीन आवृत्ती खुणा करून परत मिळते: नवीन शब्द हिरव्या रंगात हायलाइट केलेले, आणि जिथे शब्द काढले तिथे ते कोणते होते सांगणारी टीप. फक्त शब्द - बदललेले चित्र किंवा मांडणी दिसत नाही.</string>
+
+    <!-- Rent receipts -->
+    <string name="options_rent_tenant">भाडेकरूचे नाव (तुम्ही)</string>
+    <string name="options_rent_owner">घरमालकाचे नाव</string>
+    <string name="options_rent_address">मालमत्तेचा पत्ता</string>
+    <string name="options_rent_monthly">मासिक भाडे, रुपयांत</string>
+    <string name="options_rent_first_month">पहिला महिना</string>
+    <string name="options_year">वर्ष</string>
+    <string name="options_rent_how_many">किती महिने</string>
+    <string name="options_rent_paid_by">भरण्याची पद्धत</string>
+    <string name="options_rent_bank">बँक ट्रान्सफर</string>
+    <string name="options_rent_cash">रोख</string>
+    <string name="options_rent_cheque">चेक</string>
+    <string name="options_rent_pan">घरमालकाचा PAN (वर्षाला ₹1 लाखापेक्षा जास्त असल्यास आवश्यक)</string>
+    <string name="options_rent_hint">दर महिन्याला एक पावती, एका पेजवर दोन, रक्कम पावतीत लिहितात तशी अक्षरी. प्रिंट करा, घरमालकाची स्वाक्षरी घ्या आणि तुमच्या HRA दाव्यासोबत द्या. येथे टाइप केलेले काहीही ठेवले किंवा कुठे पाठवले जात नाही.</string>
+
+    <!-- Watermark -->
+    <string name="options_watermark_text">वॉटरमार्क मजकूर</string>
+    <string name="options_layout">मांडणी</string>
+    <string name="options_strength">गडदपणा</string>
+    <string name="options_light">फिकट</string>
+    <string name="options_strong">गडद</string>
+    <string name="options_watermark_hint">पेजच्या आकारानुसार, त्यामुळे DRAFT आणि CONFIDENTIAL दोन्ही पेजभर येतात; लांब मजकूर बसवण्यासाठी लहान केला जातो.</string>
+
+    <!-- Page numbers -->
+    <string name="options_page_numbers">पेज क्रमांक</string>
+    <string name="options_bates_numbers">Bates क्रमांक</string>
+    <string name="options_bates_prefix">उपसर्ग, उदा. ACME-</string>
+    <string name="options_digits">अंक</string>
+    <string name="options_bates_hint">दिलेल्या सर्व फाइलमध्ये, त्या यादीत असलेल्या क्रमाने, एकच सलग क्रम: दुसरी फाइल पहिली जिथे संपली तिथून पुढे सुरू होते.</string>
+    <string name="options_leave_unnumbered">इतकी पेज क्रमांकाशिवाय ठेवा</string>
+
+    <!-- Crop -->
+    <string name="options_crop_mm">मिलिमीटरने कापा</string>
+    <string name="options_crop_auto">पांढरे समास काढा</string>
+    <string name="options_crop_auto_hint">प्रत्येक पेज त्याच्या शब्द आणि चित्रांच्या अगदी बाहेरपर्यंत कापले जाते, 2 mm पांढरी जागा ठेवून. काहीच न सापडलेले पेज तसेच ठेवले जाते.</string>
+    <string name="options_crop_mm_each">प्रत्येक कडेवरून मिलिमीटर</string>
+    <string name="options_mm_top">वर, mm</string>
+    <string name="options_mm_right">उजवीकडे, mm</string>
+    <string name="options_mm_bottom">खाली, mm</string>
+    <string name="options_mm_left">डावीकडे, mm</string>
+    <string name="options_crop_measured_hint">तुम्ही वाचता त्या दिशेने पेजवर मोजले जाते, ते कसेही साठवलेले असो.</string>
+    <string name="options_crop_then">मग प्रत्येक पेज यावर ठेवा</string>
+    <string name="options_leave_as_is">जसे आहे तसे ठेवा</string>
+    <string name="options_crop_scale_up">लहान पेज बसतील असे मोठे करा</string>
+    <string name="options_crop_keep_size">लहान पेज मूळ आकारात ठेवा</string>
+    <string name="options_crop_hint">क्रॉप केल्याने समास हटवले जात नाहीत तर लपवले जातात, प्रत्येक PDF वाचक असेच काम करतो. पेजमधून काही कायमचे काढण्यासाठी भाग काढा वापरा.</string>
+
+    <!-- Background -->
+    <string name="options_background_hint">पेजवर आधीपासून असलेल्याच्या मागे काढले जाते, त्यामुळे मजकूर वर राहतो. स्कॅन केलेले पेज एकच भरीव चित्र असते, त्यामुळे त्यातून रंग दिसणार नाही. गडद रंगावर काळा मजकूर वाचता येत नाही; तो पांढऱ्या मजकुराच्या किंवा चित्रांच्या पेजसाठी आहे.</string>
+
+    <!-- Page labels -->
+    <string name="options_labels_set">लेबल सेट करा</string>
+    <string name="options_labels_remove">लेबल काढा</string>
+    <string name="options_labels_remove_hint">वाचक पुन्हा पहिल्या पेजपासून मोजू लागतात.</string>
+    <string name="options_labels_front">प्रारंभिक पेज (मुखपृष्ठ, अनुक्रमणिका)</string>
+    <string name="options_labels_front_style">प्रारंभिक पेजची शैली</string>
+    <string name="options_labels_rest">मग उरलेली</string>
+    <string name="options_starting_at">येथून सुरू</string>
+    <string name="options_labels_prefix">उपसर्ग, उदा. A- (पर्यायी)</string>
+    <string name="options_labels_hint">लेबलमुळे वाचक त्याच्या पेज बॉक्समध्ये काय दाखवतो ते बदलते, पेजवर काय छापले आहे ते नाही. ज्या अहवालाचे पेज 1 हे नववे पान आहे, त्यासाठी हे उपयोगी: लेबलसह 57 टाइप केल्यास 57 वर जाता येते. पेजवरच क्रमांक हवे असल्यास पेज क्रमांक वापरा.</string>
+
+    <!-- Bookmarks, attachments -->
+    <string name="options_bookmarks_hint">बुकमार्क म्हणजे वाचक त्याच्या बाजूच्या पॅनेलमध्ये दाखवतो ती अनुक्रमणिका. वरील यादी संपादित करा: शीर्षक आणि ते उघडणारे पेज. एखादी नोंद आधीच्या नोंदीखाली ठेवण्यासाठी ती आत सरकवा.</string>
+    <string name="options_attach_put">फाइल आत ठेवा</string>
+    <string name="options_attach_take">फाइल बाहेर काढा</string>
+    <string name="options_attach_take_hint">दस्तऐवजातील प्रत्येक फाइल जशी होती तशी स्वतंत्र परिणाम म्हणून बाहेर येते.</string>
+    <string name="options_attach_put_hint">पहिली फाइल PDF असते. त्यानंतर जोडलेले सर्व काही प्रतीमध्ये जसेच्या तसे ठेवले जाते आणि कधीही उघडले जात नाही - स्प्रेडशीट, फोटो, दुसरा PDF. वाचक त्या त्यांच्या अटॅचमेंट पॅनेलमध्ये दाखवतात.</string>
+
+    <!-- Sign, add image -->
+    <string name="options_sign_hint">हे तुमची स्वाक्षरी पेजवर काढते, प्रिंट करून, सही करून आणि पुन्हा स्कॅन केल्यासारखेच. ही क्रिप्टोग्राफिक डिजिटल स्वाक्षरी नाही.</string>
+    <string name="options_width_share">रुंदी, पेजच्या प्रमाणात</string>
+    <string name="options_full_width">पूर्ण रुंदी</string>
+    <string name="options_add_image_hint">PDF निवडा, मग इमेज: PNG, JPEG किंवा WebP. ती पेजमध्येच काढली जाते, त्यामुळे पुढील वाचक ती ओढून काढू शकत नाही.</string>
+
+    <!-- Add text -->
+    <string name="options_what_to_write">काय लिहायचे</string>
+    <string name="options_big">मोठा</string>
+    <string name="options_ink">शाई</string>
+    <string name="options_already_there">आधीपासून असलेले</string>
+    <string name="options_write_over">त्यावरच लिहा</string>
+    <string name="options_cover_first">आधी झाका</string>
+    <string name="options_add_text_hint">मजकूर कुठे जाईल ते निवडण्यासाठी खालील पेजवर टॅप करा. झाकल्याने जुना मजकूर हटवला जात नाही, त्यावर पांढरा रंग दिला जातो, त्यामुळे ही दुरुस्ती आहे, रिडॅक्शन नाही - काही कायमचे काढायचे असल्यास भाग काढा वापरा.</string>
+
+    <!-- Header and footer -->
+    <string name="options_along_top">वरच्या बाजूला</string>
+    <string name="options_along_bottom">खालच्या बाजूला</string>
+    <string name="options_header_hint">प्रत्येक पेजवर छाप देताना चार गोष्टी भरल्या जातात: {page} पेज क्रमांक, {total} एकूण पेज, {date} आजची तारीख आणि {name} दस्तऐवजाचे नाव. \"गोपनीय - {date}\" चालते, तसेच \"{name} - पेज {page} / {total}\" ही.</string>
+    <string name="options_leave_unstamped">इतकी पेज छापाशिवाय ठेवा</string>
+
+    <!-- Insert -->
+    <string name="options_insert_hint">पहिली फाइल म्हणजे ज्यात जोडायचे आहे तो दस्तऐवज. दुसरी फाइल जोडल्यास तिची पेज आत जातात; काहीच न जोडल्यास त्याऐवजी रिकामी पेज मिळतात.</string>
+    <string name="options_insert_at">या पेजवर घाला</string>
+    <string name="options_insert_blank_heading">दुसरी फाइल नसल्यास रिकामी पेज</string>
+    <string name="options_insert_or_replace">किंवा पेज बदला</string>
+    <string name="options_insert_beside">शेजारी घाला</string>
+    <string name="options_insert_replace">ही पेज बदला</string>
+    <string name="options_insert_pages_replace">बदलायची पेज</string>
+    <string name="options_insert_replace_hint">यांपैकी पहिले पेज जिथे होते तिथे नवीन पेज जातात</string>
+
+    <!-- Annotate -->
+    <string name="options_finger">तुमचे बोट काय करते</string>
+    <string name="options_note_says">टिपेत काय लिहायचे</string>
+    <string name="options_stamp_says">त्यावर काय लिहायचे</string>
+    <string name="options_own_word">किंवा तुमचा स्वतःचा शब्द</string>
+    <string name="options_thickness">जाडी</string>
+    <string name="options_thin">पातळ</string>
+    <string name="options_thick">जाड</string>
+    <string name="options_tap_page">ते जिथे हवे तिथे पेजवर टॅप करा.</string>
+    <string name="options_drag_page">पेजवर ओढा.</string>
+    <string name="options_draw_finger">बोटाने काढा.</string>
+    <string name="options_annotate_hint">खुणा टिपा म्हणून जोडल्या जात नाहीत तर पेजमध्येच काढल्या जातात, त्यामुळे त्या इतर कोणत्याही वाचकातही दिसतात - आणि पुन्हा काढता येत नाहीत. तुम्ही निवडलेला दस्तऐवज कोणत्याही परिस्थितीत बदलत नाही.</string>
+
+    <!-- Forms -->
+    <string name="options_form_editable">संपादित करता येईल असे ठेवा</string>
+    <string name="options_form_seal">उत्तरे पक्की करा</string>
+    <string name="options_form_seal_hint">पक्की केल्याने उत्तरे पेजमध्ये काढली जातात आणि फील्ड काढली जातात, त्यामुळे कोणीही ती पुन्हा टाइप करू शकत नाही. हे पूर्ववत करता येत नाही, आणि संपादनयोग्य मूळ फाइल अबाधित राहते - तुम्ही निवडलेल्या फाइलमध्ये Sheaf कधीच लिहीत नाही.</string>
+    <string name="options_form_editable_hint">परिणाम फॉर्मच राहतो, त्यामुळे तो उघडणारा कोणीही नंतर उत्तरे बदलू शकतो.</string>
+
+    <!-- N-up, split by size -->
+    <string name="options_per_sheet">प्रति शीट पेज</string>
+    <string name="options_sheet">शीट</string>
+    <string name="options_nup_hint">पेज सर्वात मोठी दिसतील अशा दिशेने शीट फिरवली जाते: आडव्या शीटवर दोन उभी पेज शेजारी शेजारी, दोन रुंद स्लाइड एकाखाली एक.</string>
+    <string name="options_each_part_under">प्रत्येक भाग यापेक्षा कमी</string>
+    <string name="options_split_size_hint">प्रत्येक भाग सेव्ह करून मोजला जातो, त्यामुळे कोणताही मर्यादेपेक्षा मोठा होत नाही - फक्त एकटेच मर्यादेपेक्षा मोठे असलेले पेज वगळता, ते स्वतंत्र भाग बनते आणि त्यावर खूण केली जाते.</string>
+
+    <!-- Metadata -->
+    <string name="options_meta_edit">तपशील संपादित करा</string>
+    <string name="options_meta_clean">लपलेला डेटा साफ करा</string>
+    <string name="options_meta_blank">तपशील रिकामे करा</string>
+    <string name="options_meta_strip_hint">शीर्षक, लेखक, विषय, कीवर्ड, फाइल बनवणारे अ‍ॅप आणि तारखा साफ करते. स्कॅनर PDF मध्ये त्याचा मेक आणि मॉडेल लिहितो; वर्ड प्रोसेसर ज्याच्या नावे परवाना आहे ते नाव लिहितो.</string>
+    <string name="options_meta_clean_hint">फाइल पाठवण्यापूर्वी ती जे उघड करते ते काढते: तपशील आणि त्यांची लपलेली XMP प्रत, पेज थंबनेल आणि खासगी संपादन डेटा, आणि यांपैकी तुम्ही निवडाल ते. काय सापडले ते परिणामात सांगितले जाते.</string>
+    <string name="options_clean_scripts">स्क्रिप्ट आणि उघडताना होणाऱ्या क्रिया</string>
+    <string name="options_clean_attachments">जोडलेल्या फाइल</string>
+    <string name="options_clean_comments">टिप्पण्या आणि टिपा</string>
+    <plurals name="options_meta_batch_hint">
+        <item quantity="one">सर्व %1$d फाइलसाठी: तुम्ही भरलेला बॉक्स प्रत्येक फाइलवर लागू होतो; रिकामा ठेवलेला बॉक्स प्रत्येक फाइलचे स्वतःचे तपशील ठेवतो.</item>
+        <item quantity="other">सर्व %1$d फाइलसाठी: तुम्ही भरलेला बॉक्स प्रत्येक फाइलवर लागू होतो; रिकामा ठेवलेला बॉक्स प्रत्येक फाइलचे स्वतःचे तपशील ठेवतो.</item>
+    </plurals>
+    <string name="options_meta_single_hint">हे दस्तऐवजाचे सध्याचे तपशील आहेत. जे बदलायचे ते संपादित करा; रिकामा बॉक्स ते साफ करतो.</string>
+    <string name="options_title">शीर्षक</string>
+    <string name="options_author">लेखक</string>
+    <string name="options_subject">विषय</string>
+    <string name="options_keywords">कीवर्ड</string>
+
+    <!-- Extract images, redact, summarise -->
+    <string name="options_extract_images_hint">हे दस्तऐवजात आधीपासून असलेली चित्रे त्यांच्या मूळ आकारात बाहेर काढते. पेजचीच चित्रे हवी असल्यास PDF ते इमेज वापरा.</string>
+    <string name="options_redact_hint">जे काढायचे आहे त्यावर बॉक्स काढा. खूण केलेली पेज इमेज म्हणून पुन्हा बनवली जातात, त्यामुळे खाली जे होते ते फक्त झाकले जात नाही तर खरोखर काढले जाते - आणि त्या पेजवरील मजकूर निवडता येत नाही. इतर पेज अबाधित राहतात.</string>
+    <string name="options_summarise_hint">दस्तऐवजाचा सार सांगणारी वाक्ये निवडते, आणि त्यातील रकमा, तारखा आणि टक्केवारी यादीत देते. प्रत्येक मुद्दा दस्तऐवजातीलच वाक्य असतो, त्यामुळे तो मूळ फाइलमध्ये पुन्हा शोधता येतो. हे या फोनवरच होते; काहीही कुठे पाठवले जात नाही. स्कॅनसाठी आधी शोधण्यायोग्य बनवा आवश्यक आहे. भाषांतरासाठी हे अ‍ॅप डाउनलोड न करणारे भाषा मॉडेल लागते, त्यामुळे ते दिले जात नाही.</string>
+</resources>

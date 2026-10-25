@@ -15,13 +15,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.pdf.CompressionLevel
 import com.layerbit.sheaf.pdf.ImageFormat
 import com.layerbit.sheaf.pdf.ImageStamp
 import com.layerbit.sheaf.ops.OfficeTarget
-import com.layerbit.sheaf.ops.RentReceiptsOp
 import com.layerbit.sheaf.pdf.NewField
 import com.layerbit.sheaf.pdf.OcrScript
 import com.layerbit.sheaf.pdf.PageLabelSpec
@@ -70,7 +72,7 @@ fun ToolOptions(
     val hintOnly = tool in HINT_ONLY
     Panel(modifier = modifier.fillMaxWidth()) {
         SectionHeading(
-            if (hintOnly) "About this tool" else "Options",
+            if (hintOnly) stringResource(R.string.options_about_this_tool) else stringResource(R.string.options_heading),
             accent = GroupAccents.of(tool.group),
             modifier = Modifier.padding(bottom = 12.dp)
         )
@@ -78,26 +80,26 @@ fun ToolOptions(
         when (tool) {
             ToolId.EXTRACT -> {
                 ChoiceRow(
-                    options = listOf(false to "Keep these pages", true to "Remove these pages"),
+                    options = listOf(false to stringResource(R.string.options_extract_keep), true to stringResource(R.string.options_extract_remove)),
                     selected = config.removePages,
                     onSelect = { value -> onChange { it.copy(removePages = value) } }
                 )
                 PageSpecField(
                     value = config.pageSpec,
                     pageCount = pageCount,
-                    label = if (config.removePages) "Pages to remove" else "Pages to keep",
+                    label = if (config.removePages) stringResource(R.string.options_extract_pages_remove) else stringResource(R.string.options_extract_pages_keep),
                     onChange = { spec -> onChange { it.copy(pageSpec = spec) } }
                 )
             }
 
             ToolId.SPLIT -> {
-                SectionHeading("How to split")
+                SectionHeading(stringResource(R.string.options_split_how))
                 ChoiceRow(
                     options = listOf(
-                        ToolConfig.SplitMode.EVERY_N to "Every N pages",
-                        ToolConfig.SplitMode.EACH_PAGE to "Single pages",
-                        ToolConfig.SplitMode.RANGES to "By ranges",
-                        ToolConfig.SplitMode.AT_BOOKMARKS to "At the bookmarks"
+                        ToolConfig.SplitMode.EVERY_N to stringResource(R.string.options_split_every_n),
+                        ToolConfig.SplitMode.EACH_PAGE to stringResource(R.string.options_split_single),
+                        ToolConfig.SplitMode.RANGES to stringResource(R.string.options_split_ranges),
+                        ToolConfig.SplitMode.AT_BOOKMARKS to stringResource(R.string.options_split_bookmarks)
                     ),
                     selected = config.splitMode,
                     onSelect = { mode -> onChange { it.copy(splitMode = mode) } }
@@ -105,7 +107,7 @@ fun ToolOptions(
                 when (config.splitMode) {
                     ToolConfig.SplitMode.EVERY_N -> NumberField(
                         value = config.splitSize,
-                        label = "Pages per file",
+                        label = stringResource(R.string.options_split_pages_per_file),
                         min = 1,
                         max = pageCount ?: 9999,
                         onChange = { size -> onChange { it.copy(splitSize = size) } }
@@ -113,21 +115,19 @@ fun ToolOptions(
                     ToolConfig.SplitMode.RANGES -> PageSpecField(
                         value = config.pageSpec,
                         pageCount = pageCount,
-                        label = "One file per range",
-                        hint = "Separate the files with commas: 1-3, 4-8, 9-",
+                        label = stringResource(R.string.options_split_one_per_range),
+                        hint = stringResource(R.string.options_split_ranges_hint),
                         onChange = { spec -> onChange { it.copy(pageSpec = spec) } }
                     )
                     ToolConfig.SplitMode.EACH_PAGE -> Unit
                     ToolConfig.SplitMode.AT_BOOKMARKS -> Hint(
-                        "One file per top-level entry in the document's own table of contents, " +
-                            "which is the natural way to break up a scanned book or a bundle " +
-                            "of statements. Documents without one say so rather than guessing."
+                        stringResource(R.string.options_split_bookmarks_hint)
                     )
                 }
             }
 
             ToolId.PDF_TO_IMAGES -> {
-                SectionHeading("Format")
+                SectionHeading(stringResource(R.string.options_format))
                 ChoiceRow(
                     options = listOf(
                         ImageFormat.PNG to "PNG",
@@ -136,12 +136,12 @@ fun ToolOptions(
                     selected = config.imageFormat,
                     onSelect = { format -> onChange { it.copy(imageFormat = format) } }
                 )
-                SectionHeading("Resolution")
+                SectionHeading(stringResource(R.string.options_resolution))
                 ChoiceRow(
                     options = listOf(
-                        96 to "96 · screen",
-                        200 to "200 · good",
-                        300 to "300 · print"
+                        96 to stringResource(R.string.options_dpi_screen),
+                        200 to stringResource(R.string.options_dpi_good),
+                        300 to stringResource(R.string.options_dpi_print)
                     ),
                     selected = config.dpi,
                     onSelect = { dpi -> onChange { it.copy(dpi = dpi) } }
@@ -149,38 +149,38 @@ fun ToolOptions(
                 PageSpecField(
                     value = config.pageSpec,
                     pageCount = pageCount,
-                    label = "Pages",
-                    hint = "Leave empty for every page",
+                    label = stringResource(R.string.options_pages),
+                    hint = stringResource(R.string.options_empty_every_page),
                     onChange = { spec -> onChange { it.copy(pageSpec = spec) } }
                 )
             }
 
             ToolId.IMAGES_TO_PDF -> {
-                SectionHeading("Page size")
+                SectionHeading(stringResource(R.string.options_page_size))
                 ChoiceRow(
                     options = listOf(
                         PageSpec.Size.A4 to "A4",
-                        PageSpec.Size.LETTER to "Letter",
+                        PageSpec.Size.LETTER to stringResource(R.string.options_size_letter),
                         PageSpec.Size.A5 to "A5",
-                        PageSpec.Size.FIT_IMAGE to "Fit the image"
+                        PageSpec.Size.FIT_IMAGE to stringResource(R.string.options_size_fit)
                     ),
                     selected = config.pageSize,
                     onSelect = { size -> onChange { it.copy(pageSize = size) } }
                 )
-                SectionHeading("Output")
+                SectionHeading(stringResource(R.string.options_output))
                 ChoiceRow(
-                    options = listOf(false to "One PDF, a page per image", true to "A PDF per image"),
+                    options = listOf(false to stringResource(R.string.options_one_pdf), true to stringResource(R.string.options_pdf_per_image)),
                     selected = config.separatePdfs,
                     onSelect = { value -> onChange { it.copy(separatePdfs = value) } }
                 )
                 if (config.pageSize != PageSpec.Size.FIT_IMAGE) {
-                    SectionHeading("Margin")
+                    SectionHeading(stringResource(R.string.options_margin))
                     ChoiceRow(
                         options = listOf(
-                            0f to "None",
-                            18f to "Narrow",
-                            36f to "Normal",
-                            72f to "Wide"
+                            0f to stringResource(R.string.options_none),
+                            18f to stringResource(R.string.options_narrow),
+                            36f to stringResource(R.string.options_normal),
+                            72f to stringResource(R.string.options_wide)
                         ),
                         selected = config.marginPoints,
                         onSelect = { margin -> onChange { it.copy(marginPoints = margin) } }
@@ -189,7 +189,7 @@ fun ToolOptions(
             }
 
             ToolId.PDF_TO_OFFICE -> {
-                SectionHeading("Make a")
+                SectionHeading(stringResource(R.string.options_make_a))
                 ChoiceRow(
                     options = OfficeTarget.entries.map { it to it.label },
                     selected = config.officeTarget,
@@ -197,46 +197,40 @@ fun ToolOptions(
                 )
                 if (config.officeTarget == OfficeTarget.POWERPOINT) {
                     ChoiceRow(
-                        options = listOf(true to "Pictures of the pages", false to "Editable text"),
+                        options = listOf(true to stringResource(R.string.options_office_pictures), false to stringResource(R.string.options_office_editable)),
                         selected = config.convertPictures,
                         onSelect = { value -> onChange { it.copy(convertPictures = value) } }
                     )
                 } else if (config.officeTarget != OfficeTarget.EXCEL) {
                     ToggleRow(
-                        title = "Bring the pictures along",
+                        title = stringResource(R.string.options_office_bring_pictures),
                         checked = config.convertPictures,
                         onChange = { on -> onChange { it.copy(convertPictures = on) } }
                     )
                 }
                 Hint(
                     when (config.officeTarget) {
-                        OfficeTarget.WORD -> "Paragraphs, headings, lists and tables, with Word's own styles, so the " +
-                            "navigation pane works and the text reflows when edited. A PDF holds lines, not " +
-                            "paragraphs, so this is reconstruction: check a long document after."
-                        OfficeTarget.EXCEL -> "One sheet per page. Lines that line up in columns become cells; a " +
-                            "number stays a number so sums work. Best on statements and tables."
-                        OfficeTarget.EPUB -> "A reflowing book for e-readers, cut into chapters at the headings."
-                        OfficeTarget.HTML -> "One self-contained web page, pictures included, that opens in any browser."
-                        OfficeTarget.POWERPOINT -> "One slide per page, in the page's own shape: a picture of each page, " +
-                            "exactly as it looks, or its lines as text boxes you can edit."
-                    } + " Scanned pages have no words until Make searchable has read them."
+                        OfficeTarget.WORD -> stringResource(R.string.options_office_word_hint)
+                        OfficeTarget.EXCEL -> stringResource(R.string.options_office_excel_hint)
+                        OfficeTarget.EPUB -> stringResource(R.string.options_office_epub_hint)
+                        OfficeTarget.HTML -> stringResource(R.string.options_office_html_hint)
+                        OfficeTarget.POWERPOINT -> stringResource(R.string.options_office_pptx_hint)
+                    } + " " + stringResource(R.string.options_office_scanned_hint)
                 )
             }
 
             ToolId.OFFICE_TO_PDF -> Hint(
-                "Paragraphs, headings, lists and tables come through, laid out on A4 in the " +
-                    "phone's own fonts - Hindi, Tamil, Malayalam and the rest included, where " +
-                    "the phone has the font. Shapes, text boxes and tracked changes do not."
+                stringResource(R.string.options_office_to_pdf_hint)
             )
 
             ToolId.COMPRESS -> {
                 ChoiceRow(
-                    options = listOf(false to "Pick a level", true to "Get under a size"),
+                    options = listOf(false to stringResource(R.string.options_compress_level), true to stringResource(R.string.options_compress_size)),
                     selected = config.compressToSize,
                     onSelect = { value -> onChange { it.copy(compressToSize = value) } }
                 )
                 if (config.compressToSize) {
-                    SectionHeading("Under")
+                    SectionHeading(stringResource(R.string.options_under))
                     ChoiceRow(
                         options = listOf(1 to "1 MB", 2 to "2 MB", 5 to "5 MB", 10 to "10 MB", 25 to "25 MB"),
                         selected = config.compressTargetMb,
@@ -244,27 +238,24 @@ fun ToolOptions(
                     )
                     NumberField(
                         value = config.compressTargetMb,
-                        label = "Or any size, in MB",
+                        label = stringResource(R.string.options_any_size_mb),
                         min = 1,
                         max = 2000,
                         onChange = { value -> onChange { it.copy(compressTargetMb = value) } }
                     )
                     Hint(
-                        "The levels are tried lightest first and the first that fits is kept. " +
-                            "If none fits, you get the smallest and are told; Split by size can " +
-                            "then cut it into parts that do."
+                        stringResource(R.string.options_compress_size_hint)
                     )
                     ToggleRow(
-                        title = "Let pages become pictures if that is what it takes",
+                        title = stringResource(R.string.options_compress_pictures),
                         checked = config.compressPictures,
                         onChange = { on -> onChange { it.copy(compressPictures = on) } }
                     )
                     Hint(
-                        "Only when no level gets under the size. Each page becomes one picture that " +
-                            "looks the same; its words are kept underneath, so search and copy still work."
+                        stringResource(R.string.options_compress_pictures_hint)
                     )
                 } else {
-                    SectionHeading("How hard to squeeze")
+                    SectionHeading(stringResource(R.string.options_compress_how_hard))
                     ChoiceRow(
                         options = CompressionLevel.entries.map { it to it.label },
                         selected = config.compression,
@@ -272,34 +263,34 @@ fun ToolOptions(
                     )
                 }
                 Hint(
-                    "Sheaf shrinks the images inside a document and leaves text untouched, so " +
-                        "text stays sharp and selectable. A document with no scanned pages will " +
-                        "barely change."
+                    stringResource(R.string.options_compress_hint)
                 )
 
                 // The real operation on the real file, thrown away afterwards. An estimate
                 // from image sizes would be wrong in exactly the cases that matter, and the
                 // question being asked is whether this will fit under an attachment limit.
                 when (sizeCheck) {
-                    SizeCheck.Idle -> SecondaryButton(text = "Check the size first", onClick = onCheckSize, tall = false)
+                    SizeCheck.Idle -> SecondaryButton(text = stringResource(R.string.options_check_size), onClick = onCheckSize, tall = false)
                     SizeCheck.Working -> Text(
-                        "Trying it…",
+                        stringResource(R.string.options_check_trying),
                         style = MaterialTheme.typography.bodyMedium,
                         color = SheafColors.Muted
                     )
                     SizeCheck.Failed -> Text(
-                        "That could not be measured. Running it will still tell you.",
+                        stringResource(R.string.options_check_failed),
                         style = MaterialTheme.typography.bodySmall,
                         color = SheafColors.Skipped
                     )
                     is SizeCheck.Done -> Text(
                         text = if (sizeCheck.compressedBytes >= sizeCheck.originalBytes) {
-                            "${formatBytes(sizeCheck.originalBytes)} - already as small as it goes " +
-                                "at this level, so the original would be kept."
+                            stringResource(R.string.options_check_same, formatBytes(sizeCheck.originalBytes))
                         } else {
-                            "${formatBytes(sizeCheck.originalBytes)} to " +
-                                "${formatBytes(sizeCheck.compressedBytes)} - " +
-                                "${(sizeCheck.savedFraction * 100).toInt()}% smaller."
+                            stringResource(
+                                R.string.options_check_result,
+                                formatBytes(sizeCheck.originalBytes),
+                                formatBytes(sizeCheck.compressedBytes),
+                                (sizeCheck.savedFraction * 100).toInt()
+                            )
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (sizeCheck.compressedBytes >= sizeCheck.originalBytes) {
@@ -313,87 +304,80 @@ fun ToolOptions(
 
             ToolId.SET_PASSWORD -> {
                 ChoiceRow(
-                    options = listOf(false to "Password to open", true to "Restrict only, no password"),
+                    options = listOf(false to stringResource(R.string.options_pw_open), true to stringResource(R.string.options_pw_restrict)),
                     selected = config.restrictOnly,
                     onSelect = { value -> onChange { it.copy(restrictOnly = value) } }
                 )
                 if (!config.restrictOnly) {
                     PasswordField(
                         value = config.newPassword,
-                        label = "Password",
+                        label = stringResource(R.string.options_password),
                         onChange = { value -> onChange { it.copy(newPassword = value) } }
                     )
                     PasswordField(
                         value = config.confirmPassword,
-                        label = "Type it again",
+                        label = stringResource(R.string.options_pw_again),
                         onChange = { value -> onChange { it.copy(confirmPassword = value) } }
                     )
                     Hint(
-                        "Sheaf encrypts with AES-256 and does not keep the password anywhere. If you " +
-                            "forget it, the document cannot be opened again - not by us either."
+                        stringResource(R.string.options_pw_hint)
                     )
                 } else {
                     Hint(
-                        "The file opens without a password. It is encrypted with a key nobody is " +
-                            "given, so the restrictions below cannot be lifted by typing one."
+                        stringResource(R.string.options_pw_restrict_hint)
                     )
                 }
-                SectionHeading("What a reader may do")
+                SectionHeading(stringResource(R.string.options_pw_reader_may))
                 ToggleRow(
-                    title = "Allow printing",
+                    title = stringResource(R.string.options_allow_printing),
                     checked = config.allowPrinting,
                     onChange = { on -> onChange { it.copy(allowPrinting = on) } }
                 )
                 ToggleRow(
-                    title = "Allow copying text",
+                    title = stringResource(R.string.options_allow_copying),
                     checked = config.allowCopying,
                     onChange = { on -> onChange { it.copy(allowCopying = on) } }
                 )
                 ToggleRow(
-                    title = "Allow changes",
+                    title = stringResource(R.string.options_allow_changes),
                     checked = config.allowChanges,
                     onChange = { on -> onChange { it.copy(allowChanges = on) } }
                 )
                 Hint(
-                    "These three are a request, not a lock. The PDF standard asks readers to " +
-                        "honour them and most do, but a reader that ignores them can. " +
-                        if (config.restrictOnly) "Anyone who can open the file can print it to a new one." else "The encryption is the part that actually holds."
+                    stringResource(
+                        if (config.restrictOnly) R.string.options_pw_request_restrict else R.string.options_pw_request_lock
+                    )
                 )
             }
 
-            ToolId.MERGE -> Hint("Files are joined top to bottom. Use the arrows to reorder them.")
+            ToolId.MERGE -> Hint(stringResource(R.string.options_merge_hint))
 
             ToolId.REMOVE_PASSWORD -> Hint(
-                "You need the document's password. Sheaf opens it the way any reader would and " +
-                    "saves an unlocked copy - it cannot recover a password you do not have."
+                stringResource(R.string.options_remove_pw_hint)
             )
 
             ToolId.EXTRACT_TEXT -> PageSpecField(
                 value = config.pageSpec,
                 pageCount = pageCount,
-                label = "Pages",
-                hint = "Leave empty for the whole document",
+                label = stringResource(R.string.options_pages),
+                hint = stringResource(R.string.options_empty_whole_doc),
                 onChange = { spec -> onChange { it.copy(pageSpec = spec) } }
             )
 
             ToolId.OCR -> {
-                SectionHeading("Language of the pages")
+                SectionHeading(stringResource(R.string.options_ocr_language))
                 ChoiceRow(
                     options = OcrScript.entries.map { it to it.label },
                     selected = config.ocrScript,
                     onSelect = { value -> onChange { it.copy(ocrScript = value) } }
                 )
                 Hint(
-                    "Sheaf reads the words in a scan and lays them invisibly over the page, so the " +
-                        "document looks exactly the same but you can search, select and copy it. " +
-                        "Both models are inside the app; nothing is downloaded. This is the slowest " +
-                        "tool here - expect around a second a page - and it keeps running if you " +
-                        "switch to another app."
+                    stringResource(R.string.options_ocr_hint)
                 )
             }
 
             ToolId.RESIZE_PHOTO -> {
-                SectionHeading("Under")
+                SectionHeading(stringResource(R.string.options_under))
                 ChoiceRow(
                     options = listOf(20 to "20 KB", 50 to "50 KB", 100 to "100 KB", 200 to "200 KB", 500 to "500 KB"),
                     selected = config.photoKb,
@@ -401,236 +385,226 @@ fun ToolOptions(
                 )
                 NumberField(
                     value = config.photoKb,
-                    label = "Or any size, in KB",
+                    label = stringResource(R.string.options_any_size_kb),
                     min = 2,
                     max = 100000,
                     onChange = { value -> onChange { it.copy(photoKb = value) } }
                 )
-                Hint("Whatever the form asks for, at least 2 KB.")
-                SectionHeading("Pixels")
+                Hint(stringResource(R.string.options_photo_min_hint))
+                SectionHeading(stringResource(R.string.options_pixels))
                 ChoiceRow(
                     options = ToolConfig.PhotoMode.entries.map { it to it.label },
                     selected = config.photoMode,
                     onSelect = { value -> onChange { it.copy(photoMode = value) } }
                 )
                 when (config.photoMode) {
-                    ToolConfig.PhotoMode.KEEP -> Hint("As many pixels as it has, unless it needs fewer to fit.")
-                    ToolConfig.PhotoMode.PASSPORT -> Hint("413 × 531 pixels (300 dpi), cut from the middle to that shape.")
+                    ToolConfig.PhotoMode.KEEP -> Hint(stringResource(R.string.options_photo_keep_hint))
+                    ToolConfig.PhotoMode.PASSPORT -> Hint(stringResource(R.string.options_photo_passport_hint))
                     ToolConfig.PhotoMode.EXACT -> {
                         NumberField(
                             value = config.photoWidth,
-                            label = "Width (px)",
+                            label = stringResource(R.string.options_width_px),
                             min = 16,
                             max = 4096,
                             onChange = { value -> onChange { it.copy(photoWidth = value) } }
                         )
                         NumberField(
                             value = config.photoHeight,
-                            label = "Height (px)",
+                            label = stringResource(R.string.options_height_px),
                             min = 16,
                             max = 4096,
                             onChange = { value -> onChange { it.copy(photoHeight = value) } }
                         )
-                        Hint("Cut from the middle to that shape, then made exactly that size.")
+                        Hint(stringResource(R.string.options_photo_exact_hint))
                     }
                 }
                 Hint(
-                    "Each picture comes out as a JPEG under the size you choose, as sharp as that " +
-                        "allows. Here 1 KB is 1,000 bytes, so it is under the limit however the " +
-                        "form counts. The phone's hidden details, its location too, are left out."
+                    stringResource(R.string.options_photo_hint)
                 )
             }
 
             ToolId.EDIT_TEXT -> Hint(
-                "The old words are painted over in the page's own colour and the new ones written " +
-                    "in their place: in the document's own font where it can be, otherwise the " +
-                    "nearest built-in one, and squeezed a little to stay inside a table cell. Hindi, " +
-                    "Malayalam and every other script the phone shows can be typed. On a scan, only " +
-                    "the words you change are repainted. The old words stay inside the file " +
-                    "underneath, so anyone who copies the text can still find them: to take words " +
-                    "out for good, use Remove areas."
+                stringResource(R.string.options_edit_text_hint)
             )
 
             ToolId.CREATE_FORM -> {
-                SectionHeading("The next box you drag becomes a")
+                SectionHeading(stringResource(R.string.options_form_next_box))
                 ChoiceRow(
                     options = NewField.Kind.entries.map { it to it.label },
                     selected = config.fieldKind,
                     onSelect = { value -> onChange { it.copy(fieldKind = value) } }
                 )
                 Hint(
-                    "Drag a box on the page above where each field should go, then name it in " +
-                        "the list. The result is a real PDF form: anyone can fill it in, in any " +
-                        "reader, and Fill in a form here seals the answers."
+                    stringResource(R.string.options_create_form_hint)
                 )
             }
 
             ToolId.DIGITAL_SIGN -> {
                 PasswordField(
                     value = config.certPassword,
-                    label = "Certificate password",
+                    label = stringResource(R.string.options_cert_password),
                     onChange = { value -> onChange { it.copy(certPassword = value) } }
                 )
                 Field(
                     value = config.signReason,
-                    label = "Reason (optional): \"I approve this document\"",
+                    label = stringResource(R.string.options_sign_reason),
                     keyboardType = KeyboardType.Text,
                     onChange = { value -> onChange { it.copy(signReason = value) } }
                 )
                 Field(
                     value = config.signLocation,
-                    label = "Place (optional)",
+                    label = stringResource(R.string.options_sign_place),
                     keyboardType = KeyboardType.Text,
                     onChange = { value -> onChange { it.copy(signLocation = value) } }
                 )
-                SectionHeading("On the page")
+                SectionHeading(stringResource(R.string.options_on_the_page))
                 ChoiceRow(
-                    options = listOf(true to "Show a signature box", false to "Sign invisibly"),
+                    options = listOf(true to stringResource(R.string.options_sign_show_box), false to stringResource(R.string.options_sign_invisible)),
                     selected = config.signVisible,
                     onSelect = { value -> onChange { it.copy(signVisible = value) } }
                 )
                 if (config.signVisible) {
                     ChoiceRow(
-                        options = listOf(false to "On the last page", true to "On the first page"),
+                        options = listOf(false to stringResource(R.string.options_sign_last), true to stringResource(R.string.options_sign_first)),
                         selected = config.signOnFirstPage,
                         onSelect = { value -> onChange { it.copy(signOnFirstPage = value) } }
                     )
                 }
                 Hint(
-                    "Pick the PDF, then your certificate: a .pfx or .p12 from your bank, your " +
-                        "employer or a signing service. The signature is the kind every reader's " +
-                        "panel checks. The certificate and its password are used for this run and " +
-                        "kept nowhere. This is not the same as Sign, which draws a picture of a signature."
+                    stringResource(R.string.options_digital_sign_hint)
                 )
             }
 
             ToolId.PDF_A -> Hint(
-                "PDF/A-2b is what records offices, courts and auditors ask for: a file that will " +
-                    "open the same way in twenty years. The copy gets a colour profile, archive " +
-                    "details and no scripts, attachments or password. A font the file uses but does " +
-                    "not carry is the one thing that cannot be fixed here, and the result says if so."
+                stringResource(R.string.options_pdfa_hint)
             )
 
             ToolId.COMPARE -> Hint(
-                "Add the older version first and the newer one second. The newer one comes " +
-                    "back marked: new words highlighted in green, and a note wherever words " +
-                    "were taken out saying what they were. Words only - a changed picture or " +
-                    "layout is not seen."
+                stringResource(R.string.options_compare_hint)
             )
 
             ToolId.RENT_RECEIPTS -> {
                 Field(
                     value = config.tenant,
-                    label = "Tenant's name (you)",
+                    label = stringResource(R.string.options_rent_tenant),
                     keyboardType = KeyboardType.Text,
                     onChange = { value -> onChange { it.copy(tenant = value) } }
                 )
                 Field(
                     value = config.landlord,
-                    label = "Owner's name",
+                    label = stringResource(R.string.options_rent_owner),
                     keyboardType = KeyboardType.Text,
                     onChange = { value -> onChange { it.copy(landlord = value) } }
                 )
                 Field(
                     value = config.rentAddress,
-                    label = "Address of the property",
+                    label = stringResource(R.string.options_rent_address),
                     keyboardType = KeyboardType.Text,
                     onChange = { value -> onChange { it.copy(rentAddress = value) } }
                 )
                 Field(
                     value = if (config.rent > 0) config.rent.toString() else "",
-                    label = "Monthly rent, in rupees",
+                    label = stringResource(R.string.options_rent_monthly),
                     keyboardType = KeyboardType.Number,
                     onChange = { value -> onChange { it.copy(rent = value.filter { c -> c.isDigit() }.take(9).toLongOrNull() ?: 0L) } }
                 )
-                SectionHeading("First month")
+                SectionHeading(stringResource(R.string.options_rent_first_month))
                 ChoiceRow(
-                    options = (1..12).map { it to RentReceiptsOp.monthName(2000, it, 0).substringBefore(' ').take(3) },
+                    // The chips follow the screen's language; the receipts themselves keep the op's own month names.
+                    options = java.text.DateFormatSymbols
+                        .getInstance(androidx.compose.ui.platform.LocalConfiguration.current.locales[0])
+                        .shortMonths
+                        .take(12)
+                        .mapIndexed { i, name -> i + 1 to name },
                     selected = config.rentMonth,
                     onSelect = { value -> onChange { it.copy(rentMonth = value) } }
                 )
                 NumberField(
                     value = config.rentYear,
-                    label = "Year",
+                    label = stringResource(R.string.options_year),
                     min = 2000,
                     max = 2100,
                     onChange = { value -> onChange { it.copy(rentYear = value) } }
                 )
-                SectionHeading("How many months")
+                SectionHeading(stringResource(R.string.options_rent_how_many))
                 ChoiceRow(
                     options = listOf(1 to "1", 3 to "3", 6 to "6", 12 to "12"),
                     selected = config.rentMonths,
                     onSelect = { value -> onChange { it.copy(rentMonths = value) } }
                 )
-                SectionHeading("Paid by")
+                SectionHeading(stringResource(R.string.options_rent_paid_by))
                 ChoiceRow(
-                    options = listOf("Bank transfer", "UPI", "Cash", "Cheque").map { it to it },
+                    // The value is what the receipt prints, so it stays as written; only the chip is translated.
+                    options = listOf(
+                        "Bank transfer" to stringResource(R.string.options_rent_bank),
+                        "UPI" to "UPI",
+                        "Cash" to stringResource(R.string.options_rent_cash),
+                        "Cheque" to stringResource(R.string.options_rent_cheque)
+                    ),
                     selected = config.rentMode,
                     onSelect = { value -> onChange { it.copy(rentMode = value) } }
                 )
                 Field(
                     value = config.landlordPan,
-                    label = "Owner's PAN (needed over Rs. 1 lakh a year)",
+                    label = stringResource(R.string.options_rent_pan),
                     keyboardType = KeyboardType.Text,
                     onChange = { value -> onChange { it.copy(landlordPan = value.uppercase().take(10)) } }
                 )
                 Hint(
-                    "One receipt a month, two to a page, with the amount in words as a receipt " +
-                        "writes it. Print, get them signed by the owner, and hand them in with " +
-                        "your HRA claim. Nothing typed here is kept or sent anywhere."
+                    stringResource(R.string.options_rent_hint)
                 )
             }
 
             ToolId.WATERMARK -> {
                 Field(
                     value = config.watermarkText,
-                    label = "Watermark text",
+                    label = stringResource(R.string.options_watermark_text),
                     keyboardType = KeyboardType.Text,
                     onChange = { text -> onChange { it.copy(watermarkText = text) } }
                 )
-                SectionHeading("Layout")
+                SectionHeading(stringResource(R.string.options_layout))
                 ChoiceRow(
                     options = WatermarkSpec.Layout.entries.map { it to it.label },
                     selected = config.watermarkLayout,
                     onSelect = { value -> onChange { it.copy(watermarkLayout = value) } }
                 )
-                SectionHeading("Strength")
+                SectionHeading(stringResource(R.string.options_strength))
                 ChoiceRow(
-                    options = listOf(0.12f to "Light", 0.22f to "Medium", 0.38f to "Strong"),
+                    options = listOf(0.12f to stringResource(R.string.options_light), 0.22f to stringResource(R.string.options_medium), 0.38f to stringResource(R.string.options_strong)),
                     selected = config.watermarkOpacity,
                     onSelect = { value -> onChange { it.copy(watermarkOpacity = value) } }
                 )
-                SectionHeading("Colour")
+                SectionHeading(stringResource(R.string.options_colour))
                 ChoiceRow(
-                    options = listOf(WATERMARK_GREY to "Grey", WATERMARK_RED to "Red", WATERMARK_BLUE to "Blue"),
+                    options = listOf(WATERMARK_GREY to stringResource(R.string.options_grey), WATERMARK_RED to stringResource(R.string.options_red), WATERMARK_BLUE to stringResource(R.string.options_blue)),
                     selected = config.watermarkColour,
                     onSelect = { value -> onChange { it.copy(watermarkColour = value) } }
                 )
                 PageSpecField(
                     value = config.pageSpec,
                     pageCount = pageCount,
-                    label = "Pages",
-                    hint = "Leave empty for every page",
+                    label = stringResource(R.string.options_pages),
+                    hint = stringResource(R.string.options_empty_every_page),
                     onChange = { spec -> onChange { it.copy(pageSpec = spec) } }
                 )
-                Hint("Sized to the page, so DRAFT and CONFIDENTIAL both cross it; longer text is shrunk to fit.")
+                Hint(stringResource(R.string.options_watermark_hint))
             }
 
             ToolId.PAGE_NUMBERS -> {
                 ChoiceRow(
-                    options = listOf(false to "Page numbers", true to "Bates numbers"),
+                    options = listOf(false to stringResource(R.string.options_page_numbers), true to stringResource(R.string.options_bates_numbers)),
                     selected = config.bates,
                     onSelect = { value -> onChange { it.copy(bates = value) } }
                 )
-                SectionHeading("Where")
+                SectionHeading(stringResource(R.string.options_where))
                 ChoiceRow(
                     options = listOf(
-                        PageNumberSpec.Position.BOTTOM_CENTRE to "Bottom",
-                        PageNumberSpec.Position.BOTTOM_RIGHT to "Bottom right",
-                        PageNumberSpec.Position.BOTTOM_LEFT to "Bottom left",
-                        PageNumberSpec.Position.TOP_CENTRE to "Top",
-                        PageNumberSpec.Position.TOP_RIGHT to "Top right",
-                        PageNumberSpec.Position.TOP_LEFT to "Top left"
+                        PageNumberSpec.Position.BOTTOM_CENTRE to stringResource(R.string.options_bottom),
+                        PageNumberSpec.Position.BOTTOM_RIGHT to stringResource(R.string.options_bottom_right),
+                        PageNumberSpec.Position.BOTTOM_LEFT to stringResource(R.string.options_bottom_left),
+                        PageNumberSpec.Position.TOP_CENTRE to stringResource(R.string.options_top),
+                        PageNumberSpec.Position.TOP_RIGHT to stringResource(R.string.options_top_right),
+                        PageNumberSpec.Position.TOP_LEFT to stringResource(R.string.options_top_left)
                     ),
                     selected = config.numberPosition,
                     onSelect = { value -> onChange { it.copy(numberPosition = value) } }
@@ -638,11 +612,11 @@ fun ToolOptions(
                 if (config.bates) {
                     Field(
                         value = config.batesPrefix,
-                        label = "Prefix, such as ACME-",
+                        label = stringResource(R.string.options_bates_prefix),
                         keyboardType = KeyboardType.Text,
                         onChange = { value -> onChange { it.copy(batesPrefix = value) } }
                     )
-                    SectionHeading("Digits")
+                    SectionHeading(stringResource(R.string.options_digits))
                     ChoiceRow(
                         options = listOf(4 to "0001", 6 to "000001", 8 to "00000001"),
                         selected = config.batesDigits,
@@ -650,17 +624,16 @@ fun ToolOptions(
                     )
                     NumberField(
                         value = config.numberStartAt,
-                        label = "Start at",
+                        label = stringResource(R.string.options_start_at),
                         min = 1,
                         max = 99_999_999,
                         onChange = { value -> onChange { it.copy(numberStartAt = value) } }
                     )
                     Hint(
-                        "One unbroken run across every file given, in the order they are listed: " +
-                            "the second file carries on from where the first ended."
+                        stringResource(R.string.options_bates_hint)
                     )
                 } else {
-                    SectionHeading("Format")
+                    SectionHeading(stringResource(R.string.options_format))
                     ChoiceRow(
                         options = listOf(
                             "{n}" to "1",
@@ -674,7 +647,7 @@ fun ToolOptions(
                     )
                     NumberField(
                         value = config.numberStartAt,
-                        label = "Start at",
+                        label = stringResource(R.string.options_start_at),
                         min = 1,
                         max = 99_999,
                         onChange = { value -> onChange { it.copy(numberStartAt = value) } }
@@ -682,7 +655,7 @@ fun ToolOptions(
                 }
                 NumberField(
                     value = config.numberSkipFirst,
-                    label = "Leave this many pages unnumbered",
+                    label = stringResource(R.string.options_leave_unnumbered),
                     min = 0,
                     max = (pageCount ?: 9999) - 1,
                     onChange = { value -> onChange { it.copy(numberSkipFirst = value) } }
@@ -691,38 +664,37 @@ fun ToolOptions(
 
             ToolId.CROP -> {
                 ChoiceRow(
-                    options = listOf(false to "Trim by millimetres", true to "Remove white margins"),
+                    options = listOf(false to stringResource(R.string.options_crop_mm), true to stringResource(R.string.options_crop_auto)),
                     selected = config.cropAuto,
                     onSelect = { value -> onChange { it.copy(cropAuto = value) } }
                 )
                 if (config.cropAuto) {
                     Hint(
-                        "Each page is trimmed to just outside its words and pictures, with 2 mm " +
-                            "of white kept. A page with nothing to find is left alone."
+                        stringResource(R.string.options_crop_auto_hint)
                     )
                 } else {
-                    SectionHeading("Millimetres off each edge")
+                    SectionHeading(stringResource(R.string.options_crop_mm_each))
                     ChoiceRow(
-                        options = listOf(0f to "None", 5f to "5 mm", 10f to "10 mm", 15f to "15 mm", 20f to "20 mm"),
+                        options = listOf(0f to stringResource(R.string.options_none), 5f to "5 mm", 10f to "10 mm", 15f to "15 mm", 20f to "20 mm"),
                         selected = if (config.cropTopMm == config.cropRightMm && config.cropTopMm == config.cropBottomMm && config.cropTopMm == config.cropLeftMm) config.cropTopMm else -1f,
                         onSelect = { mm ->
                             onChange { it.copy(cropTopMm = mm, cropRightMm = mm, cropBottomMm = mm, cropLeftMm = mm) }
                         }
                     )
-                    MillimetreField("Top", config.cropTopMm) { mm -> onChange { it.copy(cropTopMm = mm) } }
-                    MillimetreField("Right", config.cropRightMm) { mm -> onChange { it.copy(cropRightMm = mm) } }
-                    MillimetreField("Bottom", config.cropBottomMm) { mm -> onChange { it.copy(cropBottomMm = mm) } }
-                    MillimetreField("Left", config.cropLeftMm) { mm -> onChange { it.copy(cropLeftMm = mm) } }
-                    Hint("Measured on the page as you read it, whichever way it is stored.")
+                    MillimetreField(stringResource(R.string.options_mm_top), config.cropTopMm) { mm -> onChange { it.copy(cropTopMm = mm) } }
+                    MillimetreField(stringResource(R.string.options_mm_right), config.cropRightMm) { mm -> onChange { it.copy(cropRightMm = mm) } }
+                    MillimetreField(stringResource(R.string.options_mm_bottom), config.cropBottomMm) { mm -> onChange { it.copy(cropBottomMm = mm) } }
+                    MillimetreField(stringResource(R.string.options_mm_left), config.cropLeftMm) { mm -> onChange { it.copy(cropLeftMm = mm) } }
+                    Hint(stringResource(R.string.options_crop_measured_hint))
                 }
-                SectionHeading("Then put every page on")
+                SectionHeading(stringResource(R.string.options_crop_then))
                 ChoiceRow(
                     options = listOf(
-                        null to "Leave as it is",
+                        null to stringResource(R.string.options_leave_as_is),
                         PageSpec.Size.A4 to "A4",
-                        PageSpec.Size.LETTER to "Letter",
+                        PageSpec.Size.LETTER to stringResource(R.string.options_size_letter),
                         PageSpec.Size.A5 to "A5",
-                        PageSpec.Size.LEGAL to "Legal",
+                        PageSpec.Size.LEGAL to stringResource(R.string.options_size_legal),
                         PageSpec.Size.A3 to "A3"
                     ),
                     selected = config.resizeTo,
@@ -730,7 +702,7 @@ fun ToolOptions(
                 )
                 if (config.resizeTo != null) {
                     ChoiceRow(
-                        options = listOf(true to "Scale small pages up to fit", false to "Keep small pages their real size"),
+                        options = listOf(true to stringResource(R.string.options_crop_scale_up), false to stringResource(R.string.options_crop_keep_size)),
                         selected = config.cropEnlarge,
                         onSelect = { value -> onChange { it.copy(cropEnlarge = value) } }
                     )
@@ -738,29 +710,27 @@ fun ToolOptions(
                 PageSpecField(
                     value = config.pageSpec,
                     pageCount = pageCount,
-                    label = "Pages",
-                    hint = "Leave empty for every page",
+                    label = stringResource(R.string.options_pages),
+                    hint = stringResource(R.string.options_empty_every_page),
                     onChange = { spec -> onChange { it.copy(pageSpec = spec) } }
                 )
                 Hint(
-                    "Cropping hides the margins rather than deleting them, which is how every " +
-                        "PDF reader works. To take something out of a page for good, use " +
-                        "Remove areas."
+                    stringResource(R.string.options_crop_hint)
                 )
             }
 
             ToolId.BACKGROUND -> {
-                SectionHeading("Colour")
+                SectionHeading(stringResource(R.string.options_colour))
                 ChoiceRow(
                     options = listOf(
-                        BACKGROUND_CREAM to "Cream",
-                        BACKGROUND_SEPIA to "Sepia",
-                        BACKGROUND_GREY to "Grey",
-                        BACKGROUND_BLUE to "Blue",
-                        BACKGROUND_GREEN to "Green",
-                        BACKGROUND_PINK to "Pink",
-                        BACKGROUND_YELLOW to "Yellow",
-                        BACKGROUND_DARK to "Dark"
+                        BACKGROUND_CREAM to stringResource(R.string.options_cream),
+                        BACKGROUND_SEPIA to stringResource(R.string.options_sepia),
+                        BACKGROUND_GREY to stringResource(R.string.options_grey),
+                        BACKGROUND_BLUE to stringResource(R.string.options_blue),
+                        BACKGROUND_GREEN to stringResource(R.string.options_green),
+                        BACKGROUND_PINK to stringResource(R.string.options_pink),
+                        BACKGROUND_YELLOW to stringResource(R.string.options_yellow),
+                        BACKGROUND_DARK to stringResource(R.string.options_dark)
                     ),
                     selected = config.backgroundColour,
                     onSelect = { value -> onChange { it.copy(backgroundColour = value) } }
@@ -768,42 +738,40 @@ fun ToolOptions(
                 PageSpecField(
                     value = config.pageSpec,
                     pageCount = pageCount,
-                    label = "Pages",
-                    hint = "Leave empty for every page",
+                    label = stringResource(R.string.options_pages),
+                    hint = stringResource(R.string.options_empty_every_page),
                     onChange = { spec -> onChange { it.copy(pageSpec = spec) } }
                 )
                 Hint(
-                    "Drawn behind what is already on the page, so the text stays on top. A " +
-                        "scanned page is one solid picture, so a colour will not show through it. " +
-                        "Dark leaves black type unreadable; it is for pages of white type or pictures."
+                    stringResource(R.string.options_background_hint)
                 )
             }
 
             ToolId.PAGE_LABELS -> {
                 ChoiceRow(
-                    options = listOf(false to "Set the labels", true to "Remove the labels"),
+                    options = listOf(false to stringResource(R.string.options_labels_set), true to stringResource(R.string.options_labels_remove)),
                     selected = config.removeLabels,
                     onSelect = { value -> onChange { it.copy(removeLabels = value) } }
                 )
                 if (config.removeLabels) {
-                    Hint("Readers go back to counting from the first page.")
+                    Hint(stringResource(R.string.options_labels_remove_hint))
                 } else {
                     NumberField(
                         value = config.labelFrontPages,
-                        label = "Front matter pages (cover, contents)",
+                        label = stringResource(R.string.options_labels_front),
                         min = 0,
                         max = (pageCount ?: 9999) - 1,
                         onChange = { value -> onChange { it.copy(labelFrontPages = value) } }
                     )
                     if (config.labelFrontPages > 0) {
-                        SectionHeading("Front matter style")
+                        SectionHeading(stringResource(R.string.options_labels_front_style))
                         ChoiceRow(
                             options = PageLabelSpec.Style.entries.map { it to it.label },
                             selected = config.labelFrontStyle,
                             onSelect = { value -> onChange { it.copy(labelFrontStyle = value) } }
                         )
                     }
-                    SectionHeading("Then the rest")
+                    SectionHeading(stringResource(R.string.options_labels_rest))
                     ChoiceRow(
                         options = PageLabelSpec.Style.entries.map { it to it.label },
                         selected = config.labelStyle,
@@ -811,198 +779,185 @@ fun ToolOptions(
                     )
                     NumberField(
                         value = config.labelStartAt,
-                        label = "Starting at",
+                        label = stringResource(R.string.options_starting_at),
                         min = 1,
                         max = 99_999,
                         onChange = { value -> onChange { it.copy(labelStartAt = value) } }
                     )
                     Field(
                         value = config.labelPrefix,
-                        label = "Prefix, such as A- (optional)",
+                        label = stringResource(R.string.options_labels_prefix),
                         keyboardType = KeyboardType.Text,
                         onChange = { value -> onChange { it.copy(labelPrefix = value) } }
                     )
                     Hint(
-                        "Labels change what a reader shows in its page box, not what is printed " +
-                            "on the page. A report whose page 1 is the ninth sheet is the reason: " +
-                            "with labels, typing 57 goes to 57. For numbers on the page itself, use Page numbers."
+                        stringResource(R.string.options_labels_hint)
                     )
                 }
             }
 
             ToolId.BOOKMARKS -> Hint(
-                "Bookmarks are the table of contents a reader shows in its side panel. Edit " +
-                    "the list above: a title and the page it opens. Indent an entry to nest it " +
-                    "under the one before."
+                stringResource(R.string.options_bookmarks_hint)
             )
 
             ToolId.ATTACHMENTS -> {
                 ChoiceRow(
-                    options = listOf(false to "Put files inside", true to "Take the files out"),
+                    options = listOf(false to stringResource(R.string.options_attach_put), true to stringResource(R.string.options_attach_take)),
                     selected = config.extractAttachments,
                     onSelect = { value -> onChange { it.copy(extractAttachments = value) } }
                 )
                 Hint(
                     if (config.extractAttachments) {
-                        "Every file inside the document comes out as its own result, as it was."
+                        stringResource(R.string.options_attach_take_hint)
                     } else {
-                        "The first file is the PDF. Everything added after it is carried inside " +
-                            "the copy byte for byte and never opened - a spreadsheet, a photo, " +
-                            "another PDF. Readers list them in their attachments panel."
+                        stringResource(R.string.options_attach_put_hint)
                     }
                 )
             }
 
             ToolId.SIGN -> {
-                SectionHeading("Where on the page")
+                SectionHeading(stringResource(R.string.options_where_on_page))
                 ChoiceRow(
                     options = listOf(
-                        ImageStamp.Anchor.BOTTOM_RIGHT to "Bottom right",
-                        ImageStamp.Anchor.BOTTOM_LEFT to "Bottom left",
-                        ImageStamp.Anchor.BOTTOM_CENTRE to "Bottom centre"
+                        ImageStamp.Anchor.BOTTOM_RIGHT to stringResource(R.string.options_bottom_right),
+                        ImageStamp.Anchor.BOTTOM_LEFT to stringResource(R.string.options_bottom_left),
+                        ImageStamp.Anchor.BOTTOM_CENTRE to stringResource(R.string.options_bottom_centre)
                     ),
                     selected = config.signAnchor,
                     onSelect = { value -> onChange { it.copy(signAnchor = value) } }
                 )
-                SectionHeading("Size")
+                SectionHeading(stringResource(R.string.options_size))
                 ChoiceRow(
-                    options = listOf(0.2f to "Small", 0.3f to "Medium", 0.45f to "Large"),
+                    options = listOf(0.2f to stringResource(R.string.options_small), 0.3f to stringResource(R.string.options_medium), 0.45f to stringResource(R.string.options_large)),
                     selected = config.signWidth,
                     onSelect = { value -> onChange { it.copy(signWidth = value) } }
                 )
                 NumberField(
                     value = config.markPage,
-                    label = "Page",
+                    label = stringResource(R.string.options_page),
                     min = 1,
                     max = pageCount ?: 9999,
                     onChange = { value -> onChange { it.copy(markPage = value) } }
                 )
                 Hint(
-                    "This draws your signature into the page, the same as printing, signing " +
-                        "and scanning it back. It is not a cryptographic digital signature."
+                    stringResource(R.string.options_sign_hint)
                 )
             }
 
             ToolId.ADD_IMAGE -> {
-                SectionHeading("Where on the page")
+                SectionHeading(stringResource(R.string.options_where_on_page))
                 ChoiceRow(
                     options = listOf(
-                        ImageStamp.Anchor.TOP_LEFT to "Top left",
-                        ImageStamp.Anchor.TOP_CENTRE to "Top",
-                        ImageStamp.Anchor.TOP_RIGHT to "Top right",
-                        ImageStamp.Anchor.MIDDLE_LEFT to "Left",
-                        ImageStamp.Anchor.MIDDLE_CENTRE to "Middle",
-                        ImageStamp.Anchor.MIDDLE_RIGHT to "Right",
-                        ImageStamp.Anchor.BOTTOM_LEFT to "Bottom left",
-                        ImageStamp.Anchor.BOTTOM_CENTRE to "Bottom",
-                        ImageStamp.Anchor.BOTTOM_RIGHT to "Bottom right"
+                        ImageStamp.Anchor.TOP_LEFT to stringResource(R.string.options_top_left),
+                        ImageStamp.Anchor.TOP_CENTRE to stringResource(R.string.options_top),
+                        ImageStamp.Anchor.TOP_RIGHT to stringResource(R.string.options_top_right),
+                        ImageStamp.Anchor.MIDDLE_LEFT to stringResource(R.string.options_left),
+                        ImageStamp.Anchor.MIDDLE_CENTRE to stringResource(R.string.options_middle),
+                        ImageStamp.Anchor.MIDDLE_RIGHT to stringResource(R.string.options_right),
+                        ImageStamp.Anchor.BOTTOM_LEFT to stringResource(R.string.options_bottom_left),
+                        ImageStamp.Anchor.BOTTOM_CENTRE to stringResource(R.string.options_bottom),
+                        ImageStamp.Anchor.BOTTOM_RIGHT to stringResource(R.string.options_bottom_right)
                     ),
                     selected = config.signAnchor,
                     onSelect = { value -> onChange { it.copy(signAnchor = value) } }
                 )
-                SectionHeading("Width, as a share of the page")
+                SectionHeading(stringResource(R.string.options_width_share))
                 ChoiceRow(
-                    options = listOf(0.15f to "Small", 0.3f to "Medium", 0.5f to "Large", 0.9f to "Full width"),
+                    options = listOf(0.15f to stringResource(R.string.options_small), 0.3f to stringResource(R.string.options_medium), 0.5f to stringResource(R.string.options_large), 0.9f to stringResource(R.string.options_full_width)),
                     selected = config.signWidth,
                     onSelect = { value -> onChange { it.copy(signWidth = value) } }
                 )
                 NumberField(
                     value = config.markPage,
-                    label = "Page",
+                    label = stringResource(R.string.options_page),
                     min = 1,
                     max = pageCount ?: 9999,
                     onChange = { value -> onChange { it.copy(markPage = value) } }
                 )
                 Hint(
-                    "Pick the PDF, then the image: PNG, JPEG or WebP. It is drawn into the " +
-                        "page, so the next reader cannot drag it off."
+                    stringResource(R.string.options_add_image_hint)
                 )
             }
 
             ToolId.ADD_TEXT -> {
                 Field(
                     value = config.noteText,
-                    label = "What to write",
+                    label = stringResource(R.string.options_what_to_write),
                     keyboardType = KeyboardType.Text,
                     onChange = { value -> onChange { it.copy(noteText = value) } }
                 )
-                SectionHeading("Size")
+                SectionHeading(stringResource(R.string.options_size))
                 ChoiceRow(
-                    options = listOf(9f to "Small", 12f to "Normal", 16f to "Large", 24f to "Big"),
+                    options = listOf(9f to stringResource(R.string.options_small), 12f to stringResource(R.string.options_normal), 16f to stringResource(R.string.options_large), 24f to stringResource(R.string.options_big)),
                     selected = config.noteSize,
                     onSelect = { value -> onChange { it.copy(noteSize = value) } }
                 )
-                SectionHeading("Ink")
+                SectionHeading(stringResource(R.string.options_ink))
                 ChoiceRow(
                     options = listOf(
-                        NOTE_BLACK to "Black",
-                        NOTE_BLUE to "Blue",
-                        NOTE_RED to "Red"
+                        NOTE_BLACK to stringResource(R.string.options_black),
+                        NOTE_BLUE to stringResource(R.string.options_blue),
+                        NOTE_RED to stringResource(R.string.options_red)
                     ),
                     selected = config.noteColour,
                     onSelect = { value -> onChange { it.copy(noteColour = value) } }
                 )
-                SectionHeading("What is already there")
+                SectionHeading(stringResource(R.string.options_already_there))
                 ChoiceRow(
                     options = listOf(
-                        false to "Write over it",
-                        true to "Cover it first"
+                        false to stringResource(R.string.options_write_over),
+                        true to stringResource(R.string.options_cover_first)
                     ),
                     selected = config.noteCover,
                     onSelect = { value -> onChange { it.copy(noteCover = value) } }
                 )
                 NumberField(
                     value = config.markPage,
-                    label = "Page",
+                    label = stringResource(R.string.options_page),
                     min = 1,
                     max = pageCount ?: 9999,
                     onChange = { value -> onChange { it.copy(markPage = value) } }
                 )
                 Hint(
-                    "Tap the page below to choose where the text goes. Covering paints white " +
-                        "over the old text rather than deleting it, so it is a correction, not " +
-                        "a redaction - use Remove areas when something has to be gone for good."
+                    stringResource(R.string.options_add_text_hint)
                 )
             }
 
             ToolId.HEADER_FOOTER -> {
                 Field(
                     value = config.headerText,
-                    label = "Along the top",
+                    label = stringResource(R.string.options_along_top),
                     keyboardType = KeyboardType.Text,
                     onChange = { value -> onChange { it.copy(headerText = value) } }
                 )
                 Field(
                     value = config.footerText,
-                    label = "Along the bottom",
+                    label = stringResource(R.string.options_along_bottom),
                     keyboardType = KeyboardType.Text,
                     onChange = { value -> onChange { it.copy(footerText = value) } }
                 )
                 Hint(
-                    "Four things are filled in as each page is stamped: {page} the page " +
-                        "number, {total} how many there are, {date} today, and {name} the " +
-                        "document's name. \"Confidential - {date}\" works, so does " +
-                        "\"{name} - page {page} of {total}\"."
+                    stringResource(R.string.options_header_hint)
                 )
-                SectionHeading("Where")
+                SectionHeading(stringResource(R.string.options_where))
                 ChoiceRow(
                     options = listOf(
-                        StampSpec.Align.LEFT to "Left",
-                        StampSpec.Align.CENTRE to "Centre",
-                        StampSpec.Align.RIGHT to "Right"
+                        StampSpec.Align.LEFT to stringResource(R.string.options_left),
+                        StampSpec.Align.CENTRE to stringResource(R.string.options_centre),
+                        StampSpec.Align.RIGHT to stringResource(R.string.options_right)
                     ),
                     selected = config.stampAlign,
                     onSelect = { value -> onChange { it.copy(stampAlign = value) } }
                 )
-                SectionHeading("Size")
+                SectionHeading(stringResource(R.string.options_size))
                 ChoiceRow(
-                    options = listOf(8f to "Small", 9f to "Normal", 11f to "Large"),
+                    options = listOf(8f to stringResource(R.string.options_small), 9f to stringResource(R.string.options_normal), 11f to stringResource(R.string.options_large)),
                     selected = config.stampSize,
                     onSelect = { value -> onChange { it.copy(stampSize = value) } }
                 )
                 NumberField(
                     value = config.stampSkipFirst,
-                    label = "Leave this many pages unstamped",
+                    label = stringResource(R.string.options_leave_unstamped),
                     min = 0,
                     max = (pageCount ?: 9999) - 1,
                     onChange = { value -> onChange { it.copy(stampSkipFirst = value) } }
@@ -1011,27 +966,26 @@ fun ToolOptions(
 
             ToolId.INSERT -> {
                 Hint(
-                    "The first file is the document being added to. Add a second file and its " +
-                        "pages go in; add nothing and you get blank pages instead."
+                    stringResource(R.string.options_insert_hint)
                 )
                 if (!config.replacePages) {
                     NumberField(
                         value = config.insertAt,
-                        label = "Insert at page",
+                        label = stringResource(R.string.options_insert_at),
                         min = 1,
                         max = (pageCount ?: 9999) + 1,
                         onChange = { value -> onChange { it.copy(insertAt = value) } }
                     )
                 }
-                SectionHeading("Blank pages, if no second file")
+                SectionHeading(stringResource(R.string.options_insert_blank_heading))
                 ChoiceRow(
-                    options = listOf(0 to "None", 1 to "1", 2 to "2", 4 to "4"),
+                    options = listOf(0 to stringResource(R.string.options_none), 1 to "1", 2 to "2", 4 to "4"),
                     selected = config.blankPages,
                     onSelect = { value -> onChange { it.copy(blankPages = value) } }
                 )
-                SectionHeading("Or replace pages")
+                SectionHeading(stringResource(R.string.options_insert_or_replace))
                 ChoiceRow(
-                    options = listOf(false to "Insert beside", true to "Replace these pages"),
+                    options = listOf(false to stringResource(R.string.options_insert_beside), true to stringResource(R.string.options_insert_replace)),
                     selected = config.replacePages,
                     onSelect = { value -> onChange { it.copy(replacePages = value) } }
                 )
@@ -1039,15 +993,15 @@ fun ToolOptions(
                     PageSpecField(
                         value = config.replaceSpec,
                         pageCount = pageCount,
-                        label = "Pages to replace",
-                        hint = "The new pages go in where the first of these was",
+                        label = stringResource(R.string.options_insert_pages_replace),
+                        hint = stringResource(R.string.options_insert_replace_hint),
                         onChange = { spec -> onChange { it.copy(replaceSpec = spec) } }
                     )
                 }
             }
 
             ToolId.ANNOTATE -> {
-                SectionHeading("What your finger does")
+                SectionHeading(stringResource(R.string.options_finger))
                 ChoiceRow(
                     options = ToolConfig.MarkupTool.entries.map { it to it.label },
                     selected = config.markupTool,
@@ -1073,19 +1027,19 @@ fun ToolOptions(
                     ToolConfig.MarkupTool.NOTE -> {
                         Field(
                             value = config.markupText,
-                            label = "What the note says",
+                            label = stringResource(R.string.options_note_says),
                             keyboardType = KeyboardType.Text,
                             onChange = { value -> onChange { it.copy(markupText = value) } }
                         )
-                        SectionHeading("Size")
+                        SectionHeading(stringResource(R.string.options_size))
                         ChoiceRow(
-                            options = listOf(8f to "Small", 10f to "Normal", 14f to "Large"),
+                            options = listOf(8f to stringResource(R.string.options_small), 10f to stringResource(R.string.options_normal), 14f to stringResource(R.string.options_large)),
                             selected = config.noteSize,
                             onSelect = { value -> onChange { it.copy(noteSize = value) } }
                         )
                     }
                     ToolConfig.MarkupTool.STAMP -> {
-                        SectionHeading("What it says")
+                        SectionHeading(stringResource(R.string.options_stamp_says))
                         ChoiceRow(
                             options = STAMP_WORDS.map { it to it },
                             selected = config.stampText,
@@ -1093,29 +1047,29 @@ fun ToolOptions(
                         )
                         Field(
                             value = config.stampText,
-                            label = "Or your own word",
+                            label = stringResource(R.string.options_own_word),
                             keyboardType = KeyboardType.Text,
                             onChange = { value -> onChange { it.copy(stampText = value) } }
                         )
                     }
                     else -> Unit
                 }
-                SectionHeading("Colour")
+                SectionHeading(stringResource(R.string.options_colour))
                 if (config.markupTool.usesInk) {
                     ChoiceRow(
                         options = listOf(
-                            NOTE_BLACK to "Black",
-                            NOTE_BLUE to "Blue",
-                            NOTE_RED to "Red",
-                            INK_GREEN to "Green"
+                            NOTE_BLACK to stringResource(R.string.options_black),
+                            NOTE_BLUE to stringResource(R.string.options_blue),
+                            NOTE_RED to stringResource(R.string.options_red),
+                            INK_GREEN to stringResource(R.string.options_green)
                         ),
                         selected = config.markupColour,
                         onSelect = { value -> onChange { it.copy(markupColour = value) } }
                     )
                     if (config.markupTool != ToolConfig.MarkupTool.NOTE && config.markupTool != ToolConfig.MarkupTool.STAMP) {
-                        SectionHeading("Thickness")
+                        SectionHeading(stringResource(R.string.options_thickness))
                         ChoiceRow(
-                            options = listOf(1.2f to "Thin", 2.5f to "Medium", 5f to "Thick"),
+                            options = listOf(1.2f to stringResource(R.string.options_thin), 2.5f to stringResource(R.string.options_medium), 5f to stringResource(R.string.options_thick)),
                             selected = config.penWidth,
                             onSelect = { value -> onChange { it.copy(penWidth = value) } }
                         )
@@ -1123,10 +1077,10 @@ fun ToolOptions(
                 } else {
                     ChoiceRow(
                         options = listOf(
-                            HIGHLIGHT_YELLOW to "Yellow",
-                            HIGHLIGHT_GREEN to "Green",
-                            HIGHLIGHT_PINK to "Pink",
-                            HIGHLIGHT_BLUE to "Blue"
+                            HIGHLIGHT_YELLOW to stringResource(R.string.options_yellow),
+                            HIGHLIGHT_GREEN to stringResource(R.string.options_green),
+                            HIGHLIGHT_PINK to stringResource(R.string.options_pink),
+                            HIGHLIGHT_BLUE to stringResource(R.string.options_blue)
                         ),
                         selected = config.markupColour,
                         onSelect = { value -> onChange { it.copy(markupColour = value) } }
@@ -1134,62 +1088,56 @@ fun ToolOptions(
                 }
                 Hint(
                     when {
-                        config.markupTool.taps -> "Tap the page where it should go. "
-                        config.markupTool.drags -> "Drag across the page. "
-                        else -> "Draw with your finger. "
-                    } + "Marks are drawn into the page rather than added as notes, so they are " +
-                        "still there in any other reader - and cannot be peeled off again. " +
-                        "The document you chose is never changed either way."
+                        config.markupTool.taps -> stringResource(R.string.options_tap_page)
+                        config.markupTool.drags -> stringResource(R.string.options_drag_page)
+                        else -> stringResource(R.string.options_draw_finger)
+                    } + " " + stringResource(R.string.options_annotate_hint)
                 )
             }
 
             ToolId.FORMS -> {
                 ChoiceRow(
                     options = listOf(
-                        false to "Leave it editable",
-                        true to "Seal the answers in"
+                        false to stringResource(R.string.options_form_editable),
+                        true to stringResource(R.string.options_form_seal)
                     ),
                     selected = config.flattenForm,
                     onSelect = { value -> onChange { it.copy(flattenForm = value) } }
                 )
                 Hint(
                     if (config.flattenForm) {
-                        "Sealing draws the answers into the page and removes the fields, so " +
-                            "nobody can retype them. It cannot be undone, and the editable " +
-                            "original is untouched - Sheaf never writes to the file you chose."
+                        stringResource(R.string.options_form_seal_hint)
                     } else {
-                        "The result stays a form, so the answers can be changed later by " +
-                            "anyone who opens it."
+                        stringResource(R.string.options_form_editable_hint)
                     }
                 )
             }
 
             ToolId.N_UP -> {
-                SectionHeading("Pages per sheet")
+                SectionHeading(stringResource(R.string.options_per_sheet))
                 ChoiceRow(
                     options = listOf(2 to "2", 4 to "4", 6 to "6", 8 to "8", 9 to "9", 16 to "16"),
                     selected = config.perSheet,
                     onSelect = { value -> onChange { it.copy(perSheet = value) } }
                 )
-                SectionHeading("Sheet")
+                SectionHeading(stringResource(R.string.options_sheet))
                 ChoiceRow(
                     options = listOf(
                         PageSpec.Size.A4 to "A4",
-                        PageSpec.Size.LETTER to "Letter",
+                        PageSpec.Size.LETTER to stringResource(R.string.options_size_letter),
                         PageSpec.Size.A3 to "A3",
-                        PageSpec.Size.LEGAL to "Legal"
+                        PageSpec.Size.LEGAL to stringResource(R.string.options_size_legal)
                     ),
                     selected = config.nUpPaper,
                     onSelect = { value -> onChange { it.copy(nUpPaper = value) } }
                 )
                 Hint(
-                    "The sheet is turned whichever way shows the pages biggest: two upright " +
-                        "pages side by side on a sideways sheet, two wide slides one above the other."
+                    stringResource(R.string.options_nup_hint)
                 )
             }
 
             ToolId.SPLIT_BY_SIZE -> {
-                SectionHeading("Each part under")
+                SectionHeading(stringResource(R.string.options_each_part_under))
                 ChoiceRow(
                     options = listOf(2 to "2 MB", 5 to "5 MB", 10 to "10 MB", 25 to "25 MB"),
                     selected = config.partMb,
@@ -1197,52 +1145,46 @@ fun ToolOptions(
                 )
                 NumberField(
                     value = config.partMb,
-                    label = "Or any size, in MB",
+                    label = stringResource(R.string.options_any_size_mb),
                     min = 1,
                     max = 2000,
                     onChange = { value -> onChange { it.copy(partMb = value) } }
                 )
                 Hint(
-                    "Each part is measured by saving it, so none comes out over the limit - " +
-                        "except a single page that is bigger than the limit on its own, which " +
-                        "becomes its own part and is marked."
+                    stringResource(R.string.options_split_size_hint)
                 )
             }
 
             ToolId.METADATA -> {
                 ChoiceRow(
                     options = listOf(
-                        ToolConfig.MetaMode.EDIT to "Edit the details",
-                        ToolConfig.MetaMode.CLEAN to "Clean hidden data",
-                        ToolConfig.MetaMode.STRIP to "Blank the details"
+                        ToolConfig.MetaMode.EDIT to stringResource(R.string.options_meta_edit),
+                        ToolConfig.MetaMode.CLEAN to stringResource(R.string.options_meta_clean),
+                        ToolConfig.MetaMode.STRIP to stringResource(R.string.options_meta_blank)
                     ),
                     selected = config.metaMode,
                     onSelect = { value -> onChange { it.copy(metaMode = value) } }
                 )
                 when (config.metaMode) {
                     ToolConfig.MetaMode.STRIP -> Hint(
-                        "Clears the title, author, subject, keywords, the app that made it and " +
-                            "the dates. A scanner writes its make and model into a PDF; a word " +
-                            "processor writes the name it is licensed to."
+                        stringResource(R.string.options_meta_strip_hint)
                     )
                     ToolConfig.MetaMode.CLEAN -> {
                         Hint(
-                            "Takes out what a file gives away before it is sent: the details and " +
-                                "their hidden XMP copy, page thumbnails and private editing data, and " +
-                                "whichever of these you choose. The result says what was found."
+                            stringResource(R.string.options_meta_clean_hint)
                         )
                         ToggleRow(
-                            title = "Scripts and open actions",
+                            title = stringResource(R.string.options_clean_scripts),
                             checked = config.cleanScripts,
                             onChange = { on -> onChange { it.copy(cleanScripts = on) } }
                         )
                         ToggleRow(
-                            title = "Attached files",
+                            title = stringResource(R.string.options_clean_attachments),
                             checked = config.cleanAttachments,
                             onChange = { on -> onChange { it.copy(cleanAttachments = on) } }
                         )
                         ToggleRow(
-                            title = "Comments and notes",
+                            title = stringResource(R.string.options_clean_comments),
                             checked = config.cleanComments,
                             onChange = { on -> onChange { it.copy(cleanComments = on) } }
                         )
@@ -1250,32 +1192,32 @@ fun ToolOptions(
                     ToolConfig.MetaMode.EDIT -> {
                         Hint(
                             if (fileCount > 1) {
-                                "For all $fileCount files: a box you fill is set on every one; a box left empty keeps each file's own."
+                                pluralStringResource(R.plurals.options_meta_batch_hint, fileCount, fileCount)
                             } else {
-                                "These are the document's current details. Edit whichever you want to change; an empty box clears it."
+                                stringResource(R.string.options_meta_single_hint)
                             }
                         )
                         Field(
                             value = config.metaTitle,
-                            label = "Title",
+                            label = stringResource(R.string.options_title),
                             keyboardType = KeyboardType.Text,
                             onChange = { value -> onChange { it.copy(metaTitle = value) } }
                         )
                         Field(
                             value = config.metaAuthor,
-                            label = "Author",
+                            label = stringResource(R.string.options_author),
                             keyboardType = KeyboardType.Text,
                             onChange = { value -> onChange { it.copy(metaAuthor = value) } }
                         )
                         Field(
                             value = config.metaSubject,
-                            label = "Subject",
+                            label = stringResource(R.string.options_subject),
                             keyboardType = KeyboardType.Text,
                             onChange = { value -> onChange { it.copy(metaSubject = value) } }
                         )
                         Field(
                             value = config.metaKeywords,
-                            label = "Keywords",
+                            label = stringResource(R.string.options_keywords),
                             keyboardType = KeyboardType.Text,
                             onChange = { value -> onChange { it.copy(metaKeywords = value) } }
                         )
@@ -1284,24 +1226,17 @@ fun ToolOptions(
             }
 
             ToolId.EXTRACT_IMAGES -> Hint(
-                "This pulls out the pictures already inside the document at their original " +
-                    "size. For pictures of the pages themselves, use PDF to images."
+                stringResource(R.string.options_extract_images_hint)
             )
 
             ToolId.REDACT -> Hint(
-                "Draw a box over anything that should go. The marked pages are rebuilt as " +
-                    "images, so what was underneath is genuinely gone rather than covered - " +
-                    "and those pages stop being selectable text. Other pages are untouched."
+                stringResource(R.string.options_redact_hint)
             )
 
             // These have their own canvases on the tool screen rather than plain settings.
             ToolId.SCAN, ToolId.EDIT_IMAGES, ToolId.RECIPES -> Unit
             ToolId.SUMMARISE -> Hint(
-                "Picks the sentences that carry the document, and lists the amounts, dates and " +
-                    "percentages in it. Every point is a sentence from the document itself, so each " +
-                    "can be found again in the original. Worked out on this phone; nothing is sent " +
-                    "anywhere. A scan needs Make searchable first. Translation needs a language model " +
-                    "this app does not download, so it is not offered."
+                stringResource(R.string.options_summarise_hint)
             )
 
             ToolId.ORGANISE -> Unit
@@ -1321,7 +1256,7 @@ private fun PageSpecField(
     value: String,
     pageCount: Int?,
     label: String,
-    hint: String = "Type page numbers like 1-3, 7, 12-",
+    hint: String = stringResource(R.string.options_page_spec_hint),
     onChange: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1331,7 +1266,7 @@ private fun PageSpecField(
             keyboardType = KeyboardType.Text,
             onChange = onChange
         )
-        Hint(if (pageCount != null) "$hint. This document has $pageCount pages." else hint)
+        Hint(if (pageCount != null) pluralStringResource(R.plurals.options_page_spec_with_count, pageCount, hint, pageCount) else hint)
     }
 }
 
@@ -1350,7 +1285,7 @@ private fun NumberField(value: Int, label: String, min: Int, max: Int, onChange:
         )
         // Nudged a step at a time, or typed: a page number is usually one off, a Bates start
         // is usually six digits.
-        RoundIconButton(iconRes = com.layerbit.sheaf.R.drawable.ic_minus, contentDescription = "Less", onClick = { onChange((value - 1).coerceIn(min, top)) }, size = 36.dp)
+        RoundIconButton(iconRes = com.layerbit.sheaf.R.drawable.ic_minus, contentDescription = stringResource(R.string.options_less), onClick = { onChange((value - 1).coerceIn(min, top)) }, size = 36.dp)
         androidx.compose.foundation.layout.Box(modifier = Modifier.width(88.dp).padding(horizontal = 6.dp)) {
             Field(
                 value = value.toString(),
@@ -1365,16 +1300,16 @@ private fun NumberField(value: Int, label: String, min: Int, max: Int, onChange:
                 centred = true
             )
         }
-        RoundIconButton(iconRes = com.layerbit.sheaf.R.drawable.ic_plus, contentDescription = "More", onClick = { onChange((value + 1).coerceIn(min, top)) }, size = 36.dp)
+        RoundIconButton(iconRes = com.layerbit.sheaf.R.drawable.ic_plus, contentDescription = stringResource(R.string.options_more), onClick = { onChange((value + 1).coerceIn(min, top)) }, size = 36.dp)
     }
 }
 
 /** A length in millimetres, typed. Blank reads as nothing off that edge. */
 @Composable
-private fun MillimetreField(edge: String, value: Float, onChange: (Float) -> Unit) {
+private fun MillimetreField(label: String, value: Float, onChange: (Float) -> Unit) {
     Field(
         value = if (value == 0f) "" else if (value == value.toInt().toFloat()) value.toInt().toString() else value.toString(),
-        label = "$edge, mm",
+        label = label,
         keyboardType = KeyboardType.Decimal,
         onChange = { text ->
             val parsed = text.replace(',', '.').filter { it.isDigit() || it == '.' }.toFloatOrNull() ?: 0f
@@ -1385,7 +1320,7 @@ private fun MillimetreField(edge: String, value: Float, onChange: (Float) -> Uni
 
 /** Also used by the per-document unlock prompt on the tool screen. */
 @Composable
-fun PasswordField(value: String, label: String = "Password", onChange: (String) -> Unit) {
+fun PasswordField(value: String, label: String = stringResource(R.string.options_password), onChange: (String) -> Unit) {
     Field(
         value = value,
         label = label,
