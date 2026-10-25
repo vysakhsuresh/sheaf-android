@@ -22,6 +22,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
@@ -237,12 +241,13 @@ fun ToolScreen(
     val rowGapPx = with(LocalDensity.current) { 14.dp.toPx() }
     val haptics = LocalHapticFeedback.current
 
-    Column(modifier = modifier.fillMaxSize()) {
-    LazyColumn(
-        modifier = Modifier.weight(1f).fillMaxWidth(),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
+    // On a tablet, an unfolded foldable or a Chromebook window, the page being worked on goes
+    // in its own pane beside the files and options, so changing a setting and seeing its
+    // effect happen side by side instead of a scroll apart.
+    val twoPane = LocalConfiguration.current.screenWidthDp >= TWO_PANE_MIN_WIDTH_DP &&
+        running == null && finished == null && hasPreviewPane(tool, state)
+
+    val body: LazyListScope.() -> Unit = {
         when {
             running != null -> item { RunningPanel(running, onCancel) }
 
@@ -512,7 +517,7 @@ fun ToolScreen(
                             onChange = onConfigChange
                         )
                     }
-                    item {
+                    previewItem {
                         EffectPreview(
                             tool = tool,
                             config = state.config,
@@ -593,7 +598,7 @@ fun ToolScreen(
                         )
                     }
                     if (state.stampBitmap != null) {
-                        item {
+                        previewItem {
                             EffectPreview(
                                 tool = tool,
                                 config = state.config,
@@ -644,7 +649,7 @@ fun ToolScreen(
                         )
                     }
                 } else if (tool == ToolId.ANNOTATE && state.pageOrder.isNotEmpty()) {
-                    item {
+                    previewItem {
                         MarkupCanvas(
                             pageIndex = state.canvasPage,
                             pageCount = state.pageOrder.size,
@@ -674,7 +679,7 @@ fun ToolScreen(
                     }
                 } else if (tool == ToolId.CREATE_FORM && state.pageOrder.isNotEmpty()) {
                     val onThisPage = state.newFields.withIndex().filter { it.value.pageIndex == state.canvasPage }
-                    item {
+                    previewItem {
                         RedactCanvas(
                             pageIndex = state.canvasPage,
                             pageCount = state.pageOrder.size,
@@ -707,7 +712,7 @@ fun ToolScreen(
                         }
                     }
                 } else if (tool == ToolId.EDIT_TEXT && state.pageOrder.isNotEmpty()) {
-                    item {
+                    previewItem {
                         val selectedText = state.selectedLine?.let { state.lineEdits[state.canvasPage]?.get(it)?.text }
                         EditTextCanvas(
                             pageIndex = state.canvasPage,
@@ -750,7 +755,7 @@ fun ToolScreen(
                         )
                     }
                 } else if (tool == ToolId.EDIT_IMAGES && state.pageOrder.isNotEmpty()) {
-                    item {
+                    previewItem {
                         PicturesCanvas(
                             pageIndex = state.canvasPage,
                             pageCount = state.pageOrder.size,
@@ -783,7 +788,7 @@ fun ToolScreen(
                             onFind = onFindSensitive
                         )
                     }
-                    item {
+                    previewItem {
                         RedactCanvas(
                             pageIndex = state.canvasPage,
                             pageCount = state.pageOrder.size,
@@ -838,7 +843,7 @@ fun ToolScreen(
                         tool == ToolId.PAGE_NUMBERS || tool == ToolId.ADD_TEXT ||
                         tool == ToolId.BACKGROUND
                     ) {
-                        item {
+                        previewItem {
                             EffectPreview(
                                 tool = tool,
                                 config = state.config,
@@ -872,6 +877,23 @@ fun ToolScreen(
         }
     }
 
+    Column(modifier = modifier.fillMaxSize()) {
+    Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) { PaneScope(this, if (twoPane) Pane.MAIN else Pane.ALL).body() }
+        if (twoPane) {
+            Box(Modifier.width(1.dp).fillMaxHeight().background(SheafColors.Border))
+            LazyColumn(
+                modifier = Modifier.weight(1.25f).fillMaxHeight(),
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) { PaneScope(this, Pane.PREVIEW).body() }
+        }
+    }
+
     // The one coloured button on the screen sits under the list, always in reach, and says
     // why it is waiting when it is.
     if (running == null && finished == null) {
@@ -897,6 +919,60 @@ fun ToolScreen(
                 onChainTool(next, file)
             }
         )
+    }
+}
+
+/** Window width from which a tool's page preview gets a pane of its own: Material's "expanded". */
+private const val TWO_PANE_MIN_WIDTH_DP = 840
+
+/** Which items a list draws: all of them on a phone, one side of the split on a wide window. */
+private enum class Pane { ALL, MAIN, PREVIEW }
+
+/**
+ * The tool screen's list, filtered to one pane.
+ *
+ * One item builder serves both panes, so the screen's long chain of per-tool branches is
+ * written once: everything is a main-pane item except what [previewItem] marks, which is the
+ * page the tool is drawing on. On a phone both kinds go in one list in their usual order.
+ */
+private class PaneScope(private val inner: LazyListScope, private val pane: Pane) : LazyListScope by inner {
+    override fun item(key: Any?, contentType: Any?, content: @Composable LazyItemScope.() -> Unit) {
+        if (pane != Pane.PREVIEW) inner.item(key, contentType, content)
+    }
+
+    override fun items(
+        count: Int,
+        key: ((index: Int) -> Any)?,
+        contentType: (index: Int) -> Any?,
+        itemContent: @Composable LazyItemScope.(index: Int) -> Unit
+    ) {
+        if (pane != Pane.PREVIEW) inner.items(count, key, contentType, itemContent)
+    }
+
+    fun preview(content: @Composable LazyItemScope.() -> Unit) {
+        if (pane != Pane.MAIN) inner.item(contentType = "preview", content = content)
+    }
+}
+
+/** An item that shows the page being worked on, which moves to the right-hand pane when wide. */
+private fun LazyListScope.previewItem(content: @Composable LazyItemScope.() -> Unit) {
+    if (this is PaneScope) preview(content) else item(content = content)
+}
+
+/**
+ * Whether this tool, in this state, has a page to show beside its options - the same
+ * conditions under which the screen's branches below emit a [previewItem]. Kept beside them
+ * on purpose: a tool that gains a preview there and not here simply stays single-pane.
+ */
+private fun hasPreviewPane(tool: ToolId, state: ToolUiState): Boolean {
+    val pages = state.pageOrder.isNotEmpty()
+    val docs = state.documents.isNotEmpty()
+    return when (tool) {
+        ToolId.SIGN -> docs
+        ToolId.ADD_IMAGE -> docs && state.stampBitmap != null
+        ToolId.ANNOTATE, ToolId.CREATE_FORM, ToolId.EDIT_TEXT, ToolId.EDIT_IMAGES, ToolId.REDACT -> pages
+        ToolId.CROP, ToolId.WATERMARK, ToolId.PAGE_NUMBERS, ToolId.ADD_TEXT, ToolId.BACKGROUND -> docs
+        else -> false
     }
 }
 

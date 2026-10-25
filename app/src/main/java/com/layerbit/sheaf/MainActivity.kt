@@ -10,7 +10,17 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.mimeTypes
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -60,6 +70,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -102,19 +113,35 @@ class MainActivity : ComponentActivity() {
                     enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
                 }
 
-                SheafApp(
-                    recentsFlow = sheaf.recents.observe(),
-                    bookmarkCountFlow = sheaf.bookmarks.observeCount(),
-                    settings = settings,
-                    onSettingsChange = { transform -> sheaf.settings.update(transform) },
-                    openTicket = openTicket,
-                    openAnyTicket = openAnyTicket,
-                    jumpToTool = jumpToTool,
-                    onJumpHandled = { jumpToTool = null },
-                    onPickDocument = { pickDocument.launch(arrayOf(Exporter.PDF_MIME)) },
-                    onOpenRecentUri = { open(Uri.parse(it)) },
-                    onForgetRecent = { uri -> lifecycleScope.launch { sheaf.recents.forget(uri) } }
-                )
+                // Dragging a file onto the window, from a Chromebook's Files app, a tablet's
+                // taskbar or a split-screen file manager: handled exactly like a share.
+                val dropTarget = remember {
+                    object : DragAndDropTarget {
+                        override fun onDrop(event: DragAndDropEvent): Boolean = acceptDrop(event.toAndroidDragEvent())
+                    }
+                }
+                Box(
+                    Modifier.fillMaxSize().dragAndDropTarget(
+                        shouldStartDragAndDrop = { event ->
+                            event.mimeTypes().any { it == Exporter.PDF_MIME || it.startsWith("image/") || it.startsWith("text/") || it.startsWith("application/vnd.openxmlformats") }
+                        },
+                        target = dropTarget
+                    )
+                ) {
+                    SheafApp(
+                        recentsFlow = sheaf.recents.observe(),
+                        bookmarkCountFlow = sheaf.bookmarks.observeCount(),
+                        settings = settings,
+                        onSettingsChange = { transform -> sheaf.settings.update(transform) },
+                        openTicket = openTicket,
+                        openAnyTicket = openAnyTicket,
+                        jumpToTool = jumpToTool,
+                        onJumpHandled = { jumpToTool = null },
+                        onPickDocument = { pickDocument.launch(arrayOf(Exporter.PDF_MIME)) },
+                        onOpenRecentUri = { open(Uri.parse(it)) },
+                        onForgetRecent = { uri -> lifecycleScope.launch { sheaf.recents.forget(uri) } }
+                    )
+                }
             }
         }
 
@@ -227,6 +254,26 @@ class MainActivity : ComponentActivity() {
         val type = declared?.takeIf { it != "*/*" } ?: runCatching { contentResolver.getType(uri) }.getOrNull()
         if (type != null) return type == Exporter.PDF_MIME
         return uri.lastPathSegment.orEmpty().endsWith(".pdf", ignoreCase = true)
+    }
+
+    /**
+     * A drop from another app. The grant to read what was dropped is asked for first and lasts
+     * as long as this activity, which is long enough for the file to be copied in.
+     */
+    private fun acceptDrop(event: android.view.DragEvent): Boolean {
+        val clip = event.clipData ?: return false
+        if (requestDragAndDropPermissions(event) == null) return false
+        val uris = (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
+        if (uris.isEmpty()) return false
+        when {
+            uris.size == 1 && isPdf(uris.first(), null) -> open(uris.first())
+            uris.all { isPdf(it, null) } -> {
+                sheaf.handoff.offer(uris)
+                jumpToTool = ToolId.MERGE
+            }
+            else -> openAny(uris)
+        }
+        return true
     }
 
     /** Hands files that are not a PDF to Open a file, which suggests the right tool for them. */

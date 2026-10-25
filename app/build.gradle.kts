@@ -98,6 +98,14 @@ android {
         buildConfig = true
     }
 
+    // Warnings that exist today are recorded in lint-baseline.xml, so lint reports only what is
+    // new. Fatal issues still fail lintVitalRelease, which runs before every release build.
+    lint {
+        baseline = file("lint-baseline.xml")
+        checkReleaseBuilds = true
+        abortOnError = true
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
