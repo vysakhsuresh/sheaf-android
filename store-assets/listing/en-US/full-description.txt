@@ -1,0 +1,39 @@
+Sheaf is every PDF tool you need, and it works entirely on your phone.
+
+Most PDF apps upload your file to a server to merge, compress or convert it. Sheaf does the same work on the device. It does not even hold Android's internet permission, so a contract, a bank statement or an ID scan can never leave your phone through it. You can check that yourself under "App permissions" on this page.
+
+READ
+• A fast reader with search, bookmarks, a page grid, links that work, and continuous, page-by-page or two-up reading
+• Select text to copy, share, define, translate or read aloud
+• Sepia, dark paper and night colours, a brightness control and margin cropping for comfortable reading
+• Opens password-protected PDFs right in the reader
+
+SCAN
+• A document scanner with live page detection and auto-capture
+• Batch mode for many pages, and ID card mode that puts front and back on one A4
+• Shadow removal, white balance and straightening, then Document, Grey or Photo looks
+• Make a scan searchable with on-device OCR, including Hindi, Marathi and other Devanagari scripts
+
+ORGANISE AND EDIT
+• Merge, split, extract, insert, reorder, rotate and delete pages
+• Compress to a target size, add page numbers and Bates numbers, headers, footers and watermarks
+• Edit text and pictures, crop pages, add images and backgrounds
+• Mark up with highlights, pen, shapes, arrows, notes and stamps, with pressure-sensitive stylus support
+
+SIGN AND SECURE
+• Draw a signature once and reuse it; sign with a digital certificate (.pfx)
+• Add or remove passwords, permanently remove areas, find and black out sensitive details
+• Fill forms, create fillable forms, save PDF/A for archiving
+
+CONVERT
+• Word, Excel, text, CSV and Markdown to PDF; PDF to Word or Excel
+• Photos to PDF, PDF to images
+• Recipes: save a chain of tools and run it on a batch of files in one tap
+
+MADE FOR EVERY SCREEN
+• Tablet and foldable layouts, keyboard shortcuts, TalkBack support and large-text friendly
+• Home-screen widgets for scanning, opening a PDF and your recent documents
+
+Every tool is free. No ads, no account, no subscription, no page limits, and your original file is never changed - every tool makes a new one.
+
+Questions or ideas: ceo@layerbit.co.in

@@ -40,6 +40,7 @@ class SheafSettings(context: Context) {
             .putString(KEY_SAVE_FOLDER, updated.saveFolder)
             .putString(KEY_RECENT_TOOLS, updated.recentTools.joinToString(","))
             .putBoolean(KEY_EDITABLE_MARKS, updated.editableMarks)
+            .putBoolean(KEY_AUTO_CAPTURE, updated.autoCapture)
             .apply()
         _state.value = updated
     }
@@ -69,7 +70,8 @@ class SheafSettings(context: Context) {
             favouriteTools = prefs.getStringSet(KEY_FAVOURITES, emptySet()).orEmpty(),
             saveFolder = prefs.getString(KEY_SAVE_FOLDER, null),
             recentTools = prefs.getString(KEY_RECENT_TOOLS, null).orEmpty().split(",").filter { it.matches(Regex("[A-Z_]+")) },
-            editableMarks = prefs.getBoolean(KEY_EDITABLE_MARKS, false)
+            editableMarks = prefs.getBoolean(KEY_EDITABLE_MARKS, false),
+            autoCapture = prefs.getBoolean(KEY_AUTO_CAPTURE, true)
         )
     }
 
@@ -84,6 +86,7 @@ class SheafSettings(context: Context) {
         const val KEY_SAVE_FOLDER = "saveFolder"
         const val KEY_RECENT_TOOLS = "recentTools"
         const val KEY_EDITABLE_MARKS = "editableMarks"
+        const val KEY_AUTO_CAPTURE = "autoCapture"
         const val MAX_RECENT_TOOLS = 6
     }
 }
@@ -124,7 +127,9 @@ data class Settings(
      * mark that someone else's app can quietly remove is not what most people sending a
      * marked-up document expect. Sign and Remove areas always flatten, whatever this says.
      */
-    val editableMarks: Boolean = false
+    val editableMarks: Boolean = false,
+    /** The scanner takes the picture itself once a page is held still in the frame. */
+    val autoCapture: Boolean = true
 )
 
 enum class ThemeChoice(val label: String) {

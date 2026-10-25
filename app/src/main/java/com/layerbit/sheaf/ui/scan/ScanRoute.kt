@@ -4,16 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.Preview
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -22,26 +13,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,22 +32,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.sheaf.jobs.JobState
 import com.layerbit.sheaf.R
 import com.layerbit.sheaf.ui.components.IconTile
 import com.layerbit.sheaf.ui.components.Panel
-import com.layerbit.sheaf.ui.components.Pill
 import com.layerbit.sheaf.ui.components.PrimaryButton
 import com.layerbit.sheaf.ui.components.SecondaryButton
-import com.layerbit.sheaf.ui.components.pressScale
 import com.layerbit.sheaf.ui.theme.SheafColors
-import java.util.concurrent.Executors
 
 /**
  * The scanner, end to end: viewfinder, corner adjustment, page strip, make a PDF.
@@ -84,6 +60,7 @@ fun ScanRoute(
 ) {
     val state by viewModel.state.collectAsState()
     val jobState by viewModel.jobState.collectAsState()
+    val autoCapture by viewModel.autoCapture.collectAsState()
     val context = LocalContext.current
 
     var hasCamera by remember {
@@ -93,6 +70,7 @@ fun ScanRoute(
         )
     }
 
+    val notificationGate = com.layerbit.sheaf.ui.components.rememberNotificationGate()
     val requestCamera = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted -> hasCamera = granted }
@@ -123,6 +101,7 @@ fun ScanRoute(
             editing != null -> PageEditor(
                 editing = editing,
                 onMoveCorner = viewModel::moveCorner,
+                onWholePhoto = viewModel::useWholePhoto,
                 onFilter = viewModel::setFilter,
                 onKeep = viewModel::keepPage,
                 onDiscard = viewModel::discardPage,
@@ -135,10 +114,18 @@ fun ScanRoute(
             )
 
             else -> Viewfinder(
-                onCaptured = viewModel::captured,
-                captureTarget = viewModel::captureTarget,
-                onError = { /* surfaced through state below */ },
+                mode = state.mode,
+                onMode = viewModel::setMode,
+                autoCapture = autoCapture,
+                onToggleAuto = viewModel::toggleAutoCapture,
+                ready = !state.busy && jobState !is JobState.Running,
                 pageCount = state.pages.size,
+                processing = state.processing,
+                waitingForBack = state.pendingIdFront != null,
+                captureTarget = viewModel::captureTarget,
+                onCaptured = viewModel::captured,
+                onCaptureFailed = viewModel::captureFailed,
+                tracker = viewModel.autoTracker,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -147,8 +134,10 @@ fun ScanRoute(
             ScannedPages(
                 pages = state.pages,
                 busy = state.busy || jobState is JobState.Running,
+                processing = state.processing,
+                onReopen = viewModel::reopenPage,
                 onRemove = viewModel::removePage,
-                onMakePdf = viewModel::makePdf
+                onMakePdf = { notificationGate { viewModel.makePdf() } }
             )
         }
 
@@ -156,142 +145,6 @@ fun ScanRoute(
             Panel(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), tint = SheafColors.Failed, inset = 12.dp) {
                 Text(text = message, style = MaterialTheme.typography.bodyMedium, color = SheafColors.Text)
             }
-        }
-    }
-}
-
-@Composable
-private fun Viewfinder(
-    onCaptured: (java.io.File) -> Unit,
-    captureTarget: () -> java.io.File,
-    onError: (String) -> Unit,
-    pageCount: Int,
-    modifier: Modifier = Modifier
-) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    var capture by remember { mutableStateOf<ImageCapture?>(null) }
-
-    // One background thread for the capture callback. CameraX will otherwise use its own and
-    // the shutdown below is what keeps it from outliving this screen.
-    val executor = remember { Executors.newSingleThreadExecutor() }
-    DisposableEffect(Unit) { onDispose { executor.shutdown() } }
-
-    Box(modifier = modifier.fillMaxSize()) {
-        AndroidView(
-            modifier = Modifier.fillMaxSize(),
-            factory = { ctx ->
-                val previewView = PreviewView(ctx).apply {
-                    scaleType = PreviewView.ScaleType.FILL_CENTER
-                }
-                val providerFuture = ProcessCameraProvider.getInstance(ctx)
-                providerFuture.addListener({
-                    val provider = providerFuture.get()
-                    val preview = Preview.Builder().build().also {
-                        it.setSurfaceProvider(previewView.surfaceProvider)
-                    }
-                    val imageCapture = ImageCapture.Builder()
-                        // Quality over latency: this is a document, and a slightly slower
-                        // shutter is a better trade than a soft page nobody can read.
-                        .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
-                        .build()
-
-                    runCatching {
-                        provider.unbindAll()
-                        provider.bindToLifecycle(
-                            lifecycleOwner,
-                            CameraSelector.DEFAULT_BACK_CAMERA,
-                            preview,
-                            imageCapture
-                        )
-                    }
-                    capture = imageCapture
-                }, ContextCompat.getMainExecutor(ctx))
-                previewView
-            }
-        )
-
-        // Corner guides: where the page should sit. A frame tells the hand what the words
-        // underneath say, before the words are read.
-        Canvas(modifier = Modifier.fillMaxSize().padding(28.dp)) {
-            val arm = 34.dp.toPx()
-            val stroke = 3.dp.toPx()
-            val colour = Color.White.copy(alpha = 0.85f)
-            val w = size.width
-            val h = size.height
-            val corners = listOf(
-                Offset(0f, 0f) to Pair(Offset(arm, 0f), Offset(0f, arm)),
-                Offset(w, 0f) to Pair(Offset(w - arm, 0f), Offset(w, arm)),
-                Offset(0f, h) to Pair(Offset(arm, h), Offset(0f, h - arm)),
-                Offset(w, h) to Pair(Offset(w - arm, h), Offset(w, h - arm))
-            )
-            for ((corner, arms) in corners) {
-                drawLine(colour, corner, arms.first, stroke, StrokeCap.Round)
-                drawLine(colour, corner, arms.second, stroke, StrokeCap.Round)
-            }
-        }
-
-        // A dark scrim top and bottom, so the hint and the controls read over any page.
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(96.dp)
-                .align(Alignment.TopCenter)
-                .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent)))
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(150.dp)
-                .align(Alignment.BottomCenter)
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f))))
-        )
-
-        Row(
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Pill(if (pageCount == 0) "Fill the frame with the page" else "Page ${pageCount + 1}", Color.White, filled = false)
-            if (pageCount > 0) Pill("$pageCount kept", SheafColors.BandBright, filled = true)
-        }
-
-        Column(
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 22.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            val interaction = remember { MutableInteractionSource() }
-            Box(
-                modifier = Modifier
-                    .pressScale(interaction, 0.9f)
-                    .size(78.dp)
-                    .border(4.dp, Color.White, CircleShape)
-                    .padding(6.dp)
-                    .background(SheafColors.Band, CircleShape)
-                    .clickable(interactionSource = interaction, indication = null) {
-                        val target = captureTarget()
-                        capture?.takePicture(
-                            ImageCapture.OutputFileOptions.Builder(target).build(),
-                            executor,
-                            object : ImageCapture.OnImageSavedCallback {
-                                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                                    onCaptured(target)
-                                }
-
-                                override fun onError(exception: ImageCaptureException) {
-                                    target.delete()
-                                    onError(exception.message ?: "The photo could not be taken.")
-                                }
-                            }
-                        )
-                    }
-            )
-            Text(
-                "Tap to capture",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.85f),
-                modifier = Modifier.padding(top = 10.dp)
-            )
         }
     }
 }

@@ -59,31 +59,51 @@ import kotlin.math.hypot
 import kotlin.math.roundToInt
 
 /**
- * Adjusting a captured page: drag the corners onto the paper, pick a look, keep it.
+ * Adjusting a captured page: check the corners on the paper, pick a look, keep it.
  *
- * The handles are the whole interaction. There is no automatic edge detection, because a
- * detector that is right most of the time is worse than none - the times it is wrong it crops
- * away a signature without telling anyone. Four handles on a sensible default is quick to
- * confirm and can never quietly destroy a page.
+ * The corners start on the outline the detector found, or on a default rectangle when it
+ * found none, and the handles are always there. A detector that is right most of the time is
+ * still wrong some of the time, and when it is, the person sees it here and drags it right
+ * rather than finding a signature cropped off in the PDF.
  */
 @Composable
 fun PageEditor(
     editing: EditingPage,
     onMoveCorner: (CornerHandle, Float, Float) -> Unit,
+    onWholePhoto: () -> Unit,
     onFilter: (PageProcessor.Filter) -> Unit,
     onKeep: () -> Unit,
     onDiscard: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val purpose = editing.purpose
+    val (tag, title) = when {
+        purpose == EditPurpose.IdFront -> "Front" to "Fit the corners to the card"
+        purpose == EditPurpose.IdBack -> "Back" to "Fit the corners to the card"
+        purpose is EditPurpose.Recrop && purpose.kind == PageKind.ID_CARD ->
+            (if (purpose.side == 0) "Front" else "Back") to "Fit the corners to the card"
+        purpose is EditPurpose.Recrop -> "Recrop" to "Move the corners onto the page"
+        editing.detected -> "Found" to "Check the corners are on the page"
+        else -> "Adjust" to "Drag the corners onto the page"
+    }
+    val (keepLabel, discardLabel) = when (purpose) {
+        EditPurpose.NewPage -> "Keep this page" to "Retake"
+        EditPurpose.IdFront -> "Keep the front" to "Retake"
+        EditPurpose.IdBack -> "Keep the back" to "Retake"
+        is EditPurpose.Recrop ->
+            (if (purpose.side + 1 < purpose.sources.size) "Next, the back" else "Save the crop") to "Cancel"
+    }
+
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Pill("Adjust", SheafColors.Band, filled = true)
+            Pill(tag, SheafColors.Band, filled = true)
             Text(
-                "Drag the corners onto the page",
+                title,
                 style = MaterialTheme.typography.titleMedium,
                 color = SheafColors.Text,
-                modifier = Modifier.padding(start = 10.dp)
+                modifier = Modifier.padding(start = 10.dp).weight(1f)
             )
+            TextButton(onClick = onWholePhoto) { Text("Whole photo") }
         }
         Spacer(Modifier.height(10.dp))
 
@@ -234,8 +254,13 @@ fun PageEditor(
 
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PrimaryButton(text = "Keep this page", icon = Icons.Filled.Check, onClick = onKeep, modifier = Modifier.weight(1.4f))
-            SecondaryButton(text = "Retake", icon = Icons.Filled.Refresh, onClick = onDiscard, modifier = Modifier.weight(1f))
+            PrimaryButton(text = keepLabel, icon = Icons.Filled.Check, onClick = onKeep, modifier = Modifier.weight(1.4f))
+            SecondaryButton(
+                text = discardLabel,
+                icon = if (purpose is EditPurpose.Recrop) Icons.Filled.Close else Icons.Filled.Refresh,
+                onClick = onDiscard,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
@@ -245,6 +270,8 @@ fun PageEditor(
 fun ScannedPages(
     pages: List<ScannedPage>,
     busy: Boolean,
+    processing: Int,
+    onReopen: (Int) -> Unit,
     onRemove: (Int) -> Unit,
     onMakePdf: () -> Unit,
     modifier: Modifier = Modifier
@@ -257,7 +284,7 @@ fun ScannedPages(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             SectionHeading(if (pages.size == 1) "1 page scanned" else "${pages.size} pages scanned", modifier = Modifier.weight(1f))
-            Text("Tap a page's ✕ to drop it", style = MaterialTheme.typography.labelSmall, color = SheafColors.Dim)
+            Text("Tap a page to recrop it", style = MaterialTheme.typography.labelSmall, color = SheafColors.Dim)
         }
         Spacer(Modifier.height(10.dp))
 
@@ -266,7 +293,7 @@ fun ScannedPages(
                 Box {
                     Image(
                         bitmap = page.thumbnail.asImageBitmap(),
-                        contentDescription = "Scanned page ${index + 1}",
+                        contentDescription = "Scanned page ${index + 1}. Tap to recrop it.",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .height(104.dp)
@@ -274,6 +301,9 @@ fun ScannedPages(
                             .clip(RoundedCornerShape(10.dp))
                             .background(SheafColors.Paper)
                             .border(1.dp, SheafColors.Border, RoundedCornerShape(10.dp))
+                            // Reopens on the uncropped photo, so a crop that was a little off
+                            // is moved rather than rescanned.
+                            .clickable(enabled = !busy && page.sources.isNotEmpty()) { onReopen(index) }
                     )
                     Pill(
                         "${index + 1}",
@@ -294,9 +324,13 @@ fun ScannedPages(
 
         Spacer(Modifier.height(14.dp))
         PrimaryButton(
-            text = if (busy) "Making the PDF…" else "Make a PDF of ${if (pages.size == 1) "this page" else "these ${pages.size} pages"}",
+            text = when {
+                busy -> "Making the PDF…"
+                processing > 0 -> "Saving the last ${if (processing == 1) "page" else "$processing pages"}…"
+                else -> "Make a PDF of ${if (pages.size == 1) "this page" else "these ${pages.size} pages"}"
+            },
             onClick = onMakePdf,
-            enabled = pages.isNotEmpty() && !busy,
+            enabled = pages.isNotEmpty() && !busy && processing == 0,
             modifier = Modifier.fillMaxWidth()
         )
     }
