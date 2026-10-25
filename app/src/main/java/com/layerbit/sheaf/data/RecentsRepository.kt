@@ -44,6 +44,8 @@ class RecentsRepository(private val dao: RecentDao) {
         // The existing reading position is carried over rather than reset: REPLACE writes a
         // whole row, so reopening a document would otherwise send the reader back to page one.
         val existing = dao.positionFor(uri.toString()) ?: 0
+        // The reading mode is carried over the same way, for the same reason.
+        val mode = dao.readingModeFor(uri.toString())
         dao.upsert(
             RecentEntity(
                 uri = uri.toString(),
@@ -51,7 +53,8 @@ class RecentsRepository(private val dao: RecentDao) {
                 pageCount = pageCount,
                 sizeBytes = sizeBytes,
                 lastOpenedAt = System.currentTimeMillis(),
-                lastPage = existing.coerceIn(0, (pageCount - 1).coerceAtLeast(0))
+                lastPage = existing.coerceIn(0, (pageCount - 1).coerceAtLeast(0)),
+                readingMode = mode
             )
         )
         val dropped = dao.urisBeyond(MAX_RECENTS)
@@ -71,6 +74,12 @@ class RecentsRepository(private val dao: RecentDao) {
 
     suspend fun rememberPosition(uri: String, pageIndex: Int) =
         dao.rememberPosition(uri, pageIndex)
+
+    /** The reading mode chosen for this document, by name, or null. */
+    suspend fun readingModeFor(uri: String): String? = dao.readingModeFor(uri)
+
+    suspend fun rememberReadingMode(uri: String, mode: String?) =
+        dao.rememberReadingMode(uri, mode)
 
     suspend fun forget(uri: String) {
         dao.delete(uri)

@@ -39,6 +39,14 @@ interface RecentDao {
     @Query("UPDATE recents SET lastPage = :pageIndex WHERE uri = :uri")
     suspend fun rememberPosition(uri: String, pageIndex: Int)
 
+    /** The reading mode chosen for this document, or null when none was. */
+    @Query("SELECT readingMode FROM recents WHERE uri = :uri")
+    suspend fun readingModeFor(uri: String): String?
+
+    /** An UPDATE for the same reason as [rememberPosition]: choosing a mode is not opening. */
+    @Query("UPDATE recents SET readingMode = :mode WHERE uri = :uri")
+    suspend fun rememberReadingMode(uri: String, mode: String?)
+
     /**
      * Keeps the table from growing without bound. Called after each insert rather than on a
      * schedule, because a list nobody is looking at does not need a background job.

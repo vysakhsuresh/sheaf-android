@@ -30,5 +30,15 @@ data class RecentEntity(
      * nothing to store. Reopening a 300-page statement at page one is the difference between
      * a reader and a file preview.
      */
-    val lastPage: Int = 0
+    val lastPage: Int = 0,
+    /**
+     * How the reader chose to see this document - one long scroll, a page at a time, or two
+     * side by side - by name, or null for never chosen.
+     *
+     * Per document rather than one setting, because the choice follows the document: a novel
+     * read a page at a time and a statement scrolled through are both the right answer.
+     * Stored as a name, not an ordinal, so reordering the modes in code cannot quietly swap
+     * everyone's choice.
+     */
+    val readingMode: String? = null
 )
