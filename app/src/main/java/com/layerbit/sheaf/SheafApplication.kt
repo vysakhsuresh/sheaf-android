@@ -107,6 +107,8 @@ class SheafApplication : Application() {
         // First, so a crash anywhere after this - including in the setup below - is written
         // down where Settings can offer it.
         CrashLog.install(this)
+        // Before anything that might build a sentence for the user.
+        com.layerbit.sheaf.text.Strings.install(this)
         // PDFBox loads its font metrics and glyph lists from assets, and without this every
         // call that touches a font throws. Cheap, and it must happen before any operation.
         PDFBoxResourceLoader.init(this)
