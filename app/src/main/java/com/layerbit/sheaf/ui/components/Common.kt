@@ -46,6 +46,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
 import com.layerbit.sheaf.ui.theme.SheafColors
 import java.util.Locale
 
@@ -309,7 +311,7 @@ fun formatBytes(bytes: Long): String = when {
     else -> String.format(Locale.getDefault(), "%.2f GB", bytes / (1024.0 * 1024 * 1024))
 }
 
-fun formatPageCount(pages: Int): String = if (pages == 1) "1 page" else "$pages pages"
+fun formatPageCount(pages: Int): String = Strings.plural(R.plurals.app_page_count, pages)
 
 /**
  * A row of mutually exclusive choices, as chips.

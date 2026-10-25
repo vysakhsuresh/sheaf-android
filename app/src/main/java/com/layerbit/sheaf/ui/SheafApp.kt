@@ -20,6 +20,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.layerbit.sheaf.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -296,8 +298,8 @@ fun SheafApp(
             composable(Routes.OPEN) {
                 Column {
                     SheafTopBar(
-                        title = "Open a file",
-                        subtitle = "Sheaf looks at it on this phone and suggests what to do",
+                        title = stringResource(R.string.app_open_title),
+                        subtitle = stringResource(R.string.app_open_subtitle),
                         onBack = { navController.popBackStack() },
                         iconRes = com.layerbit.sheaf.R.drawable.ic_tool_read,
                         accent = SheafColors.Band
@@ -316,7 +318,7 @@ fun SheafApp(
             composable(Routes.SETTINGS) {
                 LaunchedEffect(Unit) { workspaceBytes = sheaf.workspace.sizeBytes() }
                 Column {
-                    SheafTopBar(title = "Settings", onBack = { navController.popBackStack() })
+                    SheafTopBar(title = stringResource(R.string.app_settings), onBack = { navController.popBackStack() })
                     SettingsScreen(
                         settings = settings,
                         workspaceBytes = workspaceBytes,
@@ -334,7 +336,7 @@ fun SheafApp(
 
             composable(Routes.ABOUT) {
                 Column {
-                    SheafTopBar(title = "About Sheaf", onBack = { navController.popBackStack() })
+                    SheafTopBar(title = stringResource(R.string.app_about_title), onBack = { navController.popBackStack() })
                     AboutScreen()
                 }
             }

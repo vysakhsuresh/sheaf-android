@@ -1,5 +1,8 @@
 package com.layerbit.sheaf.prefs
 
+import androidx.annotation.StringRes
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -132,8 +135,10 @@ data class Settings(
     val autoCapture: Boolean = true
 )
 
-enum class ThemeChoice(val label: String) {
-    SYSTEM("Match the system"),
-    LIGHT("Light"),
-    DARK("Dark")
+enum class ThemeChoice(@StringRes val labelRes: Int) {
+    SYSTEM(R.string.app_theme_match_system),
+    LIGHT(R.string.app_theme_light),
+    DARK(R.string.app_theme_dark);
+
+    val label: String get() = Strings.get(labelRes)
 }

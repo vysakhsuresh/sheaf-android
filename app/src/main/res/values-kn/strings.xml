@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="job_channel_name">ಡಾಕ್ಯುಮೆಂಟ್ ಮೇಲೆ ಕೆಲಸ ನಡೆಯುತ್ತಿದೆ</string>
+    <string name="job_channel_description">Sheaf ಫೈಲ್ ಅನ್ನು ಪ್ರಕ್ರಿಯೆಗೊಳಿಸುತ್ತಿರುವಾಗ ಪ್ರಗತಿಯನ್ನು ತೋರಿಸುತ್ತದೆ. ಶಬ್ದವಿಲ್ಲ.</string>
+    <string name="job_progress">%2$d ರಲ್ಲಿ %1$d</string>
+
+    <string name="shortcut_scan_short">ಸ್ಕ್ಯಾನ್</string>
+    <string name="shortcut_scan_long">ಡಾಕ್ಯುಮೆಂಟ್ ಸ್ಕ್ಯಾನ್ ಮಾಡಿ</string>
+    <string name="shortcut_merge_short">ವಿಲೀನ</string>
+    <string name="shortcut_merge_long">PDF ಗಳನ್ನು ವಿಲೀನಗೊಳಿಸಿ</string>
+    <string name="shortcut_compress_short">ಕಂಪ್ರೆಸ್</string>
+    <string name="shortcut_compress_long">PDF ಅನ್ನು ಕಂಪ್ರೆಸ್ ಮಾಡಿ</string>
+
+    <string name="widget_quick_label">ಸ್ಕ್ಯಾನ್ ಮಾಡಿ, ತೆರೆಯಿರಿ</string>
+    <string name="widget_quick_description">ಒಂದೇ ಟ್ಯಾಪ್‌ನಲ್ಲಿ ಡಾಕ್ಯುಮೆಂಟ್ ಸ್ಕ್ಯಾನ್ ಮಾಡಿ ಅಥವಾ PDF ತೆರೆಯಿರಿ.</string>
+    <string name="widget_recents_label">ಇತ್ತೀಚಿನ ಡಾಕ್ಯುಮೆಂಟ್‌ಗಳು</string>
+    <string name="widget_recents_description">ನೀವು ಓದುತ್ತಿದ್ದ ಡಾಕ್ಯುಮೆಂಟ್‌ಗಳು, ಪ್ರತಿಯೊಂದೂ ನೀವು ನಿಲ್ಲಿಸಿದ ಸ್ಥಳದಿಂದ ಒಂದು ಟ್ಯಾಪ್ ದೂರದಲ್ಲಿ.</string>
+</resources>

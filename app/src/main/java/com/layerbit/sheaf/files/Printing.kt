@@ -1,5 +1,7 @@
 package com.layerbit.sheaf.files
 
+import com.layerbit.sheaf.text.Strings
+import com.layerbit.sheaf.R
 import android.content.Context
 import android.os.Bundle
 import android.os.CancellationSignal
@@ -76,7 +78,7 @@ private class FilePrintAdapter(
         callback: WriteResultCallback?
     ) {
         if (destination == null) {
-            callback?.onWriteFailed("There was nowhere to write the document.")
+            callback?.onWriteFailed(Strings.get(R.string.app_print_no_destination))
             return
         }
         try {
@@ -91,7 +93,7 @@ private class FilePrintAdapter(
                 callback?.onWriteFinished(arrayOf(PageRange.ALL_PAGES))
             }
         } catch (e: Exception) {
-            callback?.onWriteFailed(e.message ?: "The document could not be sent to the printer.")
+            callback?.onWriteFailed(e.message ?: Strings.get(R.string.app_print_failed))
         }
     }
 }

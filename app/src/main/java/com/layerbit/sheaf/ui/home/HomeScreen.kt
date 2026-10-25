@@ -42,6 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.R
@@ -104,13 +106,13 @@ fun HomeScreen(
         item(key = "actions") {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 PrimaryButton(
-                    text = "Open a PDF",
+                    text = stringResource(R.string.app_home_open_pdf),
                     iconRes = R.drawable.ic_tool_read,
                     onClick = onOpenDocument,
                     modifier = Modifier.weight(1.3f)
                 )
                 SecondaryButton(
-                    text = "Scan",
+                    text = stringResource(R.string.app_home_scan),
                     iconRes = R.drawable.ic_tool_scan,
                     onClick = { onTool(ToolId.SCAN) },
                     modifier = Modifier.weight(1f)
@@ -123,9 +125,9 @@ fun HomeScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconTile(iconRes = R.drawable.ic_tool_read, accent = SheafColors.Band, size = 40.dp)
                     Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
-                        Text("Not sure which tool? Open your file", style = MaterialTheme.typography.titleMedium, color = SheafColors.Text)
+                        Text(stringResource(R.string.app_home_open_any_title), style = MaterialTheme.typography.titleMedium, color = SheafColors.Text)
                         Text(
-                            "A PDF, photos, a Word or Excel file, or a whole folder: Sheaf suggests what to do with it, and runs your recipes.",
+                            stringResource(R.string.app_home_open_any_body),
                             style = MaterialTheme.typography.bodySmall,
                             color = SheafColors.Muted
                         )
@@ -142,8 +144,7 @@ fun HomeScreen(
             if (matches.isEmpty()) {
                 item {
                     Text(
-                        "Nothing matches that. Every tool is listed when the search is empty - " +
-                            "or tell us what is missing from the About screen.",
+                        stringResource(R.string.app_home_no_match),
                         style = MaterialTheme.typography.bodyMedium,
                         color = SheafColors.Muted,
                         modifier = Modifier.padding(top = 8.dp)
@@ -151,14 +152,14 @@ fun HomeScreen(
                 }
             } else {
                 item(key = "search-results") {
-                    SectionHeading(if (matches.size == 1) "1 tool" else "${matches.size} tools", modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
+                    SectionHeading(pluralStringResource(R.plurals.app_tool_count, matches.size, matches.size),modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
                     ToolCards(tools = matches, favourites = favourites, onTool = onTool, onToggleFavourite = onToggleFavourite)
                 }
             }
         } else {
             if (recentTools.isNotEmpty()) {
                 item(key = "recent-tools") {
-                    SectionHeading("Your recent tools", modifier = Modifier.padding(top = 6.dp, bottom = 8.dp))
+                    SectionHeading(stringResource(R.string.app_home_recent_tools), modifier = Modifier.padding(top = 6.dp, bottom = 8.dp))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(recentTools, key = { it.name }) { tool ->
                             Panel(onClick = { onTool(tool) }, inset = 10.dp, tint = GroupAccents.of(tool.group)) {
@@ -180,7 +181,7 @@ fun HomeScreen(
 
             if (recents.isNotEmpty()) {
                 item(key = "recents") {
-                    SectionHeading("Pick up where you left off", modifier = Modifier.padding(top = 6.dp, bottom = 8.dp))
+                    SectionHeading(stringResource(R.string.app_home_pick_up), modifier = Modifier.padding(top = 6.dp, bottom = 8.dp))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(recents, key = { it.uri }) { recent ->
                             RecentCard(recent = recent, onOpen = { onOpenRecent(recent) }, onForget = { onForgetRecent(recent) })
@@ -191,7 +192,7 @@ fun HomeScreen(
 
             if (starred.isNotEmpty()) {
                 item(key = "favourites") {
-                    SectionHeading("Yours", accent = SheafColors.Band, modifier = Modifier.padding(top = 6.dp, bottom = 8.dp))
+                    SectionHeading(stringResource(R.string.app_home_yours), accent = SheafColors.Band, modifier = Modifier.padding(top = 6.dp, bottom = 8.dp))
                     ToolCards(tools = starred, favourites = favourites, onTool = onTool, onToggleFavourite = onToggleFavourite)
                 }
             }
@@ -227,13 +228,13 @@ fun HomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    "Long-press a tool to pin it to the top.",
+                    stringResource(R.string.app_home_pin_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = SheafColors.Dim
                 )
                 TextButton(onClick = onAbout) {
                     Text(
-                        "Free, offline, and from ${BrandLinks.BRAND_LABEL}",
+                        stringResource(R.string.app_home_footer, BrandLinks.BRAND_LABEL),
                         style = MaterialTheme.typography.bodySmall,
                         color = SheafColors.Dim
                     )
@@ -265,22 +266,22 @@ private fun Hero(onSettings: () -> Unit, onAbout: () -> Unit) {
                 Column(modifier = Modifier.weight(1f).padding(start = 4.dp)) {
                     Text("Sheaf", style = MaterialTheme.typography.displayMedium, color = SheafColors.Text)
                     Text(
-                        "Every PDF tool. Nothing leaves your phone.",
+                        stringResource(R.string.app_tagline),
                         style = MaterialTheme.typography.bodyMedium,
                         color = SheafColors.Muted
                     )
                 }
-                RoundIconButton(icon = Icons.Filled.Settings, contentDescription = "Settings", onClick = onSettings)
+                RoundIconButton(icon = Icons.Filled.Settings, contentDescription = stringResource(R.string.app_settings), onClick = onSettings)
                 Spacer(Modifier.width(8.dp))
-                RoundIconButton(icon = Icons.Filled.Info, contentDescription = "About", onClick = onAbout)
+                RoundIconButton(icon = Icons.Filled.Info, contentDescription = stringResource(R.string.app_about), onClick = onAbout)
             }
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.padding(top = 12.dp, start = 4.dp)
             ) {
-                Pill("Offline", SheafColors.Done)
-                Pill("No internet permission", SheafColors.Running)
-                Pill("${ToolId.entries.size} tools", SheafColors.Band)
+                Pill(stringResource(R.string.app_home_pill_offline), SheafColors.Done)
+                Pill(stringResource(R.string.app_home_pill_no_internet), SheafColors.Running)
+                Pill(pluralStringResource(R.plurals.app_tool_count, ToolId.entries.size, ToolId.entries.size), SheafColors.Band)
             }
         }
     }
@@ -303,7 +304,7 @@ private fun SearchField(query: String, onChange: (String) -> Unit) {
         Box(modifier = Modifier.weight(1f)) {
             if (query.isEmpty()) {
                 Text(
-                    "Search tools: shrink, lock, sign, Hindi…",
+                    stringResource(R.string.app_home_search_hint),
                     style = MaterialTheme.typography.bodyMedium,
                     color = SheafColors.Dim,
                     maxLines = 1,
@@ -320,7 +321,7 @@ private fun SearchField(query: String, onChange: (String) -> Unit) {
             )
         }
         if (query.isNotBlank()) {
-            RoundIconButton(icon = Icons.Filled.Close, contentDescription = "Clear", onClick = { onChange("") }, size = 28.dp)
+            RoundIconButton(icon = Icons.Filled.Close, contentDescription = stringResource(R.string.app_clear), onClick = { onChange("") }, size = 28.dp)
         }
     }
 }
@@ -429,7 +430,7 @@ private fun ToolCard(
             IconTile(iconRes = iconFor(tool), accent = accent)
             Spacer(Modifier.weight(1f))
             if (starred) {
-                Icon(Icons.Filled.Star, contentDescription = "Pinned", tint = SheafColors.BandBright, modifier = Modifier.size(16.dp))
+                Icon(Icons.Filled.Star, contentDescription = stringResource(R.string.app_home_pinned), tint = SheafColors.BandBright, modifier = Modifier.size(16.dp))
             }
         }
         Text(
@@ -459,7 +460,7 @@ private fun RecentCard(recent: RecentEntity, onOpen: () -> Unit, onForget: () ->
         Row(verticalAlignment = Alignment.Top) {
             IconTile(iconRes = R.drawable.ic_tool_read, accent = SheafColors.Band, filled = true, size = 36.dp)
             Spacer(Modifier.weight(1f))
-            RoundIconButton(icon = Icons.Filled.Close, contentDescription = "Remove from the list", onClick = onForget, size = 28.dp)
+            RoundIconButton(icon = Icons.Filled.Close, contentDescription = stringResource(R.string.app_home_remove_recent), onClick = onForget, size = 28.dp)
         }
         Text(
             text = recent.displayName,
@@ -470,11 +471,7 @@ private fun RecentCard(recent: RecentEntity, onOpen: () -> Unit, onForget: () ->
             modifier = Modifier.padding(top = 10.dp)
         )
         Text(
-            text = buildString {
-                append(formatPageCount(recent.pageCount))
-                append(" · ")
-                append(formatBytes(recent.sizeBytes))
-            },
+            text = stringResource(R.string.app_home_recent_details, formatPageCount(recent.pageCount), formatBytes(recent.sizeBytes)),
             style = MaterialTheme.typography.bodySmall,
             color = SheafColors.Dim,
             modifier = Modifier.padding(top = 2.dp)
@@ -497,7 +494,7 @@ private fun RecentCard(recent: RecentEntity, onOpen: () -> Unit, onForget: () ->
                 )
             }
             Text(
-                "Page ${recent.lastPage + 1} of ${recent.pageCount}",
+                stringResource(R.string.app_page_of, recent.lastPage + 1, recent.pageCount),
                 style = MaterialTheme.typography.labelSmall,
                 color = SheafColors.Muted,
                 modifier = Modifier.padding(top = 4.dp)

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="job_channel_name">दस्तऐवजावर काम सुरू आहे</string>
+    <string name="job_channel_description">Sheaf फाइलवर प्रक्रिया करत असताना प्रगती दाखवते. आवाज नाही.</string>
+    <string name="job_progress">%2$d पैकी %1$d</string>
+
+    <!-- Long-press the launcher icon. Short labels are what fits under an icon; long labels
+         are what the launcher shows when there is room, and both are required. -->
+    <string name="shortcut_scan_short">स्कॅन</string>
+    <string name="shortcut_scan_long">दस्तऐवज स्कॅन करा</string>
+    <string name="shortcut_merge_short">जोडा</string>
+    <string name="shortcut_merge_long">PDF जोडा</string>
+    <string name="shortcut_compress_short">लहान करा</string>
+    <string name="shortcut_compress_long">PDF लहान करा</string>
+
+    <string name="widget_quick_label">स्कॅन करा आणि उघडा</string>
+    <string name="widget_quick_description">एका टॅपमध्ये दस्तऐवज स्कॅन करा किंवा PDF उघडा.</string>
+    <string name="widget_recents_label">अलीकडील दस्तऐवज</string>
+    <string name="widget_recents_description">तुम्ही वाचत असलेले दस्तऐवज, प्रत्येक जिथे सोडला तिथूनच, एका टॅपवर.</string>
+</resources>

@@ -1,5 +1,7 @@
 package com.layerbit.sheaf.jobs
 
+import com.layerbit.sheaf.text.Strings
+import com.layerbit.sheaf.R
 import android.app.ForegroundServiceStartNotAllowedException
 import android.content.Context
 import android.os.Build
@@ -65,19 +67,18 @@ class OpWorker(
                 inputs.drop(index).forEach { left ->
                     outcomes += OpOutcome.Skipped(
                         left.displayName,
-                        "Android stops a background job after six hours, so Sheaf finished the " +
-                            "file it was on and stopped. Run this one again."
+                        Strings.get(R.string.app_job_skipped_deadline)
                     )
                 }
                 break
             }
             context.checkCancelled()
             outcomes += op.run(listOf(input), context) { inner ->
-                val label = if (inner.label.isBlank() || inner.label == "Done") input.displayName else inner.label
-                report(Progress(index, inputs.size, "File ${index + 1} of ${inputs.size} · $label"))
+                val label = if (inner.label.isBlank() || inner.label == Strings.get(R.string.app_job_done) || (inner.unitsTotal > 0 && inner.unitsDone >= inner.unitsTotal)) input.displayName else inner.label
+                report(Progress(index, inputs.size, Strings.get(R.string.app_job_file_progress, index + 1, inputs.size, label)))
             }
         }
-        report(Progress(inputs.size, inputs.size, "Done"))
+        report(Progress(inputs.size, inputs.size, Strings.get(R.string.app_job_done)))
         return outcomes
     }
 
@@ -95,7 +96,7 @@ class OpWorker(
         val jobId = inputData.getString(KEY_JOB_ID)
         if (jobId == null) {
             if (tool != null) {
-                runner.publish(JobState.Crashed(tool, "This operation could not be started. Start it again."))
+                runner.publish(JobState.Crashed(tool, Strings.get(R.string.app_job_not_started)))
             }
             return Result.failure()
         }
@@ -110,7 +111,7 @@ class OpWorker(
                     if (runner.wasCancelledByUser(jobId)) {
                         JobState.Cancelled(tool)
                     } else {
-                        JobState.Crashed(tool, "This operation was lost when the app restarted. Start it again.")
+                        JobState.Crashed(tool, Strings.get(R.string.app_job_lost))
                     }
                 )
             }
@@ -230,14 +231,13 @@ class OpWorker(
             // messages that can land here, neither of them addressed to a person, are replaced.
             val reason = when {
                 t is OutOfMemoryError ->
-                    "This document needed more memory than the device would give. Try fewer pages at once."
+                    Strings.get(R.string.app_job_out_of_memory)
                 // setForeground() is inside this try for exactly this throw: from API 31 the
                 // system refuses a foreground service that starts while the app is in the
                 // background, which is where a job queued just before the user left Sheaf runs.
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && t is ForegroundServiceStartNotAllowedException ->
-                    "Android would not let this operation start while Sheaf was in the background. " +
-                        "Open Sheaf and start it again."
-                else -> t.message ?: "The operation stopped unexpectedly."
+                    Strings.get(R.string.app_job_background_start)
+                else -> t.message ?: Strings.get(R.string.app_job_stopped_unexpectedly)
             }
             runner.publish(JobState.Crashed(op.tool, reason))
             Result.failure()
@@ -258,14 +258,12 @@ class OpWorker(
         } else if (pastHardDeadline) {
             JobState.Crashed(
                 tool,
-                "Android stops a background job after six hours, and this file alone needed " +
-                    "longer. Try it in smaller parts, or with fewer pages at once."
+                Strings.get(R.string.app_job_too_long)
             )
         } else {
             JobState.Crashed(
                 tool,
-                "Android stopped this operation before it finished, which usually means storage " +
-                    "ran low or it ran for too long. Start it again."
+                Strings.get(R.string.app_job_stopped_by_system)
             )
         }
 

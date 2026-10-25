@@ -77,14 +77,14 @@ class QuickActionsWidget : GlanceAppWidget() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     ActionButton(
-                        label = "Scan",
+                        label = context.getString(R.string.app_home_scan),
                         icon = R.drawable.ic_shortcut_scan,
                         intent = sheafIntent(context, Uri.parse("sheaf://tool/SCAN")),
                         modifier = GlanceModifier.defaultWeight()
                     )
                     Spacer(GlanceModifier.width(8.dp))
                     ActionButton(
-                        label = "Open a PDF",
+                        label = context.getString(R.string.app_home_open_pdf),
                         icon = R.drawable.ic_notification,
                         intent = sheafIntent(context, Uri.parse("sheaf://tool/${MainActivity.PICK_DOCUMENT}")),
                         modifier = GlanceModifier.defaultWeight(),
@@ -131,7 +131,7 @@ private fun RecentsContent(context: Context, recents: List<RecentEntity>) {
     Column(modifier = GlanceModifier.fillMaxSize().background(Ink).cornerRadius(20.dp).padding(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = GlanceModifier.fillMaxWidth()) {
             Text(
-                "Recent in Sheaf",
+                context.getString(R.string.app_widget_recent_title),
                 style = TextStyle(color = TextColour, fontSize = 15.sp, fontWeight = FontWeight.Bold),
                 modifier = GlanceModifier.defaultWeight()
             )
@@ -140,20 +140,20 @@ private fun RecentsContent(context: Context, recents: List<RecentEntity>) {
                     .background(Band).cornerRadius(10.dp).padding(horizontal = 10.dp, vertical = 4.dp)
                     .clickable(actionStartActivity(sheafIntent(context, Uri.parse("sheaf://tool/${MainActivity.PICK_DOCUMENT}"))))
             ) {
-                Text("Open", style = TextStyle(color = TextColour, fontSize = 13.sp, fontWeight = FontWeight.Medium))
+                Text(context.getString(R.string.app_widget_open), style = TextStyle(color = TextColour, fontSize = 13.sp, fontWeight = FontWeight.Medium))
             }
         }
         Spacer(GlanceModifier.height(8.dp))
         if (recents.isEmpty()) {
             Text(
-                "Documents you open in Sheaf appear here.",
+                context.getString(R.string.app_widget_empty),
                 style = TextStyle(color = MutedColour, fontSize = 13.sp)
             )
         } else {
             LazyColumn {
                 items(recents, itemId = { it.uri.hashCode().toLong() }) { recent ->
-                    val pages = if (recent.pageCount == 1) "1 page" else "${recent.pageCount} pages"
-                    val where = if (recent.lastPage > 0) " · page ${recent.lastPage + 1}" else ""
+                    val pages = context.resources.getQuantityString(R.plurals.app_page_count, recent.pageCount, recent.pageCount)
+                    val details = if (recent.lastPage > 0) context.getString(R.string.app_widget_recent_at_page, pages, recent.lastPage + 1) else pages
                     Column(
                         modifier = GlanceModifier
                             .fillMaxWidth()
@@ -162,7 +162,7 @@ private fun RecentsContent(context: Context, recents: List<RecentEntity>) {
                     ) {
                         Column(modifier = GlanceModifier.fillMaxWidth().background(Card).cornerRadius(10.dp).padding(horizontal = 10.dp, vertical = 6.dp)) {
                             Text(recent.displayName, style = TextStyle(color = TextColour, fontSize = 14.sp), maxLines = 1)
-                            Text("$pages$where", style = TextStyle(color = MutedColour, fontSize = 12.sp), maxLines = 1)
+                            Text(details, style = TextStyle(color = MutedColour, fontSize = 12.sp), maxLines = 1)
                         }
                     }
                 }

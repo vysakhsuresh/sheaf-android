@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shared across the app's own screens -->
+    <string name="app_settings">Settings</string>
+    <string name="app_about">About</string>
+    <string name="app_about_title">About Sheaf</string>
+    <string name="app_tagline">Every PDF tool. Nothing leaves your phone.</string>
+    <string name="app_clear">Clear</string>
+    <string name="app_delete">Delete</string>
+    <string name="app_back">Back</string>
+    <string name="app_continue">Continue</string>
+    <string name="app_not_now">Not now</string>
+    <string name="app_page_of">Page %1$d of %2$d</string>
+    <plurals name="app_page_count">
+        <item quantity="one">%d page</item>
+        <item quantity="other">%d pages</item>
+    </plurals>
+    <plurals name="app_tool_count">
+        <item quantity="one">%d tool</item>
+        <item quantity="other">%d tools</item>
+    </plurals>
+    <string name="app_pill_no_internet">No internet</string>
+    <string name="app_pill_no_account">No account</string>
+    <string name="app_pill_no_tracking">No tracking</string>
+
+    <!-- Open a file -->
+    <string name="app_open_title">Open a file</string>
+    <string name="app_open_subtitle">Sheaf looks at it on this phone and suggests what to do</string>
+
+    <!-- Home -->
+    <string name="app_home_open_pdf">Open a PDF</string>
+    <string name="app_home_scan">Scan</string>
+    <string name="app_home_open_any_title">Not sure which tool? Open your file</string>
+    <string name="app_home_open_any_body">A PDF, photos, a Word or Excel file, or a whole folder: Sheaf suggests what to do with it, and runs your recipes.</string>
+    <string name="app_home_no_match">Nothing matches that. Every tool is listed when the search is empty - or tell us what is missing from the About screen.</string>
+    <string name="app_home_recent_tools">Your recent tools</string>
+    <string name="app_home_pick_up">Pick up where you left off</string>
+    <string name="app_home_yours">Yours</string>
+    <string name="app_home_pin_hint">Long-press a tool to pin it to the top.</string>
+    <string name="app_home_footer">Free, offline, and from %1$s</string>
+    <string name="app_home_pill_offline">Offline</string>
+    <string name="app_home_pill_no_internet">No internet permission</string>
+    <string name="app_home_search_hint">Search tools: shrink, lock, sign, Hindi…</string>
+    <string name="app_home_pinned">Pinned</string>
+    <string name="app_home_remove_recent">Remove from the list</string>
+    <string name="app_home_recent_details">%1$s · %2$s</string>
+
+    <!-- The notification ask before the first job -->
+    <string name="app_notify_title">Show progress in notifications?</string>
+    <string name="app_notify_body">Long jobs keep running when you leave Sheaf. A notification shows how far along they are.</string>
+
+    <!-- Settings -->
+    <string name="app_settings_appearance">Appearance</string>
+    <string name="app_settings_appearance_note">A page is always shown on white paper, whichever of these is on. Night colours in the viewer invert the page itself, and that is a separate switch in the document\'s own menu.</string>
+    <string name="app_settings_reading">Reading</string>
+    <string name="app_settings_keep_on">Keep the screen on</string>
+    <string name="app_settings_keep_on_detail">While a document is open. Reading is the one thing people do without touching the screen.</string>
+    <string name="app_settings_resume">Reopen where I left off</string>
+    <string name="app_settings_resume_detail">Remembers the page, per document. Only the page number is stored, never anything from inside the file.</string>
+    <string name="app_settings_badge">Show the page counter</string>
+    <string name="app_settings_badge_detail">The badge over the bottom of the page. Tap it to jump.</string>
+    <string name="app_settings_finish">When a job finishes</string>
+    <string name="app_settings_open_result">Open the result straight away</string>
+    <string name="app_settings_open_result_detail">Shows the finished document in the viewer as soon as it is ready.</string>
+    <string name="app_settings_editable_marks">Save marks as editable annotations</string>
+    <string name="app_settings_editable_marks_detail">Mark up keeps highlights, drawings and notes as annotations any PDF reader can edit or delete later. Off draws them into the page, so they stay exactly as made. Sign and Remove areas always draw into the page.</string>
+    <string name="app_settings_ask_save">Ask where to save every time</string>
+    <string name="app_settings_ask_save_detail">Off means results go to one folder you choose, which is what makes saving forty exported pages one gesture instead of forty.</string>
+    <string name="app_settings_space">Space and history</string>
+    <string name="app_settings_working_files">of working files on this phone</string>
+    <string name="app_settings_working_files_detail">Results waiting to be saved, and copies of documents you opened. Sheaf trims these itself; clearing them now is safe once you have saved what you wanted.</string>
+    <string name="app_settings_recents">Recent documents</string>
+    <string name="app_settings_recents_detail">The list on the home screen, and where you got to in each.</string>
+    <string name="app_settings_bookmarks">Marked pages</string>
+    <plurals name="app_settings_bookmark_count">
+        <item quantity="one">%d page starred across your documents.</item>
+        <item quantity="other">%d pages starred across your documents.</item>
+    </plurals>
+    <string name="app_settings_bookmarks_none">None yet. The star in the viewer marks a page.</string>
+    <string name="app_settings_cannot">What this app cannot do</string>
+    <string name="app_settings_cannot_detail">Sheaf has no internet permission at all. It cannot upload a document, report a crash, or check for an update - and the manifest in the repository is how you can verify that rather than taking a promise for it. Printing works because the system\'s print service does the talking, not this app.</string>
+    <string name="app_settings_crash_log">Crash log</string>
+    <string name="app_settings_crash_none">No crashes recorded</string>
+    <plurals name="app_settings_crash_count">
+        <item quantity="one">%d crash recorded</item>
+        <item quantity="other">%d crashes recorded</item>
+    </plurals>
+    <string name="app_settings_crash_detail">If Sheaf ever closes unexpectedly, a short technical log is kept here. Nothing from your documents is in it, and it is only sent if you send it.</string>
+    <string name="app_settings_crash_send">Send the log</string>
+    <string name="app_settings_crash_chooser">Send the crash log</string>
+    <string name="app_theme_system">System</string>
+    <string name="app_theme_light">Light</string>
+    <string name="app_theme_dark">Dark</string>
+    <string name="app_theme_match_system">Match the system</string>
+
+    <!-- About -->
+    <string name="app_about_offline_title">Nothing leaves this phone</string>
+    <string name="app_about_offline_body">Sheaf does not have permission to use the internet. Not restricted, not switched off in settings - the permission is absent from the app, so the process cannot open a network connection at all.\n\nYour documents are read and written on this device and nowhere else. You can check this yourself: the Play Store listing shows every permission an app declares, and this one declares no network access.</string>
+    <string name="app_about_feedback_title">Tell us what went wrong</string>
+    <string name="app_about_feedback_body">There is no crash reporting, because sending a crash report would need the internet. If something goes wrong, the fastest fix is to tell us what you were doing when it happened.</string>
+    <string name="app_about_email">Email us</string>
+    <string name="app_about_feedback_note">Opening either hands the address to another app, which does the sending under its own permissions. Sheaf still cannot open a socket, and nothing about your documents travels with it.</string>
+    <string name="app_about_working_title">Working files</string>
+    <string name="app_about_working_body">Sheaf copies a document before working on it, so your original is never touched. The copies and the results live in the app\'s own storage until you clear them, and they are not backed up anywhere.</string>
+    <string name="app_about_cleared">Cleared</string>
+    <string name="app_about_clear_now">Clear now</string>
+    <string name="app_about_working_note">Anything you have already saved or shared is kept - this only clears Sheaf\'s own scratch space.</string>
+    <string name="app_about_free_title">Free, and staying that way</string>
+    <string name="app_about_free_body">Every tool in Sheaf is free. There are no ads, no subscription and no account, and there is no server behind it to pay for. If it has saved you something, a coffee is welcome and entirely optional.</string>
+    <string name="app_about_coffee">Buy us a coffee</string>
+    <string name="app_about_rate">Rate Sheaf on Google Play</string>
+    <string name="app_about_privacy">Privacy policy</string>
+    <string name="app_about_made_by">Made by %1$s · %2$s</string>
+    <string name="app_about_version">Version %1$s</string>
+
+    <!-- First-launch intro -->
+    <string name="app_intro_offline_title">Nothing leaves your phone</string>
+    <string name="app_intro_offline_body">Sheaf has no internet permission at all. Every tool runs on this device, so a contract or a bank statement is never uploaded anywhere.</string>
+    <string name="app_intro_free_title">Every tool is free</string>
+    <string name="app_intro_free_body">Merge, compress, sign, scan, OCR, convert and the rest. No ads, no account, no subscription, and no page limits.</string>
+    <string name="app_intro_original_title">Your original is never changed</string>
+    <string name="app_intro_original_body">Each tool makes a new file and leaves the one you picked exactly as it was. You choose where the result is saved.</string>
+    <string name="app_intro_skip">Skip</string>
+    <string name="app_intro_position">Card %1$d of %2$d</string>
+    <string name="app_intro_start">Start</string>
+    <string name="app_intro_next">Next</string>
+
+    <!-- Home-screen widgets -->
+    <string name="app_widget_recent_title">Recent in Sheaf</string>
+    <string name="app_widget_open">Open</string>
+    <string name="app_widget_empty">Documents you open in Sheaf appear here.</string>
+    <string name="app_widget_recent_at_page">%1$s · page %2$d</string>
+
+    <!-- Reading and saving files -->
+    <string name="app_error_open_revoked">Could not open %1$s. The app that owns it may have revoked access.</string>
+    <string name="app_error_empty">%1$s is empty.</string>
+    <string name="app_error_write_location">Could not write to the location you chose.</string>
+    <string name="app_error_write_removed_replaced">%1$s could not be written. The incomplete file was removed, so anything it replaced is gone.</string>
+    <string name="app_error_write_removed">%1$s could not be written. The incomplete file was removed.</string>
+    <string name="app_error_write_incomplete">%1$s could not be written. The file you chose is now incomplete and will not open.</string>
+    <string name="app_error_write_left_behind">%1$s could not be written. An incomplete file was left in that folder and will not open.</string>
+    <string name="app_error_with_reason">%1$s %2$s</string>
+    <string name="app_error_permission_withdrawn">Sheaf\'s permission for that folder was withdrawn.</string>
+    <string name="app_error_no_space">There is no space left on that storage.</string>
+    <string name="app_error_read_only">That storage is read-only.</string>
+    <string name="app_error_folder_gone">That folder is no longer available.</string>
+    <string name="app_error_folder_denied">Sheaf is no longer allowed to write to that folder.</string>
+    <string name="app_error_create_failed">%1$s could not be created there.</string>
+    <string name="app_print_no_destination">There was nowhere to write the document.</string>
+    <string name="app_print_failed">The document could not be sent to the printer.</string>
+    <string name="app_bookmark_default">Page %1$d</string>
+
+    <!-- Background jobs -->
+    <string name="app_job_done">Done</string>
+    <string name="app_job_file_progress">File %1$d of %2$d · %3$s</string>
+    <string name="app_job_skipped_deadline">Android stops a background job after six hours, so Sheaf finished the file it was on and stopped. Run this one again.</string>
+    <string name="app_job_not_started">This operation could not be started. Start it again.</string>
+    <string name="app_job_lost">This operation was lost when the app restarted. Start it again.</string>
+    <string name="app_job_out_of_memory">This document needed more memory than the device would give. Try fewer pages at once.</string>
+    <string name="app_job_background_start">Android would not let this operation start while Sheaf was in the background. Open Sheaf and start it again.</string>
+    <string name="app_job_stopped_unexpectedly">The operation stopped unexpectedly.</string>
+    <string name="app_job_too_long">Android stops a background job after six hours, and this file alone needed longer. Try it in smaller parts, or with fewer pages at once.</string>
+    <string name="app_job_stopped_by_system">Android stopped this operation before it finished, which usually means storage ran low or it ran for too long. Start it again.</string>
+</resources>
