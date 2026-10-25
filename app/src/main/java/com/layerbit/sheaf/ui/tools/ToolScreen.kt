@@ -42,6 +42,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -123,7 +127,7 @@ fun ToolScreen(
     onRedactPage: (Int) -> Unit,
     onMarkupPage: (Int) -> Unit,
     onHighlight: (Int, com.layerbit.sheaf.pdf.PageArea) -> Unit,
-    onInk: (Int, List<com.layerbit.sheaf.pdf.PagePoint>) -> Unit,
+    onInk: (Int, List<com.layerbit.sheaf.pdf.PagePoint>, Float) -> Unit,
     onLine: (Int, com.layerbit.sheaf.pdf.PagePoint, com.layerbit.sheaf.pdf.PagePoint) -> Unit,
     onTap: (Int, com.layerbit.sheaf.pdf.PagePoint) -> Unit,
     onUndoMark: (Int) -> Unit,
@@ -650,7 +654,7 @@ fun ToolScreen(
                             colour = state.config.markupColour,
                             onPage = onMarkupPage,
                             onHighlight = { area -> onHighlight(state.canvasPage, area) },
-                            onInk = { points -> onInk(state.canvasPage, points) },
+                            onInk = { points, width -> onInk(state.canvasPage, points, width) },
                             onLine = { from, to -> onLine(state.canvasPage, from, to) },
                             onTap = { at -> onTap(state.canvasPage, at) },
                             onUndo = { onUndoMark(state.canvasPage) },
@@ -926,11 +930,18 @@ private fun RunningPanel(running: JobState.Running, onCancel: () -> Unit) {
                 strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
                 modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp))
             )
+            // A polite live region, so TalkBack says how the job is going without anyone having
+            // to find this line. Announced in tenths: page by page would be a stream of speech
+            // over whatever the user moved on to.
+            val tenth = (running.fraction * 10).toInt() * 10
             Text(
                 "${running.unitsDone} of ${running.unitsTotal}",
                 style = MaterialTheme.typography.bodySmall,
                 color = SheafColors.Dim,
-                modifier = Modifier.padding(top = 6.dp)
+                modifier = Modifier.padding(top = 6.dp).semantics {
+                    liveRegion = LiveRegionMode.Polite
+                    contentDescription = "${running.opTitle}: $tenth percent done"
+                }
             )
         } else {
             LinearProgressIndicator(
@@ -973,7 +984,14 @@ private fun ResultSummary(finished: JobState.Finished) {
             )
         }
         Column(modifier = Modifier.padding(start = 12.dp)) {
-            Text(text, style = MaterialTheme.typography.headlineSmall, color = SheafColors.Text)
+            // Announced the moment it appears: the end of a job is the one thing a TalkBack user
+            // waiting on it most needs to hear.
+            Text(
+                text,
+                style = MaterialTheme.typography.headlineSmall,
+                color = SheafColors.Text,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive }
+            )
             Text(
                 if (nothing) "What went wrong is listed below." else "Nothing was uploaded. The original is untouched.",
                 style = MaterialTheme.typography.bodySmall,

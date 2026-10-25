@@ -47,6 +47,12 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -109,13 +115,19 @@ fun SignaturePad(
                 modifier = Modifier
                     .fillMaxSize()
                     .pointerInput(Unit) {
+                        // Palm rejection: once a stylus has touched the pad, only a stylus
+                        // draws. A hand resting on the glass while signing is otherwise a
+                        // second, smudged signature.
+                        var stylusSeen = false
                         awaitPointerEventScope {
                             while (true) {
                                 val down = awaitPointerEvent().changes.firstOrNull { it.pressed }
                                     ?: continue
+                                if (down.type == PointerType.Stylus) stylusSeen = true
+                                if (stylusSeen && down.type != PointerType.Stylus) continue
 
                                 val stroke = SignatureStroke(size.width, size.height)
-                                stroke.start(down.position)
+                                stroke.start(down.position, down.stylusPressure())
                                 strokes += stroke
                                 hasInk = true
                                 saved = false
@@ -125,18 +137,21 @@ fun SignaturePad(
                                 // Drained here rather than through detectDragGestures so every
                                 // historical point the system batched is used. A fast stroke
                                 // reports several positions per frame, and dropping them is
-                                // what makes handwriting look like a series of corners.
+                                // what makes handwriting look like a series of corners. Only
+                                // the pointer that started the stroke is followed, so a palm
+                                // landing mid-signature cannot end it.
                                 while (true) {
                                     val event = awaitPointerEvent()
-                                    val change = event.changes.firstOrNull() ?: break
+                                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
                                     if (!change.pressed) {
                                         change.consume()
                                         break
                                     }
+                                    val pressure = change.stylusPressure()
                                     for (historical in change.historical) {
-                                        stroke.lineTo(historical.position)
+                                        stroke.lineTo(historical.position, pressure)
                                     }
-                                    stroke.lineTo(change.position)
+                                    stroke.lineTo(change.position, pressure)
                                     change.consume()
                                     version++
                                 }
@@ -148,13 +163,7 @@ fun SignaturePad(
                 // invisible to Compose on purpose.
                 @Suppress("UNUSED_EXPRESSION") version
 
-                for (stroke in strokes) {
-                    drawPath(
-                        path = stroke.path,
-                        color = Color(0xFF101A2B),
-                        style = Stroke(width = INK_WIDTH_PX, cap = StrokeCap.Round, join = StrokeJoin.Round)
-                    )
-                }
+                for (stroke in strokes) drawStroke(stroke, Color(0xFF101A2B), INK_WIDTH_PX)
             }
         }
 
@@ -198,12 +207,23 @@ class SignatureStroke(private val width: Int, private val height: Int) {
     val path = Path()
     val points = mutableListOf<Offset>()
 
-    fun start(offset: Offset) {
+    /**
+     * A width multiplier per point, from a stylus's pressure. All 1 for a finger, which reports
+     * a pressure too but one that measures contact area rather than how hard it pressed.
+     */
+    val widths = mutableListOf<Float>()
+
+    /** True once a stylus drew any of this, which is when the widths mean something. */
+    var pressured = false
+        private set
+
+    fun start(offset: Offset, pressure: Float? = null) {
         path.moveTo(offset.x, offset.y)
         points += normalise(offset, width, height)
+        widths += widthFor(pressure)
     }
 
-    fun lineTo(offset: Offset) {
+    fun lineTo(offset: Offset, pressure: Float? = null) {
         // Points closer together than this add nothing a finger can see and cost a path
         // segment each, which is what a fast scribble produces hundreds of.
         val last = points.lastOrNull()
@@ -214,8 +234,47 @@ class SignatureStroke(private val width: Int, private val height: Int) {
         }
         path.lineTo(offset.x, offset.y)
         points += normalise(offset, width, height)
+        widths += widthFor(pressure)
+    }
+
+    /** The stroke's overall weight, for a mark that has one width rather than one per point. */
+    val averageWidth: Float get() = if (widths.isEmpty()) 1f else widths.average().toFloat()
+
+    private fun widthFor(pressure: Float?): Float {
+        if (pressure == null) return 1f
+        pressured = true
+        return stylusWidth(pressure)
     }
 }
+
+/**
+ * A stylus's pressure, 0 to 1, as a multiple of the normal pen width: a light touch draws at
+ * under half, a firm one at nearly double. The floor keeps the lightest stroke visible.
+ */
+internal fun stylusWidth(pressure: Float): Float = (0.35f + pressure.coerceIn(0f, 1f) * 1.6f)
+
+/** Draws a stroke on screen: the cheap single path for a finger, segment by segment for a stylus. */
+private fun DrawScope.drawStroke(stroke: SignatureStroke, colour: Color, baseWidth: Float) {
+    if (!stroke.pressured || stroke.points.size < 2) {
+        drawPath(stroke.path, colour, style = Stroke(width = baseWidth, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        return
+    }
+    for (i in 1 until stroke.points.size) {
+        val a = stroke.points[i - 1]
+        val b = stroke.points[i]
+        drawLine(
+            color = colour,
+            start = Offset(a.x * size.width, a.y * size.height),
+            end = Offset(b.x * size.width, b.y * size.height),
+            strokeWidth = baseWidth * (stroke.widths[i - 1] + stroke.widths[i]) / 2f,
+            cap = StrokeCap.Round
+        )
+    }
+}
+
+/** The pressure to record for a pointer: a stylus's own, and nothing for a finger. */
+private fun PointerInputChange.stylusPressure(): Float? =
+    if (type == PointerType.Stylus) pressure else null
 
 private fun normalise(offset: Offset, width: Int, height: Int) = Offset(
     (offset.x / width.coerceAtLeast(1)).coerceIn(0f, 1f),
@@ -243,6 +302,21 @@ private fun writeSignature(strokes: List<SignatureStroke>, file: File) {
     for (stroke in strokes) {
         val points = stroke.points
         if (points.size < 2) continue
+        if (stroke.pressured) {
+            // A stylus signature keeps its pressure in the PNG: each segment at its own width,
+            // which is what makes it look written rather than traced.
+            val base = paint.strokeWidth
+            for (i in 1 until points.size) {
+                paint.strokeWidth = base * (stroke.widths[i - 1] + stroke.widths[i]) / 2f
+                canvas.drawLine(
+                    points[i - 1].x * SIGNATURE_WIDTH_PX, points[i - 1].y * SIGNATURE_HEIGHT_PX,
+                    points[i].x * SIGNATURE_WIDTH_PX, points[i].y * SIGNATURE_HEIGHT_PX,
+                    paint
+                )
+            }
+            paint.strokeWidth = base
+            continue
+        }
         val path = AndroidPath().apply {
             moveTo(points[0].x * SIGNATURE_WIDTH_PX, points[0].y * SIGNATURE_HEIGHT_PX)
             // Quadratic through the midpoints rather than straight segments. Joining sampled
@@ -340,6 +414,19 @@ fun RedactCanvas(
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
+                    // Dragging a box is a gesture TalkBack cannot make, so the canvas also
+                    // offers it as actions: a box across the middle of the page, which the
+                    // user can then check in the preview, and clearing the page.
+                    .semantics {
+                        contentDescription = "Page ${pageIndex + 1}, " +
+                            if (areas.isEmpty()) "no boxes" else "${areas.size} ${if (areas.size == 1) "box" else "boxes"}"
+                        customActions = listOf(
+                            CustomAccessibilityAction("Add a box across the middle of the page") {
+                                onAdd(PageArea(0.1f, 0.45f, 0.8f, 0.1f)); true
+                            },
+                            CustomAccessibilityAction("Clear this page") { onClear(); true }
+                        )
+                    }
                     .pointerInput(pageIndex) {
                         detectDragGestures(
                             onDragStart = { start -> dragStart = start; dragNow = start },
@@ -441,7 +528,8 @@ fun MarkupCanvas(
     colour: Int,
     onPage: (Int) -> Unit,
     onHighlight: (PageArea) -> Unit,
-    onInk: (List<PagePoint>) -> Unit,
+    /** The stroke, and its width as a multiple of the pen's - above 1 for a firm stylus. */
+    onInk: (List<PagePoint>, Float) -> Unit,
     onLine: (PagePoint, PagePoint) -> Unit,
     onTap: (PagePoint) -> Unit,
     onUndo: () -> Unit,
@@ -484,22 +572,29 @@ fun MarkupCanvas(
 
         val gestures = when {
             pen -> Modifier.pointerInput(pageIndex, tool) {
+                // Palm rejection, as on the signature pad: once a stylus has drawn, a finger
+                // no longer does - it is left to pinch and pan the page instead.
+                var stylusSeen = false
                 awaitPointerEventScope {
                     while (true) {
                         val down = awaitPointerEvent().changes.firstOrNull { it.pressed }
                             ?: continue
+                        if (down.type == PointerType.Stylus) stylusSeen = true
+                        if (stylusSeen && down.type != PointerType.Stylus) continue
+                        val isStylus = down.type == PointerType.Stylus
                         val drawing = SignatureStroke(size.width, size.height)
                         var cancelled = false
-                        drawing.start(down.position)
+                        drawing.start(down.position, down.stylusPressure())
                         stroke.value = drawing
                         version++
                         down.consume()
 
                         while (true) {
                             val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull() ?: break
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
                             // A second finger is a pinch: what the first had drawn is dropped.
-                            if (event.changes.count { it.pressed } > 1 || change.isConsumed) {
+                            // Not for a stylus, where the second contact is the hand holding it.
+                            if (!isStylus && (event.changes.count { it.pressed } > 1 || change.isConsumed)) {
                                 cancelled = true
                                 while (awaitPointerEvent().changes.any { it.pressed }) Unit
                                 break
@@ -508,10 +603,11 @@ fun MarkupCanvas(
                                 change.consume()
                                 break
                             }
+                            val pressure = change.stylusPressure()
                             for (historical in change.historical) {
-                                drawing.lineTo(historical.position)
+                                drawing.lineTo(historical.position, pressure)
                             }
-                            drawing.lineTo(change.position)
+                            drawing.lineTo(change.position, pressure)
                             change.consume()
                             version++
                         }
@@ -519,7 +615,9 @@ fun MarkupCanvas(
                         // A tap is not a stroke. Handing one over would put an invisible mark
                         // in the list and count towards the total.
                         if (!cancelled && drawing.points.size >= 2) {
-                            onInk(drawing.points.map { PagePoint(it.x, it.y) })
+                            // The document's ink has one width per stroke, so a stylus stroke is
+                            // written at its average pressure.
+                            onInk(drawing.points.map { PagePoint(it.x, it.y) }, drawing.averageWidth)
                         }
                         stroke.value = null
                         version++
@@ -595,7 +693,26 @@ fun MarkupCanvas(
                 )
             }
 
-            Canvas(modifier = Modifier.fillMaxSize().then(gestures)) {
+            // The same escape hatch as the redaction canvas: every tool's gesture has an action
+            // that places one mark in the middle of the page, plus undo and clear.
+            val a11y = Modifier.semantics {
+                contentDescription = "Page ${pageIndex + 1}, " +
+                    if (marks.isEmpty()) "no marks" else "${marks.size} ${if (marks.size == 1) "mark" else "marks"}"
+                customActions = listOf(
+                    CustomAccessibilityAction("Add a ${tool.label.lowercase()} in the middle of the page") {
+                        when {
+                            pen -> onInk(listOf(PagePoint(0.3f, 0.5f), PagePoint(0.7f, 0.5f)), 1f)
+                            tool.taps -> onTap(PagePoint(0.5f, 0.5f))
+                            lineTool -> onLine(PagePoint(0.3f, 0.5f), PagePoint(0.7f, 0.5f))
+                            else -> onHighlight(PageArea(0.1f, 0.47f, 0.8f, 0.04f))
+                        }
+                        true
+                    },
+                    CustomAccessibilityAction("Undo the last mark") { onUndo(); true },
+                    CustomAccessibilityAction("Clear this page") { onClear(); true }
+                )
+            }
+            Canvas(modifier = Modifier.fillMaxSize().then(a11y).then(gestures)) {
                 // Read so the draw is invalidated as points arrive. The stroke itself is
                 // invisible to Compose on purpose.
                 @Suppress("UNUSED_EXPRESSION") version
@@ -606,17 +723,7 @@ fun MarkupCanvas(
 
                 for (mark in marks) drawMark(mark, pxPerPoint)
 
-                stroke.value?.let { drawing ->
-                    drawPath(
-                        path = drawing.path,
-                        color = Color(colour),
-                        style = Stroke(
-                            width = INK_WIDTH_PX,
-                            cap = StrokeCap.Round,
-                            join = StrokeJoin.Round
-                        )
-                    )
-                }
+                stroke.value?.let { drawing -> drawStroke(drawing, Color(colour), INK_WIDTH_PX) }
 
                 val from = boxFrom
                 val to = boxTo

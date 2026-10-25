@@ -36,6 +36,10 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -103,6 +107,26 @@ fun PicturesCanvas(
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
+                    // Tapping and dragging pictures has no TalkBack equivalent, so each picture
+                    // can be chosen by number, and the chosen one taken out, kept or replaced.
+                    .semantics {
+                        val count = currentPictures.size
+                        contentDescription = "Page ${pageIndex + 1}, " + when (count) {
+                            0 -> "no pictures"
+                            1 -> "1 picture"
+                            else -> "$count pictures"
+                        } + (selected?.let { ", picture ${it + 1} chosen" } ?: "")
+                        customActions = buildList {
+                            currentPictures.indices.forEach { i ->
+                                add(CustomAccessibilityAction("Choose picture ${i + 1}") { onSelect(i); true })
+                            }
+                            val sel = selected
+                            if (sel != null && sel in currentPictures.indices) {
+                                add(CustomAccessibilityAction("Take out or keep picture ${sel + 1}") { onToggleRemove(sel); true })
+                                add(CustomAccessibilityAction("Replace picture ${sel + 1}") { onReplace(); true })
+                            }
+                        }
+                    }
                     .pointerInput(pageIndex) {
                         detectTapGestures { p ->
                             val w = size.width.toFloat()

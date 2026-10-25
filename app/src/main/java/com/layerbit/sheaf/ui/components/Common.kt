@@ -10,6 +10,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -82,8 +84,14 @@ fun Panel(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val interaction = remember { MutableInteractionSource() }
+    // A mouse over a card, or a keyboard's focus on it, on a Chromebook or a tablet with a
+    // keyboard: without a visible change there is no telling which card Enter would open.
+    val hovered by interaction.collectIsHoveredAsState()
+    val focused by interaction.collectIsFocusedAsState()
     val surface = tint?.let { it.copy(alpha = if (SheafColors.isDark) 0.14f else 0.10f) } ?: SheafColors.Surface
     val border = when {
+        onClick != null && focused -> SheafColors.Band
+        onClick != null && hovered -> SheafColors.BorderStrong
         highlighted -> SheafColors.Band.copy(alpha = 0.6f)
         tint != null -> tint.copy(alpha = 0.35f)
         else -> SheafColors.Border
@@ -94,7 +102,7 @@ fun Panel(
         .clip(PanelShape)
         .background(SheafColors.Surface)
         .then(if (tint != null) Modifier.background(surface) else Modifier)
-        .border(1.dp, border, PanelShape)
+        .border(if (onClick != null && focused) 2.dp else 1.dp, border, PanelShape)
     val tappable = when {
         onClick == null -> base
         onLongClick == null -> base.clickable(interactionSource = interaction, indication = null, onClick = onClick)
@@ -193,7 +201,7 @@ fun PrimaryButton(
             .clip(ButtonShape)
             .background(brush)
             .then(if (!enabled) Modifier.border(1.dp, SheafColors.Border, ButtonShape) else Modifier)
-            .clickable(enabled = enabled, interactionSource = interaction, indication = null, onClick = onClick)
+            .clickable(enabled = enabled, interactionSource = interaction, indication = null, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
             .padding(horizontal = 20.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
@@ -230,7 +238,7 @@ fun SecondaryButton(
             .clip(ButtonShape)
             .background(SheafColors.Surface)
             .border(1.dp, SheafColors.BorderStrong, ButtonShape)
-            .clickable(enabled = enabled, interactionSource = interaction, indication = null, onClick = onClick)
+            .clickable(enabled = enabled, interactionSource = interaction, indication = null, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
             .padding(horizontal = 18.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically

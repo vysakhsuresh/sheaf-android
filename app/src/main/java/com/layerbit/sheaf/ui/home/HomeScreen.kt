@@ -5,9 +5,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -355,14 +357,15 @@ private fun toolsMatching(query: String): List<ToolId> {
 }
 
 /**
- * Cards, two to a row and all the same height.
+ * Cards in rows, every card in a row the same height.
  *
- * The height is fixed rather than left to the content. Summaries run to two or three lines
- * depending on the tool, and letting each card size itself leaves neighbouring cards with
- * mismatched bottoms. An odd row gets an empty half-width slot rather than one card stretched
- * across, which would read as a different kind of thing.
+ * Two to a row on a phone, three on a small tablet or an unfolded foldable, four on anything
+ * wider - [toolColumns] decides. Summaries run to two or three lines depending on the tool, and
+ * letting each card size itself leaves neighbouring cards with mismatched bottoms, so each row
+ * is measured at its tallest card and the rest stretch to it. That is also what keeps a title
+ * whole at a large font size, where the fixed height this replaced cut it off. A short last row
+ * gets empty slots rather than cards stretched across, which would read as a different thing.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ToolCards(
     tools: List<ToolId>,
@@ -370,24 +373,39 @@ private fun ToolCards(
     onTool: (ToolId) -> Unit,
     onToggleFavourite: (ToolId) -> Unit
 ) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        maxItemsInEachRow = 2,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        tools.forEach { tool ->
-            ToolCard(
-                tool = tool,
-                starred = tool.name in favourites,
-                onClick = { onTool(tool) },
-                onLongClick = { onToggleFavourite(tool) },
-                modifier = Modifier.weight(1f)
-            )
+    val columns = toolColumns()
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+        tools.chunked(columns).forEach { row ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)
+            ) {
+                row.forEach { tool ->
+                    ToolCard(
+                        tool = tool,
+                        starred = tool.name in favourites,
+                        onClick = { onTool(tool) },
+                        onLongClick = { onToggleFavourite(tool) },
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    )
+                }
+                repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+            }
         }
-        if (tools.size % 2 != 0) {
-            Spacer(Modifier.weight(1f))
-        }
+    }
+}
+
+/**
+ * How many tool cards fit across the window: the Material window-size breakpoints, read from
+ * the window's own width so split screen on a tablet gets the phone layout it now is.
+ */
+@Composable
+internal fun toolColumns(): Int {
+    val width = LocalConfiguration.current.screenWidthDp
+    return when {
+        width >= 840 -> 4
+        width >= 600 -> 3
+        else -> 2
     }
 }
 
@@ -401,7 +419,7 @@ private fun ToolCard(
 ) {
     val accent = GroupAccents.of(tool.group)
     Panel(
-        modifier = modifier.height(TOOL_CARD_HEIGHT),
+        modifier = modifier.heightIn(min = TOOL_CARD_HEIGHT),
         onClick = onClick,
         onLongClick = onLongClick,
         highlighted = starred,
@@ -488,5 +506,8 @@ private fun RecentCard(recent: RecentEntity, onOpen: () -> Unit, onForget: () ->
     }
 }
 
-/** Tall enough for the icon tile, a two-line title and a two-line summary. */
+/**
+ * Tall enough for the icon tile, a two-line title and a two-line summary at the default font
+ * size. A floor rather than a height: at larger font sizes the row grows to fit.
+ */
 private val TOOL_CARD_HEIGHT = 164.dp

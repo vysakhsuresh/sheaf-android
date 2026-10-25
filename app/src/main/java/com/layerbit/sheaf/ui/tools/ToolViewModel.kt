@@ -2062,9 +2062,10 @@ class ToolViewModel(app: Application) : AndroidViewModel(app) {
         addMark(page, PageMark.Highlight(area, colour))
     }
 
-    fun addInk(page: Int, points: List<PagePoint>) {
+    /** [widthScale] is a stylus's pressure as a multiple of the pen width; 1 for a finger. */
+    fun addInk(page: Int, points: List<PagePoint>, widthScale: Float = 1f) {
         val config = _state.value.config
-        addMark(page, PageMark.Ink(points, config.markupColour, config.penWidth))
+        addMark(page, PageMark.Ink(points, config.markupColour, config.penWidth * widthScale))
     }
 
     /** A dragged-out area, made into whichever mark the current tool draws from one. */

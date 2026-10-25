@@ -25,6 +25,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.layerbit.sheaf.ui.theme.SheafColors
@@ -85,7 +88,12 @@ fun SheafTopBar(
 @Composable
 fun RoundIconButton(
     icon: ImageVector? = null,
-    contentDescription: String?,
+    /**
+     * What TalkBack says. Required, not nullable: a round button is nothing but an icon, and an
+     * icon without a name is announced as "unlabelled button" - which is no button at all to
+     * someone who cannot see it.
+     */
+    contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     iconRes: Int? = null,
@@ -100,14 +108,17 @@ fun RoundIconButton(
             .size(size)
             .background(if (filled) SheafColors.Band else SheafColors.Surface, CircleShape)
             .border(1.dp, if (filled) SheafColors.Band else SheafColors.Border, CircleShape)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
+            // The label sits on the touch target, not just on the glyph inside it, so the whole
+            // circle is one announced button rather than a button with an image in it.
+            .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center
     ) {
         val colour = if (filled) SheafColors.OnBand else tint
         if (icon != null) {
-            Icon(icon, contentDescription = contentDescription, tint = colour, modifier = Modifier.size(size * 0.5f))
+            Icon(icon, contentDescription = null, tint = colour, modifier = Modifier.size(size * 0.5f))
         } else if (iconRes != null) {
-            Icon(painterResource(iconRes), contentDescription = contentDescription, tint = colour, modifier = Modifier.size(size * 0.5f))
+            Icon(painterResource(iconRes), contentDescription = null, tint = colour, modifier = Modifier.size(size * 0.5f))
         }
     }
 }
