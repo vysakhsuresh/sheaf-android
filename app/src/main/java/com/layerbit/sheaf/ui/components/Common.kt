@@ -267,11 +267,11 @@ fun IconTile(
     /** Off for a tile that should stay still, such as one inside a list that scrolls fast. */
     lively: Boolean = true
 ) {
-    // The drawing's own movement - see Lively.kt. Seeded by the drawing, so one tool moves at
-    // the same moment wherever it appears and different tools take turns.
-    val motion = if (lively) motionFor(iconRes) else Motion.NONE
-    val seed = livelySeed(iconRes)
+    // A tool's drawing acts out what the tool does - see ui/icons/Glyphs.kt. Seeded by the
+    // drawing, so one tool moves at the same moment wherever it appears and tools take turns.
+    val glyph = if (lively) com.layerbit.sheaf.ui.icons.glyphFor(iconRes) else null
     val shape = RoundedCornerShape(size * 0.3f)
+    val ink = if (filled) Color.White else accent
     Box(
         modifier = modifier
             .size(size)
@@ -283,16 +283,16 @@ fun IconTile(
                     Brush.linearGradient(listOf(accent.copy(alpha = 0.22f), accent.copy(alpha = 0.12f)))
                 },
                 shape
-            )
-            .livelyTile(motion, seed, if (filled) Color.White else accent),
+            ),
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            painter = painterResource(iconRes),
-            contentDescription = null,
-            tint = if (filled) Color.White else accent,
-            modifier = Modifier.size(size * 0.5f).then(if (lively) Modifier.lively(motion, seed) else Modifier)
-        )
+        if (glyph != null) {
+            com.layerbit.sheaf.ui.icons.AnimatedGlyph(
+                glyph, ink, Modifier.size(size * 0.68f), com.layerbit.sheaf.ui.icons.glyphSeed(iconRes)
+            )
+        } else {
+            Icon(painter = painterResource(iconRes), contentDescription = null, tint = ink, modifier = Modifier.size(size * 0.5f))
+        }
     }
 }
 
