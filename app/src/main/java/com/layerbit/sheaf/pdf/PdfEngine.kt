@@ -2,6 +2,8 @@ package com.layerbit.sheaf.pdf
 
 import android.graphics.Bitmap
 import android.graphics.Rect
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
 import java.io.Closeable
 import java.io.File
 
@@ -169,23 +171,23 @@ sealed class PdfException(message: String, cause: Throwable? = null) : Exception
 
     /** The file is encrypted and no password, or the wrong one, was supplied. */
     class PasswordRequired(cause: Throwable? = null) :
-        PdfException("This document is password-protected.", cause)
+        PdfException(Strings.get(R.string.engine_err_password_required), cause)
 
     /** Structurally broken beyond what the engine can recover. */
     class Corrupt(detail: String, cause: Throwable? = null) :
-        PdfException("This file could not be read as a PDF: $detail", cause)
+        PdfException(Strings.get(R.string.engine_err_corrupt, detail), cause)
 
     /** Well-formed, but uses something this particular engine cannot handle. */
     class Unsupported(detail: String, cause: Throwable? = null) :
-        PdfException("This document uses a feature Sheaf cannot handle yet: $detail", cause)
+        PdfException(Strings.get(R.string.engine_err_unsupported, detail), cause)
 
     /** Ran out of room. Distinct from Corrupt because retrying smaller can work. */
     class OutOfMemory(detail: String, cause: Throwable? = null) :
-        PdfException("This document is too large to process on this device: $detail", cause)
+        PdfException(Strings.get(R.string.engine_err_out_of_memory, detail), cause)
 
     /** Reading or writing the file itself failed. */
     class Io(detail: String, cause: Throwable? = null) :
-        PdfException("Could not read or write the file: $detail", cause)
+        PdfException(Strings.get(R.string.engine_err_io, detail), cause)
 
     /**
      * The job cannot proceed as asked: nothing was selected, the page is not there, the

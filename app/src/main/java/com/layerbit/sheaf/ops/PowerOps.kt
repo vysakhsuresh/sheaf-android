@@ -1,5 +1,6 @@
 package com.layerbit.sheaf.ops
 
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.pdf.CleanReport
 import com.layerbit.sheaf.pdf.CleanSpec
@@ -7,6 +8,7 @@ import com.layerbit.sheaf.pdf.DocumentMetadata
 import com.layerbit.sheaf.pdf.PageSpec
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
+import com.layerbit.sheaf.text.Strings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -15,7 +17,7 @@ import java.io.File
 class NUpOp(private val perSheet: Int, private val paper: PageSpec.Size = PageSpec.Size.A4) : Op {
 
     override val tool = ToolId.N_UP
-    override val title = "$perSheet pages per sheet"
+    override val title = Strings.plural(R.plurals.engine_title_nup, perSheet)
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -23,14 +25,19 @@ class NUpOp(private val perSheet: Int, private val paper: PageSpec.Size = PageSp
         context: OpContext,
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
-        eachFile(inputs, context, onProgress, "n-up", "Laying out") { input, pdfInput, output ->
+        eachFile(inputs, context, onProgress, "n-up", R.string.engine_progress_laying_out) { input, pdfInput, output ->
             var pages = 0
             context.surgeon.nUp(pdfInput, perSheet, paper, output) { _, total ->
                 context.checkCancelled(); pages = total
             }
             val sheets = (pages + perSheet - 1) / perSheet
             "${input.baseName} $perSheet-up.pdf" to
-                "$pages ${if (pages == 1) "page" else "pages"} on $sheets ${if (sheets == 1) "sheet" else "sheets"} of ${paper.label}"
+                Strings.get(
+                    R.string.engine_nup_detail,
+                    Strings.plural(R.plurals.engine_count_pages, pages),
+                    Strings.plural(R.plurals.engine_count_sheets, sheets),
+                    paper.label
+                )
         }
     }
 }
@@ -48,7 +55,7 @@ class NUpOp(private val perSheet: Int, private val paper: PageSpec.Size = PageSp
 class SplitBySizeOp(private val maxBytes: Long) : Op {
 
     override val tool = ToolId.SPLIT_BY_SIZE
-    override val title = "Split under ${describeLimit(maxBytes)}"
+    override val title = Strings.get(R.string.engine_title_split_size, describeLimit(maxBytes))
     override val arity = Op.Arity.ExactlyOne
 
     override suspend fun run(
@@ -57,9 +64,9 @@ class SplitBySizeOp(private val maxBytes: Long) : Op {
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val input = inputs.firstOrNull()
-            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_no_document)))
         if (maxBytes < SMALLEST_LIMIT) {
-            return@withContext listOf(OpOutcome.Failed(input.displayName, "The limit has to be at least 1 MB."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, Strings.get(R.string.engine_split_limit_small)))
         }
 
         val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
@@ -68,29 +75,29 @@ class SplitBySizeOp(private val maxBytes: Long) : Op {
             return@withContext listOf(
                 OpOutcome.Skipped(
                     input.displayName,
-                    "This document is already under ${describeLimit(maxBytes)}, so it was left alone."
+                    Strings.get(R.string.engine_split_already_under, describeLimit(maxBytes))
                 )
             )
         }
 
-        onProgress(Progress(0, 1, "Measuring where to cut"))
+        onProgress(Progress(0, 1, Strings.get(R.string.engine_progress_measuring)))
         val groups = try {
             context.surgeon.measureSizeSplit(pdfInput, maxBytes) { done, total ->
                 context.checkCancelled()
-                onProgress(Progress(done, total, "Measuring: $done of $total pages placed"))
+                onProgress(Progress(done, total, Strings.get(R.string.engine_progress_measuring_pages, done, total)))
             }
         } catch (e: PdfException) {
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Failed."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_failed)))
         }
 
         if (groups.isEmpty()) {
-            return@withContext listOf(OpOutcome.Failed(input.displayName, "This document has no pages."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, Strings.get(R.string.engine_no_pages)))
         }
 
         val outcomes = mutableListOf<OpOutcome>()
         groups.forEachIndexed { index, pages ->
             context.checkCancelled()
-            onProgress(Progress(index, groups.size, "Writing part ${index + 1} of ${groups.size}"))
+            onProgress(Progress(index, groups.size, Strings.get(R.string.engine_progress_writing_part, index + 1, groups.size)))
 
             val partName = "${input.baseName} part ${index + 1}"
             val output = context.workspace.newOutput(partName, "size-split")
@@ -99,19 +106,21 @@ class SplitBySizeOp(private val maxBytes: Long) : Op {
                 val over = output.length() > maxBytes
                 OpOutcome.Produced(
                     SheafFile(output, "$partName.pdf", SheafFile.Origin.Derived("size-split")),
-                    buildString {
-                        append(if (pages.size == 1) "Page ${pages.first() + 1}" else "Pages ${pages.first() + 1}-${pages.last() + 1}")
+                    (
+                        if (pages.size == 1) Strings.get(R.string.engine_split_part_page, pages.first() + 1)
+                        else Strings.get(R.string.engine_split_part_pages, pages.first() + 1, pages.last() + 1)
+                    ).let {
                         // A single page bigger than the limit on its own cannot be cut any
                         // further; it is written as its own part and said so, not hidden.
-                        if (over) append(" - this page is bigger than ${describeLimit(maxBytes)} on its own")
+                        if (over) Strings.get(R.string.engine_split_part_over, it, describeLimit(maxBytes)) else it
                     }
                 )
             } catch (e: PdfException) {
                 output.delete()
-                OpOutcome.Failed(partName, e.message ?: "This part could not be written.")
+                OpOutcome.Failed(partName, e.message ?: Strings.get(R.string.engine_split_part_failed))
             }
         }
-        onProgress(Progress(groups.size, groups.size, "Done"))
+        onProgress(Progress(groups.size, groups.size, Strings.get(R.string.engine_done)))
         outcomes
     }
 
@@ -140,7 +149,7 @@ class SplitBySizeOp(private val maxBytes: Long) : Op {
 class ExtractImagesOp : Op {
 
     override val tool = ToolId.EXTRACT_IMAGES
-    override val title = "Extract images"
+    override val title = Strings.get(R.string.engine_title_extract_images)
     override val arity = Op.Arity.ExactlyOne
 
     override suspend fun run(
@@ -149,7 +158,7 @@ class ExtractImagesOp : Op {
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val input = inputs.firstOrNull()
-            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_no_document)))
 
         val dir = File(context.workspace.newOutput(input.baseName, "images", "dir").path).also { it.mkdirs() }
         val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
@@ -157,11 +166,11 @@ class ExtractImagesOp : Op {
         val files = try {
             context.surgeon.extractImages(pdfInput, dir, input.baseName) { done, total ->
                 context.checkCancelled()
-                onProgress(Progress(done, total, "Page $done of $total"))
+                onProgress(Progress(done, total, Strings.get(R.string.engine_progress_page_of, done, total)))
             }
         } catch (e: PdfException) {
             dir.deleteRecursively()
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Failed."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_failed)))
         }
 
         if (files.isEmpty()) {
@@ -169,8 +178,7 @@ class ExtractImagesOp : Op {
             return@withContext listOf(
                 OpOutcome.Skipped(
                     input.displayName,
-                    "There are no embedded images in this document. If you wanted pictures of " +
-                        "the pages themselves, use PDF to images."
+                    Strings.get(R.string.engine_extract_images_none)
                 )
             )
         }
@@ -198,7 +206,7 @@ class ExtractImagesOp : Op {
 class MetadataOp(private val metadata: DocumentMetadata) : Op {
 
     override val tool = ToolId.METADATA
-    override val title = if (metadata.stripAll) "Strip metadata" else "Edit details"
+    override val title = Strings.get(if (metadata.stripAll) R.string.engine_title_strip_metadata else R.string.engine_title_edit_details)
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -207,10 +215,10 @@ class MetadataOp(private val metadata: DocumentMetadata) : Op {
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val step = if (metadata.stripAll) "stripped" else "details"
-        eachFile(inputs, context, onProgress, step, "Writing") { input, pdfInput, output ->
+        eachFile(inputs, context, onProgress, step, R.string.engine_progress_writing) { input, pdfInput, output ->
             context.surgeon.writeMetadata(pdfInput, metadata, output)
             "${input.baseName} $step.pdf" to
-                if (metadata.stripAll) "Title, author, dates and producer cleared" else "Details updated"
+                Strings.get(if (metadata.stripAll) R.string.engine_metadata_stripped else R.string.engine_metadata_updated)
         }
     }
 }
@@ -226,7 +234,7 @@ class MetadataOp(private val metadata: DocumentMetadata) : Op {
 class CleanOp(private val spec: CleanSpec) : Op {
 
     override val tool = ToolId.METADATA
-    override val title = "Clean hidden data"
+    override val title = Strings.get(R.string.engine_title_clean)
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -234,25 +242,23 @@ class CleanOp(private val spec: CleanSpec) : Op {
         context: OpContext,
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
-        eachFile(inputs, context, onProgress, "cleaned", "Cleaning") { input, pdfInput, output ->
+        eachFile(inputs, context, onProgress, "cleaned", R.string.engine_progress_cleaning) { input, pdfInput, output ->
             val report = context.surgeon.cleanDocument(pdfInput, spec, output)
             "${input.baseName} cleaned.pdf" to describe(report)
         }
     }
 
     private fun describe(report: CleanReport): String {
-        if (report.total == 0) return "Nothing hidden was found; the copy is the same document"
+        if (report.total == 0) return Strings.get(R.string.engine_clean_nothing)
         val parts = buildList {
-            if (report.details > 0) add("the details")
-            if (report.xmp > 0) add("a hidden XMP copy of them")
-            if (report.scripts > 0) add(count(report.scripts, "script"))
-            if (report.attachments > 0) add(count(report.attachments, "attached file"))
-            if (report.comments > 0) add(count(report.comments, "comment"))
-            if (report.thumbnails > 0) add(count(report.thumbnails, "page thumbnail"))
-            if (report.privateData > 0) add("private editing data")
+            if (report.details > 0) add(Strings.get(R.string.engine_clean_details))
+            if (report.xmp > 0) add(Strings.get(R.string.engine_clean_xmp))
+            if (report.scripts > 0) add(Strings.plural(R.plurals.engine_clean_scripts, report.scripts))
+            if (report.attachments > 0) add(Strings.plural(R.plurals.engine_clean_attachments, report.attachments))
+            if (report.comments > 0) add(Strings.plural(R.plurals.engine_clean_comments, report.comments))
+            if (report.thumbnails > 0) add(Strings.plural(R.plurals.engine_clean_thumbnails, report.thumbnails))
+            if (report.privateData > 0) add(Strings.get(R.string.engine_clean_private))
         }
-        return "Removed " + parts.joinToString(", ")
+        return Strings.get(R.string.engine_clean_removed, parts.joinToString(Strings.get(R.string.engine_list_separator)))
     }
-
-    private fun count(n: Int, noun: String) = if (n == 1) "1 $noun" else "$n ${noun}s"
 }

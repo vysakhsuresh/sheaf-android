@@ -1,5 +1,7 @@
 package com.layerbit.sheaf.ops
 
+import androidx.annotation.StringRes
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.pdf.CropSpec
 import com.layerbit.sheaf.pdf.ImageStamp
@@ -12,6 +14,7 @@ import com.layerbit.sheaf.pdf.PdfInput
 import com.layerbit.sheaf.pdf.StampSpec
 import com.layerbit.sheaf.pdf.TextNote
 import com.layerbit.sheaf.pdf.WatermarkSpec
+import com.layerbit.sheaf.text.Strings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -20,7 +23,7 @@ import java.io.File
 class WatermarkOp(private val spec: WatermarkSpec, private val pageSpec: String = "") : Op {
 
     override val tool = ToolId.WATERMARK
-    override val title = "Watermark \"${spec.text}\""
+    override val title = Strings.get(R.string.engine_title_watermark, spec.text)
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -29,25 +32,21 @@ class WatermarkOp(private val spec: WatermarkSpec, private val pageSpec: String 
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         if (spec.text.isBlank()) {
-            return@withContext listOf(OpOutcome.Failed("", "Type the watermark text, such as DRAFT or COPY."))
+            return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_watermark_no_text)))
         }
-        eachFile(inputs, context, onProgress, "watermarked", "Watermark") { input, pdfInput, output ->
+        eachFile(inputs, context, onProgress, "watermarked", R.string.engine_progress_watermark) { input, pdfInput, output ->
             val total = context.surgeon.inspect(pdfInput).pageCount
             val pages = if (pageSpec.isBlank()) emptyList() else PageSelection.parse(pageSpec, total)
             if (pageSpec.isNotBlank() && pages.isEmpty()) {
-                throw PdfException.Io("This file has $total pages; none of the pages typed are in it.")
+                throw PdfException.Io(Strings.plural(R.plurals.engine_pages_typed_not_in_file, total))
             }
             var done = 0
             context.surgeon.watermark(pdfInput, spec.copy(pages = pages), output) { _, count ->
                 context.checkCancelled(); done = count
             }
-            val which = if (pages.isEmpty() || pages.size == total) {
-                "$total ${if (total == 1) "page" else "pages"}"
-            } else {
-                "${if (pages.size == 1) "page" else "pages"} ${PageSelection.describe(pages)}"
-            }
-            val how = if (spec.layout == WatermarkSpec.Layout.TILED) "repeated across" else "across"
-            "${input.baseName} watermarked.pdf" to "\"${spec.text}\" $how $which"
+            val which = describeWhich(pages, total)
+            val how = if (spec.layout == WatermarkSpec.Layout.TILED) R.string.engine_watermark_detail_tiled else R.string.engine_watermark_detail
+            "${input.baseName} watermarked.pdf" to Strings.get(how, spec.text, which)
         }
     }
 }
@@ -62,7 +61,7 @@ class WatermarkOp(private val spec: WatermarkSpec, private val pageSpec: String 
 class PageNumberOp(private val spec: PageNumberSpec, private val continueAcrossFiles: Boolean = false) : Op {
 
     override val tool = ToolId.PAGE_NUMBERS
-    override val title = if (spec.padTo > 0) "Bates numbers" else "Page numbers"
+    override val title = Strings.get(if (spec.padTo > 0) R.string.engine_title_bates else R.string.engine_title_page_numbers)
     override val arity = Op.Arity.EachIndependently
 
     /** A Bates run is one sequence across the files, so it has to see them all in one call. */
@@ -74,7 +73,7 @@ class PageNumberOp(private val spec: PageNumberSpec, private val continueAcrossF
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         var next = spec.startAt
-        eachFile(inputs, context, onProgress, "numbered", "Numbering") { input, pdfInput, output ->
+        eachFile(inputs, context, onProgress, "numbered", R.string.engine_progress_numbering) { input, pdfInput, output ->
             val from = if (continueAcrossFiles) next else spec.startAt
             var pages = 0
             context.surgeon.addPageNumbers(pdfInput, spec.copy(startAt = from), output) { _, total ->
@@ -85,7 +84,7 @@ class PageNumberOp(private val spec: PageNumberSpec, private val continueAcrossF
             val first = spec.prefix + (if (spec.padTo > 0) from.toString().padStart(spec.padTo, '0') else from.toString())
             val last = spec.prefix + (if (spec.padTo > 0) (from + numbered - 1).toString().padStart(spec.padTo, '0') else (from + numbered - 1).toString())
             "${input.baseName} numbered.pdf" to
-                if (numbered <= 0) "No pages were numbered" else "$first to $last on $numbered of $pages pages"
+                if (numbered <= 0) Strings.get(R.string.engine_numbered_none) else Strings.plural(R.plurals.engine_numbered_detail, pages, first, last, numbered, pages)
         }
     }
 }
@@ -100,7 +99,7 @@ class PageNumberOp(private val spec: PageNumberSpec, private val continueAcrossF
 class CropOp(private val spec: CropSpec, private val pageSpec: String = "") : Op {
 
     override val tool = ToolId.CROP
-    override val title = if (spec.auto) "Remove white margins" else "Crop pages"
+    override val title = Strings.get(if (spec.auto) R.string.engine_title_remove_margins else R.string.engine_title_crop)
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -109,33 +108,28 @@ class CropOp(private val spec: CropSpec, private val pageSpec: String = "") : Op
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         if (!spec.doesAnything) {
-            return@withContext listOf(OpOutcome.Failed("", "Choose how much to trim, or a page size, first."))
+            return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_crop_nothing)))
         }
-        eachFile(inputs, context, onProgress, "cropped", "Cropping") { input, pdfInput, output ->
+        eachFile(inputs, context, onProgress, "cropped", R.string.engine_progress_cropping) { input, pdfInput, output ->
             val total = context.surgeon.inspect(pdfInput).pageCount
             val pages = if (pageSpec.isBlank()) emptyList() else PageSelection.parse(pageSpec, total)
             if (pageSpec.isNotBlank() && pages.isEmpty()) {
-                throw PdfException.Io("This file has $total pages; none of the pages typed are in it.")
+                throw PdfException.Io(Strings.plural(R.plurals.engine_pages_typed_not_in_file, total))
             }
             context.surgeon.cropPages(pdfInput, spec.copy(pages = pages), output) { _, _ ->
                 context.checkCancelled()
             }
-            val which = if (pages.isEmpty() || pages.size == total) {
-                "$total ${if (total == 1) "page" else "pages"}"
-            } else {
-                "${if (pages.size == 1) "page" else "pages"} ${PageSelection.describe(pages)}"
-            }
+            val which = describeWhich(pages, total)
             val paper = spec.resizeTo?.label
-            val detail = buildString {
-                when {
-                    spec.auto -> append("White margins removed from $which")
-                    spec.trims -> append("Trimmed ${spec.describeTrims()} off $which")
-                    else -> append(which.replaceFirstChar { it.uppercase() })
-                }
-                if (paper != null) {
-                    append(if (spec.auto || spec.trims) ", then put on $paper" else " put on $paper")
-                    if (!spec.enlarge) append(", smaller pages at their real size")
-                }
+            var detail = when {
+                spec.auto -> Strings.get(R.string.engine_crop_auto, which)
+                spec.trims -> Strings.get(R.string.engine_crop_trimmed, spec.describeTrims(), which)
+                else -> which.replaceFirstChar { it.uppercase() }
+            }
+            if (paper != null) {
+                val put = if (spec.auto || spec.trims) R.string.engine_crop_then_paper else R.string.engine_crop_on_paper
+                detail = Strings.get(put, detail, paper)
+                if (!spec.enlarge) detail = Strings.get(R.string.engine_crop_real_size, detail)
             }
             val name = if (paper != null && !spec.auto && !spec.trims) {
                 "${input.baseName} on $paper.pdf"
@@ -148,9 +142,13 @@ class CropOp(private val spec: CropSpec, private val pageSpec: String = "") : Op
 
     /** "5 mm all round", or "top 10 mm, left 5 mm" when the edges differ. */
     private fun CropSpec.describeTrims(): String {
-        val edges = listOf("top" to topMm, "right" to rightMm, "bottom" to bottomMm, "left" to leftMm)
-        if (edges.all { it.second == topMm }) return "${topMm.mm()} all round"
-        return edges.filter { it.second > 0f }.joinToString(", ") { (edge, mm) -> "$edge ${mm.mm()}" }
+        val edges = listOf(
+            R.string.engine_crop_edge_top to topMm, R.string.engine_crop_edge_right to rightMm,
+            R.string.engine_crop_edge_bottom to bottomMm, R.string.engine_crop_edge_left to leftMm
+        )
+        if (edges.all { it.second == topMm }) return Strings.get(R.string.engine_crop_all_round, topMm.mm())
+        return edges.filter { it.second > 0f }
+            .joinToString(Strings.get(R.string.engine_list_separator)) { (edge, mm) -> Strings.get(edge, mm.mm()) }
     }
 
     private fun Float.mm(): String = if (this == this.toInt().toFloat()) "${toInt()} mm" else "%.1f mm".format(this)
@@ -173,7 +171,7 @@ class RedactOp(
 ) : Op {
 
     override val tool = ToolId.REDACT
-    override val title = "Remove areas"
+    override val title = Strings.get(R.string.engine_title_redact)
     override val arity = Op.Arity.ExactlyOne
 
     override suspend fun run(
@@ -182,10 +180,10 @@ class RedactOp(
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val input = inputs.firstOrNull()
-            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_no_document)))
         if (areas.values.all { it.isEmpty() }) {
             return@withContext listOf(
-                OpOutcome.Failed(input.displayName, "Draw a box over what should be removed first.")
+                OpOutcome.Failed(input.displayName, Strings.get(R.string.engine_redact_nothing))
             )
         }
 
@@ -195,11 +193,11 @@ class RedactOp(
         try {
             context.surgeon.redact(pdfInput, areas, dpi, output) { done, total ->
                 context.checkCancelled()
-                onProgress(Progress(done, total, "Removing from page $done of $total"))
+                onProgress(Progress(done, total, Strings.get(R.string.engine_progress_redacting, done, total)))
             }
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Failed."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_failed)))
         }
 
         val boxes = areas.values.sumOf { it.size }
@@ -207,8 +205,11 @@ class RedactOp(
         listOf(
             OpOutcome.Produced(
                 SheafFile(output, "${input.baseName} redacted.pdf", SheafFile.Origin.Derived("redacted")),
-                "$boxes ${if (boxes == 1) "area" else "areas"} removed from " +
-                    if (pages == 1) "1 page, which is now an image" else "$pages pages, which are now images"
+                Strings.get(
+                    R.string.engine_redact_detail,
+                    Strings.plural(R.plurals.engine_redact_areas, boxes),
+                    Strings.plural(R.plurals.engine_redact_pages, pages)
+                )
             )
         )
     }
@@ -232,7 +233,7 @@ class RedactOp(
 class SignOp(private val stamp: ImageStamp) : Op {
 
     override val tool = ToolId.SIGN
-    override val title = "Sign"
+    override val title = Strings.get(R.string.engine_title_sign)
     override val arity = Op.Arity.ExactlyOne
 
     override suspend fun run(
@@ -241,12 +242,12 @@ class SignOp(private val stamp: ImageStamp) : Op {
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val input = inputs.firstOrNull()
-            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_no_document)))
         if (!stamp.image.isFile) {
-            return@withContext listOf(OpOutcome.Failed(input.displayName, "Draw your signature first."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, Strings.get(R.string.engine_sign_nothing)))
         }
 
-        onProgress(Progress(0, 1, "Placing the signature"))
+        onProgress(Progress(0, 1, Strings.get(R.string.engine_progress_placing_signature)))
         val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
         val output = context.workspace.newOutput(input.baseName, "signed")
 
@@ -254,14 +255,14 @@ class SignOp(private val stamp: ImageStamp) : Op {
             context.surgeon.stampImage(pdfInput, stamp, output)
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Failed."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_failed)))
         }
 
-        onProgress(Progress(1, 1, "Done"))
+        onProgress(Progress(1, 1, Strings.get(R.string.engine_done)))
         listOf(
             OpOutcome.Produced(
                 SheafFile(output, "${input.baseName} signed.pdf", SheafFile.Origin.Derived("signed")),
-                "Signed on page ${stamp.pageIndex + 1}"
+                Strings.get(R.string.engine_signed_on_page, stamp.pageIndex + 1)
             )
         )
     }
@@ -277,7 +278,7 @@ class SignOp(private val stamp: ImageStamp) : Op {
 class AddImageOp(private val anchor: ImageStamp.Anchor, private val widthFraction: Float, private val page: Int) : Op {
 
     override val tool = ToolId.ADD_IMAGE
-    override val title = "Add an image"
+    override val title = Strings.get(R.string.engine_title_add_image)
     override val arity = Op.Arity.Together(min = 2)
 
     override suspend fun run(
@@ -286,11 +287,11 @@ class AddImageOp(private val anchor: ImageStamp.Anchor, private val widthFractio
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val document = inputs.firstOrNull { it.isPdf }
-            ?: return@withContext listOf(OpOutcome.Failed("", "Pick the PDF first."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_pick_pdf_first)))
         val image = inputs.firstOrNull { it.isImage }
-            ?: return@withContext listOf(OpOutcome.Failed(document.displayName, "Add the image to put on the page."))
+            ?: return@withContext listOf(OpOutcome.Failed(document.displayName, Strings.get(R.string.engine_add_image_missing)))
 
-        onProgress(Progress(0, 1, "Placing ${image.displayName}"))
+        onProgress(Progress(0, 1, Strings.get(R.string.engine_progress_placing, image.displayName)))
         val pdfInput = PdfInput(document.file, context.passwords[document.file.path])
         val output = context.workspace.newOutput(document.baseName, "with-image")
 
@@ -307,14 +308,14 @@ class AddImageOp(private val anchor: ImageStamp.Anchor, private val widthFractio
             )
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed(document.displayName, e.message ?: "Failed."))
+            return@withContext listOf(OpOutcome.Failed(document.displayName, e.message ?: Strings.get(R.string.engine_failed)))
         }
 
-        onProgress(Progress(1, 1, "Done"))
+        onProgress(Progress(1, 1, Strings.get(R.string.engine_done)))
         listOf(
             OpOutcome.Produced(
                 SheafFile(output, "${document.baseName} with image.pdf", SheafFile.Origin.Derived("with-image")),
-                "${image.displayName} placed on page $page"
+                Strings.get(R.string.engine_image_placed, image.displayName, page)
             )
         )
     }
@@ -341,7 +342,7 @@ class AnnotateOp(
 ) : Op {
 
     override val tool = ToolId.ANNOTATE
-    override val title = "Mark up"
+    override val title = Strings.get(R.string.engine_title_annotate)
     override val arity = Op.Arity.ExactlyOne
 
     override suspend fun run(
@@ -350,10 +351,10 @@ class AnnotateOp(
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val input = inputs.firstOrNull()
-            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_no_document)))
         if (marks.values.all { it.isEmpty() }) {
             return@withContext listOf(
-                OpOutcome.Failed(input.displayName, "Highlight or draw something first.")
+                OpOutcome.Failed(input.displayName, Strings.get(R.string.engine_annotate_nothing))
             )
         }
 
@@ -363,11 +364,11 @@ class AnnotateOp(
         try {
             context.surgeon.annotate(pdfInput, marks, output, editable = editable, onProgress = { done, total ->
                 context.checkCancelled()
-                onProgress(Progress(done, total, "Drawing on page $done of $total"))
+                onProgress(Progress(done, total, Strings.get(R.string.engine_progress_drawing, done, total)))
             })
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Failed."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_failed)))
         }
 
         val drawn = marks.values.sumOf { it.size }
@@ -375,8 +376,11 @@ class AnnotateOp(
         listOf(
             OpOutcome.Produced(
                 SheafFile(output, "${input.baseName} marked.pdf", SheafFile.Origin.Derived("marked")),
-                "${if (drawn == 1) "1 mark" else "$drawn marks"} on " +
-                    "${if (pages == 1) "1 page" else "$pages pages"}"
+                Strings.get(
+                    R.string.engine_marks_on_pages,
+                    Strings.plural(R.plurals.engine_marks, drawn),
+                    Strings.plural(R.plurals.engine_count_pages, pages)
+                )
             )
         )
     }
@@ -393,7 +397,7 @@ class AnnotateOp(
 class HeaderFooterOp(private val spec: StampSpec) : Op {
 
     override val tool = ToolId.HEADER_FOOTER
-    override val title = "Header and footer"
+    override val title = Strings.get(R.string.engine_title_header_footer)
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -402,9 +406,9 @@ class HeaderFooterOp(private val spec: StampSpec) : Op {
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         if (spec.headerText.isBlank() && spec.footerText.isBlank()) {
-            return@withContext listOf(OpOutcome.Failed("", "Type a header or a footer first."))
+            return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_hf_nothing)))
         }
-        eachFile(inputs, context, onProgress, "stamped", "Stamping") { input, pdfInput, output ->
+        eachFile(inputs, context, onProgress, "stamped", R.string.engine_progress_stamping) { input, pdfInput, output ->
             var pages = 0
             // The document's own name resolves {name}, which the engine cannot know.
             context.surgeon.stampHeaderFooter(
@@ -415,12 +419,12 @@ class HeaderFooterOp(private val spec: StampSpec) : Op {
                 context.checkCancelled(); pages = total
             }
             val where = when {
-                spec.headerText.isNotBlank() && spec.footerText.isNotBlank() -> "header and footer"
-                spec.headerText.isNotBlank() -> "header"
-                else -> "footer"
+                spec.headerText.isNotBlank() && spec.footerText.isNotBlank() -> R.plurals.engine_hf_added_both
+                spec.headerText.isNotBlank() -> R.plurals.engine_hf_added_header
+                else -> R.plurals.engine_hf_added_footer
             }
             "${input.baseName} stamped.pdf" to
-                "Added a $where to ${pages - spec.skipFirst} of $pages pages"
+                Strings.plural(where, pages, pages - spec.skipFirst, pages)
         }
     }
 }
@@ -438,7 +442,7 @@ class HeaderFooterOp(private val spec: StampSpec) : Op {
 class AddTextOp(private val note: TextNote) : Op {
 
     override val tool = ToolId.ADD_TEXT
-    override val title = "Add text"
+    override val title = Strings.get(R.string.engine_title_add_text)
     override val arity = Op.Arity.ExactlyOne
 
     override suspend fun run(
@@ -447,12 +451,12 @@ class AddTextOp(private val note: TextNote) : Op {
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val input = inputs.firstOrNull()
-            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_no_document)))
         if (note.text.isBlank()) {
-            return@withContext listOf(OpOutcome.Failed(input.displayName, "Type the text first."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, Strings.get(R.string.engine_add_text_nothing)))
         }
 
-        onProgress(Progress(0, 1, "Writing on page ${note.pageIndex + 1}"))
+        onProgress(Progress(0, 1, Strings.get(R.string.engine_progress_writing_on_page, note.pageIndex + 1)))
         val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
         val output = context.workspace.newOutput(input.baseName, "edited")
 
@@ -460,16 +464,17 @@ class AddTextOp(private val note: TextNote) : Op {
             context.surgeon.addText(pdfInput, listOf(note), output)
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Failed."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_failed)))
         }
 
-        onProgress(Progress(1, 1, "Done"))
+        onProgress(Progress(1, 1, Strings.get(R.string.engine_done)))
         val lines = note.text.lines().count { it.isNotBlank() }
         listOf(
             OpOutcome.Produced(
                 SheafFile(output, "${input.baseName} edited.pdf", SheafFile.Origin.Derived("edited")),
-                "${if (lines == 1) "One line" else "$lines lines"} added to page ${note.pageIndex + 1}" +
-                    if (note.cover) ", covering what was underneath" else ""
+                Strings.plural(R.plurals.engine_lines_added, lines, lines, note.pageIndex + 1).let {
+                    if (note.cover) Strings.get(R.string.engine_lines_added_covering, it) else it
+                }
             )
         )
     }
@@ -486,14 +491,15 @@ internal suspend inline fun eachFile(
     context: OpContext,
     noinline onProgress: (Progress) -> Unit,
     step: String,
-    verb: String,
+    /** The progress line while a file is worked on: "Numbering %1$s". */
+    @StringRes verb: Int,
     crossinline work: (SheafFile, PdfInput, File) -> Pair<String, String?>
 ): List<OpOutcome> {
     val outcomes = mutableListOf<OpOutcome>()
 
     inputs.forEachIndexed { index, input ->
         context.checkCancelled()
-        onProgress(Progress(index, inputs.size, "$verb ${input.displayName}"))
+        onProgress(Progress(index, inputs.size, Strings.get(verb, input.displayName)))
 
         val output = context.workspace.newOutput(input.baseName, step)
         outcomes += try {
@@ -501,10 +507,15 @@ internal suspend inline fun eachFile(
             OpOutcome.Produced(SheafFile(output, name, SheafFile.Origin.Derived(step)), detail)
         } catch (e: PdfException) {
             output.delete()
-            OpOutcome.Failed(input.displayName, e.message ?: "$verb failed.")
+            OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_failed))
         }
     }
 
-    onProgress(Progress(inputs.size, inputs.size, "Done"))
+    onProgress(Progress(inputs.size, inputs.size, Strings.get(R.string.engine_done)))
     return outcomes
 }
+
+/** "12 pages" for the whole document, "pages 1-3, 7" for some of it. */
+internal fun describeWhich(pages: List<Int>, total: Int): String =
+    if (pages.isEmpty() || pages.size == total) Strings.plural(R.plurals.engine_count_pages, total)
+    else Strings.plural(R.plurals.engine_pages_listed, pages.size, PageSelection.describe(pages))

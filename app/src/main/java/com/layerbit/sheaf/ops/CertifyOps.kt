@@ -1,10 +1,12 @@
 package com.layerbit.sheaf.ops
 
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.pdf.NewField
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
 import com.layerbit.sheaf.pdf.SignSpec
+import com.layerbit.sheaf.text.Strings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -21,7 +23,7 @@ import kotlinx.coroutines.withContext
 class PdfAOp : Op {
 
     override val tool = ToolId.PDF_A
-    override val title = "Archive copy (PDF/A)"
+    override val title = Strings.get(R.string.engine_title_pdfa)
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -29,21 +31,18 @@ class PdfAOp : Op {
         context: OpContext,
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
-        eachFile(inputs, context, onProgress, "archive", "Archiving") { input, pdfInput, output ->
+        eachFile(inputs, context, onProgress, "archive", R.string.engine_progress_archiving) { input, pdfInput, output ->
             val wasLocked = runCatching { context.surgeon.inspect(pdfInput).isEncrypted }.getOrDefault(false)
             val report = context.surgeon.makeArchival(pdfInput, output)
-            val parts = mutableListOf("PDF/A-2b archive copy: colour profile and archive details added")
+            val parts = mutableListOf(Strings.get(R.string.engine_pdfa_done))
             val took = buildList {
-                if (report.scripts > 0) add(if (report.scripts == 1) "1 script or action" else "${report.scripts} scripts and actions")
-                if (report.attachments > 0) add(if (report.attachments == 1) "1 attached file" else "${report.attachments} attached files")
+                if (report.scripts > 0) add(Strings.plural(R.plurals.engine_pdfa_scripts, report.scripts))
+                if (report.attachments > 0) add(Strings.plural(R.plurals.engine_clean_attachments, report.attachments))
             }
-            if (took.isNotEmpty()) parts += took.joinToString(" and ") + " taken out, as the standard asks"
-            if (wasLocked) parts += "the password is gone, as archives must open for anyone"
-            if (report.fontsMissing > 0) {
-                parts += "${report.fontsMissing} ${if (report.fontsMissing == 1) "font the file uses is" else "fonts the file uses are"} " +
-                    "not inside it, so a strict checker will flag that; saving it again from the program that made it, with fonts embedded, fixes it"
-            }
-            "${input.baseName} (PDF-A).pdf" to parts.joinToString("; ")
+            if (took.isNotEmpty()) parts += Strings.get(R.string.engine_pdfa_taken_out, took.joinToString(Strings.get(R.string.engine_list_and)))
+            if (wasLocked) parts += Strings.get(R.string.engine_pdfa_unlocked)
+            if (report.fontsMissing > 0) parts += Strings.plural(R.plurals.engine_pdfa_fonts_missing, report.fontsMissing)
+            "${input.baseName} (PDF-A).pdf" to parts.joinToString(Strings.get(R.string.engine_clause_separator))
         }
     }
 }
@@ -52,7 +51,7 @@ class PdfAOp : Op {
 class CreateFormOp(private val fields: List<NewField>) : Op {
 
     override val tool = ToolId.CREATE_FORM
-    override val title = "Create a form"
+    override val title = Strings.get(R.string.engine_title_create_form)
     override val arity = Op.Arity.ExactlyOne
 
     override suspend fun run(
@@ -61,29 +60,29 @@ class CreateFormOp(private val fields: List<NewField>) : Op {
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val input = inputs.firstOrNull()
-            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_no_document)))
         val wanted = fields.filter { it.name.isNotBlank() }
         if (wanted.isEmpty()) {
-            return@withContext listOf(OpOutcome.Failed(input.displayName, "Draw a field on the page and give it a name first."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, Strings.get(R.string.engine_form_nothing)))
         }
-        onProgress(Progress(0, 1, "Adding ${wanted.size} ${if (wanted.size == 1) "field" else "fields"}"))
+        onProgress(Progress(0, 1, Strings.plural(R.plurals.engine_progress_adding_fields, wanted.size)))
         val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
         val output = context.workspace.newOutput(input.baseName, "form")
         val names = try {
             context.surgeon.addFormFields(pdfInput, wanted, output)
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Failed."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_failed)))
         }
-        onProgress(Progress(1, 1, "Done"))
+        onProgress(Progress(1, 1, Strings.get(R.string.engine_done)))
         val counts = NewField.Kind.entries.mapNotNull { kind ->
             val n = wanted.count { it.kind == kind }
-            if (n == 0) null else "$n ${if (n == 1) kind.label.lowercase() else kind.label.lowercase().replace("box", "boxes").replace("list", "lists")}"
+            if (n == 0) null else Strings.plural(kind.countRes, n)
         }
         listOf(
             OpOutcome.Produced(
                 SheafFile(output, "${input.baseName} (form).pdf", SheafFile.Origin.Derived("form")),
-                "${counts.joinToString(", ")} added (${names.size} ${if (names.size == 1) "field" else "fields"}): anyone can fill it in, in any PDF reader"
+                Strings.plural(R.plurals.engine_form_detail, names.size, counts.joinToString(Strings.get(R.string.engine_list_separator)), names.size)
             )
         )
     }
@@ -99,7 +98,7 @@ class CreateFormOp(private val fields: List<NewField>) : Op {
 class DigitalSignOp(private val password: String, private val spec: SignSpec) : Op {
 
     override val tool = ToolId.DIGITAL_SIGN
-    override val title = "Digital signature"
+    override val title = Strings.get(R.string.engine_title_digital_sign)
     override val arity = Op.Arity.Together(min = 2)
 
     override suspend fun run(
@@ -108,11 +107,11 @@ class DigitalSignOp(private val password: String, private val spec: SignSpec) : 
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val document = inputs.firstOrNull { it.isPdf }
-            ?: return@withContext listOf(OpOutcome.Failed("", "Pick the PDF first."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_pick_pdf_first)))
         val certificate = inputs.firstOrNull { !it.isPdf }
-            ?: return@withContext listOf(OpOutcome.Failed(document.displayName, "Add your certificate file (.pfx or .p12)."))
+            ?: return@withContext listOf(OpOutcome.Failed(document.displayName, Strings.get(R.string.engine_certificate_missing)))
 
-        onProgress(Progress(0, 1, "Signing ${document.displayName}"))
+        onProgress(Progress(0, 1, Strings.get(R.string.engine_progress_signing, document.displayName)))
         val pdfInput = PdfInput(document.file, context.passwords[document.file.path])
         val wasLocked = runCatching { context.surgeon.inspect(pdfInput).isEncrypted }.getOrDefault(false)
         val output = context.workspace.newOutput(document.baseName, "signed")
@@ -120,19 +119,21 @@ class DigitalSignOp(private val password: String, private val spec: SignSpec) : 
             context.surgeon.signWithCertificate(pdfInput, certificate.file, password, spec, output)
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed(document.displayName, e.message ?: "Failed."))
+            return@withContext listOf(OpOutcome.Failed(document.displayName, e.message ?: Strings.get(R.string.engine_failed)))
         }
-        onProgress(Progress(1, 1, "Done"))
-        val where = if (spec.visible) {
-            "shown at the foot of the ${if (spec.onFirstPage) "first" else "last"} page"
-        } else {
-            "invisible on the page, listed in any reader's signature panel"
-        }
-        val lock = if (wasLocked) ". The signed copy opens without the password: locking it again would break the signature" else ""
+        onProgress(Progress(1, 1, Strings.get(R.string.engine_done)))
+        val where = Strings.get(
+            when {
+                !spec.visible -> R.string.engine_signature_invisible
+                spec.onFirstPage -> R.string.engine_signature_first_page
+                else -> R.string.engine_signature_last_page
+            }
+        )
+        val signed = if (wasLocked) R.string.engine_signed_by_unlocked else R.string.engine_signed_by
         listOf(
             OpOutcome.Produced(
                 SheafFile(output, "${document.baseName} (signed).pdf", SheafFile.Origin.Derived("signed")),
-                "Signed by ${report.signer}, certificate from ${report.issuer}; $where$lock"
+                Strings.get(signed, report.signer, report.issuer, where)
             )
         )
     }

@@ -1,6 +1,10 @@
 package com.layerbit.sheaf.pdf
 
 import android.graphics.Bitmap
+import androidx.annotation.PluralsRes
+import androidx.annotation.StringRes
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
 
 /**
  * Reading the words out of a picture of a page.
@@ -29,9 +33,11 @@ interface OcrEngine {
 }
 
 /** Which recogniser reads a page. Each is its own bundled model. */
-enum class OcrScript(val label: String) {
-    LATIN("English and other Latin scripts"),
-    DEVANAGARI("Hindi, Marathi, Nepali (Devanagari)")
+enum class OcrScript(@StringRes private val labelRes: Int) {
+    LATIN(R.string.engine_ocr_script_latin),
+    DEVANAGARI(R.string.engine_ocr_script_devanagari);
+
+    val label: String get() = Strings.get(labelRes)
 }
 
 /**

@@ -1,5 +1,7 @@
 package com.layerbit.sheaf.pdf
 
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
 import com.tom_roush.pdfbox.io.MemoryUsageSetting
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
@@ -49,9 +51,9 @@ interface PageReader : Closeable {
             } catch (e: InvalidPasswordException) {
                 throw PdfException.PasswordRequired(e)
             } catch (e: OutOfMemoryError) {
-                throw PdfException.OutOfMemory("opening ${input.file.name}", e)
+                throw PdfException.OutOfMemory(Strings.get(R.string.engine_err_oom_opening, input.file.name), e)
             } catch (e: Exception) {
-                throw PdfException.Corrupt(e.message ?: "could not be opened", e)
+                throw PdfException.Corrupt(e.message ?: Strings.get(R.string.engine_err_could_not_be_opened), e)
             }
             return PdfBoxPageReader(doc)
         }

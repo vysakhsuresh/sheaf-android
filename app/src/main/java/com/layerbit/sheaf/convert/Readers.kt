@@ -1,7 +1,9 @@
 package com.layerbit.sheaf.convert
 
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.pdf.Block
 import com.layerbit.sheaf.pdf.FlowDocument
+import com.layerbit.sheaf.text.Strings
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.ByteArrayInputStream
@@ -28,7 +30,7 @@ object Readers {
     // ------------------------------------------------------------------ Word
 
     fun docx(file: File, title: String): FlowDocument {
-        val xml = file.zipEntry("word/document.xml") ?: throw IllegalArgumentException("This is not a Word file: it has no document inside.")
+        val xml = file.zipEntry("word/document.xml") ?: throw IllegalArgumentException(Strings.get(R.string.engine_err_not_word))
         val blocks = mutableListOf<Block>()
         val parser = newParser(xml)
 
@@ -176,7 +178,7 @@ object Readers {
             sheets += file.zipNames().filter { it.startsWith("xl/worksheets/sheet") && it.endsWith(".xml") }.sorted()
                 .mapIndexed { i, path -> "Sheet ${i + 1}" to path }
         }
-        if (sheets.isEmpty()) throw IllegalArgumentException("This is not a spreadsheet: it has no sheets inside.")
+        if (sheets.isEmpty()) throw IllegalArgumentException(Strings.get(R.string.engine_err_not_spreadsheet))
 
         val blocks = mutableListOf<Block>()
         sheets.forEachIndexed { index, (name, path) ->

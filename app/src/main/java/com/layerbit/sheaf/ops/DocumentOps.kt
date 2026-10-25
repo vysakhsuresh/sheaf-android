@@ -1,5 +1,6 @@
 package com.layerbit.sheaf.ops
 
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.pdf.OutlineEntry
 import com.layerbit.sheaf.pdf.PageLabelSpec
@@ -7,6 +8,7 @@ import com.layerbit.sheaf.pdf.PageSelection
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
 import com.layerbit.sheaf.pdf.labelFor
+import com.layerbit.sheaf.text.Strings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -24,7 +26,7 @@ import kotlinx.coroutines.withContext
 class PageLabelsOp(private val spec: PageLabelSpec?) : Op {
 
     override val tool = ToolId.PAGE_LABELS
-    override val title = if (spec == null) "Remove page labels" else "Page labels"
+    override val title = Strings.get(if (spec == null) R.string.engine_title_remove_labels else R.string.engine_title_labels)
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -32,7 +34,7 @@ class PageLabelsOp(private val spec: PageLabelSpec?) : Op {
         context: OpContext,
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
-        eachFile(inputs, context, onProgress, "labelled", "Labelling") { input, pdfInput, output ->
+        eachFile(inputs, context, onProgress, "labelled", R.string.engine_progress_labelling) { input, pdfInput, output ->
             val total = context.surgeon.inspect(pdfInput).pageCount
             context.surgeon.setPageLabels(pdfInput, spec, output)
             "${input.baseName} labelled.pdf" to describe(spec, total)
@@ -40,20 +42,20 @@ class PageLabelsOp(private val spec: PageLabelSpec?) : Op {
     }
 
     private fun describe(spec: PageLabelSpec?, total: Int): String {
-        if (spec == null) return "Page labels removed; readers count from the first page again"
+        if (spec == null) return Strings.get(R.string.engine_labels_removed)
         val front = spec.frontPages.coerceIn(0, total)
         val body = (total - front).coerceAtLeast(0)
-        return buildString {
-            if (front > 0) {
-                append("${spec.frontStyle.labelFor(1)} to ${spec.frontStyle.labelFor(front)} for the first ")
-                append(if (front == 1) "page" else "$front pages")
-                if (body > 0) append(", then ")
-            }
-            if (body > 0) {
-                val first = spec.prefix + spec.style.labelFor(spec.startAt)
-                val last = spec.prefix + spec.style.labelFor(spec.startAt + body - 1)
-                append(if (body == 1) first else "$first to $last")
-            }
+        val frontPart = if (front > 0) {
+            Strings.plural(R.plurals.engine_labels_front, front, spec.frontStyle.labelFor(1), spec.frontStyle.labelFor(front), front)
+        } else null
+        val bodyPart = if (body > 0) {
+            val first = spec.prefix + spec.style.labelFor(spec.startAt)
+            val last = spec.prefix + spec.style.labelFor(spec.startAt + body - 1)
+            if (body == 1) first else Strings.get(R.string.engine_labels_range, first, last)
+        } else null
+        return when {
+            frontPart != null && bodyPart != null -> Strings.get(R.string.engine_labels_then, frontPart, bodyPart)
+            else -> frontPart ?: bodyPart.orEmpty()
         }
     }
 }
@@ -62,7 +64,7 @@ class PageLabelsOp(private val spec: PageLabelSpec?) : Op {
 class BackgroundOp(private val colour: Int, private val pageSpec: String = "") : Op {
 
     override val tool = ToolId.BACKGROUND
-    override val title = "Page background"
+    override val title = Strings.get(R.string.engine_title_background)
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -70,19 +72,19 @@ class BackgroundOp(private val colour: Int, private val pageSpec: String = "") :
         context: OpContext,
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
-        eachFile(inputs, context, onProgress, "background", "Colouring") { input, pdfInput, output ->
+        eachFile(inputs, context, onProgress, "background", R.string.engine_progress_colouring) { input, pdfInput, output ->
             val total = context.surgeon.inspect(pdfInput).pageCount
             val pages = if (pageSpec.isBlank()) emptyList() else PageSelection.parse(pageSpec, total)
             if (pageSpec.isNotBlank() && pages.isEmpty()) {
-                throw PdfException.Io("This file has $total pages; none of the pages typed are in it.")
+                throw PdfException.Io(Strings.plural(R.plurals.engine_pages_typed_not_in_file, total))
             }
             context.surgeon.setBackground(pdfInput, colour, pages, output) { _, _ -> context.checkCancelled() }
             val which = if (pages.isEmpty() || pages.size == total) {
-                "all $total ${if (total == 1) "page" else "pages"}"
+                Strings.plural(R.plurals.engine_all_pages, total)
             } else {
-                "${if (pages.size == 1) "page" else "pages"} ${PageSelection.describe(pages)}"
+                Strings.plural(R.plurals.engine_pages_listed, pages.size, PageSelection.describe(pages))
             }
-            "${input.baseName} background.pdf" to "Background behind $which"
+            "${input.baseName} background.pdf" to Strings.get(R.string.engine_background_detail, which)
         }
     }
 }
@@ -97,7 +99,7 @@ class BackgroundOp(private val colour: Int, private val pageSpec: String = "") :
 class AttachmentsOp(private val extract: Boolean) : Op {
 
     override val tool = ToolId.ATTACHMENTS
-    override val title = if (extract) "Extract attachments" else "Attach files"
+    override val title = Strings.get(if (extract) R.string.engine_title_extract_attachments else R.string.engine_title_attach)
     override val arity = Op.Arity.Together(min = 1)
 
     override suspend fun run(
@@ -106,21 +108,21 @@ class AttachmentsOp(private val extract: Boolean) : Op {
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val base = inputs.firstOrNull()
-            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_no_document)))
         if (!base.isPdf) {
-            return@withContext listOf(OpOutcome.Failed(base.displayName, "The first file has to be the PDF."))
+            return@withContext listOf(OpOutcome.Failed(base.displayName, Strings.get(R.string.engine_attach_pdf_first)))
         }
         val pdfInput = PdfInput(base.file, context.passwords[base.file.path])
 
         if (extract) {
-            onProgress(Progress(0, 1, "Reading the attachments"))
+            onProgress(Progress(0, 1, Strings.get(R.string.engine_progress_reading_attachments)))
             val dir = context.workspace.newOutput(base.baseName, "attachments", "dir")
             val files = try {
                 context.surgeon.extractAttachments(pdfInput, dir)
             } catch (e: PdfException) {
-                return@withContext listOf(OpOutcome.Failed(base.displayName, e.message ?: "Failed."))
+                return@withContext listOf(OpOutcome.Failed(base.displayName, e.message ?: Strings.get(R.string.engine_failed)))
             }
-            onProgress(Progress(1, 1, "Done"))
+            onProgress(Progress(1, 1, Strings.get(R.string.engine_done)))
             return@withContext files.map { file ->
                 OpOutcome.Produced(
                     SheafFile(
@@ -129,7 +131,7 @@ class AttachmentsOp(private val extract: Boolean) : Op {
                         origin = SheafFile.Origin.Derived("attachments"),
                         mimeType = mimeFor(file.name)
                     ),
-                    "Attached to ${base.displayName}"
+                    Strings.get(R.string.engine_attached_to, base.displayName)
                 )
             }
         }
@@ -137,23 +139,26 @@ class AttachmentsOp(private val extract: Boolean) : Op {
         val attachments = inputs.drop(1)
         if (attachments.isEmpty()) {
             return@withContext listOf(
-                OpOutcome.Failed(base.displayName, "Add the files to attach after the PDF.")
+                OpOutcome.Failed(base.displayName, Strings.get(R.string.engine_attach_nothing))
             )
         }
-        onProgress(Progress(0, 1, "Attaching ${attachments.size} ${if (attachments.size == 1) "file" else "files"}"))
+        onProgress(Progress(0, 1, Strings.plural(R.plurals.engine_progress_attaching, attachments.size)))
         val output = context.workspace.newOutput(base.baseName, "attached")
         try {
             context.surgeon.attachFiles(pdfInput, attachments.map { it.displayName to it.file }, output)
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed(base.displayName, e.message ?: "Failed."))
+            return@withContext listOf(OpOutcome.Failed(base.displayName, e.message ?: Strings.get(R.string.engine_failed)))
         }
-        onProgress(Progress(1, 1, "Done"))
+        onProgress(Progress(1, 1, Strings.get(R.string.engine_done)))
         listOf(
             OpOutcome.Produced(
                 SheafFile(output, "${base.baseName} with attachments.pdf", SheafFile.Origin.Derived("attached")),
-                if (attachments.size == 1) "${attachments.first().displayName} attached"
-                else "${attachments.size} files attached: " + attachments.joinToString(", ") { it.displayName }
+                if (attachments.size == 1) Strings.get(R.string.engine_attached_one, attachments.first().displayName)
+                else Strings.plural(
+                    R.plurals.engine_attached_many, attachments.size, attachments.size,
+                    attachments.joinToString(Strings.get(R.string.engine_list_separator)) { it.displayName }
+                )
             )
         )
     }
@@ -185,7 +190,7 @@ class AttachmentsOp(private val extract: Boolean) : Op {
 class BookmarksOp(private val entries: List<OutlineEntry>) : Op {
 
     override val tool = ToolId.BOOKMARKS
-    override val title = if (entries.isEmpty()) "Remove bookmarks" else "Bookmarks"
+    override val title = Strings.get(if (entries.isEmpty()) R.string.engine_title_remove_bookmarks else R.string.engine_title_bookmarks)
     override val arity = Op.Arity.ExactlyOne
 
     override suspend fun run(
@@ -194,27 +199,27 @@ class BookmarksOp(private val entries: List<OutlineEntry>) : Op {
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val input = inputs.firstOrNull()
-            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_no_document)))
         val clean = entries.map { it.copy(title = it.title.trim()) }.filter { it.title.isNotEmpty() }
 
-        onProgress(Progress(0, 1, "Writing the bookmarks"))
+        onProgress(Progress(0, 1, Strings.get(R.string.engine_progress_writing_bookmarks)))
         val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
         val output = context.workspace.newOutput(input.baseName, "bookmarked")
         try {
             context.surgeon.writeOutline(pdfInput, clean, output)
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Failed."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_failed)))
         }
-        onProgress(Progress(1, 1, "Done"))
+        onProgress(Progress(1, 1, Strings.get(R.string.engine_done)))
         listOf(
             OpOutcome.Produced(
                 SheafFile(output, "${input.baseName} bookmarked.pdf", SheafFile.Origin.Derived("bookmarked")),
-                when (clean.size) {
-                    0 -> "Bookmarks removed"
-                    1 -> "1 bookmark written"
-                    else -> "${clean.size} bookmarks written" +
-                        if (clean.any { it.depth > 0 }) ", nested" else ""
+                when {
+                    clean.isEmpty() -> Strings.get(R.string.engine_bookmarks_removed)
+                    clean.size > 1 && clean.any { it.depth > 0 } ->
+                        Strings.get(R.string.engine_bookmarks_nested, Strings.plural(R.plurals.engine_bookmarks_written, clean.size))
+                    else -> Strings.plural(R.plurals.engine_bookmarks_written, clean.size)
                 }
             )
         )

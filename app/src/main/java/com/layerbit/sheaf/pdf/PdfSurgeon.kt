@@ -1,6 +1,10 @@
 package com.layerbit.sheaf.pdf
 
 import android.graphics.Bitmap
+import androidx.annotation.PluralsRes
+import androidx.annotation.StringRes
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
 import java.io.File
 
 /**
@@ -511,11 +515,13 @@ data class NewField(
     /** For a drop-down: what can be picked. */
     val options: List<String> = emptyList()
 ) {
-    enum class Kind(val label: String) {
-        TEXT("Text box"),
-        MULTILINE("Paragraph box"),
-        CHECK("Tick box"),
-        CHOICE("Drop-down list")
+    enum class Kind(@StringRes private val labelRes: Int, @PluralsRes val countRes: Int) {
+        TEXT(R.string.engine_field_text, R.plurals.engine_field_count_text),
+        MULTILINE(R.string.engine_field_multiline, R.plurals.engine_field_count_multiline),
+        CHECK(R.string.engine_field_check, R.plurals.engine_field_count_check),
+        CHOICE(R.string.engine_field_choice, R.plurals.engine_field_count_choice);
+
+        val label: String get() = Strings.get(labelRes)
     }
 }
 
@@ -559,10 +565,12 @@ data class WatermarkSpec(
     /** Zero-based page indices; empty means every page. */
     val pages: List<Int> = emptyList()
 ) {
-    enum class Layout(val label: String) {
-        ONCE_DIAGONAL("Once, diagonally"),
-        STRAIGHT("Once, straight across"),
-        TILED("Repeated all over")
+    enum class Layout(@StringRes private val labelRes: Int) {
+        ONCE_DIAGONAL(R.string.engine_watermark_layout_diagonal),
+        STRAIGHT(R.string.engine_watermark_layout_straight),
+        TILED(R.string.engine_watermark_layout_tiled);
+
+        val label: String get() = Strings.get(labelRes)
     }
 }
 
@@ -836,15 +844,15 @@ data class PageSpec(
     /** When true, a landscape image gets a landscape page rather than being shrunk to fit. */
     val matchImageOrientation: Boolean = true
 ) {
-    enum class Size(val widthPoints: Float, val heightPoints: Float, val label: String) {
+    enum class Size(val widthPoints: Float, val heightPoints: Float, private val standardName: String, @StringRes private val labelRes: Int = 0) {
         /** 210 x 297 mm. */
         A4(595.28f, 841.89f, "A4"),
 
         /** 8.5 x 11 in. */
-        LETTER(612f, 792f, "Letter"),
+        LETTER(612f, 792f, "Letter", R.string.engine_paper_letter),
 
         /** 8.5 x 14 in. */
-        LEGAL(612f, 1008f, "Legal"),
+        LEGAL(612f, 1008f, "Legal", R.string.engine_paper_legal),
 
         /** 297 x 420 mm. */
         A3(841.89f, 1190.55f, "A3"),
@@ -853,7 +861,10 @@ data class PageSpec(
         A5(419.53f, 595.28f, "A5"),
 
         /** The page takes the image's own proportions - no borders, nothing cropped. */
-        FIT_IMAGE(0f, 0f, "Fit the image")
+        FIT_IMAGE(0f, 0f, "Fit the image", R.string.engine_paper_fit_image);
+
+        /** "A4" stays "A4" in every language; Letter, Legal and the fit are translated. */
+        val label: String get() = if (labelRes == 0) standardName else Strings.get(labelRes)
     }
 }
 
@@ -871,15 +882,17 @@ enum class ImageFormat(val extension: String, val mimeType: String) {
  * at any zoom. A text-only document will barely shrink, and the result screen says so rather
  * than letting the user wonder why nothing happened.
  */
-enum class CompressionLevel(val maxDimension: Int, val jpegQuality: Int, val label: String) {
+enum class CompressionLevel(val maxDimension: Int, val jpegQuality: Int, @StringRes private val labelRes: Int) {
     /** Visually indistinguishable on screen. Safe for anything you still need to read. */
-    LIGHT(2400, 85, "Light"),
+    LIGHT(2400, 85, R.string.engine_compression_light),
 
     /** Noticeably smaller. Fine for email and for sharing. */
-    BALANCED(1600, 72, "Balanced"),
+    BALANCED(1600, 72, R.string.engine_compression_balanced),
 
     /** Smallest. Photographs will show artefacts; scanned text stays legible. */
-    STRONG(1100, 58, "Strong")
+    STRONG(1100, 58, R.string.engine_compression_strong);
+
+    val label: String get() = Strings.get(labelRes)
 }
 
 data class CompressionResult(

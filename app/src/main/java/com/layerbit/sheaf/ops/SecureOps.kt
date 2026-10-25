@@ -1,10 +1,12 @@
 package com.layerbit.sheaf.ops
 
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.pdf.CompressionLevel
 import com.layerbit.sheaf.pdf.DocumentPermissions
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
+import com.layerbit.sheaf.text.Strings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -35,7 +37,11 @@ class CompressOp(
 ) : Op {
 
     override val tool = ToolId.COMPRESS
-    override val title = if (targetBytes != null) "Compress to under ${describeBytes(targetBytes)}" else "Compress (${level.label})"
+    override val title = if (targetBytes != null) {
+        Strings.get(R.string.engine_title_compress_to, describeBytes(targetBytes))
+    } else {
+        Strings.get(R.string.engine_title_compress, level.label)
+    }
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -72,7 +78,7 @@ class CompressOp(
                         output.delete()
                         outcomes += OpOutcome.Skipped(
                             input.displayName,
-                            "Already as small as it goes - compressing made it larger, so the original was kept."
+                            Strings.get(R.string.engine_compress_larger)
                         )
                     }
 
@@ -81,9 +87,9 @@ class CompressOp(
                         outcomes += OpOutcome.Skipped(
                             input.displayName,
                             if (result.imagesRecompressed == 0) {
-                                "Nothing to compress - this document is text, not scanned images."
+                                Strings.get(R.string.engine_compress_text_only)
                             } else {
-                                "Only ${(result.savedFraction * 100).toInt()}% smaller, so the original was kept."
+                                Strings.get(R.string.engine_compress_negligible, (result.savedFraction * 100).toInt())
                             }
                         )
                     }
@@ -94,31 +100,33 @@ class CompressOp(
                             "${input.baseName} compressed.pdf",
                             SheafFile.Origin.Derived("compressed")
                         ),
-                        "${(result.savedFraction * 100).toInt()}% smaller - " +
-                            "${result.imagesRecompressed} images re-encoded"
+                        Strings.plural(
+                            R.plurals.engine_compress_detail, result.imagesRecompressed,
+                            (result.savedFraction * 100).toInt(), result.imagesRecompressed
+                        )
                     )
                 }
             } catch (e: PdfException) {
                 output.delete()
-                outcomes += OpOutcome.Failed(input.displayName, e.message ?: "Compression failed.")
+                outcomes += OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_compress_failed))
             }
         }
 
-        onProgress(Progress(inputs.size, inputs.size, "Done"))
+        onProgress(Progress(inputs.size, inputs.size, Strings.get(R.string.engine_done)))
         outcomes
     }
 
     /** Lightest level first, stopping at the first that fits under [target]. */
     private fun toSize(input: SheafFile, context: OpContext, target: Long, step: (String) -> Unit): OpOutcome {
         if (input.sizeBytes <= target) {
-            return OpOutcome.Skipped(input.displayName, "Already under ${describeBytes(target)}, so it was left alone.")
+            return OpOutcome.Skipped(input.displayName, Strings.get(R.string.engine_compress_already_under, describeBytes(target)))
         }
         val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
         var smallest: Pair<File, CompressionLevel>? = null
         try {
             for (candidate in CompressionLevel.entries) {
                 context.checkCancelled()
-                step("trying ${candidate.label.lowercase()}")
+                step(Strings.get(R.string.engine_compress_trying, candidate.label.lowercase()))
                 val output = context.workspace.newOutput(input.baseName, "compressed")
                 val result = context.surgeon.compress(pdfInput, candidate, output) { _, _ -> context.checkCancelled() }
                 val size = result.compressedBytes
@@ -126,7 +134,7 @@ class CompressOp(
                     smallest?.first?.delete()
                     return OpOutcome.Produced(
                         SheafFile(output, "${input.baseName} compressed.pdf", SheafFile.Origin.Derived("compressed")),
-                        "Under ${describeBytes(target)} at ${describeBytes(size)}, with ${candidate.label.lowercase()} compression"
+                        Strings.get(R.string.engine_compress_under_at, describeBytes(target), describeBytes(size), candidate.label.lowercase())
                     )
                 }
                 val best = smallest
@@ -139,9 +147,9 @@ class CompressOp(
             }
         } catch (e: PdfException) {
             smallest?.first?.delete()
-            return OpOutcome.Failed(input.displayName, e.message ?: "Compression failed.")
+            return OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_compress_failed))
         }
-        val (file, level) = smallest ?: return OpOutcome.Failed(input.displayName, "Compression failed.")
+        val (file, level) = smallest ?: return OpOutcome.Failed(input.displayName, Strings.get(R.string.engine_compress_failed))
         if (allowPictures) {
             picturesUnder(input, context, target, step)?.let { pictures ->
                 file.delete()
@@ -152,14 +160,12 @@ class CompressOp(
             file.delete()
             return OpOutcome.Skipped(
                 input.displayName,
-                "Cannot get under ${describeBytes(target)}: the pictures are already as small as they go, and " +
-                    "re-encoding them made the file larger. Split by size can cut it into parts that fit."
+                Strings.get(R.string.engine_compress_cannot_get_under, describeBytes(target))
             )
         }
         return OpOutcome.Produced(
             SheafFile(file, "${input.baseName} compressed.pdf", SheafFile.Origin.Derived("compressed")),
-            "Still over ${describeBytes(target)}: the smallest it goes is ${describeBytes(file.length())}, " +
-                "with ${level.label.lowercase()} compression. Split by size can cut it into parts that fit."
+            Strings.get(R.string.engine_compress_still_over, describeBytes(target), describeBytes(file.length()), level.label.lowercase())
         )
     }
 
@@ -180,7 +186,7 @@ class CompressOp(
         val engine = if (encrypted) context.encryptedReader else context.engine
         for ((dpi, quality) in PICTURE_LADDER) {
             context.checkCancelled()
-            step("pages as pictures at $dpi dpi")
+            step(Strings.get(R.string.engine_compress_trying_pictures, dpi))
             val jpegs = mutableListOf<Pair<File, com.layerbit.sheaf.pdf.PageSize>>()
             val output = context.workspace.newOutput(input.baseName, "compressed")
             try {
@@ -208,8 +214,10 @@ class CompressOp(
             if (output.length() <= target) {
                 return OpOutcome.Produced(
                     SheafFile(output, "${input.baseName} compressed.pdf", SheafFile.Origin.Derived("compressed")),
-                    "${describeBytes(input.sizeBytes)} → ${describeBytes(output.length())}, under ${describeBytes(target)}; " +
-                        "pages are now pictures at $dpi dpi, with their words kept underneath to search and copy"
+                    Strings.get(
+                        R.string.engine_compress_as_pictures,
+                        describeBytes(input.sizeBytes), describeBytes(output.length()), describeBytes(target), dpi
+                    )
                 )
             }
             output.delete()
@@ -253,7 +261,7 @@ class SetPasswordOp(
 ) : Op {
 
     override val tool = ToolId.SET_PASSWORD
-    override val title = if (restrictOnly) "Restrict a PDF" else "Add a password"
+    override val title = Strings.get(if (restrictOnly) R.string.engine_title_restrict else R.string.engine_title_add_password)
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -262,15 +270,15 @@ class SetPasswordOp(
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val withheld = buildList {
-            if (!permissions.allowPrinting) add("printing")
-            if (!permissions.allowCopying) add("copying text")
-            if (!permissions.allowChanges) add("changes")
+            if (!permissions.allowPrinting) add(Strings.get(R.string.engine_withheld_printing))
+            if (!permissions.allowCopying) add(Strings.get(R.string.engine_withheld_copying))
+            if (!permissions.allowChanges) add(Strings.get(R.string.engine_withheld_changes))
         }
         if (!restrictOnly && password.isBlank()) {
-            return@withContext listOf(OpOutcome.Failed("", "Enter a password first."))
+            return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_password_empty)))
         }
         if (restrictOnly && withheld.isEmpty()) {
-            return@withContext listOf(OpOutcome.Failed("", "Choose at least one thing to restrict."))
+            return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_restrict_nothing)))
         }
 
         val step = if (restrictOnly) "restricted" else "protected"
@@ -295,19 +303,23 @@ class SetPasswordOp(
                         SheafFile.Origin.Derived(step)
                     ),
                     when {
-                        restrictOnly ->
-                            "Opens without a password; asks readers not to allow " + withheld.joinToString(" or ")
-                        withheld.isEmpty() -> "Encrypted with AES-256"
-                        else ->
-                            "Encrypted with AES-256, asking readers not to allow " + withheld.joinToString(" or ")
+                        restrictOnly -> Strings.get(
+                            R.string.engine_restricted_detail,
+                            withheld.joinToString(Strings.get(R.string.engine_list_or))
+                        )
+                        withheld.isEmpty() -> Strings.get(R.string.engine_encrypted)
+                        else -> Strings.get(
+                            R.string.engine_encrypted_restricted,
+                            withheld.joinToString(Strings.get(R.string.engine_list_or))
+                        )
                     }
                 )
             } catch (e: PdfException) {
                 output.delete()
-                OpOutcome.Failed(input.displayName, e.message ?: "Could not add a password.")
+                OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_password_add_failed))
             }
         }
-        onProgress(Progress(inputs.size, inputs.size, "Done"))
+        onProgress(Progress(inputs.size, inputs.size, Strings.get(R.string.engine_done)))
         outcomes
     }
 }
@@ -323,7 +335,7 @@ class SetPasswordOp(
 class RemovePasswordOp : Op {
 
     override val tool = ToolId.REMOVE_PASSWORD
-    override val title = "Remove a password"
+    override val title = Strings.get(R.string.engine_title_remove_password)
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -341,7 +353,7 @@ class RemovePasswordOp : Op {
             if (password.isNullOrEmpty()) {
                 outcomes += OpOutcome.Failed(
                     input.displayName,
-                    "Sheaf needs this document's password to unlock it."
+                    Strings.get(R.string.engine_password_needed)
                 )
                 return@forEachIndexed
             }
@@ -355,17 +367,17 @@ class RemovePasswordOp : Op {
                         "${input.baseName} unlocked.pdf",
                         SheafFile.Origin.Derived("unlocked")
                     ),
-                    "Opens without a password"
+                    Strings.get(R.string.engine_unlocked)
                 )
             } catch (_: PdfException.PasswordRequired) {
                 output.delete()
-                OpOutcome.Failed(input.displayName, "That password did not open this document.")
+                OpOutcome.Failed(input.displayName, Strings.get(R.string.engine_password_wrong))
             } catch (e: PdfException) {
                 output.delete()
-                OpOutcome.Failed(input.displayName, e.message ?: "Could not remove the password.")
+                OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_password_remove_failed))
             }
         }
-        onProgress(Progress(inputs.size, inputs.size, "Done"))
+        onProgress(Progress(inputs.size, inputs.size, Strings.get(R.string.engine_done)))
         outcomes
     }
 }

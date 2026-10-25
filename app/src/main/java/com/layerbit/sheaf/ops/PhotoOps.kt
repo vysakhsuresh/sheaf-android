@@ -9,7 +9,9 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
 import androidx.exifinterface.media.ExifInterface
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.files.SheafFile
+import com.layerbit.sheaf.text.Strings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -40,7 +42,7 @@ class ResizePhotoOp(
 ) : Op {
 
     override val tool = ToolId.RESIZE_PHOTO
-    override val title = "Resize photo to ${PhotoFit.limitText(kb)}"
+    override val title = Strings.get(R.string.engine_title_resize_photo, PhotoFit.limitText(kb))
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -57,25 +59,26 @@ class ResizePhotoOp(
             onProgress(
                 Progress(
                     i, inputs.size,
-                    if (inputs.size == 1) "Fitting it under $under…" else "Fitting the ${PhotoFit.ordinal(i + 1)} picture under $under"
+                    if (inputs.size == 1) Strings.get(R.string.engine_progress_fitting_one, under)
+                    else Strings.get(R.string.engine_progress_fitting_many, i + 1, inputs.size, under)
                 )
             )
             try {
                 fit(input, context)
             } catch (e: OutOfMemoryError) {
-                OpOutcome.Failed(input.displayName, "This picture is too big for this phone's memory.")
+                OpOutcome.Failed(input.displayName, Strings.get(R.string.engine_photo_out_of_memory))
             } catch (e: OpCancelled) {
                 throw e
             } catch (e: Exception) {
-                OpOutcome.Failed(input.displayName, e.message ?: "This picture couldn't be read. Save it as JPEG or PNG and try again.")
+                OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_photo_unreadable))
             }
-        }.also { onProgress(Progress(inputs.size, inputs.size, "Done")) }
+        }.also { onProgress(Progress(inputs.size, inputs.size, Strings.get(R.string.engine_done))) }
     }
 
     private fun fit(input: SheafFile, context: OpContext): OpOutcome {
         val bytes = input.file.readBytes()
         val kind = PhotoFit.kindOf(bytes)
-            ?: return OpOutcome.Failed(input.displayName, "This isn't an image this tool can read. Use JPEG, PNG, WebP, GIF, BMP or HEIC.")
+            ?: return OpOutcome.Failed(input.displayName, Strings.get(R.string.engine_photo_not_image))
         val limit = (kb * 1000).roundToInt()
         val before = bytes.size.toLong()
         val stem = PhotoFit.stem(input.displayName)
@@ -109,14 +112,14 @@ class ResizePhotoOp(
                 if (stripped.size.toLong() == before) {
                     return OpOutcome.Skipped(
                         input.displayName,
-                        "This photo is already a ${PhotoFit.sizeText(before)} JPEG, under $under, $seenW × $seenH px, with nothing hidden in it. Nothing to change."
+                        Strings.get(R.string.engine_photo_already_fine, PhotoFit.sizeText(before), under, seenW, seenH)
                     )
                 }
                 val out = context.workspace.newOutput("$stem (under $under)", "resized", "jpg")
                 out.writeBytes(stripped)
                 return OpOutcome.Produced(
                     SheafFile(out, "$stem (under $under).jpg", SheafFile.Origin.Derived("resized"), SheafFile.MIME_JPEG),
-                    "${PhotoFit.sizeText(before)} → ${PhotoFit.sizeText(stripped.size.toLong())}, under $under; $seenW × $seenH px, the picture itself untouched$hidden"
+                    Strings.get(R.string.engine_photo_stripped, PhotoFit.sizeText(before), PhotoFit.sizeText(stripped.size.toLong()), under, seenW, seenH, hidden)
                 )
             }
         }
@@ -164,14 +167,17 @@ class ResizePhotoOp(
                     if (smallBytes.size >= before) {
                         return OpOutcome.Skipped(
                             input.displayName,
-                            "$under is too small for this picture to stay clear, and it is already as small as it gets (${PhotoFit.sizeText(before)}). Choose a bigger size if the form allows it."
+                            Strings.get(R.string.engine_photo_too_small_kept, under, PhotoFit.sizeText(before))
                         )
                     }
                     val out = context.workspace.newOutput("$stem (resized)", "resized", "jpg")
                     out.writeBytes(smallBytes)
                     return OpOutcome.Produced(
                         SheafFile(out, "$stem (resized).jpg", SheafFile.Origin.Derived("resized"), SheafFile.MIME_JPEG),
-                        "${PhotoFit.sizeText(before)} → ${PhotoFit.sizeText(smallBytes.size.toLong())}. $under is too small for this picture to stay clear: this is the smallest that still looks right, ${smallSize.first} × ${smallSize.second} px$hidden"
+                        Strings.get(
+                            R.string.engine_photo_smallest_clear,
+                            PhotoFit.sizeText(before), PhotoFit.sizeText(smallBytes.size.toLong()), under, smallSize.first, smallSize.second, hidden
+                        )
                     )
                 }
 
@@ -197,28 +203,35 @@ class ResizePhotoOp(
                 out.writeBytes(shot.bytes)
                 return OpOutcome.Produced(
                     SheafFile(out, "$stem (resized).jpg", SheafFile.Origin.Derived("resized"), SheafFile.MIME_JPEG),
-                    "${PhotoFit.sizeText(before)} → ${PhotoFit.sizeText(shot.bytes.size.toLong())}. $under is too small for ${size.first} × ${size.second} px to stay clear: this is the smallest at that size. Type fewer pixels, or choose Keep its shape to let it shrink$hidden"
+                    Strings.get(
+                        R.string.engine_photo_exact_too_small,
+                        PhotoFit.sizeText(before), PhotoFit.sizeText(shot.bytes.size.toLong()), under, size.first, size.second, hidden
+                    )
                 )
             }
 
             val dims = buildString {
-                if (pixels is PhotoPixels.Passport) append("passport shape, ")
-                append("${size.first} × ${size.second} px")
+                append(
+                    Strings.get(
+                        if (pixels is PhotoPixels.Passport) R.string.engine_photo_dims_passport else R.string.engine_photo_dims,
+                        size.first, size.second
+                    )
+                )
                 when {
-                    shrunk && pixels is PhotoPixels.Keep -> append(", made smaller to fit (it was $seenW × $seenH)")
-                    shrunk -> append(", made smaller than ${plan.outW} × ${plan.outH} to fit")
-                    pixels is PhotoPixels.Keep && plan.capped -> append(" (it was $seenW × $seenH)")
+                    shrunk && pixels is PhotoPixels.Keep -> append(Strings.get(R.string.engine_photo_made_smaller, seenW, seenH))
+                    shrunk -> append(Strings.get(R.string.engine_photo_made_smaller_than, plan.outW, plan.outH))
+                    pixels is PhotoPixels.Keep && plan.capped -> append(Strings.get(R.string.engine_photo_it_was, seenW, seenH))
                     pixels is PhotoPixels.Passport && plan.outW < PhotoFit.PASSPORT_W ->
-                        append(", not enlarged to ${PhotoFit.PASSPORT_W} × ${PhotoFit.PASSPORT_H}: the photo has fewer pixels")
+                        append(Strings.get(R.string.engine_photo_not_enlarged, PhotoFit.PASSPORT_W, PhotoFit.PASSPORT_H))
                 }
-                if (orientation != 1) append(", turned upright")
-                if (kind != PhotoFit.Kind.JPEG) append(", now a JPEG")
+                if (orientation != 1) append(Strings.get(R.string.engine_photo_turned_upright))
+                if (kind != PhotoFit.Kind.JPEG) append(Strings.get(R.string.engine_photo_now_jpeg))
             }
             val out = context.workspace.newOutput("$stem (under $under)", "resized", "jpg")
             out.writeBytes(shot.bytes)
             return OpOutcome.Produced(
                 SheafFile(out, "$stem (under $under).jpg", SheafFile.Origin.Derived("resized"), SheafFile.MIME_JPEG),
-                "${PhotoFit.sizeText(before)} → ${PhotoFit.sizeText(shot.bytes.size.toLong())}, under $under; $dims$hidden"
+                Strings.get(R.string.engine_photo_done, PhotoFit.sizeText(before), PhotoFit.sizeText(shot.bytes.size.toLong()), under, dims, hidden)
             )
         } finally {
             source.recycle()
@@ -349,9 +362,9 @@ object PhotoFit {
     class Shot(val fits: Boolean, val bytes: ByteArray, val quality: Int)
 
     fun problem(kb: Float, pixels: PhotoPixels): String? = when {
-        !(kb >= MIN_KB) -> "Choose a size of at least 2 KB."
+        !(kb >= MIN_KB) -> Strings.get(R.string.engine_photo_min_size)
         pixels is PhotoPixels.Exact && (pixels.width !in MIN_SIDE..MAX_SIDE || pixels.height !in MIN_SIDE..MAX_SIDE) ->
-            "Type a width and a height between 16 and 4096 pixels."
+            Strings.get(R.string.engine_photo_pixels_range, MIN_SIDE, MAX_SIDE)
         else -> null
     }
 
@@ -372,9 +385,9 @@ object PhotoFit {
     }
 
     fun unreadable(kind: Kind) = when (kind) {
-        Kind.AVIF -> "This phone can't read AVIF images. Save it as JPEG or PNG first."
-        Kind.HEIC -> "This phone can't read this HEIC photo. Share it as JPEG from the phone it came from, then add it again."
-        else -> "This picture couldn't be read. Save it as JPEG or PNG and try again."
+        Kind.AVIF -> Strings.get(R.string.engine_photo_no_avif)
+        Kind.HEIC -> Strings.get(R.string.engine_photo_no_heic)
+        else -> Strings.get(R.string.engine_photo_unreadable)
     }
 
     /** Which part of the upright picture is kept, and how many pixels it comes out at. */
@@ -441,9 +454,6 @@ object PhotoFit {
     fun stem(name: String): String =
         name.replace(Regex("\\.[A-Za-z0-9]{1,5}$"), "").ifBlank { "Image" }
 
-    fun ordinal(n: Int): String = listOf("first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth")
-        .getOrNull(n - 1) ?: "${n}th"
-
     /**
      * A JPEG with its hidden segments taken out and the picture left byte for byte: EXIF and
      * XMP, comments, maker data. The colour profile and Adobe's colour marker stay, because
@@ -486,16 +496,16 @@ object PhotoFit {
 
     /** What the original carried that the result leaves behind, as a clause for the detail. */
     fun hiddenNote(kind: Kind, b: ByteArray, file: File): String {
-        if (kind == Kind.HEIC || kind == Kind.AVIF) return "; any location and camera details taken out"
+        if (kind == Kind.HEIC || kind == Kind.AVIF) return Strings.get(R.string.engine_photo_hidden_any)
         val location = (kind == Kind.JPEG || kind == Kind.WEBP) &&
             runCatching { ExifInterface(file.path).latLong != null }.getOrDefault(false)
-        if (location) return "; location and camera details taken out"
+        if (location) return Strings.get(R.string.engine_photo_hidden_location)
         val details = when (kind) {
             Kind.JPEG -> stripJpeg(b)?.let { it.size != b.size } ?: true
             Kind.PNG -> listOf("eXIf", "tEXt", "zTXt", "iTXt", "tIME").any { chunk -> String(b, Charsets.ISO_8859_1).contains(chunk) }
             Kind.WEBP -> String(b, 0, min(b.size, 4096), Charsets.ISO_8859_1).let { it.contains("EXIF") || it.contains("XMP ") }
             else -> false
         }
-        return if (details) "; camera details taken out" else ""
+        return if (details) Strings.get(R.string.engine_photo_hidden_camera) else ""
     }
 }

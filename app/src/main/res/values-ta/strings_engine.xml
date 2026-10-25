@@ -1,0 +1,538 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Shared by many tools -->
+    <string name="engine_no_document">ஆவணம் எதுவும் தேர்ந்தெடுக்கப்படவில்லை.</string>
+    <string name="engine_pick_pdf_first">முதலில் PDF-ஐத் தேர்ந்தெடுக்கவும்.</string>
+    <string name="engine_pick_one_pdf">ஒரு PDF-ஐத் தேர்ந்தெடுக்கவும்.</string>
+    <string name="engine_failed">தோல்வியடைந்தது.</string>
+    <string name="engine_done">முடிந்தது</string>
+    <string name="engine_unreadable">படிக்க முடியவில்லை.</string>
+    <string name="engine_list_separator">, </string>
+    <plurals name="engine_count_pages">
+        <item quantity="one">%d பக்கம்</item>
+        <item quantity="other">%d பக்கங்கள்</item>
+    </plurals>
+    <plurals name="engine_pages_listed">
+        <item quantity="one">பக்கம் %1$s</item>
+        <item quantity="other">பக்கங்கள் %1$s</item>
+    </plurals>
+    <plurals name="engine_pages_typed_not_in_file">
+        <item quantity="one">இந்தக் கோப்பில் %d பக்கம் உள்ளது; உள்ளிட்ட பக்கங்களில் எதுவும் இதில் இல்லை.</item>
+        <item quantity="other">இந்தக் கோப்பில் %d பக்கங்கள் உள்ளன; உள்ளிட்ட பக்கங்களில் எதுவும் இதில் இல்லை.</item>
+    </plurals>
+
+    <!-- Watermark -->
+    <string name="engine_title_watermark">வாட்டர்மார்க் \"%1$s\"</string>
+    <string name="engine_watermark_no_text">DRAFT அல்லது COPY போன்ற வாட்டர்மார்க் உரையை உள்ளிடவும்.</string>
+    <string name="engine_progress_watermark">வாட்டர்மார்க் இடுகிறது: %1$s</string>
+    <string name="engine_watermark_detail">%2$s முழுவதும் \"%1$s\"</string>
+    <string name="engine_watermark_detail_tiled">%2$s முழுவதும் \"%1$s\" திரும்பத் திரும்ப</string>
+
+    <!-- Page numbers -->
+    <string name="engine_title_bates">Bates எண்கள்</string>
+    <string name="engine_title_page_numbers">பக்க எண்கள்</string>
+    <string name="engine_progress_numbering">எண்ணிடுகிறது: %1$s</string>
+    <string name="engine_numbered_none">எந்தப் பக்கத்துக்கும் எண் இடப்படவில்லை</string>
+    <plurals name="engine_numbered_detail">
+        <item quantity="one">%3$d / %4$d பக்கத்தில் %1$s முதல் %2$s வரை</item>
+        <item quantity="other">%3$d / %4$d பக்கங்களில் %1$s முதல் %2$s வரை</item>
+    </plurals>
+
+    <!-- Crop -->
+    <string name="engine_title_remove_margins">வெள்ளை ஓரங்களை அகற்று</string>
+    <string name="engine_title_crop">பக்கங்களைச் செதுக்கு</string>
+    <string name="engine_crop_nothing">முதலில் எவ்வளவு வெட்ட வேண்டும் அல்லது பக்க அளவைத் தேர்ந்தெடுக்கவும்.</string>
+    <string name="engine_progress_cropping">செதுக்குகிறது: %1$s</string>
+    <string name="engine_crop_auto">வெள்ளை ஓரங்கள் அகற்றப்பட்டன: %1$s</string>
+    <string name="engine_crop_trimmed">%2$s: %1$s வெட்டப்பட்டது</string>
+    <string name="engine_crop_then_paper">%1$s, பிறகு %2$s தாளில் வைக்கப்பட்டது</string>
+    <string name="engine_crop_on_paper">%1$s, %2$s தாளில் வைக்கப்பட்டது</string>
+    <string name="engine_crop_real_size">%1$s, சிறிய பக்கங்கள் அவற்றின் உண்மையான அளவில்</string>
+    <string name="engine_crop_all_round">சுற்றிலும் %1$s</string>
+    <string name="engine_crop_edge_top">மேலே %1$s</string>
+    <string name="engine_crop_edge_right">வலதில் %1$s</string>
+    <string name="engine_crop_edge_bottom">கீழே %1$s</string>
+    <string name="engine_crop_edge_left">இடதில் %1$s</string>
+
+    <!-- Redact -->
+    <string name="engine_title_redact">பகுதிகளை அகற்று</string>
+    <string name="engine_redact_nothing">முதலில் அகற்ற வேண்டியதன் மீது ஒரு பெட்டியை வரையவும்.</string>
+    <string name="engine_progress_redacting">அகற்றுகிறது: பக்கம் %1$d / %2$d</string>
+    <string name="engine_redact_detail">%1$s: %2$s</string>
+    <plurals name="engine_redact_areas">
+        <item quantity="one">%d பகுதி அகற்றப்பட்டது</item>
+        <item quantity="other">%d பகுதிகள் அகற்றப்பட்டன</item>
+    </plurals>
+    <plurals name="engine_redact_pages">
+        <item quantity="one">%d பக்கம், இப்போது அது படம்</item>
+        <item quantity="other">%d பக்கங்கள், இப்போது அவை படங்கள்</item>
+    </plurals>
+
+    <!-- Sign, add an image -->
+    <string name="engine_title_sign">கையொப்பமிடு</string>
+    <string name="engine_sign_nothing">முதலில் உங்கள் கையொப்பத்தை வரையவும்.</string>
+    <string name="engine_progress_placing_signature">கையொப்பத்தை வைக்கிறது</string>
+    <string name="engine_signed_on_page">பக்கம் %1$d இல் கையொப்பமிடப்பட்டது</string>
+    <string name="engine_title_add_image">படத்தைச் சேர்</string>
+    <string name="engine_add_image_missing">பக்கத்தில் வைக்க வேண்டிய படத்தைச் சேர்க்கவும்.</string>
+    <string name="engine_progress_placing">வைக்கிறது: %1$s</string>
+    <string name="engine_image_placed">%1$s பக்கம் %2$d இல் வைக்கப்பட்டது</string>
+
+    <!-- Mark up -->
+    <string name="engine_title_annotate">குறியிடு</string>
+    <string name="engine_annotate_nothing">முதலில் எதையாவது ஹைலைட் செய்யவும் அல்லது வரையவும்.</string>
+    <string name="engine_progress_drawing">வரைகிறது: பக்கம் %1$d / %2$d</string>
+    <string name="engine_marks_on_pages">%2$s: %1$s</string>
+    <plurals name="engine_marks">
+        <item quantity="one">%d குறி</item>
+        <item quantity="other">%d குறிகள்</item>
+    </plurals>
+
+    <!-- Header and footer -->
+    <string name="engine_title_header_footer">தலைப்பும் அடிக்குறிப்பும்</string>
+    <string name="engine_hf_nothing">முதலில் தலைப்பு அல்லது அடிக்குறிப்பை உள்ளிடவும்.</string>
+    <string name="engine_progress_stamping">சேர்க்கிறது: %1$s</string>
+    <plurals name="engine_hf_added_both">
+        <item quantity="one">%1$d / %2$d பக்கத்தில் தலைப்பும் அடிக்குறிப்பும் சேர்க்கப்பட்டன</item>
+        <item quantity="other">%1$d / %2$d பக்கங்களில் தலைப்பும் அடிக்குறிப்பும் சேர்க்கப்பட்டன</item>
+    </plurals>
+    <plurals name="engine_hf_added_header">
+        <item quantity="one">%1$d / %2$d பக்கத்தில் தலைப்பு சேர்க்கப்பட்டது</item>
+        <item quantity="other">%1$d / %2$d பக்கங்களில் தலைப்பு சேர்க்கப்பட்டது</item>
+    </plurals>
+    <plurals name="engine_hf_added_footer">
+        <item quantity="one">%1$d / %2$d பக்கத்தில் அடிக்குறிப்பு சேர்க்கப்பட்டது</item>
+        <item quantity="other">%1$d / %2$d பக்கங்களில் அடிக்குறிப்பு சேர்க்கப்பட்டது</item>
+    </plurals>
+
+    <!-- Add text -->
+    <string name="engine_title_add_text">உரையைச் சேர்</string>
+    <string name="engine_add_text_nothing">முதலில் உரையை உள்ளிடவும்.</string>
+    <string name="engine_progress_writing_on_page">பக்கம் %1$d இல் எழுதுகிறது</string>
+    <plurals name="engine_lines_added">
+        <item quantity="one">பக்கம் %2$d இல் ஒரு வரி சேர்க்கப்பட்டது</item>
+        <item quantity="other">பக்கம் %2$d இல் %1$d வரிகள் சேர்க்கப்பட்டன</item>
+    </plurals>
+    <string name="engine_lines_added_covering">%1$s, கீழே இருந்ததை மறைத்து</string>
+
+    <!-- Compress -->
+    <string name="engine_title_compress_to">%1$s-க்குக் கீழ் சுருக்கு</string>
+    <string name="engine_title_compress">சுருக்கு (%1$s)</string>
+    <string name="engine_compress_larger">ஏற்கனவே முடிந்த அளவு சிறியது - சுருக்கியபோது பெரிதானதால், அசல் கோப்பே வைக்கப்பட்டது.</string>
+    <string name="engine_compress_text_only">சுருக்க எதுவும் இல்லை - இந்த ஆவணம் உரையால் ஆனது, ஸ்கேன் செய்த படங்கள் அல்ல.</string>
+    <string name="engine_compress_negligible">%1$d%% மட்டுமே சிறியதானதால், அசல் கோப்பே வைக்கப்பட்டது.</string>
+    <plurals name="engine_compress_detail">
+        <item quantity="one">%1$d%% சிறியது - %2$d படம் மீண்டும் என்கோட் செய்யப்பட்டது</item>
+        <item quantity="other">%1$d%% சிறியது - %2$d படங்கள் மீண்டும் என்கோட் செய்யப்பட்டன</item>
+    </plurals>
+    <string name="engine_compress_failed">சுருக்க முடியவில்லை.</string>
+    <string name="engine_compress_already_under">ஏற்கனவே %1$s-க்குக் கீழ் உள்ளதால், மாற்றப்படவில்லை.</string>
+    <string name="engine_compress_trying">%1$s முயல்கிறது</string>
+    <string name="engine_compress_under_at">%2$s: %1$s-க்குக் கீழ், %3$s சுருக்கத்துடன்</string>
+    <string name="engine_compress_cannot_get_under">%1$s-க்குக் கீழ் கொண்டுவர முடியவில்லை: படங்கள் ஏற்கனவே முடிந்த அளவு சிறியவை, மீண்டும் என்கோட் செய்தபோது கோப்பு பெரிதானது. \"அளவின்படி பிரி\" இதைப் பொருந்தும் பகுதிகளாகப் பிரிக்கும்.</string>
+    <string name="engine_compress_still_over">இன்னும் %1$s-க்கு மேல் உள்ளது: %3$s சுருக்கத்துடன் மிகக் குறைந்த அளவு %2$s. \"அளவின்படி பிரி\" இதைப் பொருந்தும் பகுதிகளாகப் பிரிக்கும்.</string>
+    <string name="engine_compress_trying_pictures">பக்கங்களை %1$d dpi படங்களாக</string>
+    <string name="engine_compress_as_pictures">%1$s → %2$s, %3$s-க்குக் கீழ்; பக்கங்கள் இப்போது %4$d dpi படங்கள், தேடவும் நகலெடுக்கவும் அவற்றின் சொற்கள் கீழே வைக்கப்பட்டுள்ளன</string>
+
+    <!-- Passwords -->
+    <string name="engine_title_restrict">PDF-ஐக் கட்டுப்படுத்து</string>
+    <string name="engine_title_add_password">கடவுச்சொல்லைச் சேர்</string>
+    <string name="engine_withheld_printing">அச்சிடுதல்</string>
+    <string name="engine_withheld_copying">உரையை நகலெடுத்தல்</string>
+    <string name="engine_withheld_changes">மாற்றங்கள்</string>
+    <string name="engine_list_or"> அல்லது </string>
+    <string name="engine_password_empty">முதலில் கடவுச்சொல்லை உள்ளிடவும்.</string>
+    <string name="engine_restrict_nothing">கட்டுப்படுத்த குறைந்தது ஒன்றைத் தேர்ந்தெடுக்கவும்.</string>
+    <string name="engine_restricted_detail">கடவுச்சொல் இல்லாமல் திறக்கும்; %1$s அனுமதிக்க வேண்டாம் என ரீடர்களிடம் கேட்கும்</string>
+    <string name="engine_encrypted">AES-256 மூலம் என்க்ரிப்ட் செய்யப்பட்டது</string>
+    <string name="engine_encrypted_restricted">AES-256 மூலம் என்க்ரிப்ட் செய்யப்பட்டது, %1$s அனுமதிக்க வேண்டாம் என ரீடர்களிடம் கேட்கிறது</string>
+    <string name="engine_password_add_failed">கடவுச்சொல்லைச் சேர்க்க முடியவில்லை.</string>
+    <string name="engine_title_remove_password">கடவுச்சொல்லை அகற்று</string>
+    <string name="engine_password_needed">இந்த ஆவணத்தைத் திறக்க Sheaf-க்கு அதன் கடவுச்சொல் தேவை.</string>
+    <string name="engine_unlocked">கடவுச்சொல் இல்லாமல் திறக்கும்</string>
+    <string name="engine_password_wrong">அந்தக் கடவுச்சொல்லால் இந்த ஆவணம் திறக்கவில்லை.</string>
+    <string name="engine_password_remove_failed">கடவுச்சொல்லை அகற்ற முடியவில்லை.</string>
+
+    <!-- Pages per sheet -->
+    <plurals name="engine_title_nup">
+        <item quantity="one">ஒரு தாளில் %d பக்கம்</item>
+        <item quantity="other">ஒரு தாளில் %d பக்கங்கள்</item>
+    </plurals>
+    <string name="engine_progress_laying_out">அமைக்கிறது: %1$s</string>
+    <string name="engine_nup_detail">%1$s, %3$s அளவில் %2$s</string>
+    <plurals name="engine_count_sheets">
+        <item quantity="one">%d தாள்</item>
+        <item quantity="other">%d தாள்கள்</item>
+    </plurals>
+
+    <!-- Split by size -->
+    <string name="engine_title_split_size">%1$s-க்குக் கீழாகப் பிரி</string>
+    <string name="engine_split_limit_small">வரம்பு குறைந்தது 1 MB ஆக இருக்க வேண்டும்.</string>
+    <string name="engine_split_already_under">இந்த ஆவணம் ஏற்கனவே %1$s-க்குக் கீழ் உள்ளதால், மாற்றப்படவில்லை.</string>
+    <string name="engine_progress_measuring">எங்கே பிரிக்க வேண்டும் என அளவிடுகிறது</string>
+    <string name="engine_progress_measuring_pages">அளவிடுகிறது: %1$d / %2$d பக்கங்கள் வைக்கப்பட்டன</string>
+    <string name="engine_no_pages">இந்த ஆவணத்தில் பக்கங்கள் இல்லை.</string>
+    <string name="engine_progress_writing_part">பகுதி %1$d / %2$d எழுதுகிறது</string>
+    <string name="engine_split_part_page">பக்கம் %1$d</string>
+    <string name="engine_split_part_pages">பக்கங்கள் %1$d-%2$d</string>
+    <string name="engine_split_part_over">%1$s - இந்தப் பக்கம் தனியாகவே %2$s-ஐ விடப் பெரியது</string>
+    <string name="engine_split_part_failed">இந்தப் பகுதியை எழுத முடியவில்லை.</string>
+
+    <!-- Extract images -->
+    <string name="engine_title_extract_images">படங்களைப் பிரித்தெடு</string>
+    <string name="engine_progress_page_of">பக்கம் %1$d / %2$d</string>
+    <string name="engine_extract_images_none">இந்த ஆவணத்தில் உட்பொதிந்த படங்கள் இல்லை. பக்கங்களையே படங்களாக வேண்டுமெனில், \"PDF-இலிருந்து படங்கள்\" என்பதைப் பயன்படுத்தவும்.</string>
+
+    <!-- Metadata, clean -->
+    <string name="engine_title_strip_metadata">மெட்டாடேட்டாவை அகற்று</string>
+    <string name="engine_title_edit_details">விவரங்களைத் திருத்து</string>
+    <string name="engine_progress_writing">எழுதுகிறது: %1$s</string>
+    <string name="engine_metadata_stripped">தலைப்பு, ஆசிரியர், தேதிகள், உருவாக்கிய நிரல் ஆகியவை அழிக்கப்பட்டன</string>
+    <string name="engine_metadata_updated">விவரங்கள் புதுப்பிக்கப்பட்டன</string>
+    <string name="engine_title_clean">மறைந்த தரவை அகற்று</string>
+    <string name="engine_progress_cleaning">சுத்தம் செய்கிறது: %1$s</string>
+    <string name="engine_clean_nothing">மறைந்த எதுவும் கிடைக்கவில்லை; நகல் அதே ஆவணம்தான்</string>
+    <string name="engine_clean_details">விவரங்கள்</string>
+    <string name="engine_clean_xmp">அவற்றின் மறைந்த XMP நகல்</string>
+    <string name="engine_clean_private">தனிப்பட்ட திருத்தத் தரவு</string>
+    <string name="engine_clean_removed">அகற்றப்பட்டவை: %1$s</string>
+    <plurals name="engine_clean_scripts">
+        <item quantity="one">%d ஸ்கிரிப்ட்</item>
+        <item quantity="other">%d ஸ்கிரிப்டுகள்</item>
+    </plurals>
+    <plurals name="engine_clean_attachments">
+        <item quantity="one">%d இணைக்கப்பட்ட கோப்பு</item>
+        <item quantity="other">%d இணைக்கப்பட்ட கோப்புகள்</item>
+    </plurals>
+    <plurals name="engine_clean_comments">
+        <item quantity="one">%d கருத்து</item>
+        <item quantity="other">%d கருத்துகள்</item>
+    </plurals>
+    <plurals name="engine_clean_thumbnails">
+        <item quantity="one">%d பக்கச் சிறுபடம்</item>
+        <item quantity="other">%d பக்கச் சிறுபடங்கள்</item>
+    </plurals>
+
+    <!-- Page labels, background -->
+    <string name="engine_title_remove_labels">பக்க லேபிள்களை அகற்று</string>
+    <string name="engine_title_labels">பக்க லேபிள்கள்</string>
+    <string name="engine_progress_labelling">லேபிளிடுகிறது: %1$s</string>
+    <string name="engine_labels_removed">பக்க லேபிள்கள் அகற்றப்பட்டன; ரீடர்கள் மீண்டும் முதல் பக்கத்திலிருந்து எண்ணும்</string>
+    <plurals name="engine_labels_front">
+        <item quantity="one">முதல் பக்கத்துக்கு %1$s முதல் %2$s வரை</item>
+        <item quantity="other">முதல் %3$d பக்கங்களுக்கு %1$s முதல் %2$s வரை</item>
+    </plurals>
+    <string name="engine_labels_range">%1$s முதல் %2$s வரை</string>
+    <string name="engine_labels_then">%1$s, பிறகு %2$s</string>
+    <string name="engine_title_background">பக்கப் பின்னணி</string>
+    <string name="engine_progress_colouring">வண்ணமிடுகிறது: %1$s</string>
+    <plurals name="engine_all_pages">
+        <item quantity="one">அனைத்து %d பக்கமும்</item>
+        <item quantity="other">அனைத்து %d பக்கங்களும்</item>
+    </plurals>
+    <string name="engine_background_detail">பின்னணி சேர்க்கப்பட்டது: %1$s</string>
+
+    <!-- Attachments -->
+    <string name="engine_title_extract_attachments">இணைப்புகளைப் பிரித்தெடு</string>
+    <string name="engine_title_attach">கோப்புகளை இணை</string>
+    <string name="engine_attach_pdf_first">முதல் கோப்பு PDF ஆக இருக்க வேண்டும்.</string>
+    <string name="engine_progress_reading_attachments">இணைப்புகளைப் படிக்கிறது</string>
+    <string name="engine_attached_to">%1$s உடன் இணைக்கப்பட்டது</string>
+    <string name="engine_attach_nothing">PDF-க்குப் பிறகு இணைக்க வேண்டிய கோப்புகளைச் சேர்க்கவும்.</string>
+    <plurals name="engine_progress_attaching">
+        <item quantity="one">%d கோப்பை இணைக்கிறது</item>
+        <item quantity="other">%d கோப்புகளை இணைக்கிறது</item>
+    </plurals>
+    <string name="engine_attached_one">%1$s இணைக்கப்பட்டது</string>
+    <plurals name="engine_attached_many">
+        <item quantity="one">%1$d கோப்பு இணைக்கப்பட்டது: %2$s</item>
+        <item quantity="other">%1$d கோப்புகள் இணைக்கப்பட்டன: %2$s</item>
+    </plurals>
+
+    <!-- Bookmarks -->
+    <string name="engine_title_remove_bookmarks">புக்மார்க்குகளை அகற்று</string>
+    <string name="engine_title_bookmarks">புக்மார்க்குகள்</string>
+    <string name="engine_progress_writing_bookmarks">புக்மார்க்குகளை எழுதுகிறது</string>
+    <string name="engine_bookmarks_removed">புக்மார்க்குகள் அகற்றப்பட்டன</string>
+    <plurals name="engine_bookmarks_written">
+        <item quantity="one">%d புக்மார்க் எழுதப்பட்டது</item>
+        <item quantity="other">%d புக்மார்க்குகள் எழுதப்பட்டன</item>
+    </plurals>
+    <string name="engine_bookmarks_nested">%1$s, அடுக்கடுக்காக</string>
+
+    <!-- Make searchable -->
+    <string name="engine_title_ocr">தேடக்கூடியதாக்கு</string>
+    <string name="engine_title_ocr_script">தேடக்கூடியதாக்கு (%1$s)</string>
+    <string name="engine_ocr_unavailable">இந்தச் சாதனத்தில் உரை அறிதல் கிடைக்கவில்லை.</string>
+    <string name="engine_progress_reading_page">பக்கம் %1$d / %2$d படிக்கிறது</string>
+    <string name="engine_unreadable_document">இந்த ஆவணத்தைப் படிக்க முடியவில்லை.</string>
+    <string name="engine_ocr_no_text">இந்த ஆவணத்தில் உரை எதுவும் கிடைக்கவில்லை. இது ஸ்கேன் அல்லாமல் ஏற்கனவே உரையாக இருந்தால், இப்போதே தேடக்கூடியதுதான்.</string>
+    <string name="engine_ocr_nothing_placed">பக்கத்தில் எதையும் வைக்க முடியவில்லை.</string>
+    <string name="engine_progress_writing_page">பக்கம் %1$d / %2$d எழுதுகிறது</string>
+    <plurals name="engine_ocr_detail">
+        <item quantity="one">%1$d / %2$d பக்கங்களில் உரை கிடைத்தது - %3$d வரி இப்போது தேர்ந்தெடுக்கக்கூடியது</item>
+        <item quantity="other">%1$d / %2$d பக்கங்களில் உரை கிடைத்தது - %3$d வரிகள் இப்போது தேர்ந்தெடுக்கக்கூடியவை</item>
+    </plurals>
+    <string name="engine_ocr_write_failed">உரை அடுக்கை எழுத முடியவில்லை.</string>
+
+    <!-- Extract text -->
+    <string name="engine_title_extract_text">உரையைப் பிரித்தெடு</string>
+    <plurals name="engine_extract_text_no_match">
+        <item quantity="one">\"%1$s\" உடன் எந்தப் பக்கமும் பொருந்தவில்லை. இந்த ஆவணத்தில் %2$d பக்கம் உள்ளது.</item>
+        <item quantity="other">\"%1$s\" உடன் எந்தப் பக்கமும் பொருந்தவில்லை. இந்த ஆவணத்தில் %2$d பக்கங்கள் உள்ளன.</item>
+    </plurals>
+    <plurals name="engine_progress_reading_pages">
+        <item quantity="one">%d பக்கத்தைப் படிக்கிறது</item>
+        <item quantity="other">%d பக்கங்களைப் படிக்கிறது</item>
+    </plurals>
+    <string name="engine_extract_text_none">இந்த ஆவணத்தில் உரை இல்லை. இது ஸ்கேனாக இருக்கலாம் - முதலில் இதில் \"தேடக்கூடியதாக்கு\" என்பதை இயக்கி, பிறகு மீண்டும் முயலவும்.</string>
+    <string name="engine_words_from_pages">%2$s: %1$s</string>
+    <plurals name="engine_words">
+        <item quantity="one">%d சொல்</item>
+        <item quantity="other">%d சொற்கள்</item>
+    </plurals>
+
+    <!-- Archive copy -->
+    <string name="engine_title_pdfa">காப்பக நகல் (PDF/A)</string>
+    <string name="engine_progress_archiving">காப்பகமாக்குகிறது: %1$s</string>
+    <string name="engine_pdfa_done">PDF/A-2b காப்பக நகல்: வண்ணச் சுயவிவரமும் காப்பக விவரங்களும் சேர்க்கப்பட்டன</string>
+    <plurals name="engine_pdfa_scripts">
+        <item quantity="one">%d ஸ்கிரிப்ட் அல்லது செயல்</item>
+        <item quantity="other">%d ஸ்கிரிப்டுகளும் செயல்களும்</item>
+    </plurals>
+    <string name="engine_list_and"> மற்றும் </string>
+    <string name="engine_clause_separator">; </string>
+    <string name="engine_pdfa_taken_out">தரநிலை கோருவதால், %1$s அகற்றப்பட்டன</string>
+    <string name="engine_pdfa_unlocked">காப்பகங்கள் யார் வேண்டுமானாலும் திறக்கும்படி இருக்க வேண்டும் என்பதால், கடவுச்சொல் நீக்கப்பட்டது</string>
+    <plurals name="engine_pdfa_fonts_missing">
+        <item quantity="one">கோப்பு பயன்படுத்தும் %d எழுத்துரு அதற்குள் இல்லை, எனவே கடுமையான சரிபார்ப்புக் கருவி இதைச் சுட்டிக்காட்டும்; அதை உருவாக்கிய நிரலிலிருந்து எழுத்துருக்களை உட்பொதித்து மீண்டும் சேமித்தால் சரியாகும்</item>
+        <item quantity="other">கோப்பு பயன்படுத்தும் %d எழுத்துருக்கள் அதற்குள் இல்லை, எனவே கடுமையான சரிபார்ப்புக் கருவி இதைச் சுட்டிக்காட்டும்; அதை உருவாக்கிய நிரலிலிருந்து எழுத்துருக்களை உட்பொதித்து மீண்டும் சேமித்தால் சரியாகும்</item>
+    </plurals>
+
+    <!-- Create a form -->
+    <string name="engine_title_create_form">படிவத்தை உருவாக்கு</string>
+    <string name="engine_form_nothing">முதலில் பக்கத்தில் ஒரு புலத்தை வரைந்து அதற்குப் பெயர் கொடுக்கவும்.</string>
+    <plurals name="engine_progress_adding_fields">
+        <item quantity="one">%d புலத்தைச் சேர்க்கிறது</item>
+        <item quantity="other">%d புலங்களைச் சேர்க்கிறது</item>
+    </plurals>
+    <plurals name="engine_form_detail">
+        <item quantity="one">%1$s சேர்க்கப்பட்டது (%2$d புலம்): எந்த PDF ரீடரிலும் யார் வேண்டுமானாலும் இதை நிரப்பலாம்</item>
+        <item quantity="other">%1$s சேர்க்கப்பட்டன (%2$d புலங்கள்): எந்த PDF ரீடரிலும் யார் வேண்டுமானாலும் இதை நிரப்பலாம்</item>
+    </plurals>
+    <string name="engine_field_text">உரைப் பெட்டி</string>
+    <string name="engine_field_multiline">பத்திப் பெட்டி</string>
+    <string name="engine_field_check">தேர்வுப்பெட்டி</string>
+    <string name="engine_field_choice">கீழ்தோன்றும் பட்டியல்</string>
+    <plurals name="engine_field_count_text">
+        <item quantity="one">%d உரைப் பெட்டி</item>
+        <item quantity="other">%d உரைப் பெட்டிகள்</item>
+    </plurals>
+    <plurals name="engine_field_count_multiline">
+        <item quantity="one">%d பத்திப் பெட்டி</item>
+        <item quantity="other">%d பத்திப் பெட்டிகள்</item>
+    </plurals>
+    <plurals name="engine_field_count_check">
+        <item quantity="one">%d தேர்வுப்பெட்டி</item>
+        <item quantity="other">%d தேர்வுப்பெட்டிகள்</item>
+    </plurals>
+    <plurals name="engine_field_count_choice">
+        <item quantity="one">%d கீழ்தோன்றும் பட்டியல்</item>
+        <item quantity="other">%d கீழ்தோன்றும் பட்டியல்கள்</item>
+    </plurals>
+
+    <!-- Digital signature -->
+    <string name="engine_title_digital_sign">டிஜிட்டல் கையொப்பம்</string>
+    <string name="engine_certificate_missing">உங்கள் சான்றிதழ் கோப்பைச் சேர்க்கவும் (.pfx அல்லது .p12).</string>
+    <string name="engine_progress_signing">கையொப்பமிடுகிறது: %1$s</string>
+    <string name="engine_signature_first_page">முதல் பக்கத்தின் அடியில் காட்டப்படும்</string>
+    <string name="engine_signature_last_page">கடைசிப் பக்கத்தின் அடியில் காட்டப்படும்</string>
+    <string name="engine_signature_invisible">பக்கத்தில் தெரியாது, எந்த ரீடரின் கையொப்பப் பேனலிலும் பட்டியலிடப்படும்</string>
+    <string name="engine_signed_by">%1$s கையொப்பமிட்டார், சான்றிதழ் வழங்கியது %2$s; %3$s</string>
+    <string name="engine_signed_by_unlocked">%1$s கையொப்பமிட்டார், சான்றிதழ் வழங்கியது %2$s; %3$s. கையொப்பமிட்ட நகல் கடவுச்சொல் இல்லாமல் திறக்கும்: மீண்டும் பூட்டினால் கையொப்பம் செல்லாததாகிவிடும்</string>
+
+    <!-- Resize photo -->
+    <string name="engine_title_resize_photo">புகைப்பட அளவை %1$s ஆக்கு</string>
+    <string name="engine_progress_fitting_one">%1$s-க்குள் பொருத்துகிறது…</string>
+    <string name="engine_progress_fitting_many">படம் %1$d / %2$d-ஐ %3$s-க்குள் பொருத்துகிறது</string>
+    <string name="engine_photo_out_of_memory">இந்தப் படம் இந்த ஃபோனின் நினைவகத்துக்கு மிகப் பெரியது.</string>
+    <string name="engine_photo_unreadable">இந்தப் படத்தைப் படிக்க முடியவில்லை. JPEG அல்லது PNG ஆகச் சேமித்து மீண்டும் முயலவும்.</string>
+    <string name="engine_photo_not_image">இந்தக் கருவியால் படிக்கக்கூடிய படம் இது அல்ல. JPEG, PNG, WebP, GIF, BMP அல்லது HEIC பயன்படுத்தவும்.</string>
+    <string name="engine_photo_already_fine">இந்தப் புகைப்படம் ஏற்கனவே %1$s JPEG, %2$s-க்குக் கீழ், %3$d × %4$d px, இதில் எதுவும் மறைந்திருக்கவில்லை. மாற்ற எதுவும் இல்லை.</string>
+    <string name="engine_photo_stripped">%1$s → %2$s, %3$s-க்குக் கீழ்; %4$d × %5$d px, படம் மாற்றப்படவில்லை%6$s</string>
+    <string name="engine_photo_too_small_kept">இந்தப் படம் தெளிவாக இருக்க %1$s போதாது, மேலும் இது ஏற்கனவே முடிந்த அளவு சிறியது (%2$s). படிவம் அனுமதித்தால் பெரிய அளவைத் தேர்ந்தெடுக்கவும்.</string>
+    <string name="engine_photo_smallest_clear">%1$s → %2$s. இந்தப் படம் தெளிவாக இருக்க %3$s போதாது: சரியாகத் தெரியும் மிகச் சிறிய அளவு இதுதான், %4$d × %5$d px%6$s</string>
+    <string name="engine_photo_exact_too_small">%1$s → %2$s. %4$d × %5$d px தெளிவாக இருக்க %3$s போதாது: அந்த அளவில் இதுவே மிகச் சிறியது. குறைவான பிக்சல்களை உள்ளிடவும், அல்லது சுருங்க விட \"வடிவத்தை வைத்திரு\" என்பதைத் தேர்ந்தெடுக்கவும்%6$s</string>
+    <string name="engine_photo_dims">%1$d × %2$d px</string>
+    <string name="engine_photo_dims_passport">பாஸ்போர்ட் வடிவம், %1$d × %2$d px</string>
+    <string name="engine_photo_made_smaller">, பொருந்துவதற்காகச் சிறிதாக்கப்பட்டது (முன்பு %1$d × %2$d)</string>
+    <string name="engine_photo_made_smaller_than">, பொருந்துவதற்காக %1$d × %2$d-ஐ விடச் சிறிதாக்கப்பட்டது</string>
+    <string name="engine_photo_it_was"> (முன்பு %1$d × %2$d)</string>
+    <string name="engine_photo_not_enlarged">, %1$d × %2$d ஆகப் பெரிதாக்கப்படவில்லை: புகைப்படத்தில் அவ்வளவு பிக்சல்கள் இல்லை</string>
+    <string name="engine_photo_turned_upright">, நேராகத் திருப்பப்பட்டது</string>
+    <string name="engine_photo_now_jpeg">, இப்போது JPEG</string>
+    <string name="engine_photo_done">%1$s → %2$s, %3$s-க்குக் கீழ்; %4$s%5$s</string>
+    <string name="engine_photo_min_size">குறைந்தது 2 KB அளவைத் தேர்ந்தெடுக்கவும்.</string>
+    <string name="engine_photo_pixels_range">%1$d முதல் %2$d பிக்சல்களுக்குள் அகலத்தையும் உயரத்தையும் உள்ளிடவும்.</string>
+    <string name="engine_photo_no_avif">இந்த ஃபோனால் AVIF படங்களைப் படிக்க முடியாது. முதலில் JPEG அல்லது PNG ஆகச் சேமிக்கவும்.</string>
+    <string name="engine_photo_no_heic">இந்த ஃபோனால் இந்த HEIC புகைப்படத்தைப் படிக்க முடியாது. அது வந்த ஃபோனிலிருந்து JPEG ஆகப் பகிர்ந்து, மீண்டும் சேர்க்கவும்.</string>
+    <string name="engine_photo_hidden_any">; இருப்பிட, கேமரா விவரங்கள் ஏதேனும் இருந்தால் அகற்றப்பட்டன</string>
+    <string name="engine_photo_hidden_location">; இருப்பிட, கேமரா விவரங்கள் அகற்றப்பட்டன</string>
+    <string name="engine_photo_hidden_camera">; கேமரா விவரங்கள் அகற்றப்பட்டன</string>
+
+    <!-- Fill in a form -->
+    <string name="engine_title_fill_seal">படிவத்தை நிரப்பி சீல் செய்</string>
+    <string name="engine_title_fill">படிவத்தை நிரப்பு</string>
+    <string name="engine_fill_nothing">முதலில் குறைந்தது ஒரு புலத்தையாவது நிரப்பவும்.</string>
+    <string name="engine_progress_filling">நிரப்புகிறது: %1$s</string>
+    <plurals name="engine_fields_filled">
+        <item quantity="one">%d புலம் நிரப்பப்பட்டது</item>
+        <item quantity="other">%d புலங்கள் நிரப்பப்பட்டன</item>
+    </plurals>
+    <string name="engine_fields_sealed">%1$s, மீண்டும் மாற்ற முடியாதபடி சீல் செய்யப்பட்டது</string>
+
+    <!-- Edit text -->
+    <string name="engine_title_edit_text">உரையைத் திருத்து</string>
+    <string name="engine_edit_text_nothing">முதலில் ஒரு உரை வரியைத் தட்டி அதை மாற்றவும்.</string>
+    <string name="engine_progress_writing_changes">மாற்றங்களை எழுதுகிறது</string>
+    <string name="engine_edit_text_failed">மாற்றங்களை எழுத முடியவில்லை.</string>
+    <plurals name="engine_edit_text_detail">
+        <item quantity="one">%d மாற்றம் செய்யப்பட்டது. பழைய சொற்கள் மேலே வண்ணம் பூசி மறைக்கப்பட்டுள்ளன, அகற்றப்படவில்லை: சொற்களை நிரந்தரமாக அகற்ற, \"பகுதிகளை அகற்று\" என்பதைப் பயன்படுத்தவும்</item>
+        <item quantity="other">%d மாற்றங்கள் செய்யப்பட்டன. பழைய சொற்கள் மேலே வண்ணம் பூசி மறைக்கப்பட்டுள்ளன, அகற்றப்படவில்லை: சொற்களை நிரந்தரமாக அகற்ற, \"பகுதிகளை அகற்று\" என்பதைப் பயன்படுத்தவும்</item>
+    </plurals>
+    <plurals name="engine_edit_text_detail_pages">
+        <item quantity="one">%2$d பக்கங்களில் %1$d மாற்றம் செய்யப்பட்டது. பழைய சொற்கள் மேலே வண்ணம் பூசி மறைக்கப்பட்டுள்ளன, அகற்றப்படவில்லை: சொற்களை நிரந்தரமாக அகற்ற, \"பகுதிகளை அகற்று\" என்பதைப் பயன்படுத்தவும்</item>
+        <item quantity="other">%2$d பக்கங்களில் %1$d மாற்றங்கள் செய்யப்பட்டன. பழைய சொற்கள் மேலே வண்ணம் பூசி மறைக்கப்பட்டுள்ளன, அகற்றப்படவில்லை: சொற்களை நிரந்தரமாக அகற்ற, \"பகுதிகளை அகற்று\" என்பதைப் பயன்படுத்தவும்</item>
+    </plurals>
+
+    <!-- Edit pictures -->
+    <string name="engine_title_edit_pictures">படங்களைத் திருத்து</string>
+    <string name="engine_edit_pictures_nothing">முதலில் ஒரு படத்தை நகர்த்தவும், அகற்றவும் அல்லது மாற்றவும்.</string>
+    <string name="engine_progress_changing_pictures">படங்களை மாற்றுகிறது</string>
+    <string name="engine_edit_pictures_failed">படங்களை மாற்ற முடியவில்லை.</string>
+    <plurals name="engine_pictures_removed">
+        <item quantity="one">%d படம் அகற்றப்பட்டது</item>
+        <item quantity="other">%d படங்கள் அகற்றப்பட்டன</item>
+    </plurals>
+    <plurals name="engine_pictures_moved">
+        <item quantity="one">%d படம் நகர்த்தப்பட்டது</item>
+        <item quantity="other">%d படங்கள் நகர்த்தப்பட்டன</item>
+    </plurals>
+    <plurals name="engine_pictures_replaced">
+        <item quantity="one">%d படம் மாற்றி வைக்கப்பட்டது</item>
+        <item quantity="other">%d படங்கள் மாற்றி வைக்கப்பட்டன</item>
+    </plurals>
+    <plurals name="engine_pictures_missed">
+        <item quantity="one">; %d மாற்றத்தைச் செய்ய முடியவில்லை</item>
+        <item quantity="other">; %d மாற்றங்களைச் செய்ய முடியவில்லை</item>
+    </plurals>
+
+    <!-- Recipes -->
+    <string name="engine_recipe_empty">இந்தச் செய்முறையில் படிகள் இல்லை.</string>
+    <string name="engine_recipe_step">படி %1$d / %2$d: %3$s</string>
+    <string name="engine_recipe_unchanged">மாற்றமில்லை</string>
+
+    <!-- Choices the PDF layer names -->
+    <string name="engine_watermark_layout_diagonal">ஒருமுறை, குறுக்காகச் சாய்வாக</string>
+    <string name="engine_watermark_layout_straight">ஒருமுறை, நேராகக் குறுக்கே</string>
+    <string name="engine_watermark_layout_tiled">முழுவதும் திரும்பத் திரும்ப</string>
+    <string name="engine_paper_letter">லெட்டர்</string>
+    <string name="engine_paper_legal">லீகல்</string>
+    <string name="engine_paper_fit_image">படத்துக்கு ஏற்ப</string>
+    <string name="engine_compression_light">லேசான</string>
+    <string name="engine_compression_balanced">சமநிலையான</string>
+    <string name="engine_compression_strong">வலுவான</string>
+    <string name="engine_ocr_script_latin">ஆங்கிலம் மற்றும் பிற லத்தீன் எழுத்துமுறைகள்</string>
+    <string name="engine_ocr_script_devanagari">இந்தி, மராத்தி, நேபாளி (தேவநாகரி)</string>
+
+    <!-- Kinds of comment found in a document -->
+    <string name="engine_comment_reply">பதில்</string>
+    <string name="engine_comment_note">குறிப்பு</string>
+    <string name="engine_comment_text_box">உரைப் பெட்டி</string>
+    <string name="engine_comment_highlight">ஹைலைட்</string>
+    <string name="engine_comment_underline">அடிக்கோடு</string>
+    <string name="engine_comment_strikethrough">நடுக்கோடு</string>
+    <string name="engine_comment_squiggle">அலைக்கோடு</string>
+    <string name="engine_comment_drawing">வரைபடம்</string>
+    <string name="engine_comment_box">பெட்டி</string>
+    <string name="engine_comment_circle">வட்டம்</string>
+    <string name="engine_comment_line">கோடு</string>
+    <string name="engine_comment_shape">வடிவம்</string>
+    <string name="engine_comment_stamp">முத்திரை</string>
+    <string name="engine_comment_insertion">செருகல்</string>
+    <string name="engine_comment_attached_file">இணைக்கப்பட்ட கோப்பு</string>
+    <string name="engine_comment_sound">ஒலி</string>
+    <string name="engine_comment_media">மீடியா</string>
+    <string name="engine_comment_redaction">மறைப்புக் குறி</string>
+
+    <!-- What can go wrong in the PDF layer. The first five lead into a detail after the colon. -->
+    <string name="engine_err_password_required">இந்த ஆவணம் கடவுச்சொல்லால் பாதுகாக்கப்பட்டுள்ளது.</string>
+    <string name="engine_err_corrupt">இந்தக் கோப்பை PDF ஆகப் படிக்க முடியவில்லை: %1$s</string>
+    <string name="engine_err_unsupported">Sheaf-ஆல் இன்னும் கையாள முடியாத ஓர் அம்சத்தை இந்த ஆவணம் பயன்படுத்துகிறது: %1$s</string>
+    <string name="engine_err_out_of_memory">இந்தச் சாதனத்தில் செயலாக்க இந்த ஆவணம் மிகப் பெரியது: %1$s</string>
+    <string name="engine_err_io">கோப்பைப் படிக்கவோ எழுதவோ முடியவில்லை: %1$s</string>
+    <string name="engine_err_could_not_be_opened">திறக்க முடியவில்லை</string>
+    <string name="engine_err_unreadable">படிக்க முடியவில்லை</string>
+    <string name="engine_err_could_not_merge">இந்த ஆவணத்தை இணைக்க முடியவில்லை</string>
+    <string name="engine_err_could_not_images">இந்தப் படங்களிலிருந்து PDF உருவாக்க முடியவில்லை</string>
+    <string name="engine_err_could_not_receipts">ரசீதுகளை எழுத முடியவில்லை</string>
+    <string name="engine_err_could_not_lay_out">இந்த ஆவணத்தை அமைக்க முடியவில்லை</string>
+    <string name="engine_err_could_not_pictures">பக்கங்களைப் படங்களாக்க முடியவில்லை</string>
+    <string name="engine_err_could_not_open">இந்த ஆவணத்தைத் திறக்க முடியவில்லை</string>
+    <string name="engine_err_could_not_process">இந்த ஆவணத்தைச் செயலாக்க முடியவில்லை</string>
+    <string name="engine_err_merge_locked">இணைப்பதற்கு முன் \"%1$s\" இலிருந்து கடவுச்சொல்லை அகற்றவும்</string>
+    <string name="engine_err_oom_merging">%1$d ஆவணங்களை இணைக்கும்போது</string>
+    <string name="engine_err_oom_images">%1$d படங்களிலிருந்து PDF உருவாக்கும்போது</string>
+    <string name="engine_err_oom_page_dpi">பக்கம் %1$d, %2$d DPI இல்</string>
+    <string name="engine_err_oom_page_size">பக்கம் %1$d, %2$dx%3$d இல்</string>
+    <string name="engine_err_oom_page">பக்கம் %1$d</string>
+    <string name="engine_err_oom_opening">%1$s-ஐத் திறக்கும்போது</string>
+    <string name="engine_err_not_an_image">%1$s-ஐப் படமாகப் படிக்க முடியவில்லை</string>
+    <string name="engine_err_image_unreadable">படத்தைப் படிக்க முடியவில்லை</string>
+    <string name="engine_err_page_not_rendered">பக்கம் %1$d-ஐக் காட்ட முடியவில்லை</string>
+    <string name="engine_err_page_not_measured">பக்கம் %1$d-ஐ அளவிட முடியவில்லை</string>
+    <plurals name="engine_err_page_out_of_range">
+        <item quantity="one">%2$d பக்க ஆவணத்தில் பக்கம் %1$d இல்லை</item>
+        <item quantity="other">%2$d பக்க ஆவணத்தில் பக்கம் %1$d இல்லை</item>
+    </plurals>
+    <string name="engine_err_could_not_write">%1$s-ஐ எழுத முடியவில்லை</string>
+    <string name="engine_err_not_a_file">%1$s ஒரு கோப்பு அல்ல</string>
+    <string name="engine_err_platform_encrypted">என்க்ரிப்ட் செய்யப்பட்ட ஆவணங்களை சிஸ்டம் ரெண்டரரால் திறக்க முடியாது</string>
+    <string name="engine_err_no_form_fields">இந்த ஆவணத்தில் படிவப் புலங்கள் இல்லை</string>
+    <string name="engine_err_ocr_page">உரை அறிதலால் இந்தப் பக்கத்தைப் படிக்க முடியவில்லை</string>
+    <string name="engine_err_nothing_to_merge">இணைக்க எதுவும் இல்லை.</string>
+    <string name="engine_err_no_pages_selected">பக்கங்கள் எதுவும் தேர்ந்தெடுக்கப்படவில்லை.</string>
+    <string name="engine_err_no_images_selected">படங்கள் எதுவும் தேர்ந்தெடுக்கப்படவில்லை.</string>
+    <string name="engine_err_no_such_page">இந்த ஆவணத்தில் பக்கம் %1$d இல்லை.</string>
+    <string name="engine_err_pages_typed_missing">உள்ளிட்ட பக்கங்களில் எதுவும் இந்த ஆவணத்தில் இல்லை.</string>
+    <string name="engine_err_password_empty">கடவுச்சொல் காலியாக இருக்கக்கூடாது.</string>
+    <string name="engine_err_nothing_to_restrict">அனைத்தும் அனுமதிக்கப்பட்டுள்ளன, எனவே கட்டுப்படுத்த எதுவும் இல்லை.</string>
+    <string name="engine_err_not_protected">இந்த ஆவணம் கடவுச்சொல்லால் பாதுகாக்கப்படவில்லை.</string>
+    <string name="engine_err_words_not_found">அந்தச் சொற்கள் கிடைக்கவில்லை. ஸ்கேன் செய்த பக்கத்தில் தேடுவதற்கு உரை இருக்காது; முதலில் \"தேடக்கூடியதாக்கு\" என்பதை இயக்கவும்.</string>
+    <string name="engine_err_nothing_to_write">எழுத எதுவும் இல்லை.</string>
+    <string name="engine_err_draw_field">முதலில் பக்கத்தில் ஒரு புலத்தை வரையவும்.</string>
+    <string name="engine_err_fields_off_page">எந்தப் புலமும் இந்த ஆவணத்தின் பக்கத்தில் அமையவில்லை.</string>
+    <string name="engine_err_not_signed">ஆவணத்தில் கையொப்பமிட முடியவில்லை: %1$s</string>
+    <string name="engine_err_signature_not_made">கையொப்பத்தை உருவாக்க முடியவில்லை</string>
+    <string name="engine_err_crop_too_much">ஓரங்களில் இவ்வளவு வெட்டினால் பக்கம் %1$d-இல் கிட்டத்தட்ட எதுவும் மிஞ்சாது. சிறிய ஓரங்களைப் பயன்படுத்தவும்.</string>
+    <string name="engine_err_no_margins">அகற்ற வெள்ளை ஓரங்கள் இல்லை: பக்கங்களில் உள்ளவை ஏற்கனவே ஓரம் வரை உள்ளன, அல்லது பக்கங்கள் வெறுமையாக உள்ளன.</string>
+    <string name="engine_err_nothing_marked_removal">அகற்றுவதற்கு எதுவும் குறிக்கப்படவில்லை.</string>
+    <string name="engine_err_nothing_marked">எந்தப் பக்கத்திலும் எதுவும் குறிக்கப்படவில்லை.</string>
+    <string name="engine_err_no_header_footer">சேர்க்க தலைப்பு அல்லது அடிக்குறிப்பு உரை இல்லை.</string>
+    <string name="engine_err_all_blank">அப்படிச் செய்தால் எல்லாப் பக்கங்களும் வெற்றுப் பக்கங்களாக மாறிவிடும்.</string>
+    <string name="engine_err_insert_empty">செருக வேண்டிய ஆவணத்தில் பக்கங்கள் இல்லை.</string>
+    <string name="engine_err_pick_attachment">இணைக்கக் குறைந்தது ஒரு கோப்பைத் தேர்ந்தெடுக்கவும்.</string>
+    <string name="engine_err_no_attachments">இந்த ஆவணத்தில் இணைக்கப்பட்ட கோப்புகள் இல்லை.</string>
+    <string name="engine_err_attachments_unreadable">இணைக்கப்பட்ட கோப்புகளை இந்த ஆவணத்திலிருந்து படிக்க முடியவில்லை.</string>
+    <string name="engine_err_no_pages_to_write">எழுதுவதற்குப் பக்கங்கள் இல்லை.</string>
+    <string name="engine_err_pictures_not_found">அந்தப் படங்களைப் பக்கத்தின் வரைதலில் கண்டுபிடிக்க முடியவில்லை, எனவே எதுவும் மாற்றப்படவில்லை. வரைபடம் அல்லது ஸ்கேனுக்குள் உள்ள படத்தைத் தனியாகத் திருத்த முடியாது.</string>
+    <string name="engine_err_certificate_password">அது சான்றிதழின் கடவுச்சொல் அல்ல.</string>
+    <string name="engine_err_certificate_unreadable">இது Sheaf படிக்கக்கூடிய சான்றிதழ் கோப்பு அல்ல: .pfx அல்லது .p12 கோப்பு தேவை.</string>
+    <string name="engine_err_certificate_no_key">இந்தச் சான்றிதழ் கோப்பில் தனிப்பட்ட விசை இல்லை, எனவே இதைக் கொண்டு எதிலும் கையொப்பமிட முடியாது.</string>
+    <string name="engine_err_certificate_empty">இந்தச் சான்றிதழ் கோப்பில் சான்றிதழ் எதுவும் இல்லை.</string>
+    <string name="engine_err_certificate_expired">இந்தச் சான்றிதழ் %1$s அன்று காலாவதியானது. ரீடர் கையொப்பத்தைச் செல்லாதது எனக் குறிக்கும் என்பதால், இது பயன்படுத்தப்படவில்லை. இதை வழங்கியவரிடம் புதுப்பிக்கவும்.</string>
+    <string name="engine_err_not_word">இது Word கோப்பு அல்ல: இதற்குள் ஆவணம் இல்லை.</string>
+    <string name="engine_err_not_spreadsheet">இது ஸ்ப்ரெட்ஷீட் அல்ல: இதற்குள் தாள்கள் இல்லை.</string>
+    <string name="engine_err_deck_empty">ஸ்லைடுத் தொகுப்பில் குறைந்தது ஒரு ஸ்லைடு இருக்க வேண்டும்.</string>
+</resources>
