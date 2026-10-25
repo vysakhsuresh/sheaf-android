@@ -28,6 +28,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import androidx.annotation.StringRes
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
 import java.io.File
 import java.io.FileOutputStream
 
@@ -121,7 +124,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
                         it.copy(
                             busy = false,
                             processing = if (batch) it.processing - 1 else it.processing,
-                            error = "That photo could not be read."
+                            error = Strings.get(R.string.reading_scan_photo_unreadable)
                         )
                     }
                     return@withLock
@@ -149,7 +152,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
                         it.copy(
                             processing = it.processing - 1,
                             pages = if (page != null) it.pages + page else it.pages,
-                            error = if (page == null) "That page could not be saved." else it.error
+                            error = if (page == null) Strings.get(R.string.reading_scan_page_not_saved) else it.error
                         )
                     }
                     return@withLock
@@ -240,7 +243,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
                             current.copy(busy = false, editing = null, pages = pages)
                         }
                         is KeepOutcome.NextSide -> current.copy(busy = false, editing = outcome.next)
-                        KeepOutcome.Failed -> current.copy(busy = false, editing = null, error = "That page could not be saved.")
+                        KeepOutcome.Failed -> current.copy(busy = false, editing = null, error = Strings.get(R.string.reading_scan_page_not_saved))
                     }
                 }
             }
@@ -303,7 +306,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
                 val first = page.sources.first()
                 val photo = withContext(Dispatchers.IO) { runCatching { decodeUpright(first.original) }.getOrNull() }
                 if (photo == null) {
-                    _state.update { it.copy(busy = false, error = "The photo behind that page is gone. Scan it again.") }
+                    _state.update { it.copy(busy = false, error = Strings.get(R.string.reading_scan_photo_gone)) }
                     return@withLock
                 }
                 _state.update {
@@ -339,18 +342,18 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
         val current = _state.value
         val pages = current.pages
         if (pages.isEmpty()) {
-            _state.update { it.copy(error = "Scan a page first.") }
+            _state.update { it.copy(error = Strings.get(R.string.reading_scan_first)) }
             return
         }
         if (current.processing > 0) {
-            _state.update { it.copy(error = "Still saving the last page. One moment.") }
+            _state.update { it.copy(error = Strings.get(R.string.reading_scan_still_saving)) }
             return
         }
 
         val inputs = pages.mapIndexed { index, page ->
             SheafFile(
                 file = page.file,
-                displayName = "Page ${index + 1}",
+                displayName = Strings.get(R.string.reading_page_n, index + 1),
                 origin = SheafFile.Origin.Derived("scan"),
                 mimeType = SheafFile.MIME_JPEG
             )
@@ -543,10 +546,12 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
 
 enum class CornerHandle { TOP_LEFT, TOP_RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT }
 
-enum class ScanMode(val label: String) {
-    SINGLE("One page"),
-    BATCH("Batch"),
-    ID_CARD("ID card")
+enum class ScanMode(@StringRes val labelRes: Int) {
+    SINGLE(R.string.reading_scan_mode_single),
+    BATCH(R.string.reading_scan_mode_batch),
+    ID_CARD(R.string.reading_scan_mode_id_card);
+
+    val label: String get() = Strings.get(labelRes)
 }
 
 enum class PageKind { PAGE, ID_CARD }

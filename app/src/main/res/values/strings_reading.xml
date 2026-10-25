@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The reader, the scanner and the Open screen. -->
+<resources>
+    <!-- Reader -->
+    <string name="reading_mode_continuous">One long scroll</string>
+    <string name="reading_mode_single">A page at a time</string>
+    <string name="reading_mode_two_up">Two pages side by side</string>
+    <string name="reading_tint_day">Day</string>
+    <string name="reading_tint_sepia">Sepia</string>
+    <string name="reading_tint_dark_paper">Dark paper</string>
+    <string name="reading_tint_night">Night</string>
+
+    <string name="reading_page_n">Page %1$d</string>
+    <string name="reading_page_not_displayed">Page %1$d could not be displayed</string>
+    <string name="reading_no_app_link">No app on this phone can open that link.</string>
+    <string name="reading_no_text_to_select">There is no text to select on this page. A scan needs Make searchable first.</string>
+    <string name="reading_back">Back</string>
+    <string name="reading_opening">Opening…</string>
+    <string name="reading_copy_failed">That could not be copied.</string>
+    <string name="reading_copied">Copied.</string>
+    <string name="reading_no_app_define">No app on this phone can look words up.</string>
+    <string name="reading_no_app_translate">No app on this phone can translate.</string>
+    <string name="reading_zoom_reset">%1$d%% · reset</string>
+    <string name="reading_use_on_document">Use on this document</string>
+
+    <string name="reading_copy">Copy</string>
+    <string name="reading_share">Share</string>
+    <string name="reading_find">Find</string>
+    <string name="reading_read_aloud">Read aloud</string>
+    <string name="reading_define">Define</string>
+    <string name="reading_translate">Translate</string>
+    <string name="reading_clear_selection">Clear the selection</string>
+
+    <string name="reading_locked_title">This document is locked</string>
+    <string name="reading_locked_body">Type its password to open it. Sheaf keeps the password only while the document is open.</string>
+    <string name="reading_password">Password</string>
+    <string name="reading_password_wrong">That password did not open it. Check it and try again.</string>
+    <string name="reading_checking">Checking…</string>
+    <string name="reading_open">Open</string>
+
+    <string name="reading_pages">Pages</string>
+    <string name="reading_type_page_number">Type a page number</string>
+
+    <string name="reading_options_title">Reading options</string>
+    <string name="reading_layout">Layout</string>
+    <string name="reading_remembered">Remembered for this document.</string>
+    <string name="reading_paper">Paper</string>
+    <string name="reading_brightness">Brightness</string>
+    <string name="reading_percent">%1$d%%</string>
+    <string name="reading_brightness_note">Dims the pages only. The phone\'s own brightness stays as it is.</string>
+    <string name="reading_crop_margins">Crop white margins</string>
+    <string name="reading_crop_margins_detail">Trims the empty border round each page, so the words come out bigger.</string>
+
+    <string name="reading_page_of">Page %1$d of %2$d</string>
+    <string name="reading_remove_mark">Remove this mark</string>
+    <string name="reading_mark_page">Mark this page</string>
+    <string name="reading_more">More</string>
+    <string name="reading_contents_and_marks">Contents and marks</string>
+    <string name="reading_comments_menu">Comments (%1$d)</string>
+    <string name="reading_go_to_page_menu">Go to page…</string>
+    <string name="reading_stop_reading_aloud">Stop reading aloud</string>
+    <string name="reading_read_aloud_from_page">Read aloud from this page</string>
+    <string name="reading_options_menu">Reading options…</string>
+    <string name="reading_day_colours">Day colours</string>
+    <string name="reading_night_colours">Night colours</string>
+    <string name="reading_print">Print or save as PDF…</string>
+    <string name="reading_share_document">Share this document…</string>
+    <string name="reading_use_tool">Use a tool on this</string>
+
+    <string name="reading_starting_voice">Starting the voice…</string>
+    <string name="reading_reading_page_aloud">Reading page %1$d aloud</string>
+    <string name="reading_stop">Stop</string>
+
+    <plurals name="reading_comments">
+        <item quantity="one">%d comment</item>
+        <item quantity="other">%d comments</item>
+    </plurals>
+    <string name="reading_comment_on_page">page %1$d</string>
+
+    <string name="reading_find_hint">Find in this document</string>
+    <string name="reading_previous_match">Previous match</string>
+    <string name="reading_next_match">Next match</string>
+    <string name="reading_searching">Searching…</string>
+    <string name="reading_no_matches">No pages contain that.</string>
+    <string name="reading_match_position">Page %1$d · %2$d of %3$d pages with a match</string>
+    <plurals name="reading_pages_count">
+        <item quantity="one">%d page</item>
+        <item quantity="other">%d pages</item>
+    </plurals>
+    <string name="reading_matches_marked">Matches are marked on the page. Tap to see the list again.</string>
+    <string name="reading_page_short">p. %1$d</string>
+    <plurals name="reading_matches_on_page">
+        <item quantity="one">%d match on this page</item>
+        <item quantity="other">%d matches on this page</item>
+    </plurals>
+
+    <string name="reading_your_marks">Your marks</string>
+    <string name="reading_remove">Remove</string>
+    <string name="reading_contents">Contents</string>
+    <string name="reading_no_contents">This document has no table of contents, and you have not marked a page in it yet. The star in the bar marks the page you are on.</string>
+
+    <string name="reading_go_to_page">Go to page</string>
+    <plurals name="reading_document_has_pages">
+        <item quantity="one">This document has %d page.</item>
+        <item quantity="other">This document has %d pages.</item>
+    </plurals>
+    <string name="reading_page_range">1 to %1$d</string>
+    <string name="reading_go">Go</string>
+
+    <string name="reading_could_not_open">This document could not be opened.</string>
+    <string name="reading_no_tts">This phone has no text-to-speech engine.</string>
+    <string name="reading_voice_stopped">The voice stopped. Try again.</string>
+    <string name="reading_reached_end">Reached the end.</string>
+    <string name="reading_no_text_to_read">No text to read. A scanned page needs Make searchable first.</string>
+
+    <!-- Scanner -->
+    <string name="reading_scan_mode_single">One page</string>
+    <string name="reading_scan_mode_batch">Batch</string>
+    <string name="reading_scan_mode_id_card">ID card</string>
+    <string name="reading_scan_filter_photo">Photo</string>
+    <string name="reading_scan_filter_grey">Grey</string>
+    <string name="reading_scan_filter_document">Document</string>
+
+    <string name="reading_scan_photo_failed">The photo could not be taken. Try again.</string>
+    <string name="reading_scan_camera_failed">The camera could not be started.</string>
+    <string name="reading_scan_auto_on">Auto on</string>
+    <string name="reading_scan_auto_off">Auto off</string>
+    <string name="reading_scan_auto_description">Take the picture by itself when the page is still</string>
+    <string name="reading_scan_card_back">Now the back of the card</string>
+    <string name="reading_scan_card_front">The front of the card</string>
+    <string name="reading_scan_fill_frame">Fill the frame with the page</string>
+    <string name="reading_scan_hold_still">Hold still</string>
+    <string name="reading_scan_page_found">Page found</string>
+    <plurals name="reading_scan_kept">
+        <item quantity="one">%d kept</item>
+        <item quantity="other">%d kept</item>
+    </plurals>
+    <string name="reading_scan_saving">Saving %1$d</string>
+    <string name="reading_scan_take_picture">Take the picture</string>
+    <string name="reading_scan_taking">Taking the picture…</string>
+    <string name="reading_scan_hold_or_tap">Hold still, or tap to capture</string>
+    <string name="reading_scan_tap_to_capture">Tap to capture</string>
+    <string name="reading_scan_on">On</string>
+    <string name="reading_scan_off">Off</string>
+
+    <string name="reading_scan_camera_needed">Sheaf needs the camera to scan a page</string>
+    <string name="reading_scan_camera_privacy">The photo is processed on this phone and never sent anywhere - Sheaf has no permission to use the internet at all.</string>
+    <string name="reading_scan_allow_camera">Allow the camera</string>
+    <string name="reading_scan_ready">Your scan is ready</string>
+    <string name="reading_scan_nothing">Nothing was produced</string>
+    <string name="reading_scan_made_here">Made on this phone. Nothing was uploaded.</string>
+    <string name="reading_scan_try_again">Try scanning again.</string>
+    <string name="reading_scan_save_share">Save or share it</string>
+    <string name="reading_scan_something_else">Scan something else</string>
+
+    <string name="reading_scan_tag_front">Front</string>
+    <string name="reading_scan_tag_back">Back</string>
+    <string name="reading_scan_tag_recrop">Recrop</string>
+    <string name="reading_scan_tag_found">Found</string>
+    <string name="reading_scan_tag_adjust">Adjust</string>
+    <string name="reading_scan_fit_card">Fit the corners to the card</string>
+    <string name="reading_scan_move_corners">Move the corners onto the page</string>
+    <string name="reading_scan_check_corners">Check the corners are on the page</string>
+    <string name="reading_scan_drag_corners">Drag the corners onto the page</string>
+    <string name="reading_scan_keep_page">Keep this page</string>
+    <string name="reading_scan_keep_front">Keep the front</string>
+    <string name="reading_scan_keep_back">Keep the back</string>
+    <string name="reading_scan_next_back">Next, the back</string>
+    <string name="reading_scan_save_crop">Save the crop</string>
+    <string name="reading_scan_retake">Retake</string>
+    <string name="reading_scan_cancel">Cancel</string>
+    <string name="reading_scan_whole_photo">Whole photo</string>
+    <string name="reading_scan_captured_page">Captured page</string>
+    <string name="reading_scan_look">Look</string>
+
+    <plurals name="reading_scan_pages_scanned">
+        <item quantity="one">%d page scanned</item>
+        <item quantity="other">%d pages scanned</item>
+    </plurals>
+    <string name="reading_scan_tap_to_recrop">Tap a page to recrop it</string>
+    <string name="reading_scan_thumbnail">Scanned page %1$d. Tap to recrop it.</string>
+    <string name="reading_scan_remove_page">Remove page %1$d</string>
+    <string name="reading_scan_making_pdf">Making the PDF…</string>
+    <plurals name="reading_scan_saving_last">
+        <item quantity="one">Saving the last page…</item>
+        <item quantity="other">Saving the last %d pages…</item>
+    </plurals>
+    <plurals name="reading_scan_make_pdf">
+        <item quantity="one">Make a PDF of this page</item>
+        <item quantity="other">Make a PDF of these %d pages</item>
+    </plurals>
+
+    <string name="reading_scan_photo_unreadable">That photo could not be read.</string>
+    <string name="reading_scan_page_not_saved">That page could not be saved.</string>
+    <string name="reading_scan_photo_gone">The photo behind that page is gone. Scan it again.</string>
+    <string name="reading_scan_first">Scan a page first.</string>
+    <string name="reading_scan_still_saving">Still saving the last page. One moment.</string>
+
+    <!-- Open a file -->
+    <plurals name="reading_open_looking_at">
+        <item quantity="one">Looking at %d file on this phone…</item>
+        <item quantity="other">Looking at %d files on this phone…</item>
+    </plurals>
+    <string name="reading_open_looked_at">Looked at %1$d of %2$d…</string>
+    <string name="reading_open_one_unreadable">One file could not be read.</string>
+    <string name="reading_open_looking_in_folder">Looking in the folder…</string>
+    <string name="reading_open_folder_empty">That folder is empty.</string>
+
+    <string name="reading_open_pick_files">Pick your files</string>
+    <string name="reading_open_pick_files_body">PDFs, photos, Word and Excel. Sheaf looks at them on this phone and suggests what to do. Nothing is uploaded.</string>
+    <string name="reading_open_pick_folder">Pick a whole folder</string>
+    <plurals name="reading_open_your_files">
+        <item quantity="one">Your file</item>
+        <item quantity="other">Your %d files</item>
+    </plurals>
+    <plurals name="reading_open_more_files">
+        <item quantity="one">and %d more file</item>
+        <item quantity="other">and %d more files</item>
+    </plurals>
+    <plurals name="reading_open_what_to_do">
+        <item quantity="one">What to do with it</item>
+        <item quantity="other">What to do with these %d</item>
+    </plurals>
+    <string name="reading_open_start_over">Start over</string>
+    <string name="reading_open_run_recipe">Run one of your recipes on them</string>
+    <string name="reading_open_any_tool">Or pick any tool →</string>
+
+    <string name="reading_open_locked">locked</string>
+    <string name="reading_open_a_scan">a scan</string>
+    <string name="reading_open_a_form">a form</string>
+    <string name="reading_open_unreadable">couldn\'t be read</string>
+    <string name="reading_open_picture">picture</string>
+    <string name="reading_open_office">Word, Excel or text</string>
+    <string name="reading_open_first_page">First page of %1$s</string>
+
+    <string name="reading_open_read">Read</string>
+    <string name="reading_open_pdf_to_excel">PDF to Excel</string>
+    <string name="reading_open_pdf_to_word">PDF to Word</string>
+    <string name="reading_open_office_to_pdf">Word, Excel or text to PDF</string>
+</resources>

@@ -72,6 +72,8 @@ import com.layerbit.sheaf.pdf.PageArea
 import com.layerbit.sheaf.pdf.PageLink
 import com.layerbit.sheaf.pdf.PageSize
 import com.layerbit.sheaf.ui.theme.SheafColors
+import androidx.compose.ui.res.stringResource
+import com.layerbit.sheaf.R
 import kotlin.math.roundToInt
 
 /**
@@ -346,6 +348,7 @@ private fun PageItem(
     val aspect = if (shownCrop != null) pageAspect * shownCrop.width / shownCrop.height else pageAspect
 
     val image: ImageBitmap? = remember(bitmap) { bitmap?.asImageBitmap() }
+    val pageLabel = stringResource(R.string.reading_page_n, index + 1)
     val highlights = input.highlights[index].orEmpty()
     val emphasised = input.emphasisedPage == index
     val selection = input.selection?.takeIf { it.pageIndex == index }
@@ -368,7 +371,7 @@ private fun PageItem(
             // blank sheet rather than a hole in the list.
             .background(if (failed) SheafColors.SurfaceDim else look.paper)
             .onSizeChanged { boxSize = it }
-            .semantics { contentDescription = "Page ${index + 1}" }
+            .semantics { contentDescription = pageLabel }
             .pointerInput(generation, index) {
                 fun fraction(at: Offset): Pair<Float, Float> {
                     val w = size.width.toFloat().coerceAtLeast(1f)
@@ -434,7 +437,7 @@ private fun PageItem(
 
         if (failed) {
             Text(
-                text = "Page ${index + 1} could not be displayed",
+                text = stringResource(R.string.reading_page_not_displayed, index + 1),
                 style = MaterialTheme.typography.bodySmall,
                 color = SheafColors.Dim,
                 textAlign = TextAlign.Center
@@ -621,7 +624,7 @@ internal fun PageThumbnail(
             image?.let {
                 Image(
                     bitmap = it,
-                    contentDescription = "Page ${index + 1}",
+                    contentDescription = stringResource(R.string.reading_page_n, index + 1),
                     contentScale = ContentScale.Fit,
                     colorFilter = look.filter,
                     modifier = Modifier.fillMaxSize()

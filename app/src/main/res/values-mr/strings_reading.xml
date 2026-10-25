@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reading_mode_continuous">एक लांब स्क्रोल</string>
+    <string name="reading_mode_single">एका वेळी एक पान</string>
+    <string name="reading_mode_two_up">दोन पाने शेजारी</string>
+    <string name="reading_tint_day">दिवस</string>
+    <string name="reading_tint_sepia">सेपिया</string>
+    <string name="reading_tint_dark_paper">गडद कागद</string>
+    <string name="reading_tint_night">रात्र</string>
+
+    <string name="reading_page_n">पान %1$d</string>
+    <string name="reading_page_not_displayed">पान %1$d दाखवता आले नाही</string>
+    <string name="reading_no_app_link">या फोनवरील कोणतेही ॲप ती लिंक उघडू शकत नाही.</string>
+    <string name="reading_no_text_to_select">या पानावर निवडण्यासाठी मजकूर नाही. स्कॅनवर आधी \"शोधण्याजोगे करा\" चालवा.</string>
+    <string name="reading_back">मागे</string>
+    <string name="reading_opening">उघडत आहे…</string>
+    <string name="reading_copy_failed">ते कॉपी करता आले नाही.</string>
+    <string name="reading_copied">कॉपी केले.</string>
+    <string name="reading_no_app_define">या फोनवर शब्दांचे अर्थ पाहणारे कोणतेही ॲप नाही.</string>
+    <string name="reading_no_app_translate">या फोनवर भाषांतर करणारे कोणतेही ॲप नाही.</string>
+    <string name="reading_zoom_reset">%1$d%% · रीसेट करा</string>
+    <string name="reading_use_on_document">या दस्तऐवजावर वापरा</string>
+
+    <string name="reading_copy">कॉपी करा</string>
+    <string name="reading_share">शेअर करा</string>
+    <string name="reading_find">शोधा</string>
+    <string name="reading_read_aloud">वाचून दाखवा</string>
+    <string name="reading_define">अर्थ</string>
+    <string name="reading_translate">भाषांतर करा</string>
+    <string name="reading_clear_selection">निवड काढा</string>
+
+    <string name="reading_locked_title">हा दस्तऐवज लॉक आहे</string>
+    <string name="reading_locked_body">तो उघडण्यासाठी त्याचा पासवर्ड टाइप करा. दस्तऐवज उघडा असेपर्यंतच Sheaf पासवर्ड जपून ठेवते.</string>
+    <string name="reading_password">पासवर्ड</string>
+    <string name="reading_password_wrong">या पासवर्डने तो उघडला नाही. पासवर्ड तपासा आणि पुन्हा प्रयत्न करा.</string>
+    <string name="reading_checking">तपासत आहे…</string>
+    <string name="reading_open">उघडा</string>
+
+    <string name="reading_pages">पाने</string>
+    <string name="reading_type_page_number">पान क्रमांक टाइप करा</string>
+
+    <string name="reading_options_title">वाचनाचे पर्याय</string>
+    <string name="reading_layout">लेआउट</string>
+    <string name="reading_remembered">या दस्तऐवजासाठी लक्षात ठेवले.</string>
+    <string name="reading_paper">कागद</string>
+    <string name="reading_brightness">ब्राइटनेस</string>
+    <string name="reading_percent">%1$d%%</string>
+    <string name="reading_brightness_note">फक्त पाने मंद होतात. फोनचा स्वतःचा ब्राइटनेस आहे तसाच राहतो.</string>
+    <string name="reading_crop_margins">पांढरे समास कापा</string>
+    <string name="reading_crop_margins_detail">प्रत्येक पानाभोवतीची रिकामी कडा काढते, त्यामुळे शब्द मोठे दिसतात.</string>
+
+    <string name="reading_page_of">पान %1$d / %2$d</string>
+    <string name="reading_remove_mark">ही खूण काढा</string>
+    <string name="reading_mark_page">या पानावर खूण करा</string>
+    <string name="reading_more">आणखी</string>
+    <string name="reading_contents_and_marks">अनुक्रमणिका आणि खुणा</string>
+    <string name="reading_comments_menu">टिप्पण्या (%1$d)</string>
+    <string name="reading_go_to_page_menu">पानावर जा…</string>
+    <string name="reading_stop_reading_aloud">वाचून दाखवणे थांबवा</string>
+    <string name="reading_read_aloud_from_page">या पानापासून वाचून दाखवा</string>
+    <string name="reading_options_menu">वाचनाचे पर्याय…</string>
+    <string name="reading_day_colours">दिवसाचे रंग</string>
+    <string name="reading_night_colours">रात्रीचे रंग</string>
+    <string name="reading_print">प्रिंट करा किंवा PDF म्हणून सेव्ह करा…</string>
+    <string name="reading_share_document">हा दस्तऐवज शेअर करा…</string>
+    <string name="reading_use_tool">यावर एखादे टूल वापरा</string>
+
+    <string name="reading_starting_voice">आवाज सुरू होत आहे…</string>
+    <string name="reading_reading_page_aloud">पान %1$d वाचून दाखवत आहे</string>
+    <string name="reading_stop">थांबवा</string>
+
+    <plurals name="reading_comments">
+        <item quantity="one">%d टिप्पणी</item>
+        <item quantity="other">%d टिप्पण्या</item>
+    </plurals>
+    <string name="reading_comment_on_page">पान %1$d</string>
+
+    <string name="reading_find_hint">या दस्तऐवजात शोधा</string>
+    <string name="reading_previous_match">मागील जुळणी</string>
+    <string name="reading_next_match">पुढील जुळणी</string>
+    <string name="reading_searching">शोधत आहे…</string>
+    <string name="reading_no_matches">कोणत्याही पानावर ते सापडले नाही.</string>
+    <string name="reading_match_position">पान %1$d · जुळणी असलेल्या %3$d पानांपैकी %2$d</string>
+    <plurals name="reading_pages_count">
+        <item quantity="one">%d पान</item>
+        <item quantity="other">%d पाने</item>
+    </plurals>
+    <string name="reading_matches_marked">जुळण्या पानावर चिन्हांकित केल्या आहेत. यादी पुन्हा पाहण्यासाठी टॅप करा.</string>
+    <string name="reading_page_short">पा. %1$d</string>
+    <plurals name="reading_matches_on_page">
+        <item quantity="one">या पानावर %d जुळणी</item>
+        <item quantity="other">या पानावर %d जुळण्या</item>
+    </plurals>
+
+    <string name="reading_your_marks">तुमच्या खुणा</string>
+    <string name="reading_remove">काढा</string>
+    <string name="reading_contents">अनुक्रमणिका</string>
+    <string name="reading_no_contents">या दस्तऐवजात अनुक्रमणिका नाही, आणि तुम्ही अजून त्यातील कोणत्याही पानावर खूण केलेली नाही. बारमधील तारा तुम्ही ज्या पानावर आहात त्यावर खूण करतो.</string>
+
+    <string name="reading_go_to_page">पानावर जा</string>
+    <plurals name="reading_document_has_pages">
+        <item quantity="one">या दस्तऐवजात %d पान आहे.</item>
+        <item quantity="other">या दस्तऐवजात %d पाने आहेत.</item>
+    </plurals>
+    <string name="reading_page_range">1 ते %1$d</string>
+    <string name="reading_go">जा</string>
+
+    <string name="reading_could_not_open">हा दस्तऐवज उघडता आला नाही.</string>
+    <string name="reading_no_tts">या फोनमध्ये टेक्स्ट-टू-स्पीच इंजिन नाही.</string>
+    <string name="reading_voice_stopped">आवाज थांबला. पुन्हा प्रयत्न करा.</string>
+    <string name="reading_reached_end">शेवटपर्यंत पोहोचलात.</string>
+    <string name="reading_no_text_to_read">वाचण्यासाठी मजकूर नाही. स्कॅन केलेल्या पानावर आधी \"शोधण्याजोगे करा\" चालवा.</string>
+
+    <string name="reading_scan_mode_single">एक पान</string>
+    <string name="reading_scan_mode_batch">अनेक पाने</string>
+    <string name="reading_scan_mode_id_card">ID कार्ड</string>
+    <string name="reading_scan_filter_photo">फोटो</string>
+    <string name="reading_scan_filter_grey">ग्रे</string>
+    <string name="reading_scan_filter_document">दस्तऐवज</string>
+
+    <string name="reading_scan_photo_failed">फोटो घेता आला नाही. पुन्हा प्रयत्न करा.</string>
+    <string name="reading_scan_camera_failed">कॅमेरा सुरू करता आला नाही.</string>
+    <string name="reading_scan_auto_on">ऑटो सुरू</string>
+    <string name="reading_scan_auto_off">ऑटो बंद</string>
+    <string name="reading_scan_auto_description">पान स्थिर असताना आपोआप फोटो घ्या</string>
+    <string name="reading_scan_card_back">आता कार्डची मागील बाजू</string>
+    <string name="reading_scan_card_front">कार्डची पुढील बाजू</string>
+    <string name="reading_scan_fill_frame">पानाने संपूर्ण फ्रेम भरा</string>
+    <string name="reading_scan_hold_still">फोन स्थिर धरा</string>
+    <string name="reading_scan_page_found">पान सापडले</string>
+    <plurals name="reading_scan_kept">
+        <item quantity="one">%d ठेवले</item>
+        <item quantity="other">%d ठेवली</item>
+    </plurals>
+    <string name="reading_scan_saving">%1$d सेव्ह होत आहेत</string>
+    <string name="reading_scan_take_picture">फोटो घ्या</string>
+    <string name="reading_scan_taking">फोटो घेत आहे…</string>
+    <string name="reading_scan_hold_or_tap">स्थिर धरा, किंवा कॅप्चर करण्यासाठी टॅप करा</string>
+    <string name="reading_scan_tap_to_capture">कॅप्चर करण्यासाठी टॅप करा</string>
+    <string name="reading_scan_on">सुरू</string>
+    <string name="reading_scan_off">बंद</string>
+
+    <string name="reading_scan_camera_needed">पान स्कॅन करण्यासाठी Sheaf ला कॅमेऱ्याची गरज आहे</string>
+    <string name="reading_scan_camera_privacy">फोटोवर याच फोनवर प्रक्रिया होते आणि तो कुठेही पाठवला जात नाही - Sheaf ला इंटरनेट वापरण्याची परवानगीच नाही.</string>
+    <string name="reading_scan_allow_camera">कॅमेऱ्याला परवानगी द्या</string>
+    <string name="reading_scan_ready">तुमचा स्कॅन तयार आहे</string>
+    <string name="reading_scan_nothing">काहीही तयार झाले नाही</string>
+    <string name="reading_scan_made_here">याच फोनवर तयार केले. काहीही अपलोड झाले नाही.</string>
+    <string name="reading_scan_try_again">पुन्हा स्कॅन करून पहा.</string>
+    <string name="reading_scan_save_share">सेव्ह किंवा शेअर करा</string>
+    <string name="reading_scan_something_else">दुसरे काहीतरी स्कॅन करा</string>
+
+    <string name="reading_scan_tag_front">पुढची बाजू</string>
+    <string name="reading_scan_tag_back">मागची बाजू</string>
+    <string name="reading_scan_tag_recrop">पुन्हा कापा</string>
+    <string name="reading_scan_tag_found">सापडले</string>
+    <string name="reading_scan_tag_adjust">जुळवा</string>
+    <string name="reading_scan_fit_card">कोपरे कार्डवर बसवा</string>
+    <string name="reading_scan_move_corners">कोपरे पानावर आणा</string>
+    <string name="reading_scan_check_corners">कोपरे पानावर आहेत ना ते तपासा</string>
+    <string name="reading_scan_drag_corners">कोपरे ओढून पानावर आणा</string>
+    <string name="reading_scan_keep_page">हे पान ठेवा</string>
+    <string name="reading_scan_keep_front">पुढील बाजू ठेवा</string>
+    <string name="reading_scan_keep_back">मागील बाजू ठेवा</string>
+    <string name="reading_scan_next_back">आता, मागील बाजू</string>
+    <string name="reading_scan_save_crop">कापणी सेव्ह करा</string>
+    <string name="reading_scan_retake">पुन्हा घ्या</string>
+    <string name="reading_scan_cancel">रद्द करा</string>
+    <string name="reading_scan_whole_photo">संपूर्ण फोटो</string>
+    <string name="reading_scan_captured_page">कॅप्चर केलेले पान</string>
+    <string name="reading_scan_look">रूप</string>
+
+    <plurals name="reading_scan_pages_scanned">
+        <item quantity="one">%d पान स्कॅन झाले</item>
+        <item quantity="other">%d पाने स्कॅन झाली</item>
+    </plurals>
+    <string name="reading_scan_tap_to_recrop">पुन्हा कापण्यासाठी एखाद्या पानावर टॅप करा</string>
+    <string name="reading_scan_thumbnail">स्कॅन केलेले पान %1$d. पुन्हा कापण्यासाठी टॅप करा.</string>
+    <string name="reading_scan_remove_page">पान %1$d काढा</string>
+    <string name="reading_scan_making_pdf">PDF तयार होत आहे…</string>
+    <plurals name="reading_scan_saving_last">
+        <item quantity="one">शेवटचे पान सेव्ह होत आहे…</item>
+        <item quantity="other">शेवटची %d पाने सेव्ह होत आहेत…</item>
+    </plurals>
+    <plurals name="reading_scan_make_pdf">
+        <item quantity="one">या पानाची PDF तयार करा</item>
+        <item quantity="other">या %d पानांची PDF तयार करा</item>
+    </plurals>
+
+    <string name="reading_scan_photo_unreadable">तो फोटो वाचता आला नाही.</string>
+    <string name="reading_scan_page_not_saved">ते पान सेव्ह करता आले नाही.</string>
+    <string name="reading_scan_photo_gone">त्या पानाचा फोटो आता उपलब्ध नाही. ते पुन्हा स्कॅन करा.</string>
+    <string name="reading_scan_first">आधी एखादे पान स्कॅन करा.</string>
+    <string name="reading_scan_still_saving">शेवटचे पान अजून सेव्ह होत आहे. एक क्षण थांबा.</string>
+
+    <plurals name="reading_open_looking_at">
+        <item quantity="one">या फोनवरील %d फाइल पाहत आहे…</item>
+        <item quantity="other">या फोनवरील %d फाइल्स पाहत आहे…</item>
+    </plurals>
+    <string name="reading_open_looked_at">%2$d पैकी %1$d पाहिल्या…</string>
+    <string name="reading_open_one_unreadable">एक फाइल वाचता आली नाही.</string>
+    <string name="reading_open_looking_in_folder">फोल्डरमध्ये पाहत आहे…</string>
+    <string name="reading_open_folder_empty">ते फोल्डर रिकामे आहे.</string>
+
+    <string name="reading_open_pick_files">तुमच्या फाइल्स निवडा</string>
+    <string name="reading_open_pick_files_body">PDF, फोटो, Word आणि Excel. Sheaf त्या याच फोनवर पाहून काय करायचे ते सुचवते. काहीही अपलोड होत नाही.</string>
+    <string name="reading_open_pick_folder">संपूर्ण फोल्डर निवडा</string>
+    <plurals name="reading_open_your_files">
+        <item quantity="one">तुमची फाइल</item>
+        <item quantity="other">तुमच्या %d फाइल्स</item>
+    </plurals>
+    <plurals name="reading_open_more_files">
+        <item quantity="one">आणि आणखी %d फाइल</item>
+        <item quantity="other">आणि आणखी %d फाइल्स</item>
+    </plurals>
+    <plurals name="reading_open_what_to_do">
+        <item quantity="one">हिचे काय करायचे</item>
+        <item quantity="other">या %d चे काय करायचे</item>
+    </plurals>
+    <string name="reading_open_start_over">पुन्हा सुरू करा</string>
+    <string name="reading_open_run_recipe">त्यांच्यावर तुमची एखादी रेसिपी चालवा</string>
+    <string name="reading_open_any_tool">किंवा कोणतेही टूल निवडा →</string>
+
+    <string name="reading_open_locked">लॉक आहे</string>
+    <string name="reading_open_a_scan">स्कॅन</string>
+    <string name="reading_open_a_form">फॉर्म</string>
+    <string name="reading_open_unreadable">वाचता आली नाही</string>
+    <string name="reading_open_picture">फोटो</string>
+    <string name="reading_open_office">Word, Excel किंवा मजकूर</string>
+    <string name="reading_open_first_page">%1$s चे पहिले पान</string>
+
+    <string name="reading_open_read">वाचा</string>
+    <string name="reading_open_pdf_to_excel">PDF ते Excel</string>
+    <string name="reading_open_pdf_to_word">PDF ते Word</string>
+    <string name="reading_open_office_to_pdf">Word, Excel किंवा मजकूर ते PDF</string>
+</resources>

@@ -43,6 +43,7 @@ import com.layerbit.sheaf.ui.components.Panel
 import com.layerbit.sheaf.ui.components.PrimaryButton
 import com.layerbit.sheaf.ui.components.SecondaryButton
 import com.layerbit.sheaf.ui.theme.SheafColors
+import androidx.compose.ui.res.stringResource
 
 /**
  * The scanner, end to end: viewfinder, corner adjustment, page strip, make a PDF.
@@ -156,21 +157,20 @@ private fun CameraDenied(onRetry: () -> Unit, modifier: Modifier = Modifier) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 IconTile(iconRes = R.drawable.ic_tool_scan, accent = SheafColors.Band, filled = true, size = 56.dp)
                 Text(
-                    text = "Sheaf needs the camera to scan a page",
+                    text = stringResource(R.string.reading_scan_camera_needed),
                     style = MaterialTheme.typography.titleMedium,
                     color = SheafColors.Text,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 14.dp)
                 )
                 Text(
-                    text = "The photo is processed on this phone and never sent anywhere - Sheaf " +
-                        "has no permission to use the internet at all.",
+                    text = stringResource(R.string.reading_scan_camera_privacy),
                     style = MaterialTheme.typography.bodyMedium,
                     color = SheafColors.Muted,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 6.dp)
                 )
-                PrimaryButton(text = "Allow the camera", onClick = onRetry, modifier = Modifier.fillMaxWidth().padding(top = 16.dp))
+                PrimaryButton(text = stringResource(R.string.reading_scan_allow_camera), onClick = onRetry, modifier = Modifier.fillMaxWidth().padding(top = 16.dp))
             }
         }
     }
@@ -195,12 +195,12 @@ private fun ScanResult(finished: JobState.Finished, onShare: () -> Unit, onDone:
             }
             Column(modifier = Modifier.padding(start = 12.dp)) {
                 Text(
-                    text = if (produced != null) "Your scan is ready" else "Nothing was produced",
+                    text = stringResource(if (produced != null) R.string.reading_scan_ready else R.string.reading_scan_nothing),
                     style = MaterialTheme.typography.headlineSmall,
                     color = SheafColors.Text
                 )
                 Text(
-                    "Made on this phone. Nothing was uploaded.",
+                    stringResource(R.string.reading_scan_made_here),
                     style = MaterialTheme.typography.bodySmall,
                     color = SheafColors.Dim
                 )
@@ -214,7 +214,7 @@ private fun ScanResult(finished: JobState.Finished, onShare: () -> Unit, onDone:
                     Text(
                         text = produced?.file?.displayName
                             ?: finished.failed.firstOrNull()?.reason
-                            ?: "Try scanning again.",
+                            ?: stringResource(R.string.reading_scan_try_again),
                         style = MaterialTheme.typography.titleMedium,
                         color = SheafColors.Text
                     )
@@ -226,9 +226,9 @@ private fun ScanResult(finished: JobState.Finished, onShare: () -> Unit, onDone:
         }
         Spacer(Modifier.height(16.dp))
         if (produced != null) {
-            PrimaryButton(text = "Save or share it", icon = Icons.Filled.Share, onClick = onShare, modifier = Modifier.fillMaxWidth())
+            PrimaryButton(text = stringResource(R.string.reading_scan_save_share), icon = Icons.Filled.Share, onClick = onShare, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(10.dp))
         }
-        SecondaryButton(text = "Scan something else", onClick = onDone, modifier = Modifier.fillMaxWidth())
+        SecondaryButton(text = stringResource(R.string.reading_scan_something_else), onClick = onDone, modifier = Modifier.fillMaxWidth())
     }
 }
