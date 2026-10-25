@@ -210,10 +210,10 @@ fun PrimaryButton(
     ) {
         val tint = if (enabled) SheafColors.OnBand else SheafColors.Dim
         if (icon != null) {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+            LivelyIcon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
             Box(Modifier.size(8.dp))
         } else if (iconRes != null) {
-            Icon(painterResource(iconRes), contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+            LivelyIcon(painterResource(iconRes), contentDescription = null, tint = tint, modifier = Modifier.size(20.dp), iconRes = iconRes)
             Box(Modifier.size(8.dp))
         }
         Text(text, style = MaterialTheme.typography.titleMedium, color = tint, maxLines = 1)
@@ -246,10 +246,10 @@ fun SecondaryButton(
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null) {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+            LivelyIcon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
             Box(Modifier.size(8.dp))
         } else if (iconRes != null) {
-            Icon(painterResource(iconRes), contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+            LivelyIcon(painterResource(iconRes), contentDescription = null, tint = tint, modifier = Modifier.size(18.dp), iconRes = iconRes)
             Box(Modifier.size(8.dp))
         }
         Text(text, style = MaterialTheme.typography.titleMedium, color = tint, maxLines = 1)
@@ -291,7 +291,7 @@ fun IconTile(
             painter = painterResource(iconRes),
             contentDescription = null,
             tint = if (filled) Color.White else accent,
-            modifier = Modifier.size(size * 0.5f).lively(motion, seed)
+            modifier = Modifier.size(size * 0.5f).then(if (lively) Modifier.lively(motion, seed) else Modifier)
         )
     }
 }

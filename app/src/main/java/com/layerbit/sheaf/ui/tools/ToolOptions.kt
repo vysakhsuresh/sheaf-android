@@ -1405,7 +1405,7 @@ internal fun Hint(text: String) {
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = androidx.compose.ui.Alignment.Top
     ) {
-        androidx.compose.material3.Icon(
+        com.layerbit.sheaf.ui.components.LivelyIcon(
             imageVector = androidx.compose.material.icons.Icons.Filled.Info,
             contentDescription = null,
             tint = SheafColors.Dim,

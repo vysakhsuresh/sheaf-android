@@ -46,9 +46,14 @@ import kotlin.math.sin
  */
 val LocalLivelyClock = staticCompositionLocalOf<State<Float>?> { null }
 
-/** Twelve seconds per lap; each icon spends the first [BURST] of its own lap moving. */
-private const val LAP_MS = 12_000
-private const val BURST = 0.13f
+/**
+ * Eight seconds per lap. Each icon makes its own movement for the first [BURST] of its lap -
+ * about two and a half seconds - and breathes gently for the rest, [BREATHS] times a lap, so
+ * no icon is ever quite still.
+ */
+private const val LAP_MS = 8_000
+private const val BURST = 0.3f
+private const val BREATHS = 4f
 private const val TAU = (2 * PI).toFloat()
 
 @Composable
@@ -110,12 +115,16 @@ fun motionFor(@DrawableRes icon: Int): Motion = when (icon) {
 /** The same for the Material glyphs on the round buttons; most of them are better still. */
 fun motionFor(icon: ImageVector): Motion = when (icon.name.substringAfterLast('.')) {
     "Settings" -> Motion.SPIN
-    "Star", "Favorite" -> Motion.POP
+    "Star", "Favorite", "Check", "Add", "Warning" -> Motion.POP
     "Search" -> Motion.TILT
     "Info" -> Motion.HOP
     "Share", "Send" -> Motion.NUDGE
     "Lock" -> Motion.SHAKE
     "Email" -> Motion.TILT
+    "KeyboardArrowUp", "KeyboardArrowDown" -> Motion.HOP
+    "MoreVert" -> Motion.PULSE
+    "Close", "Delete" -> Motion.WIGGLE
+    // Everything else - the back arrow among them - breathes between moments.
     else -> Motion.NONE
 }
 
@@ -138,10 +147,20 @@ private fun settle(u: Float, cycles: Float) = sin(u * TAU * cycles) * (1f - u)
  * Moves the glyph. Applied to the icon itself, inside its tile, so the tile stays put and only
  * the drawing comes alive.
  */
-fun Modifier.lively(motion: Motion, seed: Int): Modifier = if (motion == Motion.NONE) this else composed {
+fun Modifier.lively(motion: Motion, seed: Int): Modifier = composed {
     val clock = LocalLivelyClock.current ?: return@composed this
     graphicsLayer {
-        val u = burst(clock.value, seed) ?: return@graphicsLayer
+        val u = if (motion == Motion.NONE) null else burst(clock.value, seed)
+        if (u == null) {
+            // Between movements, a slow breath and a slight bob - a whole number of them per
+            // lap, so the lap wraps without a jump. Small enough never to read as a jitter.
+            val phase = TAU * (clock.value * BREATHS + seed * 0.071f)
+            val breath = sin(phase)
+            scaleX = 1f + 0.06f * breath
+            scaleY = 1f + 0.06f * breath
+            translationY = -size.height * 0.04f * sin(phase + 1.3f)
+            return@graphicsLayer
+        }
         val w = size.width
         when (motion) {
             Motion.SCAN -> scaleX = 1f + 0.04f * bump(u)
@@ -202,5 +221,34 @@ fun Modifier.livelyTile(motion: Motion, seed: Int, accent: Color): Modifier =
             }
         }
     }
+
+/**
+ * The Material icon, alive. Every plain icon in the app goes through these instead of
+ * androidx.compose.material3.Icon, so none is left still; a glyph with a movement of its own
+ * makes it, and every other one breathes.
+ */
+@Composable
+fun LivelyIcon(
+    imageVector: ImageVector,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    tint: Color = androidx.compose.material3.LocalContentColor.current
+) = androidx.compose.material3.Icon(
+    imageVector, contentDescription,
+    modifier.lively(motionFor(imageVector), livelySeed(imageVector.name)), tint
+)
+
+@Composable
+fun LivelyIcon(
+    painter: androidx.compose.ui.graphics.painter.Painter,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    tint: Color = androidx.compose.material3.LocalContentColor.current,
+    /** The drawing's resource id when known, so it makes that tool's own movement. */
+    @DrawableRes iconRes: Int? = null
+) = androidx.compose.material3.Icon(
+    painter, contentDescription,
+    modifier.lively(iconRes?.let(::motionFor) ?: Motion.POP, livelySeed(iconRes ?: contentDescription ?: painter.hashCode())), tint
+)
 
 private fun easeInOut(u: Float): Float { val c = u.coerceIn(0f, 1f); return c * c * (3 - 2 * c) }

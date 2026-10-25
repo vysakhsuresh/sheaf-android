@@ -188,7 +188,7 @@ fun AboutScreen(modifier: Modifier = Modifier) {
                         modifier = Modifier.size(40.dp).background(SheafColors.Band.copy(alpha = 0.2f), RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        androidx.compose.material3.Icon(Icons.Filled.Favorite, contentDescription = null, tint = SheafColors.BandBright, modifier = Modifier.size(20.dp))
+                        com.layerbit.sheaf.ui.components.LivelyIcon(Icons.Filled.Favorite, contentDescription = null, tint = SheafColors.BandBright, modifier = Modifier.size(20.dp))
                     }
                     Column(modifier = Modifier.padding(start = 12.dp)) {
                         Text(stringResource(R.string.app_about_free_title), style = MaterialTheme.typography.titleMedium, color = SheafColors.Text)
