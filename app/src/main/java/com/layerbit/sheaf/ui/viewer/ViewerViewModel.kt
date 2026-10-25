@@ -19,7 +19,11 @@ import com.layerbit.sheaf.pdf.PdfDocument
 import com.layerbit.sheaf.pdf.OutlineEntry
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
+import com.layerbit.sheaf.pdf.PageLink
+import com.layerbit.sheaf.pdf.PageReader
+import com.layerbit.sheaf.pdf.PageWord
 import com.layerbit.sheaf.pdf.SearchHit
+import com.layerbit.sheaf.pdf.inkBounds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -49,7 +53,7 @@ import java.util.concurrent.atomic.AtomicReference
  * needs them to lay out before anything is rendered - which is what lets the scrollbar be
  * honest on a document the reader has only seen the first screen of.
  */
-class ViewerViewModel(app: Application) : AndroidViewModel(app) {
+class ViewerViewModel(app: Application) : AndroidViewModel(app), ViewerControls {
 
     private val sheaf = app as SheafApplication
 
@@ -76,6 +80,18 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
      * nothing to key a reading position or a bookmark against until the user saves it.
      */
     private var sourceKey: String? = null
+
+    /** The same Uri as an object, for the recents row that is written once a document opens. */
+    private var sourceUri: Uri? = null
+
+    /**
+     * The password the document on screen was opened with, or null for one that needed none.
+     *
+     * Held only in memory and only while the document is open; it goes in [closeCurrent].
+     * Every surgeon call the viewer makes - search, read aloud, the outline - passes it on,
+     * since each opens the file afresh and a locked file stays locked to each of them.
+     */
+    private var password: String? = null
 
     /**
      * PdfRenderer permits one open page at a time per document and is not thread-safe, so
@@ -148,6 +164,11 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
         override fun sizeOf(key: PageKey, value: Bitmap): Int = value.byteCount / 1024
     }
 
+    /** Thumbnails, kept apart from [pageCache] so the two never evict each other. */
+    private val thumbnailCache = object : LruCache<PageKey, Bitmap>(THUMBNAIL_CACHE_KB) {
+        override fun sizeOf(key: PageKey, value: Bitmap): Int = value.byteCount / 1024
+    }
+
     fun open(uri: Uri) {
         viewModelScope.launch {
             // Before anything else. The previous document's pages, file descriptor and cached
@@ -158,62 +179,129 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                 val imported = sheaf.documentStore.import(uri)
                 source = imported
                 sourceKey = uri.toString()
+                sourceUri = uri
 
-                val opened = openGuarded(imported.file)
-                // The generation rises before the document is published, not after: in between
-                // the two, a render that began would read the new document under the previous
-                // generation and file its bitmap under a key belonging to a document it did not
-                // come from, where nothing can reach it again.
-                generation += 1
-                document = opened
-
-                val sizes = withContext(Dispatchers.IO) {
-                    // One pass, up front. Each entry is two floats; even a four-thousand-page
-                    // document is measured in kilobytes, and having them all means the list can
-                    // reserve correct space for pages it has not drawn.
-                    renderLock.withLock { List(opened.pageCount) { opened.pageSize(it) } }
+                val opened = try {
+                    openGuarded { sheaf.pdfEngine.open(imported.file) }
+                } catch (locked: PdfException.PasswordRequired) {
+                    // The platform renderer refuses every encrypted file, including the many
+                    // that only carry an owner password - permissions, not a lock - and open
+                    // for anyone. PDFBox opens those with an empty password, so the reader is
+                    // only asked for one when there really is one to ask for.
+                    try {
+                        openGuarded { sheaf.encryptedReader.open(imported.file, "") }.also { password = "" }
+                    } catch (_: PdfException) {
+                        throw locked
+                    }
                 }
-
-                // Where the reader got to last time. Read before the state is published so the
-                // list can be positioned on its first layout rather than scrolling visibly.
-                val resumeAt = if (sheaf.settings.current.resumeReading) {
-                    sheaf.recents.positionFor(uri.toString())
-                        .coerceIn(0, (opened.pageCount - 1).coerceAtLeast(0))
-                } else {
-                    0
-                }
-
-                _state.value = ViewerState.Ready(
-                    generation = generation,
-                    sourceUri = uri.toString(),
-                    displayName = imported.displayName,
-                    pageCount = opened.pageCount,
-                    pageSizes = sizes,
-                    sizeBytes = imported.sizeBytes,
-                    initialPage = resumeAt
-                )
-
-                sheaf.recents.record(uri, imported.displayName, opened.pageCount, imported.sizeBytes)
-                watchBookmarks(uri.toString())
-
-                // The outline is small and quick to read, so it is fetched with the document
-                // rather than when the sheet opens. Doing it later would leave the reader
-                // looking at a spinner in a panel that is usually empty anyway.
-                val outline = withContext(Dispatchers.IO) {
-                    runCatching { sheaf.surgeon.readOutline(PdfInput(imported.file)) }
-                        .getOrDefault(emptyList())
-                }
-                _reading.value = _reading.value.copy(outline = outline)
-                loadComments()
+                publish(opened, imported, uri)
             } catch (_: PdfException.PasswordRequired) {
-                _state.value = ViewerState.NeedsPassword
+                _state.value = ViewerState.NeedsPassword()
             } catch (e: PdfException) {
                 _state.value = ViewerState.Failed(e.message ?: "This document could not be opened.")
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _state.value = ViewerState.Failed(e.message ?: "This document could not be opened.")
             }
         }
     }
+
+    /**
+     * Opens the locked document on screen with [typed], through the PDFBox engine - the one
+     * that can take a password - rather than sending the reader off to Remove a password to
+     * make an unlocked copy first. The password lives in memory for as long as the document
+     * is open, so search, read aloud and the rest can use it too, and is never written down.
+     */
+    override fun unlock(typed: String) {
+        val file = source ?: return
+        if (_state.value !is ViewerState.NeedsPassword) return
+        viewModelScope.launch {
+            _state.value = ViewerState.NeedsPassword(checking = true)
+            try {
+                val opened = openGuarded { sheaf.encryptedReader.open(file.file, typed) }
+                if (source !== file) {
+                    // Another document was opened while the password was being checked. This
+                    // one is no longer wanted, and nothing else would ever close it.
+                    withContext(NonCancellable + Dispatchers.IO) { runCatching { opened.close() } }
+                    return@launch
+                }
+                password = typed
+                publish(opened, file, sourceUri)
+            } catch (_: PdfException.PasswordRequired) {
+                _state.value = ViewerState.NeedsPassword(wrong = true)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.value = ViewerState.Failed(e.message ?: "This document could not be opened.")
+            }
+        }
+    }
+
+    /**
+     * Makes an opened document the one on screen: measures it, works out where to put the
+     * reader, and starts the small reads that come with it. Shared by a plain open and an
+     * unlock, which differ only in which engine got them here.
+     */
+    private suspend fun publish(opened: PdfDocument, file: SheafFile, uri: Uri?) {
+        // The generation rises before the document is published, not after: in between
+        // the two, a render that began would read the new document under the previous
+        // generation and file its bitmap under a key belonging to a document it did not
+        // come from, where nothing can reach it again.
+        generation += 1
+        document = opened
+
+        val sizes = withContext(Dispatchers.IO) {
+            // One pass, up front. Each entry is two floats; even a four-thousand-page
+            // document is measured in kilobytes, and having them all means the list can
+            // reserve correct space for pages it has not drawn.
+            renderLock.withLock { List(opened.pageCount) { opened.pageSize(it) } }
+        }
+
+        val key = uri?.toString()
+        // Where the reader got to last time, and how they like this one laid out. Read before
+        // the state is published so the pages can be put in place on their first layout
+        // rather than scrolling or rearranging visibly.
+        val resumeAt = if (key != null && sheaf.settings.current.resumeReading) {
+            sheaf.recents.positionFor(key).coerceIn(0, (opened.pageCount - 1).coerceAtLeast(0))
+        } else {
+            0
+        }
+        val mode = if (key != null) {
+            ReadingMode.fromName(runCatching { sheaf.recents.readingModeFor(key) }.getOrNull())
+        } else {
+            ReadingMode.CONTINUOUS
+        }
+        _reading.value = _reading.value.copy(readingMode = mode)
+
+        _state.value = ViewerState.Ready(
+            generation = generation,
+            sourceUri = key.orEmpty(),
+            displayName = file.displayName,
+            pageCount = opened.pageCount,
+            pageSizes = sizes,
+            sizeBytes = file.sizeBytes,
+            initialPage = resumeAt
+        )
+
+        if (uri != null && key != null) {
+            sheaf.recents.record(uri, file.displayName, opened.pageCount, file.sizeBytes)
+            watchBookmarks(key)
+        }
+
+        // The outline is small and quick to read, so it is fetched with the document
+        // rather than when the sheet opens. Doing it later would leave the reader
+        // looking at a spinner in a panel that is usually empty anyway.
+        val forGeneration = generation
+        val outline = withContext(Dispatchers.IO) {
+            runCatching { sheaf.surgeon.readOutline(input(file)) }.getOrDefault(emptyList())
+        }
+        if (generation == forGeneration) _reading.value = _reading.value.copy(outline = outline)
+        loadComments()
+    }
+
+    /** The open document as the surgeon wants it: the file, and the password if it took one. */
+    private fun input(file: SheafFile): PdfInput = PdfInput(file.file, password)
 
     /**
      * Opens a document, closing it again if this coroutine is cancelled while the open is in
@@ -228,11 +316,11 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
      * on [renderLock], and the only thing that cancels an open is the viewer going away, by
      * which point that scope may already be shutting down.
      */
-    private suspend fun openGuarded(file: File): PdfDocument {
+    private suspend fun openGuarded(opener: () -> PdfDocument): PdfDocument {
         val handle = AtomicReference<PdfDocument?>(null)
         try {
             return withContext(Dispatchers.IO) {
-                sheaf.pdfEngine.open(file).also { handle.set(it) }
+                opener().also { handle.set(it) }
             }
         } catch (cancelled: CancellationException) {
             handle.getAndSet(null)?.let { orphan ->
@@ -250,32 +338,127 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
      * Returns null rather than throwing if the page cannot be drawn: one unreadable page in an
      * otherwise fine document should leave a gap the user can scroll past, not empty the screen.
      */
-    suspend fun page(index: Int, widthPx: Int): Bitmap? {
+    suspend fun page(index: Int, widthPx: Int): Bitmap? = renderCached(pageCache, index, widthPx)
+
+    /**
+     * A small render of a page for the thumbnail sheet and the rail beside the pages on a
+     * wide screen.
+     *
+     * The same path the Organise grid uses - the engine's own renderPage at a small width -
+     * but with its own little cache, so scrolling the thumbnails never evicts the full-size
+     * pages the reader is actually looking at, and so a hundred thumbnails cost what a few
+     * pages do rather than what a hundred pages would.
+     */
+    override suspend fun thumbnail(index: Int): Bitmap? = renderCached(thumbnailCache, index, THUMBNAIL_WIDTH_PX)
+
+    private suspend fun renderCached(cache: LruCache<PageKey, Bitmap>, index: Int, widthPx: Int): Bitmap? {
         val doc = document ?: return null
         // Taken before the render starts, and carried in the key: by the time the bitmap
         // exists this may no longer be the document on screen, and the answer to a question
         // about one document must never be filed as the answer for another.
         val gen = generation
         val key = PageKey(gen, index, widthPx)
-        pageCache.get(key)?.let { return it }
+        cache.get(key)?.let { return it }
 
         return try {
             withContext(Dispatchers.IO) {
                 renderLock.withLock {
                     // Re-checked inside the lock: several composables can ask for the same page
                     // as it scrolls into view, and without this they each render it.
-                    val cached = pageCache.get(key)
+                    val cached = cache.get(key)
                     when {
                         cached != null -> cached
                         // The document went while this waited for the lock. Rendering from it
                         // would throw at best, and nothing will ask for this page again.
                         gen != generation || document !== doc -> null
-                        else -> doc.renderPage(index, widthPx).also { pageCache.put(key, it) }
+                        else -> doc.renderPage(index, widthPx).also { cache.put(key, it) }
                     }
                 }
             }
         } catch (_: PdfException) {
             null
+        }
+    }
+
+    // ---- words, links and margins, a page at a time ----
+
+    /**
+     * The PDFBox handle behind [wordsOn] and [linksOn], tagged with the generation it was
+     * opened for. Only touched under [readerLock], which a close takes too, so a reader can
+     * never be closed while a page is being read from it or opened for a document that has
+     * already gone.
+     */
+    private var pageReader: Pair<Int, PageReader>? = null
+
+    /** A generation the reader would not open for, so a broken file is not retried per page. */
+    private var readerFailedFor = -1
+
+    private val readerLock = Mutex()
+
+    private val wordCache = LruCache<PageKey, List<PageWord>>(WORD_CACHE_PAGES)
+    private val linkCache = LruCache<PageKey, List<PageLink>>(LINK_CACHE_PAGES)
+
+    /**
+     * Where the ink is on each page, read off its thumbnail. A boxed value because "no crop"
+     * is an answer worth remembering too - a blank page should not be measured twice.
+     */
+    private val cropCache = LruCache<PageKey, CropAnswer>(CROP_CACHE_PAGES)
+
+    private class CropAnswer(val area: PageArea?)
+
+    override suspend fun wordsOn(pageIndex: Int): List<PageWord> {
+        val key = PageKey(generation, pageIndex, 0)
+        wordCache.get(key)?.let { return it }
+        return withReader { it.words(pageIndex) }?.also { if (key.generation == generation) wordCache.put(key, it) }.orEmpty()
+    }
+
+    override suspend fun linksOn(pageIndex: Int): List<PageLink> {
+        val key = PageKey(generation, pageIndex, 0)
+        linkCache.get(key)?.let { return it }
+        return withReader { it.links(pageIndex) }?.also { if (key.generation == generation) linkCache.put(key, it) }.orEmpty()
+    }
+
+    override suspend fun marginCropFor(pageIndex: Int): PageArea? {
+        val key = PageKey(generation, pageIndex, 0)
+        cropCache.get(key)?.let { return it.area }
+        // The thumbnail is plenty to find the margins on - a few hundred pixels across is a
+        // two-millimetre error at worst, which the white kept round the ink absorbs - and it
+        // is usually already in the cache, so measuring costs a pass over 60,000 pixels.
+        val small = thumbnail(pageIndex) ?: return null
+        val area = withContext(Dispatchers.Default) { marginCrop(runCatching { inkBounds(small) }.getOrNull()) }
+        if (key.generation == generation) cropCache.put(key, CropAnswer(area))
+        return area
+    }
+
+    /**
+     * Runs [block] against this document's page reader, opening it the first time anything
+     * asks. Null when there is no document, it changed while this waited, or PDFBox cannot
+     * read the file - in which case there are simply no words or links to offer.
+     */
+    private suspend fun <T> withReader(block: (PageReader) -> T): T? {
+        val file = source ?: return null
+        val gen = generation
+        val pw = password
+        return withContext(Dispatchers.IO) {
+            readerLock.withLock {
+                if (gen != generation || document == null || readerFailedFor == gen) return@withLock null
+                val current = pageReader
+                val reader = if (current != null && current.first == gen) {
+                    current.second
+                } else {
+                    current?.second?.let { stale -> runCatching { stale.close() } }
+                    pageReader = null
+                    val opened = try {
+                        PageReader.open(PdfInput(file.file, pw))
+                    } catch (_: PdfException) {
+                        readerFailedFor = gen
+                        return@withLock null
+                    }
+                    pageReader = gen to opened
+                    opened
+                }
+                runCatching { block(reader) }.getOrNull()
+            }
         }
     }
 
@@ -293,31 +476,15 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 source = file
                 sourceKey = null
-                val opened = openGuarded(file.file)
-                // Raised before the document is published, for the reason given in [open].
-                generation += 1
-                document = opened
-
-                val sizes = withContext(Dispatchers.IO) {
-                    renderLock.withLock { List(opened.pageCount) { opened.pageSize(it) } }
-                }
-
-                _state.value = ViewerState.Ready(
-                    generation = generation,
-                    sourceUri = "",
-                    displayName = file.displayName,
-                    pageCount = opened.pageCount,
-                    pageSizes = sizes,
-                    sizeBytes = file.sizeBytes,
-                    initialPage = 0
-                )
-
-                val outline = withContext(Dispatchers.IO) {
-                    runCatching { sheaf.surgeon.readOutline(PdfInput(file.file)) }
-                        .getOrDefault(emptyList())
-                }
-                _reading.value = _reading.value.copy(outline = outline)
-                loadComments()
+                sourceUri = null
+                val opened = openGuarded { sheaf.pdfEngine.open(file.file) }
+                publish(opened, file, null)
+            } catch (_: PdfException.PasswordRequired) {
+                // A tool's result that came out locked - Add a password, say - is opened with
+                // its password like any other locked document.
+                _state.value = ViewerState.NeedsPassword()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _state.value = ViewerState.Failed(e.message ?: "This document could not be opened.")
             }
@@ -336,7 +503,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
         val forGeneration = generation
         viewModelScope.launch {
             val comments = withContext(Dispatchers.IO) {
-                runCatching { sheaf.surgeon.readComments(PdfInput(file.file)) }.getOrDefault(emptyList())
+                runCatching { sheaf.surgeon.readComments(input(file)) }.getOrDefault(emptyList())
             }
             if (generation == forGeneration) _reading.value = _reading.value.copy(comments = comments)
         }
@@ -359,7 +526,16 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
      * covers what is read out as much as what is written. A scanned page has no text to read;
      * Make searchable gives it some.
      */
-    fun readAloud(fromPage: Int) {
+    fun readAloud(fromPage: Int) = readAloud(fromPage, 0)
+
+    /**
+     * Reads aloud from a selected word rather than from the top of its page - the reader has
+     * found their place and does not want to hear the page header first.
+     */
+    override fun readAloudFrom(pageIndex: Int, wordIndex: Int) = readAloud(pageIndex, wordIndex)
+
+    private fun readAloud(fromPage: Int, fromWord: Int) {
+        pendingReadWord = fromWord
         val engine = tts
         if (engine == null) {
             pendingReadPage = fromPage
@@ -371,7 +547,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                     tts?.setOnUtteranceProgressListener(progress)
                     val page = pendingReadPage
                     pendingReadPage = -1
-                    if (page >= 0) speakPage(page)
+                    if (page >= 0) speakPage(page, takePendingWord())
                 } else {
                     _reading.value = _reading.value.copy(
                         readAloud = ReadAloud(available = false, note = "This phone has no text-to-speech engine.")
@@ -384,8 +560,13 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
             pendingReadPage = fromPage
             return
         }
-        speakPage(fromPage)
+        speakPage(fromPage, takePendingWord())
     }
+
+    /** The word to start the next page from, which applies to that one page only. */
+    private var pendingReadWord = 0
+
+    private fun takePendingWord(): Int = pendingReadWord.also { pendingReadWord = 0 }
 
     fun stopReading() {
         readJob?.cancel()
@@ -431,7 +612,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun speakPage(page: Int) {
+    private fun speakPage(page: Int, fromWord: Int = 0) {
         val file = source ?: return
         val engine = tts ?: return
         val total = (_state.value as? ViewerState.Ready)?.pageCount ?: return
@@ -439,9 +620,19 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
         readJob?.cancel()
         readJob = viewModelScope.launch {
             _reading.value = _reading.value.copy(readAloud = ReadAloud(speaking = true, page = page))
-            val text = withContext(Dispatchers.IO) {
-                runCatching { sheaf.surgeon.extractText(PdfInput(file.file), listOf(page))[page] }.getOrNull()
-            }.orEmpty().replace(Regex("\\s+"), " ").trim()
+            // From a chosen word, the page's own words from there on; they are the same words
+            // the selection was made from, so "from here" starts exactly where the reader
+            // pointed. Otherwise the page's text as the stripper lays it out.
+            val fromHere = if (fromWord > 0) {
+                wordsOn(page).drop(fromWord).joinToString(" ") { it.text }
+            } else {
+                ""
+            }
+            val text = fromHere.ifEmpty {
+                withContext(Dispatchers.IO) {
+                    runCatching { sheaf.surgeon.extractText(input(file), listOf(page))[page] }.getOrNull()
+                }.orEmpty()
+            }.replace(Regex("\\s+"), " ").trim()
             if (text.isEmpty()) {
                 // Nothing to say on this page: go on to the next, up to the end.
                 if (page + 1 < total) {
@@ -454,7 +645,9 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 return@launch
             }
-            jumpTo(page)
+            // Reading from a selection, the reader is already looking at the place; moving the
+            // page to its top would scroll the very words being read off the screen.
+            if (fromWord <= 0) jumpTo(page)
             val limit = runCatching { TextToSpeech.getMaxSpeechInputLength() }.getOrDefault(3900).coerceAtMost(3900)
             val pieces = splitForSpeech(text, limit)
             pieces.forEachIndexed { index, piece ->
@@ -488,7 +681,50 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Inverts the page rendering, for reading in the dark without a white rectangle. */
     fun toggleNightMode() {
-        _reading.value = _reading.value.copy(nightMode = !_reading.value.nightMode)
+        setTint(if (_reading.value.tint == PaperTint.NIGHT) PaperTint.DAY else PaperTint.NIGHT)
+    }
+
+    // ---- reading comfort and layout ----
+
+    /**
+     * The tint, the dimming and the margin crop are the reader's, not the document's: someone
+     * who reads in sepia at night wants the next document in sepia too. They are kept in the
+     * viewer's own small preferences file rather than the app settings, because they change
+     * with a slider and a tap mid-read and are nothing anyone would look for in Settings.
+     */
+    private val comfortPrefs = app.getSharedPreferences(COMFORT_PREFS, android.content.Context.MODE_PRIVATE)
+
+    init {
+        _reading.value = _reading.value.withComfort(
+            Comfort(
+                tint = PaperTint.fromName(comfortPrefs.getString(KEY_TINT, null)),
+                brightness = comfortPrefs.getFloat(KEY_BRIGHTNESS, 1f).coerceIn(MIN_BRIGHTNESS, 1f),
+                cropMargins = comfortPrefs.getBoolean(KEY_CROP, false)
+            )
+        )
+    }
+
+    override fun setTint(tint: PaperTint) {
+        _reading.value = _reading.value.copy(tint = tint)
+        comfortPrefs.edit().putString(KEY_TINT, tint.name).apply()
+    }
+
+    override fun setBrightness(level: Float) {
+        val value = level.coerceIn(MIN_BRIGHTNESS, 1f)
+        _reading.value = _reading.value.copy(brightness = value)
+        comfortPrefs.edit().putFloat(KEY_BRIGHTNESS, value).apply()
+    }
+
+    override fun setCropMargins(on: Boolean) {
+        _reading.value = _reading.value.copy(cropMargins = on)
+        comfortPrefs.edit().putBoolean(KEY_CROP, on).apply()
+    }
+
+    /** Lays the pages out another way, and remembers that this document is read like this. */
+    override fun setReadingMode(mode: ReadingMode) {
+        _reading.value = _reading.value.copy(readingMode = mode)
+        val key = sourceKey ?: return
+        viewModelScope.launch { runCatching { sheaf.recents.rememberReadingMode(key, mode.name) } }
     }
 
     /**
@@ -521,7 +757,7 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
             delay(SEARCH_DEBOUNCE_MS)
             _reading.value = _reading.value.copy(searching = true)
             val hits = withContext(Dispatchers.IO) {
-                runCatching { sheaf.surgeon.search(PdfInput(source.file), query) }
+                runCatching { sheaf.surgeon.search(input(source), query) }
                     .getOrDefault(emptyList())
             }
             _reading.value = _reading.value.copy(
@@ -650,14 +886,20 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
         searchJob?.cancel()
         bookmarkJob?.cancel()
         positionJob?.cancel()
-        _reading.value = ReadingState()
+        // Everything about the document goes; the reader's own comfort settings stay.
+        _reading.value = ReadingState().withComfort(_reading.value.comfort)
         pageCache.evictAll()
+        thumbnailCache.evictAll()
+        wordCache.evictAll()
+        linkCache.evictAll()
+        cropCache.evictAll()
 
         // The field is cleared first so no new render can reach this document, and the handle
         // travels to the closer rather than being dropped: clearing it alone left the last
         // reference to an open renderer with the garbage collector.
         val closing = document
         document = null
+        val closingGeneration = generation
         if (closing != null) {
             // Counted before the launch, so the completion handler can never run against a
             // count that does not include this close yet.
@@ -666,8 +908,22 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
                 // The engine reports a close it could not complete; this only keeps a teardown
                 // that runs after the viewer is gone from taking the process with it.
                 runCatching { renderLock.withLock { closing.close() } }
+                // The page reader goes with it, under its own lock. Only one opened for this
+                // document or an earlier one: by the time this runs the next document may
+                // already have opened a reader of its own, and that one is not ours to close.
+                runCatching {
+                    readerLock.withLock {
+                        val reader = pageReader
+                        if (reader != null && reader.first <= closingGeneration) {
+                            pageReader = null
+                            reader.second.close()
+                        }
+                    }
+                }
             }.invokeOnCompletion { closeFinished() }
         }
+        password = null
+        sourceUri = null
 
         // Only a copy the viewer made itself. A result handed over by a tool is still in that
         // tool's list and deleting it here would take it out from under the reader. The closer
@@ -715,8 +971,48 @@ class ViewerViewModel(app: Application) : AndroidViewModel(app) {
 
         /** Long enough that scrolling through a book is one write, not four hundred. */
         private const val POSITION_SAVE_DELAY_MS = 600L
+
+        /**
+         * Wide enough to tell a page of text from a page of figures and to find its margins,
+         * small enough that a thumbnail is about a hundred and fifty kilobytes.
+         */
+        private const val THUMBNAIL_WIDTH_PX = 200
+
+        /** About sixty thumbnails: a screenful of the grid and the rail, with some to spare. */
+        private const val THUMBNAIL_CACHE_KB = 10 * 1024
+
+        /** Words are text and boxes, a few kilobytes a page; links fewer still. */
+        private const val WORD_CACHE_PAGES = 12
+        private const val LINK_CACHE_PAGES = 64
+        private const val CROP_CACHE_PAGES = 256
+
+        private const val COMFORT_PREFS = "viewer_comfort"
+        private const val KEY_TINT = "tint"
+        private const val KEY_BRIGHTNESS = "brightness"
+        private const val KEY_CROP = "crop_margins"
     }
 }
+
+/**
+ * What the viewer screen can ask of the document beyond its rendered pages - words, links,
+ * thumbnails, the reading settings - gathered into one interface so the screen takes one
+ * parameter for all of it rather than a dozen lambdas, and so it can be faked in a preview.
+ */
+interface ViewerControls {
+    suspend fun wordsOn(pageIndex: Int): List<PageWord>
+    suspend fun linksOn(pageIndex: Int): List<PageLink>
+    suspend fun thumbnail(index: Int): Bitmap?
+    suspend fun marginCropFor(pageIndex: Int): PageArea?
+    fun unlock(typed: String)
+    fun readAloudFrom(pageIndex: Int, wordIndex: Int)
+    fun setReadingMode(mode: ReadingMode)
+    fun setTint(tint: PaperTint)
+    fun setBrightness(level: Float)
+    fun setCropMargins(on: Boolean)
+}
+
+/** The reader's comfort settings, which outlive any one document. */
+data class Comfort(val tint: PaperTint, val brightness: Float, val cropMargins: Boolean)
 
 /**
  * A rendered page is identified by the document it was drawn from, which page it is and how
@@ -730,7 +1026,14 @@ data class Jump(val pageIndex: Int, val token: Int)
 
 /** Everything about how the document is being read, as opposed to what it contains. */
 data class ReadingState(
-    val nightMode: Boolean = false,
+    /** The colour the pages are drawn in. Night is the old night mode. */
+    val tint: PaperTint = PaperTint.DAY,
+    /** How bright the pages are drawn, from [MIN_BRIGHTNESS] to 1. Only the pages. */
+    val brightness: Float = 1f,
+    /** Whether the white margins round each page are cropped away while reading. */
+    val cropMargins: Boolean = false,
+    /** How the pages are laid out: chosen per document, defaulting to one long scroll. */
+    val readingMode: ReadingMode = ReadingMode.CONTINUOUS,
     val outline: List<OutlineEntry> = emptyList(),
     val bookmarks: List<BookmarkEntity> = emptyList(),
     val query: String = "",
@@ -744,7 +1047,14 @@ data class ReadingState(
     /** The comments on the pages, for the list in the menu. */
     val comments: List<Comment> = emptyList(),
     val readAloud: ReadAloud = ReadAloud()
-)
+) {
+    val nightMode: Boolean get() = tint == PaperTint.NIGHT
+
+    val comfort: Comfort get() = Comfort(tint, brightness, cropMargins)
+
+    fun withComfort(comfort: Comfort): ReadingState =
+        copy(tint = comfort.tint, brightness = comfort.brightness, cropMargins = comfort.cropMargins)
+}
 
 /** Whether the document is being read out, and from where. */
 data class ReadAloud(
@@ -759,7 +1069,11 @@ data class ReadAloud(
 
 sealed interface ViewerState {
     data object Loading : ViewerState
-    data object NeedsPassword : ViewerState
+    /**
+     * The document is locked. [wrong] after a password that did not open it; [checking] while
+     * one is being tried, which on a large file is long enough to want a spinner.
+     */
+    data class NeedsPassword(val wrong: Boolean = false, val checking: Boolean = false) : ViewerState
     data class Failed(val reason: String) : ViewerState
     data class Ready(
         /**
