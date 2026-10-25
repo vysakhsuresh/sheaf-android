@@ -161,4 +161,7 @@
     <string name="app_job_stopped_unexpectedly">કામ અણધારી રીતે અટકી ગયું.</string>
     <string name="app_job_too_long">Android છ કલાક પછી બૅકગ્રાઉન્ડનું કામ બંધ કરી દે છે, અને માત્ર આ ફાઇલને જ તેનાથી વધુ સમય જોઈતો હતો. તેને નાના ભાગોમાં, અથવા એકસાથે ઓછાં પેજ સાથે અજમાવો.</string>
     <string name="app_job_stopped_by_system">Android એ આ કામ પૂરું થાય તે પહેલાં બંધ કરી દીધું, જેનો સામાન્ય રીતે અર્થ એ છે કે સ્ટોરેજ ઓછું થઈ ગયું હતું અથવા તે બહુ લાંબો સમય ચાલ્યું. ફરી શરૂ કરો.</string>
+    <string name="app_settings_language">ભાષા</string>
+    <string name="app_settings_language_detail">Sheaf તમારા ફોનની ભાષા અનુસરે છે. ફક્ત Sheaf માટે અલગ ભાષા પસંદ કરી શકો છો.</string>
+    <string name="app_settings_language_choose">પસંદ કરો</string>
 </resources>

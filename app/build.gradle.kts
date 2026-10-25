@@ -80,7 +80,11 @@ android {
     bundle {
         abi { enableSplit = true }
         density { enableSplit = true }
-        language { enableSplit = true }
+        // Off, unlike the other two. Sheaf speaks nine languages and can be switched to any
+        // of them from Android's per-app language setting; with language splits, Play only
+        // installs the phone's own languages, and picking Malayalam on an English phone would
+        // show English. Every language's strings together are a few hundred kilobytes.
+        language { enableSplit = false }
     }
 
     compileOptions {
@@ -96,6 +100,12 @@ android {
         compose = true
         // The About screen shows the version it is actually running.
         buildConfig = true
+    }
+
+    // Writes the locale list Android 13+ shows under Settings > Apps > Sheaf > Language, from
+    // the values-xx folders that exist. English is the unqualified default (res/resources.properties).
+    androidResources {
+        generateLocaleConfig = true
     }
 
     // Warnings that exist today are recorded in lint-baseline.xml, so lint reports only what is

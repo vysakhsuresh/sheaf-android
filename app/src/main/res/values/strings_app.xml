@@ -161,4 +161,7 @@
     <string name="app_job_stopped_unexpectedly">The operation stopped unexpectedly.</string>
     <string name="app_job_too_long">Android stops a background job after six hours, and this file alone needed longer. Try it in smaller parts, or with fewer pages at once.</string>
     <string name="app_job_stopped_by_system">Android stopped this operation before it finished, which usually means storage ran low or it ran for too long. Start it again.</string>
+    <string name="app_settings_language">Language</string>
+    <string name="app_settings_language_detail">Sheaf follows your phone\'s language. You can pick a different one just for Sheaf.</string>
+    <string name="app_settings_language_choose">Choose</string>
 </resources>

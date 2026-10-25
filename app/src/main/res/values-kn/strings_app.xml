@@ -161,4 +161,7 @@
     <string name="app_job_stopped_unexpectedly">ಕಾರ್ಯಾಚರಣೆ ಅನಿರೀಕ್ಷಿತವಾಗಿ ನಿಂತುಹೋಯಿತು.</string>
     <string name="app_job_too_long">Android ಆರು ಗಂಟೆಗಳ ನಂತರ ಹಿನ್ನೆಲೆ ಕೆಲಸವನ್ನು ನಿಲ್ಲಿಸುತ್ತದೆ, ಮತ್ತು ಈ ಒಂದು ಫೈಲ್‌ಗೇ ಅದಕ್ಕಿಂತ ಹೆಚ್ಚು ಸಮಯ ಬೇಕಾಯಿತು. ಇದನ್ನು ಸಣ್ಣ ಭಾಗಗಳಲ್ಲಿ, ಅಥವಾ ಒಮ್ಮೆಗೆ ಕಡಿಮೆ ಪುಟಗಳೊಂದಿಗೆ ಪ್ರಯತ್ನಿಸಿ.</string>
     <string name="app_job_stopped_by_system">ಈ ಕಾರ್ಯಾಚರಣೆ ಮುಗಿಯುವ ಮೊದಲೇ Android ಅದನ್ನು ನಿಲ್ಲಿಸಿತು. ಸಾಮಾನ್ಯವಾಗಿ ಸಂಗ್ರಹಣೆ ಕಡಿಮೆಯಾದಾಗ ಅಥವಾ ತುಂಬಾ ಹೊತ್ತು ರನ್ ಆದಾಗ ಹೀಗಾಗುತ್ತದೆ. ಮತ್ತೆ ಪ್ರಾರಂಭಿಸಿ.</string>
+    <string name="app_settings_language">ಭಾಷೆ</string>
+    <string name="app_settings_language_detail">Sheaf ನಿಮ್ಮ ಫೋನ್‌ನ ಭಾಷೆಯನ್ನು ಅನುಸರಿಸುತ್ತದೆ. Sheaf ಗೆ ಮಾತ್ರ ಬೇರೆ ಭಾಷೆಯನ್ನು ಆಯ್ಕೆ ಮಾಡಬಹುದು.</string>
+    <string name="app_settings_language_choose">ಆಯ್ಕೆಮಾಡಿ</string>
 </resources>

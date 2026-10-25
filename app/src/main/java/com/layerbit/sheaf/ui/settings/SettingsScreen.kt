@@ -80,6 +80,31 @@ fun SettingsScreen(
                     color = SheafColors.Dim,
                     modifier = Modifier.padding(top = 10.dp)
                 )
+                // Android 13+ keeps a language per app in its own settings page, and that page
+                // is the right place to pick one: it is what the launcher, notifications and
+                // the share sheet all read too. Older Android follows the phone's language.
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    val context = LocalContext.current
+                    Box(Modifier.fillMaxWidth().padding(vertical = 10.dp).height(1.dp).background(SheafColors.Border))
+                    RowBetween {
+                        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                            Text(stringResource(R.string.app_settings_language), style = MaterialTheme.typography.bodyLarge, color = SheafColors.Text)
+                            Text(stringResource(R.string.app_settings_language_detail), style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)
+                        }
+                        SecondaryButton(
+                            text = stringResource(R.string.app_settings_language_choose),
+                            onClick = {
+                                runCatching {
+                                    context.startActivity(
+                                        Intent(android.provider.Settings.ACTION_APP_LOCALE_SETTINGS)
+                                            .setData(android.net.Uri.fromParts("package", context.packageName, null))
+                                    )
+                                }
+                            },
+                            tall = false
+                        )
+                    }
+                }
             }
         }
 

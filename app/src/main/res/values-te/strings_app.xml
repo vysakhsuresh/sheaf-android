@@ -161,4 +161,7 @@
     <string name="app_job_stopped_unexpectedly">ఆపరేషన్ అనుకోకుండా ఆగిపోయింది.</string>
     <string name="app_job_too_long">Android బ్యాక్‌గ్రౌండ్ పనిని ఆరు గంటల తర్వాత ఆపేస్తుంది, ఈ ఒక్క ఫైల్‌కే అంతకంటే ఎక్కువ సమయం పట్టింది. చిన్న భాగాలుగా, లేదా ఒకేసారి తక్కువ పేజీలతో ప్రయత్నించండి.</string>
     <string name="app_job_stopped_by_system">ఈ ఆపరేషన్ పూర్తి కాకముందే Android దాన్ని ఆపేసింది, సాధారణంగా స్టోరేజ్ తక్కువగా ఉండటం లేదా ఎక్కువసేపు రన్ కావడం దీనికి కారణం. మళ్లీ ప్రారంభించండి.</string>
+    <string name="app_settings_language">భాష</string>
+    <string name="app_settings_language_detail">Sheaf మీ ఫోన్ భాషను అనుసరిస్తుంది. Sheaf కోసం మాత్రమే వేరే భాషను ఎంచుకోవచ్చు.</string>
+    <string name="app_settings_language_choose">ఎంచుకోండి</string>
 </resources>
