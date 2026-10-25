@@ -1,6 +1,8 @@
 package com.layerbit.sheaf.ui.open
 
 import android.app.Application
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
@@ -18,8 +20,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** One opened file and what was found out about it. */
-data class OpenedFile(val file: SheafFile, val facts: Suggest.Facts)
+/**
+ * One opened file and what was found out about it.
+ *
+ * [thumbnail] is page one of a PDF, or the picture itself, at a few dozen pixels: small enough
+ * that a folder of a hundred files costs a couple of megabytes, not a crash.
+ */
+data class OpenedFile(val file: SheafFile, val facts: Suggest.Facts, val thumbnail: Bitmap? = null)
 
 data class OpenUiState(
     val files: List<OpenedFile> = emptyList(),
@@ -52,8 +59,9 @@ class OpenViewModel(app: Application) : AndroidViewModel(app) {
                 imported.exceptionOrNull()?.let { problems += it.message ?: "One file could not be read." }
                 val file = imported.getOrNull() ?: continue
                 val facts = withContext(Dispatchers.IO) { factsOf(file) }
+                val thumbnail = withContext(Dispatchers.IO) { thumbnailOf(file, facts) }
                 _state.update { current ->
-                    val files = current.files + OpenedFile(file, facts)
+                    val files = current.files + OpenedFile(file, facts, thumbnail)
                     current.copy(
                         files = files,
                         status = if (i + 1 < total) "Looked at ${i + 1} of $total…" else current.status,
@@ -129,5 +137,32 @@ class OpenViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Files shared in from another app, waiting for this screen. Empty when opened from Home. */
+    fun takeShared(): List<Uri> = sheaf.handoff.takeToOpen()
+
+    /**
+     * Page one, or the picture, at thumbnail width. Null for anything that cannot be drawn -
+     * a locked or broken PDF, a Word file - which then keeps its plain icon.
+     */
+    private fun thumbnailOf(file: SheafFile, facts: Suggest.Facts): Bitmap? = runCatching {
+        when {
+            file.isPdf && !facts.locked && !facts.unreadable ->
+                sheaf.pdfEngine.open(file.file).use { it.renderPage(0, THUMB_WIDTH_PX) }
+            file.isImage -> {
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeFile(file.file.path, bounds)
+                var sample = 1
+                while (bounds.outWidth / (sample * 2) >= THUMB_WIDTH_PX) sample *= 2
+                BitmapFactory.decodeFile(file.file.path, BitmapFactory.Options().apply { inSampleSize = sample })
+            }
+            else -> null
+        }
+    }.getOrNull()
+
     private fun plural(n: Int, one: String) = if (n == 1) "1 $one" else "$n ${one}s"
+
+    private companion object {
+        /** Twice the 44 dp the row draws it at on a typical phone, so it stays sharp. */
+        const val THUMB_WIDTH_PX = 120
+    }
 }

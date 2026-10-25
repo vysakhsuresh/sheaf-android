@@ -1,6 +1,15 @@
 package com.layerbit.sheaf.ui.settings
 
+import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
+import com.layerbit.sheaf.brand.BrandLinks
+import com.layerbit.sheaf.files.CrashLog
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -169,6 +178,10 @@ fun SettingsScreen(
         }
 
         item {
+            CrashLogSection()
+        }
+
+        item {
             Panel(modifier = Modifier.fillMaxWidth(), tint = SheafColors.Done) {
                 Row(verticalAlignment = Alignment.Top) {
                     IconTile(iconRes = R.drawable.ic_tool_lock, accent = SheafColors.Done, size = 40.dp)
@@ -191,6 +204,61 @@ fun SettingsScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * The crash log, offered rather than sent. Sharing goes through the share sheet, so the user
+ * picks the app and the person; the log never leaves on its own.
+ */
+@Composable
+private fun CrashLogSection() {
+    val context = LocalContext.current
+    var count by remember { mutableIntStateOf(CrashLog.count(context)) }
+    Section(title = "Crash log", iconRes = R.drawable.ic_tool_attachments, accent = SheafColors.Failed) {
+        RowBetween {
+            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                Text(
+                    if (count == 0) "No crashes recorded" else "${if (count == 1) "1 crash" else "$count crashes"} recorded",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = SheafColors.Text
+                )
+                Text(
+                    "If Sheaf ever closes unexpectedly, a short technical log is kept here. " +
+                        "Nothing from your documents is in it, and it is only sent if you send it.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SheafColors.Dim
+                )
+            }
+        }
+        if (count > 0) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 10.dp)) {
+                SecondaryButton(
+                    text = "Send the log",
+                    onClick = {
+                        val log = CrashLog.latest(context) ?: return@SecondaryButton
+                        val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", log)
+                        val send = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            putExtra(Intent.EXTRA_EMAIL, arrayOf(BrandLinks.SUPPORT_EMAIL))
+                            putExtra(Intent.EXTRA_SUBJECT, "Sheaf crash log")
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        runCatching { context.startActivity(Intent.createChooser(send, "Send the crash log")) }
+                    },
+                    tall = false
+                )
+                SecondaryButton(
+                    text = "Delete",
+                    onClick = {
+                        CrashLog.clear(context)
+                        count = 0
+                    },
+                    tall = false
+                )
             }
         }
     }

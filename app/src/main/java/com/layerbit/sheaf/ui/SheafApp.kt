@@ -15,6 +15,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -99,6 +100,8 @@ fun SheafApp(
      * rather than a Uri, so opening the same document twice still navigates.
      */
     openTicket: Int,
+    /** Increments when files that are not a PDF arrive from another app, for Open a file. */
+    openAnyTicket: Int = 0,
     /**
      * A tool to go straight to - from a launcher shortcut, or from a share of several files
      * that only a tool can take. Consumed once and then forgotten.
@@ -131,6 +134,17 @@ fun SheafApp(
     LaunchedEffect(openTicket) {
         if (openTicket > 0) {
             navController.navigate(Routes.VIEWER) { launchSingleTop = true }
+        }
+    }
+
+    // Photos, a Word file or a spreadsheet shared in: Open a file looks at them and suggests
+    // the tool. Not single-top: a second share while the screen is up should start it afresh
+    // with what was just shared, and popUpTo keeps those visits from stacking.
+    LaunchedEffect(openAnyTicket) {
+        if (openAnyTicket > 0) {
+            navController.navigate(Routes.OPEN) {
+                popUpTo(Routes.OPEN) { inclusive = true }
+            }
         }
     }
 
@@ -323,6 +337,19 @@ fun SheafApp(
                     AboutScreen()
                 }
             }
+        }
+
+        // The three intro cards, once. Not over a document someone opened from another app on
+        // their very first launch: they came to read that file, not to be told about the app,
+        // and the intro would only stand between them and it. It shows next launch instead.
+        val arrivedWithSomething = openTicket > 0 || openAnyTicket > 0 || jumpToTool != null
+        var showIntro by remember { mutableStateOf(!sheaf.prompts.introSeen) }
+        if (showIntro && !arrivedWithSomething) {
+            androidx.activity.compose.BackHandler { showIntro = false; sheaf.prompts.introSeen = true }
+            com.layerbit.sheaf.ui.intro.IntroScreen(onDone = {
+                sheaf.prompts.introSeen = true
+                showIntro = false
+            })
         }
     }
 }

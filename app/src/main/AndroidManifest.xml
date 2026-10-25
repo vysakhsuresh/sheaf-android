@@ -34,8 +34,10 @@
 
     <!--
       Android 13+ notification permission. Declaring it turns nothing on. It is requested at
-      the moment the first long-running operation starts, because that is when a progress
-      notification becomes useful and the user can see why it is being asked for.
+      runtime, once, right before the first job is submitted (ui/components/NotificationGate),
+      because that is when a progress notification becomes useful and the one-line reason
+      shown first makes sense. A refusal changes nothing about the work: the job still runs as
+      a foreground service and its progress shows in the app.
     -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
@@ -81,6 +83,21 @@
     <queries>
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <!--
+          "Open in another reader": without this, Android 11+ hides every other PDF app from
+          Sheaf and resolveActivity answers that there is none.
+        -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/pdf" />
+        </intent>
+        <!-- Define and Translate on a selection in the viewer, handed to whatever app offers them. -->
+        <intent>
+            <action android:name="android.intent.action.DEFINE" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TRANSLATE" />
         </intent>
     </queries>
 
@@ -130,6 +147,26 @@
                 <action android:name="android.intent.action.SEND_MULTIPLE" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/pdf" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+
+            <!--
+              Everything Sheaf can turn into a PDF, from the share sheet and "open with": a
+              photo, a Word file, a spreadsheet, plain text. These land on Open a file rather
+              than the viewer, which looks at what arrived and offers the tool that fits it -
+              Images to PDF for photos, Office to PDF for the rest. Not BROWSABLE: a web page
+              linking a .docx should open in the browser's own download, not jump here.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+                <data android:mimeType="text/plain" />
+                <data android:mimeType="text/csv" />
+                <data android:mimeType="text/markdown" />
             </intent-filter>
 
             <!--
@@ -147,6 +184,31 @@
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
         </activity>
+
+        <!-- Home-screen widgets. Both only start MainActivity with intents it already handles. -->
+        <receiver
+            android:name=".widgets.QuickActionsWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_quick_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_quick_actions" />
+        </receiver>
+
+        <receiver
+            android:name=".widgets.RecentsWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_recents_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_recents" />
+        </receiver>
 
         <!-- Adds the type to the service WorkManager's own manifest contributes. -->
         <service

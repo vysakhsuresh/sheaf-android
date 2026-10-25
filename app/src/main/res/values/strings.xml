@@ -14,4 +14,9 @@
     <string name="shortcut_merge_long">Merge PDFs</string>
     <string name="shortcut_compress_short">Compress</string>
     <string name="shortcut_compress_long">Compress a PDF</string>
+
+    <string name="widget_quick_label">Scan and open</string>
+    <string name="widget_quick_description">Scan a document or open a PDF in one tap.</string>
+    <string name="widget_recents_label">Recent documents</string>
+    <string name="widget_recents_description">The documents you were reading, each one tap from where you left off.</string>
 </resources>

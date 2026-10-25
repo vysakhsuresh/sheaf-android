@@ -21,6 +21,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -59,7 +65,14 @@ fun OpenRoute(
     val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree -> if (tree != null) viewModel.addFolder(tree) }
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
-        if (pickOnStart && state.files.isEmpty() && !state.busy) pick.launch(arrayOf("*/*"))
+        // Files shared in from another app arrive already chosen, so the picker would only be
+        // in the way of them.
+        val shared = viewModel.takeShared()
+        if (shared.isNotEmpty()) {
+            viewModel.add(shared)
+        } else if (pickOnStart && state.files.isEmpty() && !state.busy) {
+            pick.launch(arrayOf("*/*"))
+        }
     }
 
     LazyColumn(
@@ -168,16 +181,32 @@ private fun FileRow(opened: OpenedFile) {
     }.joinToString(" · ")
     Panel(modifier = Modifier.fillMaxWidth(), inset = 12.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconTile(
-                iconRes = when (f.kind) {
-                    Suggest.Kind.PDF -> R.drawable.ic_tool_read
-                    Suggest.Kind.IMAGE -> R.drawable.ic_tool_images_to_pdf
-                    Suggest.Kind.OFFICE -> R.drawable.ic_tool_office_to_pdf
-                    Suggest.Kind.OTHER -> R.drawable.ic_tool_attachments
-                },
-                accent = if (f.unreadable) SheafColors.Failed else SheafColors.Band,
-                size = 36.dp
-            )
+            val thumbnail = opened.thumbnail
+            if (thumbnail != null) {
+                // Page one, small: enough to be sure this is the document meant, which a file
+                // name from a scanner app ("Scan_20261025_0931.pdf") rarely is.
+                androidx.compose.foundation.Image(
+                    bitmap = thumbnail.asImageBitmap(),
+                    contentDescription = "First page of ${opened.file.displayName}",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .size(width = 44.dp, height = 56.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(SheafColors.Paper)
+                        .border(1.dp, SheafColors.Border, RoundedCornerShape(6.dp))
+                )
+            } else {
+                IconTile(
+                    iconRes = when (f.kind) {
+                        Suggest.Kind.PDF -> R.drawable.ic_tool_read
+                        Suggest.Kind.IMAGE -> R.drawable.ic_tool_images_to_pdf
+                        Suggest.Kind.OFFICE -> R.drawable.ic_tool_office_to_pdf
+                        Suggest.Kind.OTHER -> R.drawable.ic_tool_attachments
+                    },
+                    accent = if (f.unreadable) SheafColors.Failed else SheafColors.Band,
+                    size = 36.dp
+                )
+            }
             Column(modifier = Modifier.padding(start = 12.dp)) {
                 Text(opened.file.displayName, style = MaterialTheme.typography.titleMedium, color = SheafColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(meta, style = MaterialTheme.typography.bodySmall, color = SheafColors.Dim)

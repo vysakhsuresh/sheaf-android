@@ -34,6 +34,22 @@ class Handoff {
         return held
     }
 
+    private var waitingToOpen: List<Uri> = emptyList()
+
+    /**
+     * Files shared or opened from another app that are not a PDF - photos, a Word file, a
+     * spreadsheet - for Open a file, which looks at them and suggests the tool that fits.
+     */
+    fun offerToOpen(uris: List<Uri>) {
+        waitingToOpen = uris
+    }
+
+    fun takeToOpen(): List<Uri> {
+        val held = waitingToOpen
+        waitingToOpen = emptyList()
+        return held
+    }
+
     /** Returns what was waiting and forgets it. */
     fun take(): List<Uri> {
         val held = waiting

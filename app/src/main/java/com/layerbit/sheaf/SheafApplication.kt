@@ -5,12 +5,14 @@ import com.layerbit.sheaf.data.BookmarksRepository
 import com.layerbit.sheaf.data.OutputStore
 import com.layerbit.sheaf.data.RecentsRepository
 import com.layerbit.sheaf.data.db.SheafDatabase
+import com.layerbit.sheaf.files.CrashLog
 import com.layerbit.sheaf.files.DocumentStore
 import com.layerbit.sheaf.files.Handoff
 import com.layerbit.sheaf.files.SignatureStore
 import com.layerbit.sheaf.files.Exporter
 import com.layerbit.sheaf.files.Workspace
 import com.layerbit.sheaf.jobs.JobRunner
+import com.layerbit.sheaf.prefs.Prompts
 import com.layerbit.sheaf.prefs.SheafSettings
 import com.layerbit.sheaf.pdf.MlKitOcrEngine
 import com.layerbit.sheaf.pdf.OcrEngine
@@ -97,8 +99,14 @@ class SheafApplication : Application() {
      */
     val settings: SheafSettings by lazy { SheafSettings(this) }
 
+    /** What the app has already asked or shown once: the notification ask, the intro, a review. */
+    val prompts: Prompts by lazy { Prompts(this) }
+
     override fun onCreate() {
         super.onCreate()
+        // First, so a crash anywhere after this - including in the setup below - is written
+        // down where Settings can offer it.
+        CrashLog.install(this)
         // PDFBox loads its font metrics and glyph lists from assets, and without this every
         // call that touches a font throws. Cheap, and it must happen before any operation.
         PDFBoxResourceLoader.init(this)

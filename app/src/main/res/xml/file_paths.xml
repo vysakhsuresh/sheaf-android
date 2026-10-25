@@ -6,4 +6,6 @@
 <paths>
     <cache-path name="work" path="work/" />
     <cache-path name="imported" path="imported/" />
+    <!-- Crash logs, shared from Settings only when the user taps to send one. -->
+    <files-path name="crashes" path="crashes/" />
 </paths>

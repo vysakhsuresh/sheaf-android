@@ -17,11 +17,15 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
+import com.google.android.play.core.review.ReviewManagerFactory
 import com.layerbit.sheaf.files.Exporter
+import com.layerbit.sheaf.jobs.JobState
 import com.layerbit.sheaf.ops.ToolId
 import com.layerbit.sheaf.ui.SheafApp
 import com.layerbit.sheaf.ui.theme.SheafColors
 import com.layerbit.sheaf.ui.theme.SheafTheme
+import com.layerbit.sheaf.widgets.refreshRecentsWidget
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -30,6 +34,9 @@ class MainActivity : ComponentActivity() {
 
     /** Bumped on every open, which is what tells the UI to show the viewer. */
     private var openTicket by mutableIntStateOf(0)
+
+    /** Bumped when photos, Office or text files arrive, which sends the UI to Open a file. */
+    private var openAnyTicket by mutableIntStateOf(0)
 
     /**
      * A tool to go straight to, held until the UI has navigated to it.
@@ -101,6 +108,7 @@ class MainActivity : ComponentActivity() {
                     settings = settings,
                     onSettingsChange = { transform -> sheaf.settings.update(transform) },
                     openTicket = openTicket,
+                    openAnyTicket = openAnyTicket,
                     jumpToTool = jumpToTool,
                     onJumpHandled = { jumpToTool = null },
                     onPickDocument = { pickDocument.launch(arrayOf(Exporter.PDF_MIME)) },
@@ -111,6 +119,43 @@ class MainActivity : ComponentActivity() {
         }
 
         handleIntent(intent)
+        watchForReviewMoment()
+
+        // The recents widget shows the same list the home screen does, so it is redrawn
+        // whenever that list changes. drop(1): the first emission is the list as it already is.
+        lifecycleScope.launch {
+            sheaf.recents.observe().drop(1).collect { refreshRecentsWidget(applicationContext) }
+        }
+    }
+
+    /**
+     * Asks Play for its review sheet after the third job that fully worked, and never again
+     * inside sixty days.
+     *
+     * After a success because that is the only fair moment to ask; never mid-task, never after
+     * a failure. The sheet is drawn by the Play Store app through its own binder, so this needs
+     * no INTERNET permission of Sheaf's - and Play applies its own quota on top, so the call is
+     * a request that may quietly show nothing, which is fine.
+     */
+    private fun watchForReviewMoment() {
+        lifecycleScope.launch {
+            var lastCounted: JobState.Finished? = null
+            sheaf.jobRunner.state.collect { state ->
+                if (state !is JobState.Finished || !state.allSucceeded || state === lastCounted) return@collect
+                lastCounted = state
+                val prompts = sheaf.prompts
+                prompts.successfulJobs += 1
+                val now = System.currentTimeMillis()
+                if (!prompts.reviewDue(now)) return@collect
+                prompts.lastReviewAsk = now
+                runCatching {
+                    val manager = ReviewManagerFactory.create(this@MainActivity)
+                    manager.requestReviewFlow().addOnSuccessListener { info ->
+                        if (!isFinishing) manager.launchReviewFlow(this@MainActivity, info)
+                    }
+                }
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -133,21 +178,30 @@ class MainActivity : ComponentActivity() {
     private fun handleIntent(intent: Intent?) {
         if (intent?.action == Intent.ACTION_VIEW && intent.data?.scheme == SHORTCUT_SCHEME) {
             val name = intent.data?.lastPathSegment
+            // The widget's Open a PDF: the same picker the home screen's button opens.
+            if (name == PICK_DOCUMENT) {
+                pickDocument.launch(arrayOf(Exporter.PDF_MIME))
+                return
+            }
             jumpToTool = ToolId.entries.firstOrNull { it.name == name }
             return
         }
 
         // Several documents at once go to Merge with all of them loaded, rather than opening
         // the first and silently dropping the rest - which is what sharing five PDFs to a
-        // viewer used to do.
+        // viewer used to do. Anything that is not all PDFs - a run of photos, most often -
+        // goes to Open a file, which already knows which tool suits what it is given.
         if (intent?.action == Intent.ACTION_SEND_MULTIPLE) {
             val uris = intent.parcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM).orEmpty()
+            val allPdf = uris.isNotEmpty() && uris.all { isPdf(it, null) }
             when {
+                uris.isEmpty() -> Unit
+                !allPdf -> openAny(uris)
                 uris.size > 1 -> {
                     sheaf.handoff.offer(uris)
                     jumpToTool = ToolId.MERGE
                 }
-                uris.size == 1 -> open(uris.first())
+                else -> open(uris.first())
             }
             return
         }
@@ -157,7 +211,28 @@ class MainActivity : ComponentActivity() {
             Intent.ACTION_SEND -> intent.parcelableExtra(Intent.EXTRA_STREAM)
             else -> null
         }
-        if (uri != null) open(uri)
+        if (uri != null) {
+            if (isPdf(uri, intent?.type)) open(uri) else openAny(listOf(uri))
+        }
+    }
+
+    /**
+     * Whether an incoming Uri is a PDF, by the type the sender declared or the provider reports.
+     *
+     * The declared type comes first because a sender knows what it meant to share; the
+     * provider's answer is the fallback, and a name ending in .pdf the last resort for the
+     * file managers that report neither.
+     */
+    private fun isPdf(uri: Uri, declared: String?): Boolean {
+        val type = declared?.takeIf { it != "*/*" } ?: runCatching { contentResolver.getType(uri) }.getOrNull()
+        if (type != null) return type == Exporter.PDF_MIME
+        return uri.lastPathSegment.orEmpty().endsWith(".pdf", ignoreCase = true)
+    }
+
+    /** Hands files that are not a PDF to Open a file, which suggests the right tool for them. */
+    private fun openAny(uris: List<Uri>) {
+        sheaf.handoff.offerToOpen(uris)
+        openAnyTicket += 1
     }
 
     private fun open(uri: Uri) {
@@ -174,8 +249,11 @@ class MainActivity : ComponentActivity() {
         provider[com.layerbit.sheaf.ui.viewer.ViewerViewModel::class.java].open(uri)
     }
 
-    private companion object {
-        const val SHORTCUT_SCHEME = "sheaf"
+    companion object {
+        private const val SHORTCUT_SCHEME = "sheaf"
+
+        /** The sheaf://tool/ path that opens the document picker rather than a tool. */
+        const val PICK_DOCUMENT = "PICK"
     }
 }
 
