@@ -1,5 +1,7 @@
 package com.layerbit.sheaf.ui.tools
 
+import com.layerbit.sheaf.text.Strings
+import com.layerbit.sheaf.R
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
@@ -152,7 +154,7 @@ fun ToolRoute(
             viewModel.writeTo(destination, file) { error ->
                 // A save that silently does nothing is worse than one that says why, and the
                 // reasons here are real: a removed card, a revoked grant, a full disk.
-                message = error ?: "Saved ${file.displayName}"
+                message = error ?: Strings.get(R.string.tools_saved_one, file.displayName)
             }
         } else if (result.resultCode == Activity.RESULT_OK && destination != null) {
             // A destination came back and the result it was asked for did not: pendingSave is
@@ -161,7 +163,7 @@ fun ToolRoute(
             // moment the user named it, and that empty file stays whatever is said here - so
             // what the message buys is the user knowing it is not their result, and saving
             // again over it instead of keeping a document that will not open.
-            message = "That save was interrupted. Tap Save again."
+            message = Strings.get(R.string.tools_save_interrupted)
         }
     }
 
@@ -237,7 +239,7 @@ fun ToolRoute(
             onLoadAnswers = viewModel::loadSavedAnswers,
             onKeepAnswers = {
                 viewModel.keepAnswers()
-                message = "Kept. They will be offered the next time you fill a form."
+                message = Strings.get(R.string.tools_answers_kept_note)
             },
             onUseAnswers = viewModel::useAnswers,
             onForgetAnswers = viewModel::forgetAnswers,
@@ -275,7 +277,7 @@ fun ToolRoute(
             onSaveZip = { files ->
                 viewModel.zipResults(files) { zip ->
                     if (zip == null) {
-                        message = "The ZIP could not be written."
+                        message = Strings.get(R.string.tools_zip_failed)
                     } else if (viewModel.askWhereToSave) {
                         pendingSave = zip
                         saveFile.launch(viewModel.exportIntent(zip))
@@ -287,12 +289,12 @@ fun ToolRoute(
             onCheckSize = viewModel::checkCompressedSize,
             onCopy = { text ->
                 viewModel.copyToClipboard(text)
-                message = "Copied"
+                message = Strings.get(R.string.tools_copied)
             },
             onDone = viewModel::acknowledgeResult
         )
 
-        // The snackbar is the app's only confirmation channel - "Saved", "Copied", every
+        // The snackbar is the app's only confirmation channel - "Saved", Strings.get(R.string.tools_copied), every
         // "could not" - and left to itself it draws from inverseSurface, which the colour
         // scheme now sets but which still pairs a Material-shaped pill with a Material
         // action colour. Said here so the one thing that appears over every screen is the

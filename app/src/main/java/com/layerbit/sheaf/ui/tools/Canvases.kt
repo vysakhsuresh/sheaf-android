@@ -1,5 +1,9 @@
 package com.layerbit.sheaf.ui.tools
 
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import com.layerbit.sheaf.text.Strings
+import com.layerbit.sheaf.R
 import android.graphics.Bitmap
 import android.graphics.Canvas as AndroidCanvas
 import android.graphics.Paint as AndroidPaint
@@ -100,7 +104,7 @@ fun SignaturePad(
     var saved by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        SectionHeading("Sign here")
+        SectionHeading(stringResource(R.string.tools_sign_here))
 
         Box(
             modifier = Modifier
@@ -182,7 +186,7 @@ fun SignaturePad(
                     disabledContainerColor = SheafColors.SurfaceDim,
                     disabledContentColor = SheafColors.Dim
                 )
-            ) { Text(if (saved) "Signature saved" else "Use this signature") }
+            ) { Text(if (saved) stringResource(R.string.tools_signature_saved) else stringResource(R.string.tools_use_signature)) }
 
             OutlinedButton(
                 onClick = {
@@ -191,7 +195,7 @@ fun SignaturePad(
                     saved = false
                     version++
                 }
-            ) { Text("Clear", color = SheafColors.Muted) }
+            ) { Text(stringResource(R.string.tools_clear), color = SheafColors.Muted) }
         }
     }
 }
@@ -363,7 +367,7 @@ fun RedactCanvas(
     /** Create a form draws its boxes see-through with a label; Remove areas draws them black. */
     boxColour: Color = Color.Black,
     labels: List<String> = emptyList(),
-    emptyHint: String = "Drag a box over anything that should go",
+    emptyHint: String = stringResource(R.string.tools_redact_hint),
     /** Told the zoom once it settles, so the page can be drawn sharp at it. */
     onSharpen: (Float) -> Unit = {}
 ) {
@@ -373,15 +377,15 @@ fun RedactCanvas(
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedButton(onClick = { onPage(pageIndex - 1) }, enabled = pageIndex > 0) {
-                Text("Previous", color = SheafColors.Muted)
+                Text(stringResource(R.string.tools_previous), color = SheafColors.Muted)
             }
             Text(
-                "Page ${pageIndex + 1} of $pageCount",
+                stringResource(R.string.tools_page_of, pageIndex + 1, pageCount),
                 style = MaterialTheme.typography.bodyMedium,
                 color = SheafColors.Text
             )
             OutlinedButton(onClick = { onPage(pageIndex + 1) }, enabled = pageIndex < pageCount - 1) {
-                Text("Next", color = SheafColors.Muted)
+                Text(stringResource(R.string.tools_next), color = SheafColors.Muted)
             }
         }
         val zoom = rememberZoomState(Unit)
@@ -402,7 +406,7 @@ fun RedactCanvas(
             if (page != null) {
                 Image(
                     bitmap = page.asImageBitmap(),
-                    contentDescription = "Page ${pageIndex + 1}",
+                    contentDescription = stringResource(R.string.tools_page_n, pageIndex + 1),
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -418,13 +422,13 @@ fun RedactCanvas(
                     // offers it as actions: a box across the middle of the page, which the
                     // user can then check in the preview, and clearing the page.
                     .semantics {
-                        contentDescription = "Page ${pageIndex + 1}, " +
-                            if (areas.isEmpty()) "no boxes" else "${areas.size} ${if (areas.size == 1) "box" else "boxes"}"
+                        contentDescription = if (areas.isEmpty()) Strings.get(R.string.tools_a11y_page_no_boxes, pageIndex + 1)
+                            else Strings.plural(R.plurals.tools_a11y_page_boxes, areas.size, pageIndex + 1, areas.size)
                         customActions = listOf(
-                            CustomAccessibilityAction("Add a box across the middle of the page") {
+                            CustomAccessibilityAction(Strings.get(R.string.tools_a11y_add_box)) {
                                 onAdd(PageArea(0.1f, 0.45f, 0.8f, 0.1f)); true
                             },
-                            CustomAccessibilityAction("Clear this page") { onClear(); true }
+                            CustomAccessibilityAction(Strings.get(R.string.tools_a11y_clear_page)) { onClear(); true }
                         )
                     }
                     .pointerInput(pageIndex) {
@@ -493,13 +497,13 @@ fun RedactCanvas(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                if (areas.isEmpty()) emptyHint else "${areas.size} on this page",
+                if (areas.isEmpty()) emptyHint else pluralStringResource(R.plurals.tools_on_this_page, areas.size, areas.size),
                 style = MaterialTheme.typography.bodySmall,
                 color = SheafColors.Dim,
                 modifier = Modifier.weight(1f)
             )
             if (areas.isNotEmpty()) {
-                OutlinedButton(onClick = onClear) { Text("Clear page", color = SheafColors.Muted) }
+                OutlinedButton(onClick = onClear) { Text(stringResource(R.string.tools_clear_page), color = SheafColors.Muted) }
             }
         }
     }
@@ -544,17 +548,17 @@ fun MarkupCanvas(
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedButton(onClick = { onPage(pageIndex - 1) }, enabled = pageIndex > 0) {
-                Text("Previous", color = SheafColors.Muted)
+                Text(stringResource(R.string.tools_previous), color = SheafColors.Muted)
             }
             Text(
-                "Page ${pageIndex + 1} of $pageCount",
+                stringResource(R.string.tools_page_of, pageIndex + 1, pageCount),
                 style = MaterialTheme.typography.bodyMedium,
                 color = SheafColors.Text
             )
             OutlinedButton(
                 onClick = { onPage(pageIndex + 1) },
                 enabled = pageIndex < pageCount - 1
-            ) { Text("Next", color = SheafColors.Muted) }
+            ) { Text(stringResource(R.string.tools_next), color = SheafColors.Muted) }
         }
         val zoom = rememberZoomState(Unit)
         ZoomControls(zoom, Modifier.padding(top = 4.dp))
@@ -687,7 +691,7 @@ fun MarkupCanvas(
             if (page != null) {
                 Image(
                     bitmap = page.asImageBitmap(),
-                    contentDescription = "Page ${pageIndex + 1}",
+                    contentDescription = stringResource(R.string.tools_page_n, pageIndex + 1),
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -696,10 +700,10 @@ fun MarkupCanvas(
             // The same escape hatch as the redaction canvas: every tool's gesture has an action
             // that places one mark in the middle of the page, plus undo and clear.
             val a11y = Modifier.semantics {
-                contentDescription = "Page ${pageIndex + 1}, " +
-                    if (marks.isEmpty()) "no marks" else "${marks.size} ${if (marks.size == 1) "mark" else "marks"}"
+                contentDescription = if (marks.isEmpty()) Strings.get(R.string.tools_a11y_page_no_marks, pageIndex + 1)
+                    else Strings.plural(R.plurals.tools_a11y_page_marks, marks.size, pageIndex + 1, marks.size)
                 customActions = listOf(
-                    CustomAccessibilityAction("Add a ${tool.label.lowercase()} in the middle of the page") {
+                    CustomAccessibilityAction(Strings.get(tool.addRes)) {
                         when {
                             pen -> onInk(listOf(PagePoint(0.3f, 0.5f), PagePoint(0.7f, 0.5f)), 1f)
                             tool.taps -> onTap(PagePoint(0.5f, 0.5f))
@@ -708,8 +712,8 @@ fun MarkupCanvas(
                         }
                         true
                     },
-                    CustomAccessibilityAction("Undo the last mark") { onUndo(); true },
-                    CustomAccessibilityAction("Clear this page") { onClear(); true }
+                    CustomAccessibilityAction(Strings.get(R.string.tools_a11y_undo_mark)) { onUndo(); true },
+                    CustomAccessibilityAction(Strings.get(R.string.tools_a11y_clear_page)) { onClear(); true }
                 )
             }
             Canvas(modifier = Modifier.fillMaxSize().then(a11y).then(gestures)) {
@@ -758,19 +762,16 @@ fun MarkupCanvas(
         ) {
             Text(
                 when {
-                    marks.isNotEmpty() -> "${marks.size} on this page"
-                    pen -> "Draw on the page with your finger"
-                    tool.taps -> "Tap the page where the ${tool.label.lowercase()} should go"
-                    lineTool -> "Drag from where the ${tool.label.lowercase()} starts to where it ends"
-                    else -> "Drag across a line to ${tool.label.lowercase()} it"
+                    marks.isNotEmpty() -> pluralStringResource(R.plurals.tools_on_this_page, marks.size, marks.size)
+                    else -> stringResource(tool.hintRes)
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = SheafColors.Dim,
                 modifier = Modifier.weight(1f)
             )
             if (marks.isNotEmpty()) {
-                OutlinedButton(onClick = onUndo) { Text("Undo", color = SheafColors.Muted) }
-                OutlinedButton(onClick = onClear) { Text("Clear page", color = SheafColors.Muted) }
+                OutlinedButton(onClick = onUndo) { Text(stringResource(R.string.tools_undo), color = SheafColors.Muted) }
+                OutlinedButton(onClick = onClear) { Text(stringResource(R.string.tools_clear_page), color = SheafColors.Muted) }
             }
         }
     }

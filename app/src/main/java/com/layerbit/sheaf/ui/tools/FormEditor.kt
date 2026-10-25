@@ -1,5 +1,8 @@
 package com.layerbit.sheaf.ui.tools
 
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import com.layerbit.sheaf.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -40,7 +43,7 @@ fun FormEditor(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SectionHeading(if (fields.size == 1) "1 field" else "${fields.size} fields")
+        SectionHeading(pluralStringResource(R.plurals.tools_fields, fields.size, fields.size))
 
         fields.forEach { field ->
             val value = values[field.name] ?: field.value
@@ -51,13 +54,13 @@ fun FormEditor(
                 field.readOnly -> Panel(modifier = Modifier.fillMaxWidth()) {
                     SectionHeading(label)
                     Text(
-                        text = value.ifBlank { "Empty" },
+                        text = value.ifBlank { stringResource(R.string.tools_empty) },
                         style = MaterialTheme.typography.bodyLarge,
                         color = SheafColors.Dim,
                         modifier = Modifier.padding(top = 2.dp)
                     )
                     Text(
-                        "The form marks this one as not editable.",
+                        stringResource(R.string.tools_read_only),
                         style = MaterialTheme.typography.bodySmall,
                         color = SheafColors.Dim
                     )
@@ -94,17 +97,15 @@ fun FormEditor(
 @Composable
 fun NoFormFields(modifier: Modifier = Modifier) {
     Panel(modifier = modifier.fillMaxWidth()) {
-        SectionHeading("No form fields")
+        SectionHeading(stringResource(R.string.tools_no_form))
         Text(
-            "This document has no fillable fields in it. That is normal - a PDF only has " +
-                "them if it was built as a form, and a scan or a printout of a form is a " +
-                "picture of one.",
+            stringResource(R.string.tools_no_form_body),
             style = MaterialTheme.typography.bodyMedium,
             color = SheafColors.Muted,
             modifier = Modifier.padding(top = 6.dp)
         )
         Text(
-            "Use Add text instead: tap where the answer goes and type it.",
+            stringResource(R.string.tools_no_form_use_text),
             style = MaterialTheme.typography.bodyMedium,
             color = SheafColors.BandBright,
             modifier = Modifier.padding(top = 8.dp)

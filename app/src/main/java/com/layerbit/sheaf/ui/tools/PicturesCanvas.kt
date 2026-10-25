@@ -1,5 +1,8 @@
 package com.layerbit.sheaf.ui.tools
 
+import androidx.compose.ui.res.stringResource
+import com.layerbit.sheaf.text.Strings
+import com.layerbit.sheaf.R
 import android.graphics.Bitmap
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -81,9 +84,9 @@ fun PicturesCanvas(
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(onClick = { onPage(pageIndex - 1) }, enabled = pageIndex > 0) { Text("Previous", color = SheafColors.Muted) }
-            Text("Page ${pageIndex + 1} of $pageCount", style = MaterialTheme.typography.bodyMedium, color = SheafColors.Text)
-            OutlinedButton(onClick = { onPage(pageIndex + 1) }, enabled = pageIndex < pageCount - 1) { Text("Next", color = SheafColors.Muted) }
+            OutlinedButton(onClick = { onPage(pageIndex - 1) }, enabled = pageIndex > 0) { Text(stringResource(R.string.tools_previous), color = SheafColors.Muted) }
+            Text(stringResource(R.string.tools_page_of, pageIndex + 1, pageCount), style = MaterialTheme.typography.bodyMedium, color = SheafColors.Text)
+            OutlinedButton(onClick = { onPage(pageIndex + 1) }, enabled = pageIndex < pageCount - 1) { Text(stringResource(R.string.tools_next), color = SheafColors.Muted) }
         }
         val zoom = rememberZoomState(Unit)
         ZoomControls(zoom, Modifier.padding(top = 4.dp))
@@ -99,6 +102,8 @@ fun PicturesCanvas(
                 .border(1.dp, SheafColors.Border, RoundedCornerShape(6.dp))
         ) {
             ZoomFrame(zoom, Modifier.fillMaxSize(), onSettled = onSharpen) {
+            val takenOut = stringResource(R.string.tools_picture_taken_out)
+            val replaced = stringResource(R.string.tools_picture_replaced)
             // A drag in progress: which picture, how, and the box it would land in.
             var dragging by remember(pageIndex) { mutableStateOf<Int?>(null) }
             var resizing by remember(pageIndex) { mutableStateOf(false) }
@@ -111,19 +116,17 @@ fun PicturesCanvas(
                     // can be chosen by number, and the chosen one taken out, kept or replaced.
                     .semantics {
                         val count = currentPictures.size
-                        contentDescription = "Page ${pageIndex + 1}, " + when (count) {
-                            0 -> "no pictures"
-                            1 -> "1 picture"
-                            else -> "$count pictures"
-                        } + (selected?.let { ", picture ${it + 1} chosen" } ?: "")
+                        val said = if (count == 0) Strings.get(R.string.tools_a11y_page_no_pictures, pageIndex + 1)
+                            else Strings.plural(R.plurals.tools_a11y_page_pictures, count, pageIndex + 1, count)
+                        contentDescription = selected?.let { Strings.get(R.string.tools_a11y_picture_chosen, said, it + 1) } ?: said
                         customActions = buildList {
                             currentPictures.indices.forEach { i ->
-                                add(CustomAccessibilityAction("Choose picture ${i + 1}") { onSelect(i); true })
+                                add(CustomAccessibilityAction(Strings.get(R.string.tools_a11y_choose_picture, i + 1)) { onSelect(i); true })
                             }
                             val sel = selected
                             if (sel != null && sel in currentPictures.indices) {
-                                add(CustomAccessibilityAction("Take out or keep picture ${sel + 1}") { onToggleRemove(sel); true })
-                                add(CustomAccessibilityAction("Replace picture ${sel + 1}") { onReplace(); true })
+                                add(CustomAccessibilityAction(Strings.get(R.string.tools_a11y_toggle_picture, sel + 1)) { onToggleRemove(sel); true })
+                                add(CustomAccessibilityAction(Strings.get(R.string.tools_a11y_replace_picture, sel + 1)) { onReplace(); true })
                             }
                         }
                     }
@@ -226,7 +229,7 @@ fun PicturesCanvas(
                                 SheafColors.Failed, topLeft = original.topLeft(size), size = original.size(size),
                                 style = Stroke(width = 2.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)))
                             )
-                            label("Taken out", original.topLeft(size))
+                            label(takenOut, original.topLeft(size))
                             continue
                         }
                         change?.replacementBitmap != null -> {
@@ -258,7 +261,7 @@ fun PicturesCanvas(
                         SheafColors.Band.copy(alpha = if (isSelected) 1f else 0.7f), topLeft = tl, size = sz,
                         style = Stroke(width = if (isSelected) 4f else 2f)
                     )
-                    if (change?.replacement != null) label("Replaced", tl)
+                    if (change?.replacement != null) label(replaced, tl)
                     if (isSelected) {
                         // Resize handle, bottom right; take-out cross, top right.
                         val corner = Offset(tl.x + sz.width, tl.y + sz.height)
@@ -277,9 +280,9 @@ fun PicturesCanvas(
 
         Text(
             when {
-                pictures == null -> "Looking for pictures on this page…"
-                pictures.isEmpty() -> "This page has no pictures to change. Go to another page, or add one with Add an image."
-                else -> "Tap a picture to select it. Drag to move it, drag its corner to resize it, tap its × to take it out."
+                pictures == null -> stringResource(R.string.tools_pictures_looking)
+                pictures.isEmpty() -> stringResource(R.string.tools_pictures_none)
+                else -> stringResource(R.string.tools_pictures_hint)
             },
             style = MaterialTheme.typography.bodySmall,
             color = SheafColors.Dim,
@@ -287,9 +290,9 @@ fun PicturesCanvas(
         )
         if (selected != null && !pictures.isNullOrEmpty()) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                SecondaryButton(text = "Replace it with another picture", onClick = onReplace, tall = false, modifier = Modifier.weight(1f))
+                SecondaryButton(text = stringResource(R.string.tools_picture_replace), onClick = onReplace, tall = false, modifier = Modifier.weight(1f))
                 SecondaryButton(
-                    text = if (changes[selected]?.removed == true) "Keep it" else "Take it out",
+                    text = if (changes[selected]?.removed == true) stringResource(R.string.tools_picture_keep) else stringResource(R.string.tools_picture_take_out),
                     onClick = { onToggleRemove(selected) },
                     tall = false
                 )

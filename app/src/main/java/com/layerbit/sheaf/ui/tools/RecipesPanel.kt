@@ -1,5 +1,7 @@
 package com.layerbit.sheaf.ui.tools
 
+import androidx.compose.ui.res.stringResource
+import com.layerbit.sheaf.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -46,15 +48,14 @@ fun RecipesPanel(
     onPassword: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeading("Recipes")
+        SectionHeading(stringResource(R.string.tools_recipes))
         Text(
-            "Steps you do often, saved once and run on any number of files in one tap. Kept on this " +
-                "phone only; a password is asked for each time, never kept.",
+            stringResource(R.string.tools_recipes_intro),
             style = MaterialTheme.typography.bodySmall,
             color = SheafColors.Muted
         )
         if (state.recipes.isEmpty() && state.draft == null) {
-            Text("No recipes yet.", style = MaterialTheme.typography.bodyMedium, color = SheafColors.Dim)
+            Text(stringResource(R.string.tools_no_recipes), style = MaterialTheme.typography.bodyMedium, color = SheafColors.Dim)
         }
         for (recipe in state.recipes) {
             val chosen = recipe.id == state.recipeId
@@ -65,44 +66,44 @@ fun RecipesPanel(
                         Text(recipe.name, style = MaterialTheme.typography.titleMedium, color = SheafColors.Text)
                         Text(recipe.summary, style = MaterialTheme.typography.bodySmall, color = SheafColors.Muted)
                     }
-                    TextButton(onClick = { onDelete(recipe.id) }) { Text("Delete", color = SheafColors.Failed) }
+                    TextButton(onClick = { onDelete(recipe.id) }) { Text(stringResource(R.string.tools_delete), color = SheafColors.Failed) }
                 }
             }
         }
         val chosen = state.recipes.firstOrNull { it.id == state.recipeId }
         if (chosen?.needsPassword == true && state.draft == null) {
-            PasswordField(value = state.config.newPassword, label = "Password to lock them with", onChange = onPassword)
+            PasswordField(value = state.config.newPassword, label = stringResource(R.string.tools_recipe_password), onChange = onPassword)
         }
 
         val draft = state.draft
         if (draft == null) {
-            SecondaryButton(text = "Make a recipe", onClick = onNew, tall = false)
+            SecondaryButton(text = stringResource(R.string.tools_make_recipe), onClick = onNew, tall = false)
         } else {
             Panel(modifier = Modifier.fillMaxWidth(), inset = 14.dp) {
-                SectionHeading("A new recipe")
-                Field(value = draft.name, label = "Name, such as Invoices for the accountant", keyboardType = KeyboardType.Text, onChange = onName)
+                SectionHeading(stringResource(R.string.tools_new_recipe))
+                Field(value = draft.name, label = stringResource(R.string.tools_recipe_name), keyboardType = KeyboardType.Text, onChange = onName)
                 draft.steps.forEachIndexed { i, step ->
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-                        Text("${i + 1}. ${step.tool.title}", style = MaterialTheme.typography.titleMedium, color = SheafColors.Text, modifier = Modifier.weight(1f))
-                        TextButton(onClick = { onOpenStep(i) }) { Text(if (state.draftStep == i) "Close" else "Options", color = SheafColors.Band) }
-                        TextButton(onClick = { onRemoveStep(i) }) { Text("Take out", color = SheafColors.Failed) }
+                        Text(stringResource(R.string.tools_step_n, i + 1, step.tool.title), style = MaterialTheme.typography.titleMedium, color = SheafColors.Text, modifier = Modifier.weight(1f))
+                        TextButton(onClick = { onOpenStep(i) }) { Text(if (state.draftStep == i) stringResource(R.string.tools_close) else stringResource(R.string.tools_options), color = SheafColors.Band) }
+                        TextButton(onClick = { onRemoveStep(i) }) { Text(stringResource(R.string.tools_take_out), color = SheafColors.Failed) }
                     }
                     if (state.draftStep == i) {
                         if (step.tool == ToolId.MERGE) {
-                            Hint("Joins every file into one, in the order they are listed.")
+                            Hint(stringResource(R.string.tools_recipe_merge))
                         } else if (step.tool == ToolId.SET_PASSWORD) {
-                            Hint("The password is asked for each time the recipe runs, and never kept.")
+                            Hint(stringResource(R.string.tools_recipe_password_hint))
                             val c = step.config
-                            com.layerbit.sheaf.ui.components.ToggleRow(title = "No password to open, only restrictions", checked = c.restrictOnly, onChange = { on -> onStepChange(i) { it.copy(restrictOnly = on) } })
-                            com.layerbit.sheaf.ui.components.ToggleRow(title = "Allow printing", checked = c.allowPrinting, onChange = { on -> onStepChange(i) { it.copy(allowPrinting = on) } })
-                            com.layerbit.sheaf.ui.components.ToggleRow(title = "Allow copying text", checked = c.allowCopying, onChange = { on -> onStepChange(i) { it.copy(allowCopying = on) } })
-                            com.layerbit.sheaf.ui.components.ToggleRow(title = "Allow changes", checked = c.allowChanges, onChange = { on -> onStepChange(i) { it.copy(allowChanges = on) } })
+                            com.layerbit.sheaf.ui.components.ToggleRow(title = stringResource(R.string.tools_restrict_only), checked = c.restrictOnly, onChange = { on -> onStepChange(i) { it.copy(restrictOnly = on) } })
+                            com.layerbit.sheaf.ui.components.ToggleRow(title = stringResource(R.string.tools_allow_printing), checked = c.allowPrinting, onChange = { on -> onStepChange(i) { it.copy(allowPrinting = on) } })
+                            com.layerbit.sheaf.ui.components.ToggleRow(title = stringResource(R.string.tools_allow_copying), checked = c.allowCopying, onChange = { on -> onStepChange(i) { it.copy(allowCopying = on) } })
+                            com.layerbit.sheaf.ui.components.ToggleRow(title = stringResource(R.string.tools_allow_changes), checked = c.allowChanges, onChange = { on -> onStepChange(i) { it.copy(allowChanges = on) } })
                         } else {
                             ToolOptions(tool = step.tool, config = step.config, pageCount = null, onChange = { t -> onStepChange(i, t) })
                         }
                     }
                 }
-                Text("Add a step", style = MaterialTheme.typography.labelLarge, color = SheafColors.Muted, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
+                Text(stringResource(R.string.tools_add_step), style = MaterialTheme.typography.labelLarge, color = SheafColors.Muted, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     for (tool in Recipes.TOOLS.filter { t -> draft.steps.none { it.tool == t } }) {
                         OutlinedButton(onClick = { onAddStep(tool) }) { Text(tool.title, color = SheafColors.Text, maxLines = 1) }
@@ -110,8 +111,8 @@ fun RecipesPanel(
                 }
                 state.recipeProblem?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = SheafColors.Failed, modifier = Modifier.padding(top = 8.dp)) }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 12.dp)) {
-                    PrimaryButton(text = "Save the recipe", onClick = onSave, tall = false)
-                    SecondaryButton(text = "Cancel", onClick = onCancel, tall = false)
+                    PrimaryButton(text = stringResource(R.string.tools_save_recipe), onClick = onSave, tall = false)
+                    SecondaryButton(text = stringResource(R.string.tools_cancel), onClick = onCancel, tall = false)
                 }
             }
         }
