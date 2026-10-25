@@ -9,6 +9,8 @@ import android.graphics.Rect
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
 import java.io.File
 import java.io.IOException
 import kotlin.math.max
@@ -51,10 +53,10 @@ class PlatformPdfEngine(context: Context) : PdfEngine {
 
     override fun open(file: File, password: String?): PdfDocument {
         if (password != null) {
-            throw PdfException.Unsupported("the platform renderer cannot open encrypted documents")
+            throw PdfException.Unsupported(Strings.get(R.string.engine_err_platform_encrypted))
         }
         if (!file.isFile) {
-            throw PdfException.Io("${file.name} is not a file")
+            throw PdfException.Io(Strings.get(R.string.engine_err_not_a_file, file.name))
         }
 
         var descriptor: ParcelFileDescriptor? = null
@@ -70,10 +72,10 @@ class PlatformPdfEngine(context: Context) : PdfEngine {
             // PdfRenderer reports "file not in PDF format or corrupted" as a plain IOException,
             // indistinguishable from a genuine read error. Corrupt is the more useful guess:
             // the file was readable enough to open a descriptor on a moment ago.
-            throw PdfException.Corrupt(e.message ?: "unreadable", e)
+            throw PdfException.Corrupt(e.message ?: Strings.get(R.string.engine_err_unreadable), e)
         } catch (e: Exception) {
             descriptor?.closeQuietly()
-            throw PdfException.Corrupt(e.message ?: "could not be opened", e)
+            throw PdfException.Corrupt(e.message ?: Strings.get(R.string.engine_err_could_not_be_opened), e)
         }
     }
 }
@@ -105,7 +107,7 @@ private class PlatformPdfDocument(
                 PageSize(page.width.toFloat(), page.height.toFloat())
             }
         } catch (e: Exception) {
-            throw PdfException.Corrupt("page ${index + 1} could not be measured", e)
+            throw PdfException.Corrupt(Strings.get(R.string.engine_err_page_not_measured, index + 1), e)
         }
     }
 
@@ -130,7 +132,7 @@ private class PlatformPdfDocument(
         } catch (e: PdfException) {
             throw e
         } catch (e: Exception) {
-            throw PdfException.Corrupt("page ${index + 1} could not be rendered", e)
+            throw PdfException.Corrupt(Strings.get(R.string.engine_err_page_not_rendered, index + 1), e)
         }
     }
 
@@ -193,9 +195,7 @@ private class PlatformPdfDocument(
         } catch (e: PdfException) {
             throw e
         } catch (e: Exception) {
-            throw PdfException.Corrupt(
-                "tile ${tile.toShortString()} of page ${index + 1} could not be rendered", e
-            )
+            throw PdfException.Corrupt(Strings.get(R.string.engine_err_page_not_rendered, index + 1), e)
         }
     }
 
@@ -225,7 +225,7 @@ private class PlatformPdfDocument(
             // part of the app may have taken the heap between the clamp and here. An OOM
             // while rendering one page of a batch should fail that page rather than take the
             // process down.
-            throw PdfException.OutOfMemory("page ${index + 1} at ${width}x$height", e)
+            throw PdfException.OutOfMemory(Strings.get(R.string.engine_err_oom_page_size, index + 1, width, height), e)
         }
 
         bitmap.eraseColor(Color.WHITE)
@@ -245,7 +245,7 @@ private class PlatformPdfDocument(
 
     private fun checkIndex(index: Int) {
         if (index !in 0 until pageCount) {
-            throw PdfException.Io("page ${index + 1} does not exist in a $pageCount-page document")
+            throw PdfException.Io(Strings.plural(R.plurals.engine_err_page_out_of_range, pageCount, index + 1, pageCount))
         }
     }
 

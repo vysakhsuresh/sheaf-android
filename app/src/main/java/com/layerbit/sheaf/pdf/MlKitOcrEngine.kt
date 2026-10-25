@@ -6,6 +6,8 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -53,7 +55,7 @@ class MlKitOcrEngine : OcrEngine {
                 .addOnSuccessListener { result -> continuation.resume(result) }
                 .addOnFailureListener { error ->
                     continuation.resumeWithException(
-                        PdfException.Unsupported("the text recogniser could not read this page", error)
+                        PdfException.Unsupported(Strings.get(R.string.engine_err_ocr_page), error)
                     )
                 }
         }

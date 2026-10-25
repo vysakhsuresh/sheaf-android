@@ -2,6 +2,7 @@ package com.layerbit.sheaf
 
 import com.layerbit.sheaf.ops.PhotoFit
 import com.layerbit.sheaf.ops.PhotoPixels
+import com.layerbit.sheaf.text.Strings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -17,7 +18,7 @@ class PhotoFitTest {
     @Test fun limits() {
         assertEquals("50 KB", PhotoFit.limitText(50f))
         assertEquals("19.5 KB", PhotoFit.limitText(19.5f))
-        assertEquals("Choose a size of at least 2 KB.", PhotoFit.problem(1f, PhotoPixels.Keep))
+        assertEquals(Strings.get(R.string.engine_photo_min_size), PhotoFit.problem(1f, PhotoPixels.Keep))
         assertNull(PhotoFit.problem(2f, PhotoPixels.Exact(16, 4096)))
     }
 

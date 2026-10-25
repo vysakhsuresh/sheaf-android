@@ -1,8 +1,10 @@
 package com.layerbit.sheaf.ops
 
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
+import com.layerbit.sheaf.text.Strings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -26,7 +28,7 @@ class FillFormOp(
 ) : Op {
 
     override val tool = ToolId.FORMS
-    override val title = if (flatten) "Fill in a form and seal it" else "Fill in a form"
+    override val title = Strings.get(if (flatten) R.string.engine_title_fill_seal else R.string.engine_title_fill)
     override val arity = Op.Arity.ExactlyOne
 
     override suspend fun run(
@@ -35,14 +37,14 @@ class FillFormOp(
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val input = inputs.firstOrNull()
-            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_no_document)))
         if (values.isEmpty()) {
             return@withContext listOf(
-                OpOutcome.Failed(input.displayName, "Fill in at least one field first.")
+                OpOutcome.Failed(input.displayName, Strings.get(R.string.engine_fill_nothing))
             )
         }
 
-        onProgress(Progress(0, 1, "Filling in ${input.displayName}"))
+        onProgress(Progress(0, 1, Strings.get(R.string.engine_progress_filling, input.displayName)))
         val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
         val output = context.workspace.newOutput(input.baseName, "filled")
 
@@ -50,17 +52,16 @@ class FillFormOp(
             context.surgeon.fillForm(pdfInput, values, flatten, output)
         } catch (e: PdfException) {
             output.delete()
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Failed."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_failed)))
         }
 
-        onProgress(Progress(1, 1, "Done"))
+        onProgress(Progress(1, 1, Strings.get(R.string.engine_done)))
         val filled = values.count { it.value.isNotBlank() }
         listOf(
             OpOutcome.Produced(
                 SheafFile(output, "${input.baseName} filled.pdf", SheafFile.Origin.Derived("filled")),
-                buildString {
-                    append(if (filled == 1) "1 field filled" else "$filled fields filled")
-                    if (flatten) append(", and sealed so they cannot be retyped")
+                Strings.plural(R.plurals.engine_fields_filled, filled).let {
+                    if (flatten) Strings.get(R.string.engine_fields_sealed, it) else it
                 }
             )
         )

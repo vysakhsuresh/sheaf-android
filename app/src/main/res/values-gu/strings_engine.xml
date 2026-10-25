@@ -1,0 +1,538 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Shared by many tools -->
+    <string name="engine_no_document">કોઈ દસ્તાવેજ પસંદ કરાયો નથી.</string>
+    <string name="engine_pick_pdf_first">પહેલાં PDF પસંદ કરો.</string>
+    <string name="engine_pick_one_pdf">એક PDF પસંદ કરો.</string>
+    <string name="engine_failed">નિષ્ફળ.</string>
+    <string name="engine_done">થઈ ગયું</string>
+    <string name="engine_unreadable">વાંચી શકાતું નથી.</string>
+    <string name="engine_list_separator">, </string>
+    <plurals name="engine_count_pages">
+        <item quantity="one">%d પેજ</item>
+        <item quantity="other">%d પેજ</item>
+    </plurals>
+    <plurals name="engine_pages_listed">
+        <item quantity="one">પેજ %1$s</item>
+        <item quantity="other">પેજ %1$s</item>
+    </plurals>
+    <plurals name="engine_pages_typed_not_in_file">
+        <item quantity="one">આ ફાઇલમાં %d પેજ છે; લખેલા પેજમાંથી એક પણ તેમાં નથી.</item>
+        <item quantity="other">આ ફાઇલમાં %d પેજ છે; લખેલા પેજમાંથી એક પણ તેમાં નથી.</item>
+    </plurals>
+
+    <!-- Watermark -->
+    <string name="engine_title_watermark">વૉટરમાર્ક \"%1$s\"</string>
+    <string name="engine_watermark_no_text">વૉટરમાર્કનું લખાણ લખો, જેમ કે DRAFT અથવા COPY.</string>
+    <string name="engine_progress_watermark">%1$s પર વૉટરમાર્ક લગાવી રહ્યાં છીએ</string>
+    <string name="engine_watermark_detail">%2$s પર \"%1$s\"</string>
+    <string name="engine_watermark_detail_tiled">%2$s પર \"%1$s\" વારંવાર</string>
+
+    <!-- Page numbers -->
+    <string name="engine_title_bates">Bates નંબર</string>
+    <string name="engine_title_page_numbers">પેજ નંબર</string>
+    <string name="engine_progress_numbering">%1$s પર નંબર લગાવી રહ્યાં છીએ</string>
+    <string name="engine_numbered_none">કોઈ પેજ પર નંબર લગાવાયા નથી</string>
+    <plurals name="engine_numbered_detail">
+        <item quantity="one">%4$d માંથી %3$d પેજ પર %1$s થી %2$s</item>
+        <item quantity="other">%4$d માંથી %3$d પેજ પર %1$s થી %2$s</item>
+    </plurals>
+
+    <!-- Crop -->
+    <string name="engine_title_remove_margins">સફેદ હાંસિયા દૂર કરો</string>
+    <string name="engine_title_crop">પેજ ક્રૉપ કરો</string>
+    <string name="engine_crop_nothing">પહેલાં કેટલું કાપવું છે અથવા પેજનું કદ પસંદ કરો.</string>
+    <string name="engine_progress_cropping">%1$s ક્રૉપ કરી રહ્યાં છીએ</string>
+    <string name="engine_crop_auto">%1$s માંથી સફેદ હાંસિયા દૂર કર્યા</string>
+    <string name="engine_crop_trimmed">%2$s માંથી %1$s કાપ્યું</string>
+    <string name="engine_crop_then_paper">%1$s, પછી %2$s પર મૂક્યું</string>
+    <string name="engine_crop_on_paper">%1$s ને %2$s પર મૂક્યું</string>
+    <string name="engine_crop_real_size">%1$s, નાના પેજ તેમના મૂળ કદમાં</string>
+    <string name="engine_crop_all_round">ચારે બાજુથી %1$s</string>
+    <string name="engine_crop_edge_top">ઉપરથી %1$s</string>
+    <string name="engine_crop_edge_right">જમણેથી %1$s</string>
+    <string name="engine_crop_edge_bottom">નીચેથી %1$s</string>
+    <string name="engine_crop_edge_left">ડાબેથી %1$s</string>
+
+    <!-- Redact -->
+    <string name="engine_title_redact">ભાગ દૂર કરો</string>
+    <string name="engine_redact_nothing">પહેલાં જે દૂર કરવું છે તેના પર બૉક્સ દોરો.</string>
+    <string name="engine_progress_redacting">%2$d માંથી પેજ %1$d પરથી દૂર કરી રહ્યાં છીએ</string>
+    <string name="engine_redact_detail">%2$s માંથી %1$s</string>
+    <plurals name="engine_redact_areas">
+        <item quantity="one">%d ભાગ દૂર કર્યો</item>
+        <item quantity="other">%d ભાગ દૂર કર્યા</item>
+    </plurals>
+    <plurals name="engine_redact_pages">
+        <item quantity="one">%d પેજ, જે હવે છબી છે</item>
+        <item quantity="other">%d પેજ, જે હવે છબીઓ છે</item>
+    </plurals>
+
+    <!-- Sign, add an image -->
+    <string name="engine_title_sign">સહી કરો</string>
+    <string name="engine_sign_nothing">પહેલાં તમારી સહી દોરો.</string>
+    <string name="engine_progress_placing_signature">સહી મૂકી રહ્યાં છીએ</string>
+    <string name="engine_signed_on_page">પેજ %1$d પર સહી કરી</string>
+    <string name="engine_title_add_image">છબી ઉમેરો</string>
+    <string name="engine_add_image_missing">પેજ પર મૂકવા માટે છબી ઉમેરો.</string>
+    <string name="engine_progress_placing">%1$s મૂકી રહ્યાં છીએ</string>
+    <string name="engine_image_placed">%1$s પેજ %2$d પર મૂક્યું</string>
+
+    <!-- Mark up -->
+    <string name="engine_title_annotate">માર્ક અપ</string>
+    <string name="engine_annotate_nothing">પહેલાં કંઈક હાઇલાઇટ કરો અથવા દોરો.</string>
+    <string name="engine_progress_drawing">%2$d માંથી પેજ %1$d પર દોરી રહ્યાં છીએ</string>
+    <string name="engine_marks_on_pages">%2$s પર %1$s</string>
+    <plurals name="engine_marks">
+        <item quantity="one">%d નિશાન</item>
+        <item quantity="other">%d નિશાન</item>
+    </plurals>
+
+    <!-- Header and footer -->
+    <string name="engine_title_header_footer">હેડર અને ફૂટર</string>
+    <string name="engine_hf_nothing">પહેલાં હેડર અથવા ફૂટર લખો.</string>
+    <string name="engine_progress_stamping">%1$s પર છાપી રહ્યાં છીએ</string>
+    <plurals name="engine_hf_added_both">
+        <item quantity="one">%2$d માંથી %1$d પેજ પર હેડર અને ફૂટર ઉમેર્યાં</item>
+        <item quantity="other">%2$d માંથી %1$d પેજ પર હેડર અને ફૂટર ઉમેર્યાં</item>
+    </plurals>
+    <plurals name="engine_hf_added_header">
+        <item quantity="one">%2$d માંથી %1$d પેજ પર હેડર ઉમેર્યું</item>
+        <item quantity="other">%2$d માંથી %1$d પેજ પર હેડર ઉમેર્યું</item>
+    </plurals>
+    <plurals name="engine_hf_added_footer">
+        <item quantity="one">%2$d માંથી %1$d પેજ પર ફૂટર ઉમેર્યું</item>
+        <item quantity="other">%2$d માંથી %1$d પેજ પર ફૂટર ઉમેર્યું</item>
+    </plurals>
+
+    <!-- Add text -->
+    <string name="engine_title_add_text">લખાણ ઉમેરો</string>
+    <string name="engine_add_text_nothing">પહેલાં લખાણ લખો.</string>
+    <string name="engine_progress_writing_on_page">પેજ %1$d પર લખી રહ્યાં છીએ</string>
+    <plurals name="engine_lines_added">
+        <item quantity="one">પેજ %2$d પર એક લીટી ઉમેરી</item>
+        <item quantity="other">પેજ %2$d પર %1$d લીટી ઉમેરી</item>
+    </plurals>
+    <string name="engine_lines_added_covering">%1$s, નીચે જે હતું તેને ઢાંકીને</string>
+
+    <!-- Compress -->
+    <string name="engine_title_compress_to">%1$s થી ઓછું કરો</string>
+    <string name="engine_title_compress">કૉમ્પ્રેસ કરો (%1$s)</string>
+    <string name="engine_compress_larger">આ પહેલેથી જ શક્ય તેટલું નાનું છે - કૉમ્પ્રેસ કરવાથી તે મોટું થયું, તેથી મૂળ ફાઇલ જ રાખી.</string>
+    <string name="engine_compress_text_only">કૉમ્પ્રેસ કરવા જેવું કંઈ નથી - આ દસ્તાવેજ લખાણ છે, સ્કૅન કરેલી છબીઓ નથી.</string>
+    <string name="engine_compress_negligible">માત્ર %1$d%% નાનું થયું, તેથી મૂળ ફાઇલ જ રાખી.</string>
+    <plurals name="engine_compress_detail">
+        <item quantity="one">%1$d%% નાનું - %2$d છબી ફરી એન્કોડ કરી</item>
+        <item quantity="other">%1$d%% નાનું - %2$d છબીઓ ફરી એન્કોડ કરી</item>
+    </plurals>
+    <string name="engine_compress_failed">કૉમ્પ્રેસ કરવામાં નિષ્ફળ.</string>
+    <string name="engine_compress_already_under">પહેલેથી જ %1$s થી ઓછું છે, તેથી તેને બદલ્યું નથી.</string>
+    <string name="engine_compress_trying">%1$s અજમાવી રહ્યાં છીએ</string>
+    <string name="engine_compress_under_at">%3$s કૉમ્પ્રેસન સાથે %2$s પર %1$s થી ઓછું</string>
+    <string name="engine_compress_cannot_get_under">%1$s થી ઓછું કરી શકાતું નથી: ચિત્રો પહેલેથી જ શક્ય તેટલાં નાનાં છે, અને તેમને ફરી એન્કોડ કરવાથી ફાઇલ મોટી થઈ. કદ પ્રમાણે વિભાજીત કરો વડે તેને બંધબેસતા ભાગોમાં કાપી શકાય છે.</string>
+    <string name="engine_compress_still_over">હજી પણ %1$s થી વધુ છે: %3$s કૉમ્પ્રેસન સાથે સૌથી નાનું %2$s થાય છે. કદ પ્રમાણે વિભાજીત કરો વડે તેને બંધબેસતા ભાગોમાં કાપી શકાય છે.</string>
+    <string name="engine_compress_trying_pictures">%1$d dpi પર પેજને ચિત્રો તરીકે</string>
+    <string name="engine_compress_as_pictures">%1$s → %2$s, %3$s થી ઓછું; પેજ હવે %4$d dpi પર ચિત્રો છે, અને શોધવા તથા કૉપિ કરવા માટે તેમના શબ્દો નીચે રાખ્યા છે</string>
+
+    <!-- Passwords -->
+    <string name="engine_title_restrict">PDF પર પ્રતિબંધ મૂકો</string>
+    <string name="engine_title_add_password">પાસવર્ડ ઉમેરો</string>
+    <string name="engine_withheld_printing">પ્રિન્ટ કરવાની</string>
+    <string name="engine_withheld_copying">લખાણ કૉપિ કરવાની</string>
+    <string name="engine_withheld_changes">ફેરફાર કરવાની</string>
+    <string name="engine_list_or"> અથવા </string>
+    <string name="engine_password_empty">પહેલાં પાસવર્ડ દાખલ કરો.</string>
+    <string name="engine_restrict_nothing">પ્રતિબંધ મૂકવા માટે ઓછામાં ઓછી એક વસ્તુ પસંદ કરો.</string>
+    <string name="engine_restricted_detail">પાસવર્ડ વિના ખૂલે છે; વાંચનારને %1$s મંજૂરી ન આપવા કહે છે</string>
+    <string name="engine_encrypted">AES-256 વડે એન્ક્રિપ્ટ કર્યું</string>
+    <string name="engine_encrypted_restricted">AES-256 વડે એન્ક્રિપ્ટ કર્યું, વાંચનારને %1$s મંજૂરી ન આપવા કહે છે</string>
+    <string name="engine_password_add_failed">પાસવર્ડ ઉમેરી શકાયો નહીં.</string>
+    <string name="engine_title_remove_password">પાસવર્ડ કાઢી નાખો</string>
+    <string name="engine_password_needed">આ દસ્તાવેજ અનલૉક કરવા Sheaf ને તેનો પાસવર્ડ જોઈએ.</string>
+    <string name="engine_unlocked">પાસવર્ડ વિના ખૂલે છે</string>
+    <string name="engine_password_wrong">આ પાસવર્ડથી દસ્તાવેજ ખૂલ્યો નહીં.</string>
+    <string name="engine_password_remove_failed">પાસવર્ડ કાઢી શકાયો નહીં.</string>
+
+    <!-- Pages per sheet -->
+    <plurals name="engine_title_nup">
+        <item quantity="one">શીટ દીઠ %d પેજ</item>
+        <item quantity="other">શીટ દીઠ %d પેજ</item>
+    </plurals>
+    <string name="engine_progress_laying_out">%1$s ગોઠવી રહ્યાં છીએ</string>
+    <string name="engine_nup_detail">%3$s ની %2$s પર %1$s</string>
+    <plurals name="engine_count_sheets">
+        <item quantity="one">%d શીટ</item>
+        <item quantity="other">%d શીટ</item>
+    </plurals>
+
+    <!-- Split by size -->
+    <string name="engine_title_split_size">%1$s થી નાના ભાગમાં વિભાજીત કરો</string>
+    <string name="engine_split_limit_small">મર્યાદા ઓછામાં ઓછી 1 MB હોવી જોઈએ.</string>
+    <string name="engine_split_already_under">આ દસ્તાવેજ પહેલેથી જ %1$s થી ઓછો છે, તેથી તેને બદલ્યો નથી.</string>
+    <string name="engine_progress_measuring">ક્યાંથી કાપવું તે માપી રહ્યાં છીએ</string>
+    <string name="engine_progress_measuring_pages">માપી રહ્યાં છીએ: %2$d માંથી %1$d પેજ ગોઠવ્યાં</string>
+    <string name="engine_no_pages">આ દસ્તાવેજમાં કોઈ પેજ નથી.</string>
+    <string name="engine_progress_writing_part">%2$d માંથી ભાગ %1$d લખી રહ્યાં છીએ</string>
+    <string name="engine_split_part_page">પેજ %1$d</string>
+    <string name="engine_split_part_pages">પેજ %1$d-%2$d</string>
+    <string name="engine_split_part_over">%1$s - આ એક પેજ જ %2$s થી મોટું છે</string>
+    <string name="engine_split_part_failed">આ ભાગ લખી શકાયો નહીં.</string>
+
+    <!-- Extract images -->
+    <string name="engine_title_extract_images">છબીઓ કાઢો</string>
+    <string name="engine_progress_page_of">%2$d માંથી પેજ %1$d</string>
+    <string name="engine_extract_images_none">આ દસ્તાવેજમાં કોઈ છબીઓ નથી. જો તમારે પેજના જ ચિત્રો જોઈતા હોય, તો PDF થી છબીઓ વાપરો.</string>
+
+    <!-- Metadata, clean -->
+    <string name="engine_title_strip_metadata">મેટાડેટા કાઢી નાખો</string>
+    <string name="engine_title_edit_details">વિગતો ફેરફાર કરો</string>
+    <string name="engine_progress_writing">%1$s લખી રહ્યાં છીએ</string>
+    <string name="engine_metadata_stripped">શીર્ષક, લેખક, તારીખો અને પ્રોડ્યૂસર સાફ કર્યાં</string>
+    <string name="engine_metadata_updated">વિગતો અપડેટ કરી</string>
+    <string name="engine_title_clean">છુપાયેલો ડેટા સાફ કરો</string>
+    <string name="engine_progress_cleaning">%1$s સાફ કરી રહ્યાં છીએ</string>
+    <string name="engine_clean_nothing">કંઈ છુપાયેલું મળ્યું નહીં; કૉપિ એ જ દસ્તાવેજ છે</string>
+    <string name="engine_clean_details">વિગતો</string>
+    <string name="engine_clean_xmp">તેમની છુપાયેલી XMP કૉપિ</string>
+    <string name="engine_clean_private">ખાનગી એડિટિંગ ડેટા</string>
+    <string name="engine_clean_removed">%1$s દૂર કર્યાં</string>
+    <plurals name="engine_clean_scripts">
+        <item quantity="one">%d સ્ક્રિપ્ટ</item>
+        <item quantity="other">%d સ્ક્રિપ્ટ</item>
+    </plurals>
+    <plurals name="engine_clean_attachments">
+        <item quantity="one">%d જોડેલી ફાઇલ</item>
+        <item quantity="other">%d જોડેલી ફાઇલો</item>
+    </plurals>
+    <plurals name="engine_clean_comments">
+        <item quantity="one">%d ટિપ્પણી</item>
+        <item quantity="other">%d ટિપ્પણીઓ</item>
+    </plurals>
+    <plurals name="engine_clean_thumbnails">
+        <item quantity="one">%d પેજ થંબનેલ</item>
+        <item quantity="other">%d પેજ થંબનેલ</item>
+    </plurals>
+
+    <!-- Page labels, background -->
+    <string name="engine_title_remove_labels">પેજ લેબલ દૂર કરો</string>
+    <string name="engine_title_labels">પેજ લેબલ</string>
+    <string name="engine_progress_labelling">%1$s પર લેબલ લગાવી રહ્યાં છીએ</string>
+    <string name="engine_labels_removed">પેજ લેબલ દૂર કર્યાં; વાંચનાર ફરી પહેલા પેજથી ગણશે</string>
+    <plurals name="engine_labels_front">
+        <item quantity="one">પહેલા પેજ માટે %1$s થી %2$s</item>
+        <item quantity="other">પહેલાં %3$d પેજ માટે %1$s થી %2$s</item>
+    </plurals>
+    <string name="engine_labels_range">%1$s થી %2$s</string>
+    <string name="engine_labels_then">%1$s, પછી %2$s</string>
+    <string name="engine_title_background">પેજ બૅકગ્રાઉન્ડ</string>
+    <string name="engine_progress_colouring">%1$s માં રંગ ભરી રહ્યાં છીએ</string>
+    <plurals name="engine_all_pages">
+        <item quantity="one">બધાં %d પેજ</item>
+        <item quantity="other">બધાં %d પેજ</item>
+    </plurals>
+    <string name="engine_background_detail">%1$s પાછળ બૅકગ્રાઉન્ડ</string>
+
+    <!-- Attachments -->
+    <string name="engine_title_extract_attachments">જોડાણો કાઢો</string>
+    <string name="engine_title_attach">ફાઇલો જોડો</string>
+    <string name="engine_attach_pdf_first">પહેલી ફાઇલ PDF હોવી જોઈએ.</string>
+    <string name="engine_progress_reading_attachments">જોડાણો વાંચી રહ્યાં છીએ</string>
+    <string name="engine_attached_to">%1$s સાથે જોડ્યું</string>
+    <string name="engine_attach_nothing">PDF પછી જોડવાની ફાઇલો ઉમેરો.</string>
+    <plurals name="engine_progress_attaching">
+        <item quantity="one">%d ફાઇલ જોડી રહ્યાં છીએ</item>
+        <item quantity="other">%d ફાઇલો જોડી રહ્યાં છીએ</item>
+    </plurals>
+    <string name="engine_attached_one">%1$s જોડ્યું</string>
+    <plurals name="engine_attached_many">
+        <item quantity="one">%1$d ફાઇલ જોડી: %2$s</item>
+        <item quantity="other">%1$d ફાઇલો જોડી: %2$s</item>
+    </plurals>
+
+    <!-- Bookmarks -->
+    <string name="engine_title_remove_bookmarks">બુકમાર્ક દૂર કરો</string>
+    <string name="engine_title_bookmarks">બુકમાર્ક</string>
+    <string name="engine_progress_writing_bookmarks">બુકમાર્ક લખી રહ્યાં છીએ</string>
+    <string name="engine_bookmarks_removed">બુકમાર્ક દૂર કર્યા</string>
+    <plurals name="engine_bookmarks_written">
+        <item quantity="one">%d બુકમાર્ક લખ્યો</item>
+        <item quantity="other">%d બુકમાર્ક લખ્યા</item>
+    </plurals>
+    <string name="engine_bookmarks_nested">%1$s, એકની અંદર એક</string>
+
+    <!-- Make searchable -->
+    <string name="engine_title_ocr">શોધી શકાય તેવું બનાવો</string>
+    <string name="engine_title_ocr_script">શોધી શકાય તેવું બનાવો (%1$s)</string>
+    <string name="engine_ocr_unavailable">આ ડિવાઇસ પર લખાણ ઓળખવાની સુવિધા ઉપલબ્ધ નથી.</string>
+    <string name="engine_progress_reading_page">%2$d માંથી પેજ %1$d વાંચી રહ્યાં છીએ</string>
+    <string name="engine_unreadable_document">આ દસ્તાવેજ વાંચી શકાયો નહીં.</string>
+    <string name="engine_ocr_no_text">આ દસ્તાવેજમાં કોઈ લખાણ મળ્યું નહીં. જો તે સ્કૅન નહીં પણ પહેલેથી જ લખાણ હોય, તો તે જેમ છે તેમ શોધી શકાય છે.</string>
+    <string name="engine_ocr_nothing_placed">પેજ પર કંઈ મૂકી શકાયું નહીં.</string>
+    <string name="engine_progress_writing_page">%2$d માંથી પેજ %1$d લખી રહ્યાં છીએ</string>
+    <plurals name="engine_ocr_detail">
+        <item quantity="one">%2$d માંથી %1$d પેજ પર લખાણ મળ્યું - %3$d લીટી હવે પસંદ કરી શકાય છે</item>
+        <item quantity="other">%2$d માંથી %1$d પેજ પર લખાણ મળ્યું - %3$d લીટીઓ હવે પસંદ કરી શકાય છે</item>
+    </plurals>
+    <string name="engine_ocr_write_failed">લખાણનું સ્તર લખી શકાયું નહીં.</string>
+
+    <!-- Extract text -->
+    <string name="engine_title_extract_text">લખાણ કાઢો</string>
+    <plurals name="engine_extract_text_no_match">
+        <item quantity="one">\"%1$s\" સાથે કોઈ પેજ મેળ ખાતું નથી. આ દસ્તાવેજમાં %2$d પેજ છે.</item>
+        <item quantity="other">\"%1$s\" સાથે કોઈ પેજ મેળ ખાતું નથી. આ દસ્તાવેજમાં %2$d પેજ છે.</item>
+    </plurals>
+    <plurals name="engine_progress_reading_pages">
+        <item quantity="one">%d પેજ વાંચી રહ્યાં છીએ</item>
+        <item quantity="other">%d પેજ વાંચી રહ્યાં છીએ</item>
+    </plurals>
+    <string name="engine_extract_text_none">આ દસ્તાવેજમાં કોઈ લખાણ નથી. તે કદાચ સ્કૅન છે - પહેલાં તેના પર શોધી શકાય તેવું બનાવો ચલાવો, પછી ફરી પ્રયાસ કરો.</string>
+    <string name="engine_words_from_pages">%2$s માંથી %1$s</string>
+    <plurals name="engine_words">
+        <item quantity="one">%d શબ્દ</item>
+        <item quantity="other">%d શબ્દો</item>
+    </plurals>
+
+    <!-- Archive copy -->
+    <string name="engine_title_pdfa">આર્કાઇવ કૉપિ (PDF/A)</string>
+    <string name="engine_progress_archiving">%1$s આર્કાઇવ કરી રહ્યાં છીએ</string>
+    <string name="engine_pdfa_done">PDF/A-2b આર્કાઇવ કૉપિ: રંગ પ્રોફાઇલ અને આર્કાઇવ વિગતો ઉમેરી</string>
+    <plurals name="engine_pdfa_scripts">
+        <item quantity="one">%d સ્ક્રિપ્ટ અથવા ઍક્શન</item>
+        <item quantity="other">%d સ્ક્રિપ્ટ અને ઍક્શન</item>
+    </plurals>
+    <string name="engine_list_and"> અને </string>
+    <string name="engine_clause_separator">; </string>
+    <string name="engine_pdfa_taken_out">ધોરણ મુજબ %1$s કાઢી નાખ્યાં</string>
+    <string name="engine_pdfa_unlocked">પાસવર્ડ કાઢી નાખ્યો, કારણ કે આર્કાઇવ દરેક માટે ખૂલવું જોઈએ</string>
+    <plurals name="engine_pdfa_fonts_missing">
+        <item quantity="one">ફાઇલ જે %d ફૉન્ટ વાપરે છે તે તેની અંદર નથી, તેથી કડક તપાસનાર તેને દર્શાવશે; જે પ્રોગ્રામમાં તે બની હતી તેમાંથી ફૉન્ટ એમ્બેડ કરીને ફરી સેવ કરવાથી આ ઠીક થઈ જશે</item>
+        <item quantity="other">ફાઇલ જે %d ફૉન્ટ વાપરે છે તે તેની અંદર નથી, તેથી કડક તપાસનાર તેને દર્શાવશે; જે પ્રોગ્રામમાં તે બની હતી તેમાંથી ફૉન્ટ એમ્બેડ કરીને ફરી સેવ કરવાથી આ ઠીક થઈ જશે</item>
+    </plurals>
+
+    <!-- Create a form -->
+    <string name="engine_title_create_form">ફૉર્મ બનાવો</string>
+    <string name="engine_form_nothing">પહેલાં પેજ પર ફીલ્ડ દોરો અને તેને નામ આપો.</string>
+    <plurals name="engine_progress_adding_fields">
+        <item quantity="one">%d ફીલ્ડ ઉમેરી રહ્યાં છીએ</item>
+        <item quantity="other">%d ફીલ્ડ ઉમેરી રહ્યાં છીએ</item>
+    </plurals>
+    <plurals name="engine_form_detail">
+        <item quantity="one">%1$s ઉમેર્યું (%2$d ફીલ્ડ): કોઈ પણ વ્યક્તિ કોઈ પણ PDF રીડરમાં તેને ભરી શકે છે</item>
+        <item quantity="other">%1$s ઉમેર્યાં (%2$d ફીલ્ડ): કોઈ પણ વ્યક્તિ કોઈ પણ PDF રીડરમાં તેને ભરી શકે છે</item>
+    </plurals>
+    <string name="engine_field_text">ટેક્સ્ટ બૉક્સ</string>
+    <string name="engine_field_multiline">ફકરા બૉક્સ</string>
+    <string name="engine_field_check">ટિક બૉક્સ</string>
+    <string name="engine_field_choice">ડ્રૉપ-ડાઉન સૂચિ</string>
+    <plurals name="engine_field_count_text">
+        <item quantity="one">%d ટેક્સ્ટ બૉક્સ</item>
+        <item quantity="other">%d ટેક્સ્ટ બૉક્સ</item>
+    </plurals>
+    <plurals name="engine_field_count_multiline">
+        <item quantity="one">%d ફકરા બૉક્સ</item>
+        <item quantity="other">%d ફકરા બૉક્સ</item>
+    </plurals>
+    <plurals name="engine_field_count_check">
+        <item quantity="one">%d ટિક બૉક્સ</item>
+        <item quantity="other">%d ટિક બૉક્સ</item>
+    </plurals>
+    <plurals name="engine_field_count_choice">
+        <item quantity="one">%d ડ્રૉપ-ડાઉન સૂચિ</item>
+        <item quantity="other">%d ડ્રૉપ-ડાઉન સૂચિઓ</item>
+    </plurals>
+
+    <!-- Digital signature -->
+    <string name="engine_title_digital_sign">ડિજિટલ સહી</string>
+    <string name="engine_certificate_missing">તમારી પ્રમાણપત્ર ફાઇલ (.pfx અથવા .p12) ઉમેરો.</string>
+    <string name="engine_progress_signing">%1$s પર સહી કરી રહ્યાં છીએ</string>
+    <string name="engine_signature_first_page">પહેલા પેજના તળિયે દેખાય છે</string>
+    <string name="engine_signature_last_page">છેલ્લા પેજના તળિયે દેખાય છે</string>
+    <string name="engine_signature_invisible">પેજ પર દેખાતી નથી, કોઈ પણ રીડરની સહી પૅનલમાં સૂચિબદ્ધ છે</string>
+    <string name="engine_signed_by">%1$s દ્વારા સહી, %2$s નું પ્રમાણપત્ર; %3$s</string>
+    <string name="engine_signed_by_unlocked">%1$s દ્વારા સહી, %2$s નું પ્રમાણપત્ર; %3$s. સહી કરેલી કૉપિ પાસવર્ડ વિના ખૂલે છે: તેને ફરી લૉક કરવાથી સહી અમાન્ય થઈ જશે</string>
+
+    <!-- Resize photo -->
+    <string name="engine_title_resize_photo">ફોટાનું કદ %1$s કરો</string>
+    <string name="engine_progress_fitting_one">તેને %1$s થી ઓછું કરી રહ્યાં છીએ…</string>
+    <string name="engine_progress_fitting_many">%2$d માંથી ચિત્ર %1$d ને %3$s થી ઓછું કરી રહ્યાં છીએ</string>
+    <string name="engine_photo_out_of_memory">આ ચિત્ર આ ફોનની મેમરી માટે ખૂબ મોટું છે.</string>
+    <string name="engine_photo_unreadable">આ ચિત્ર વાંચી શકાયું નહીં. તેને JPEG અથવા PNG તરીકે સેવ કરીને ફરી પ્રયાસ કરો.</string>
+    <string name="engine_photo_not_image">આ સાધન વાંચી શકે તેવી આ છબી નથી. JPEG, PNG, WebP, GIF, BMP અથવા HEIC વાપરો.</string>
+    <string name="engine_photo_already_fine">આ ફોટો પહેલેથી જ %1$s JPEG છે, %2$s થી ઓછો, %3$d × %4$d px, અને તેમાં કંઈ છુપાયેલું નથી. કંઈ બદલવાની જરૂર નથી.</string>
+    <string name="engine_photo_stripped">%1$s → %2$s, %3$s થી ઓછું; %4$d × %5$d px, ચિત્ર પોતે બદલાયું નથી%6$s</string>
+    <string name="engine_photo_too_small_kept">આ ચિત્ર સ્પષ્ટ રહે તે માટે %1$s ખૂબ ઓછું છે, અને તે પહેલેથી જ શક્ય તેટલું નાનું છે (%2$s). જો ફૉર્મ મંજૂરી આપે તો મોટું કદ પસંદ કરો.</string>
+    <string name="engine_photo_smallest_clear">%1$s → %2$s. આ ચિત્ર સ્પષ્ટ રહે તે માટે %3$s ખૂબ ઓછું છે: યોગ્ય દેખાય તેવું આ સૌથી નાનું છે, %4$d × %5$d px%6$s</string>
+    <string name="engine_photo_exact_too_small">%1$s → %2$s. %4$d × %5$d px સ્પષ્ટ રહે તે માટે %3$s ખૂબ ઓછું છે: આ કદમાં આ સૌથી નાનું છે. ઓછા પિક્સેલ લખો, અથવા તેને નાનું થવા દેવા આકાર જાળવો પસંદ કરો%6$s</string>
+    <string name="engine_photo_dims">%1$d × %2$d px</string>
+    <string name="engine_photo_dims_passport">પાસપોર્ટ આકાર, %1$d × %2$d px</string>
+    <string name="engine_photo_made_smaller">, બંધબેસે તે માટે નાનું કર્યું (પહેલાં %1$d × %2$d હતું)</string>
+    <string name="engine_photo_made_smaller_than">, બંધબેસે તે માટે %1$d × %2$d થી નાનું કર્યું</string>
+    <string name="engine_photo_it_was"> (પહેલાં %1$d × %2$d હતું)</string>
+    <string name="engine_photo_not_enlarged">, %1$d × %2$d સુધી મોટું કર્યું નથી: ફોટામાં ઓછા પિક્સેલ છે</string>
+    <string name="engine_photo_turned_upright">, સીધું કર્યું</string>
+    <string name="engine_photo_now_jpeg">, હવે JPEG છે</string>
+    <string name="engine_photo_done">%1$s → %2$s, %3$s થી ઓછું; %4$s%5$s</string>
+    <string name="engine_photo_min_size">ઓછામાં ઓછું 2 KB નું કદ પસંદ કરો.</string>
+    <string name="engine_photo_pixels_range">%1$d અને %2$d પિક્સેલ વચ્ચે પહોળાઈ અને ઊંચાઈ લખો.</string>
+    <string name="engine_photo_no_avif">આ ફોન AVIF છબીઓ વાંચી શકતો નથી. પહેલાં તેને JPEG અથવા PNG તરીકે સેવ કરો.</string>
+    <string name="engine_photo_no_heic">આ ફોન આ HEIC ફોટો વાંચી શકતો નથી. જે ફોનમાંથી તે આવ્યો છે ત્યાંથી તેને JPEG તરીકે શેર કરો, પછી ફરી ઉમેરો.</string>
+    <string name="engine_photo_hidden_any">; સ્થાન અને કૅમેરાની કોઈ પણ વિગતો કાઢી નાખી</string>
+    <string name="engine_photo_hidden_location">; સ્થાન અને કૅમેરાની વિગતો કાઢી નાખી</string>
+    <string name="engine_photo_hidden_camera">; કૅમેરાની વિગતો કાઢી નાખી</string>
+
+    <!-- Fill in a form -->
+    <string name="engine_title_fill_seal">ફૉર્મ ભરો અને સીલ કરો</string>
+    <string name="engine_title_fill">ફૉર્મ ભરો</string>
+    <string name="engine_fill_nothing">પહેલાં ઓછામાં ઓછું એક ફીલ્ડ ભરો.</string>
+    <string name="engine_progress_filling">%1$s ભરી રહ્યાં છીએ</string>
+    <plurals name="engine_fields_filled">
+        <item quantity="one">%d ફીલ્ડ ભર્યું</item>
+        <item quantity="other">%d ફીલ્ડ ભર્યાં</item>
+    </plurals>
+    <string name="engine_fields_sealed">%1$s, અને સીલ કર્યાં જેથી ફરી બદલી ન શકાય</string>
+
+    <!-- Edit text -->
+    <string name="engine_title_edit_text">લખાણ ફેરફાર કરો</string>
+    <string name="engine_edit_text_nothing">પહેલાં લખાણની કોઈ લીટી પર ટૅપ કરીને તેને બદલો.</string>
+    <string name="engine_progress_writing_changes">ફેરફારો લખી રહ્યાં છીએ</string>
+    <string name="engine_edit_text_failed">ફેરફારો લખી શકાયા નહીં.</string>
+    <plurals name="engine_edit_text_detail">
+        <item quantity="one">%d ફેરફાર કર્યો. જૂના શબ્દો પર રંગ ચડાવ્યો છે, કાઢી નાખ્યા નથી: શબ્દો કાયમ માટે દૂર કરવા, ભાગ દૂર કરો વાપરો</item>
+        <item quantity="other">%d ફેરફારો કર્યા. જૂના શબ્દો પર રંગ ચડાવ્યો છે, કાઢી નાખ્યા નથી: શબ્દો કાયમ માટે દૂર કરવા, ભાગ દૂર કરો વાપરો</item>
+    </plurals>
+    <plurals name="engine_edit_text_detail_pages">
+        <item quantity="one">%2$d પેજમાં %1$d ફેરફાર કર્યો. જૂના શબ્દો પર રંગ ચડાવ્યો છે, કાઢી નાખ્યા નથી: શબ્દો કાયમ માટે દૂર કરવા, ભાગ દૂર કરો વાપરો</item>
+        <item quantity="other">%2$d પેજમાં %1$d ફેરફારો કર્યા. જૂના શબ્દો પર રંગ ચડાવ્યો છે, કાઢી નાખ્યા નથી: શબ્દો કાયમ માટે દૂર કરવા, ભાગ દૂર કરો વાપરો</item>
+    </plurals>
+
+    <!-- Edit pictures -->
+    <string name="engine_title_edit_pictures">ચિત્રો ફેરફાર કરો</string>
+    <string name="engine_edit_pictures_nothing">પહેલાં કોઈ ચિત્ર ખસેડો, કાઢો અથવા બદલો.</string>
+    <string name="engine_progress_changing_pictures">ચિત્રો બદલી રહ્યાં છીએ</string>
+    <string name="engine_edit_pictures_failed">ચિત્રો બદલી શકાયાં નહીં.</string>
+    <plurals name="engine_pictures_removed">
+        <item quantity="one">%d ચિત્ર કાઢ્યું</item>
+        <item quantity="other">%d ચિત્રો કાઢ્યાં</item>
+    </plurals>
+    <plurals name="engine_pictures_moved">
+        <item quantity="one">%d ચિત્ર ખસેડ્યું</item>
+        <item quantity="other">%d ચિત્રો ખસેડ્યાં</item>
+    </plurals>
+    <plurals name="engine_pictures_replaced">
+        <item quantity="one">%d ચિત્ર બદલ્યું</item>
+        <item quantity="other">%d ચિત્રો બદલ્યાં</item>
+    </plurals>
+    <plurals name="engine_pictures_missed">
+        <item quantity="one">; %d ફેરફાર થઈ શક્યો નહીં</item>
+        <item quantity="other">; %d ફેરફારો થઈ શક્યા નહીં</item>
+    </plurals>
+
+    <!-- Recipes -->
+    <string name="engine_recipe_empty">આ રેસિપીમાં કોઈ પગલાં નથી.</string>
+    <string name="engine_recipe_step">%2$d માંથી પગલું %1$d: %3$s</string>
+    <string name="engine_recipe_unchanged">કોઈ ફેરફાર નથી</string>
+
+    <!-- Choices the PDF layer names -->
+    <string name="engine_watermark_layout_diagonal">એક વાર, ત્રાંસું</string>
+    <string name="engine_watermark_layout_straight">એક વાર, સીધું આડું</string>
+    <string name="engine_watermark_layout_tiled">આખા પેજ પર વારંવાર</string>
+    <string name="engine_paper_letter">Letter</string>
+    <string name="engine_paper_legal">Legal</string>
+    <string name="engine_paper_fit_image">છબી જેટલું</string>
+    <string name="engine_compression_light">હળવું</string>
+    <string name="engine_compression_balanced">સંતુલિત</string>
+    <string name="engine_compression_strong">વધુ</string>
+    <string name="engine_ocr_script_latin">અંગ્રેજી અને અન્ય લેટિન લિપિઓ</string>
+    <string name="engine_ocr_script_devanagari">હિન્દી, મરાઠી, નેપાળી (દેવનાગરી)</string>
+
+    <!-- Kinds of comment found in a document -->
+    <string name="engine_comment_reply">જવાબ</string>
+    <string name="engine_comment_note">નોંધ</string>
+    <string name="engine_comment_text_box">ટેક્સ્ટ બૉક્સ</string>
+    <string name="engine_comment_highlight">હાઇલાઇટ</string>
+    <string name="engine_comment_underline">અન્ડરલાઇન</string>
+    <string name="engine_comment_strikethrough">છેકો</string>
+    <string name="engine_comment_squiggle">વાંકીચૂકી લીટી</string>
+    <string name="engine_comment_drawing">ચિત્રકામ</string>
+    <string name="engine_comment_box">બૉક્સ</string>
+    <string name="engine_comment_circle">વર્તુળ</string>
+    <string name="engine_comment_line">લીટી</string>
+    <string name="engine_comment_shape">આકાર</string>
+    <string name="engine_comment_stamp">સ્ટૅમ્પ</string>
+    <string name="engine_comment_insertion">ઉમેરો</string>
+    <string name="engine_comment_attached_file">જોડેલી ફાઇલ</string>
+    <string name="engine_comment_sound">અવાજ</string>
+    <string name="engine_comment_media">મીડિયા</string>
+    <string name="engine_comment_redaction">દૂર કરવાનું નિશાન</string>
+
+    <!-- What can go wrong in the PDF layer. The first five lead into a detail after the colon. -->
+    <string name="engine_err_password_required">આ દસ્તાવેજ પાસવર્ડથી સુરક્ષિત છે.</string>
+    <string name="engine_err_corrupt">આ ફાઇલ PDF તરીકે વાંચી શકાઈ નહીં: %1$s</string>
+    <string name="engine_err_unsupported">આ દસ્તાવેજ એવી સુવિધા વાપરે છે જે Sheaf હજી સંભાળી શકતું નથી: %1$s</string>
+    <string name="engine_err_out_of_memory">આ ડિવાઇસ પર પ્રક્રિયા કરવા માટે આ દસ્તાવેજ ખૂબ મોટો છે: %1$s</string>
+    <string name="engine_err_io">ફાઇલ વાંચી કે લખી શકાઈ નહીં: %1$s</string>
+    <string name="engine_err_could_not_be_opened">ખોલી શકાઈ નહીં</string>
+    <string name="engine_err_unreadable">વાંચી શકાતી નથી</string>
+    <string name="engine_err_could_not_merge">આ દસ્તાવેજ જોડી શકાયો નહીં</string>
+    <string name="engine_err_could_not_images">આ છબીઓની PDF બનાવી શકાઈ નહીં</string>
+    <string name="engine_err_could_not_receipts">રસીદો લખી શકાઈ નહીં</string>
+    <string name="engine_err_could_not_lay_out">આ દસ્તાવેજ ગોઠવી શકાયો નહીં</string>
+    <string name="engine_err_could_not_pictures">પેજનાં ચિત્રો બનાવી શકાયાં નહીં</string>
+    <string name="engine_err_could_not_open">આ દસ્તાવેજ ખોલી શકાયો નહીં</string>
+    <string name="engine_err_could_not_process">આ દસ્તાવેજ પર પ્રક્રિયા થઈ શકી નહીં</string>
+    <string name="engine_err_merge_locked">જોડતાં પહેલાં \"%1$s\" નો પાસવર્ડ કાઢી નાખો</string>
+    <string name="engine_err_oom_merging">%1$d દસ્તાવેજો જોડતી વખતે</string>
+    <string name="engine_err_oom_images">%1$d છબીઓમાંથી PDF બનાવતી વખતે</string>
+    <string name="engine_err_oom_page_dpi">%2$d DPI પર પેજ %1$d</string>
+    <string name="engine_err_oom_page_size">%2$dx%3$d પર પેજ %1$d</string>
+    <string name="engine_err_oom_page">પેજ %1$d</string>
+    <string name="engine_err_oom_opening">%1$s ખોલતી વખતે</string>
+    <string name="engine_err_not_an_image">%1$s છબી તરીકે વાંચી શકાઈ નહીં</string>
+    <string name="engine_err_image_unreadable">છબી વાંચી શકાઈ નહીં</string>
+    <string name="engine_err_page_not_rendered">પેજ %1$d બતાવી શકાયું નહીં</string>
+    <string name="engine_err_page_not_measured">પેજ %1$d માપી શકાયું નહીં</string>
+    <plurals name="engine_err_page_out_of_range">
+        <item quantity="one">%2$d પેજના દસ્તાવેજમાં પેજ %1$d નથી</item>
+        <item quantity="other">%2$d પેજના દસ્તાવેજમાં પેજ %1$d નથી</item>
+    </plurals>
+    <string name="engine_err_could_not_write">%1$s લખી શકાયું નહીં</string>
+    <string name="engine_err_not_a_file">%1$s ફાઇલ નથી</string>
+    <string name="engine_err_platform_encrypted">પ્લેટફૉર્મ રેન્ડરર એન્ક્રિપ્ટ કરેલા દસ્તાવેજો ખોલી શકતું નથી</string>
+    <string name="engine_err_no_form_fields">આ દસ્તાવેજમાં કોઈ ફૉર્મ ફીલ્ડ નથી</string>
+    <string name="engine_err_ocr_page">લખાણ ઓળખનાર આ પેજ વાંચી શક્યું નહીં</string>
+    <string name="engine_err_nothing_to_merge">જોડવા માટે કંઈ નથી.</string>
+    <string name="engine_err_no_pages_selected">કોઈ પેજ પસંદ કરાયાં નથી.</string>
+    <string name="engine_err_no_images_selected">કોઈ છબીઓ પસંદ કરાઈ નથી.</string>
+    <string name="engine_err_no_such_page">આ દસ્તાવેજમાં પેજ %1$d નથી.</string>
+    <string name="engine_err_pages_typed_missing">લખેલા પેજમાંથી એક પણ આ દસ્તાવેજમાં નથી.</string>
+    <string name="engine_err_password_empty">પાસવર્ડ ખાલી ન હોઈ શકે.</string>
+    <string name="engine_err_nothing_to_restrict">બધું મંજૂર છે, તેથી પ્રતિબંધ મૂકવા જેવું કંઈ નથી.</string>
+    <string name="engine_err_not_protected">આ દસ્તાવેજ પાસવર્ડથી સુરક્ષિત નથી.</string>
+    <string name="engine_err_words_not_found">તે શબ્દો મળ્યા નહીં. સ્કૅન કરેલા પેજમાં શોધવા માટે લખાણ હોતું નથી; પહેલાં શોધી શકાય તેવું બનાવો ચલાવો.</string>
+    <string name="engine_err_nothing_to_write">લખવા માટે કંઈ નથી.</string>
+    <string name="engine_err_draw_field">પહેલાં પેજ પર ફીલ્ડ દોરો.</string>
+    <string name="engine_err_fields_off_page">કોઈ પણ ફીલ્ડ આ દસ્તાવેજના પેજ પર આવ્યું નથી.</string>
+    <string name="engine_err_not_signed">દસ્તાવેજ પર સહી થઈ શકી નહીં: %1$s</string>
+    <string name="engine_err_signature_not_made">સહી બનાવી શકાઈ નહીં</string>
+    <string name="engine_err_crop_too_much">કિનારીઓ પરથી આટલું કાપવાથી પેજ %1$d માં લગભગ કંઈ બચશે નહીં. નાના હાંસિયા વાપરો.</string>
+    <string name="engine_err_no_margins">દૂર કરવા માટે કોઈ સફેદ હાંસિયા નથી: પેજ પરની સામગ્રી પહેલેથી જ કિનારી સુધી છે, અથવા પેજ ખાલી છે.</string>
+    <string name="engine_err_nothing_marked_removal">દૂર કરવા માટે કંઈ ચિહ્નિત કરાયું નથી.</string>
+    <string name="engine_err_nothing_marked">કોઈ પણ પેજ પર કંઈ ચિહ્નિત કરાયું નથી.</string>
+    <string name="engine_err_no_header_footer">ઉમેરવા માટે કોઈ હેડર અથવા ફૂટરનું લખાણ નથી.</string>
+    <string name="engine_err_all_blank">તેનાથી દરેક પેજ ખાલી પેજથી બદલાઈ જશે.</string>
+    <string name="engine_err_insert_empty">દાખલ કરવાના દસ્તાવેજમાં કોઈ પેજ નથી.</string>
+    <string name="engine_err_pick_attachment">જોડવા માટે ઓછામાં ઓછી એક ફાઇલ પસંદ કરો.</string>
+    <string name="engine_err_no_attachments">આ દસ્તાવેજ સાથે કોઈ ફાઇલ જોડેલી નથી.</string>
+    <string name="engine_err_attachments_unreadable">જોડેલી ફાઇલો આ દસ્તાવેજમાંથી વાંચી શકાઈ નહીં.</string>
+    <string name="engine_err_no_pages_to_write">લખવા માટે કોઈ પેજ નથી.</string>
+    <string name="engine_err_pictures_not_found">તે ચિત્રો પેજના ડ્રૉઇંગમાં મળ્યાં નહીં, તેથી કંઈ બદલાયું નથી. ડ્રૉઇંગ અથવા સ્કૅનની અંદરના ચિત્રને અલગથી ફેરફાર કરી શકાતું નથી.</string>
+    <string name="engine_err_certificate_password">આ પ્રમાણપત્રનો પાસવર્ડ નથી.</string>
+    <string name="engine_err_certificate_unreadable">આ એવી પ્રમાણપત્ર ફાઇલ નથી જે Sheaf વાંચી શકે: તેને .pfx અથવા .p12 જોઈએ.</string>
+    <string name="engine_err_certificate_no_key">આ પ્રમાણપત્ર ફાઇલમાં ખાનગી કી નથી, તેથી તે કશા પર સહી કરી શકતી નથી.</string>
+    <string name="engine_err_certificate_empty">આ પ્રમાણપત્ર ફાઇલમાં કોઈ પ્રમાણપત્ર નથી.</string>
+    <string name="engine_err_certificate_expired">આ પ્રમાણપત્રની મુદત %1$s ના રોજ પૂરી થઈ ગઈ. રીડર સહીને અમાન્ય ગણશે, તેથી તેનો ઉપયોગ કર્યો નથી. જેણે તે આપ્યું હોય તેમની પાસેથી રિન્યૂ કરાવો.</string>
+    <string name="engine_err_not_word">આ Word ફાઇલ નથી: તેની અંદર કોઈ દસ્તાવેજ નથી.</string>
+    <string name="engine_err_not_spreadsheet">આ સ્પ્રેડશીટ નથી: તેની અંદર કોઈ શીટ નથી.</string>
+    <string name="engine_err_deck_empty">ડેકમાં ઓછામાં ઓછી એક સ્લાઇડ હોવી જોઈએ.</string>
+</resources>

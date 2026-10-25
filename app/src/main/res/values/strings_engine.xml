@@ -1,0 +1,538 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Shared by many tools -->
+    <string name="engine_no_document">No document was selected.</string>
+    <string name="engine_pick_pdf_first">Pick the PDF first.</string>
+    <string name="engine_pick_one_pdf">Pick one PDF.</string>
+    <string name="engine_failed">Failed.</string>
+    <string name="engine_done">Done</string>
+    <string name="engine_unreadable">Unreadable.</string>
+    <string name="engine_list_separator">, </string>
+    <plurals name="engine_count_pages">
+        <item quantity="one">%d page</item>
+        <item quantity="other">%d pages</item>
+    </plurals>
+    <plurals name="engine_pages_listed">
+        <item quantity="one">page %1$s</item>
+        <item quantity="other">pages %1$s</item>
+    </plurals>
+    <plurals name="engine_pages_typed_not_in_file">
+        <item quantity="one">This file has %d page; none of the pages typed are in it.</item>
+        <item quantity="other">This file has %d pages; none of the pages typed are in it.</item>
+    </plurals>
+
+    <!-- Watermark -->
+    <string name="engine_title_watermark">Watermark \"%1$s\"</string>
+    <string name="engine_watermark_no_text">Type the watermark text, such as DRAFT or COPY.</string>
+    <string name="engine_progress_watermark">Watermarking %1$s</string>
+    <string name="engine_watermark_detail">\"%1$s\" across %2$s</string>
+    <string name="engine_watermark_detail_tiled">\"%1$s\" repeated across %2$s</string>
+
+    <!-- Page numbers -->
+    <string name="engine_title_bates">Bates numbers</string>
+    <string name="engine_title_page_numbers">Page numbers</string>
+    <string name="engine_progress_numbering">Numbering %1$s</string>
+    <string name="engine_numbered_none">No pages were numbered</string>
+    <plurals name="engine_numbered_detail">
+        <item quantity="one">%1$s to %2$s on %3$d of %4$d page</item>
+        <item quantity="other">%1$s to %2$s on %3$d of %4$d pages</item>
+    </plurals>
+
+    <!-- Crop -->
+    <string name="engine_title_remove_margins">Remove white margins</string>
+    <string name="engine_title_crop">Crop pages</string>
+    <string name="engine_crop_nothing">Choose how much to trim, or a page size, first.</string>
+    <string name="engine_progress_cropping">Cropping %1$s</string>
+    <string name="engine_crop_auto">White margins removed from %1$s</string>
+    <string name="engine_crop_trimmed">Trimmed %1$s off %2$s</string>
+    <string name="engine_crop_then_paper">%1$s, then put on %2$s</string>
+    <string name="engine_crop_on_paper">%1$s put on %2$s</string>
+    <string name="engine_crop_real_size">%1$s, smaller pages at their real size</string>
+    <string name="engine_crop_all_round">%1$s all round</string>
+    <string name="engine_crop_edge_top">top %1$s</string>
+    <string name="engine_crop_edge_right">right %1$s</string>
+    <string name="engine_crop_edge_bottom">bottom %1$s</string>
+    <string name="engine_crop_edge_left">left %1$s</string>
+
+    <!-- Redact -->
+    <string name="engine_title_redact">Remove areas</string>
+    <string name="engine_redact_nothing">Draw a box over what should be removed first.</string>
+    <string name="engine_progress_redacting">Removing from page %1$d of %2$d</string>
+    <string name="engine_redact_detail">%1$s from %2$s</string>
+    <plurals name="engine_redact_areas">
+        <item quantity="one">%d area removed</item>
+        <item quantity="other">%d areas removed</item>
+    </plurals>
+    <plurals name="engine_redact_pages">
+        <item quantity="one">%d page, which is now an image</item>
+        <item quantity="other">%d pages, which are now images</item>
+    </plurals>
+
+    <!-- Sign, add an image -->
+    <string name="engine_title_sign">Sign</string>
+    <string name="engine_sign_nothing">Draw your signature first.</string>
+    <string name="engine_progress_placing_signature">Placing the signature</string>
+    <string name="engine_signed_on_page">Signed on page %1$d</string>
+    <string name="engine_title_add_image">Add an image</string>
+    <string name="engine_add_image_missing">Add the image to put on the page.</string>
+    <string name="engine_progress_placing">Placing %1$s</string>
+    <string name="engine_image_placed">%1$s placed on page %2$d</string>
+
+    <!-- Mark up -->
+    <string name="engine_title_annotate">Mark up</string>
+    <string name="engine_annotate_nothing">Highlight or draw something first.</string>
+    <string name="engine_progress_drawing">Drawing on page %1$d of %2$d</string>
+    <string name="engine_marks_on_pages">%1$s on %2$s</string>
+    <plurals name="engine_marks">
+        <item quantity="one">%d mark</item>
+        <item quantity="other">%d marks</item>
+    </plurals>
+
+    <!-- Header and footer -->
+    <string name="engine_title_header_footer">Header and footer</string>
+    <string name="engine_hf_nothing">Type a header or a footer first.</string>
+    <string name="engine_progress_stamping">Stamping %1$s</string>
+    <plurals name="engine_hf_added_both">
+        <item quantity="one">Added a header and footer to %1$d of %2$d page</item>
+        <item quantity="other">Added a header and footer to %1$d of %2$d pages</item>
+    </plurals>
+    <plurals name="engine_hf_added_header">
+        <item quantity="one">Added a header to %1$d of %2$d page</item>
+        <item quantity="other">Added a header to %1$d of %2$d pages</item>
+    </plurals>
+    <plurals name="engine_hf_added_footer">
+        <item quantity="one">Added a footer to %1$d of %2$d page</item>
+        <item quantity="other">Added a footer to %1$d of %2$d pages</item>
+    </plurals>
+
+    <!-- Add text -->
+    <string name="engine_title_add_text">Add text</string>
+    <string name="engine_add_text_nothing">Type the text first.</string>
+    <string name="engine_progress_writing_on_page">Writing on page %1$d</string>
+    <plurals name="engine_lines_added">
+        <item quantity="one">One line added to page %2$d</item>
+        <item quantity="other">%1$d lines added to page %2$d</item>
+    </plurals>
+    <string name="engine_lines_added_covering">%1$s, covering what was underneath</string>
+
+    <!-- Compress -->
+    <string name="engine_title_compress_to">Compress to under %1$s</string>
+    <string name="engine_title_compress">Compress (%1$s)</string>
+    <string name="engine_compress_larger">Already as small as it goes - compressing made it larger, so the original was kept.</string>
+    <string name="engine_compress_text_only">Nothing to compress - this document is text, not scanned images.</string>
+    <string name="engine_compress_negligible">Only %1$d%% smaller, so the original was kept.</string>
+    <plurals name="engine_compress_detail">
+        <item quantity="one">%1$d%% smaller - %2$d image re-encoded</item>
+        <item quantity="other">%1$d%% smaller - %2$d images re-encoded</item>
+    </plurals>
+    <string name="engine_compress_failed">Compression failed.</string>
+    <string name="engine_compress_already_under">Already under %1$s, so it was left alone.</string>
+    <string name="engine_compress_trying">trying %1$s</string>
+    <string name="engine_compress_under_at">Under %1$s at %2$s, with %3$s compression</string>
+    <string name="engine_compress_cannot_get_under">Cannot get under %1$s: the pictures are already as small as they go, and re-encoding them made the file larger. Split by size can cut it into parts that fit.</string>
+    <string name="engine_compress_still_over">Still over %1$s: the smallest it goes is %2$s, with %3$s compression. Split by size can cut it into parts that fit.</string>
+    <string name="engine_compress_trying_pictures">pages as pictures at %1$d dpi</string>
+    <string name="engine_compress_as_pictures">%1$s → %2$s, under %3$s; pages are now pictures at %4$d dpi, with their words kept underneath to search and copy</string>
+
+    <!-- Passwords -->
+    <string name="engine_title_restrict">Restrict a PDF</string>
+    <string name="engine_title_add_password">Add a password</string>
+    <string name="engine_withheld_printing">printing</string>
+    <string name="engine_withheld_copying">copying text</string>
+    <string name="engine_withheld_changes">changes</string>
+    <string name="engine_list_or"> or </string>
+    <string name="engine_password_empty">Enter a password first.</string>
+    <string name="engine_restrict_nothing">Choose at least one thing to restrict.</string>
+    <string name="engine_restricted_detail">Opens without a password; asks readers not to allow %1$s</string>
+    <string name="engine_encrypted">Encrypted with AES-256</string>
+    <string name="engine_encrypted_restricted">Encrypted with AES-256, asking readers not to allow %1$s</string>
+    <string name="engine_password_add_failed">Could not add a password.</string>
+    <string name="engine_title_remove_password">Remove a password</string>
+    <string name="engine_password_needed">Sheaf needs this document\'s password to unlock it.</string>
+    <string name="engine_unlocked">Opens without a password</string>
+    <string name="engine_password_wrong">That password did not open this document.</string>
+    <string name="engine_password_remove_failed">Could not remove the password.</string>
+
+    <!-- Pages per sheet -->
+    <plurals name="engine_title_nup">
+        <item quantity="one">%d page per sheet</item>
+        <item quantity="other">%d pages per sheet</item>
+    </plurals>
+    <string name="engine_progress_laying_out">Laying out %1$s</string>
+    <string name="engine_nup_detail">%1$s on %2$s of %3$s</string>
+    <plurals name="engine_count_sheets">
+        <item quantity="one">%d sheet</item>
+        <item quantity="other">%d sheets</item>
+    </plurals>
+
+    <!-- Split by size -->
+    <string name="engine_title_split_size">Split under %1$s</string>
+    <string name="engine_split_limit_small">The limit has to be at least 1 MB.</string>
+    <string name="engine_split_already_under">This document is already under %1$s, so it was left alone.</string>
+    <string name="engine_progress_measuring">Measuring where to cut</string>
+    <string name="engine_progress_measuring_pages">Measuring: %1$d of %2$d pages placed</string>
+    <string name="engine_no_pages">This document has no pages.</string>
+    <string name="engine_progress_writing_part">Writing part %1$d of %2$d</string>
+    <string name="engine_split_part_page">Page %1$d</string>
+    <string name="engine_split_part_pages">Pages %1$d-%2$d</string>
+    <string name="engine_split_part_over">%1$s - this page is bigger than %2$s on its own</string>
+    <string name="engine_split_part_failed">This part could not be written.</string>
+
+    <!-- Extract images -->
+    <string name="engine_title_extract_images">Extract images</string>
+    <string name="engine_progress_page_of">Page %1$d of %2$d</string>
+    <string name="engine_extract_images_none">There are no embedded images in this document. If you wanted pictures of the pages themselves, use PDF to images.</string>
+
+    <!-- Metadata, clean -->
+    <string name="engine_title_strip_metadata">Strip metadata</string>
+    <string name="engine_title_edit_details">Edit details</string>
+    <string name="engine_progress_writing">Writing %1$s</string>
+    <string name="engine_metadata_stripped">Title, author, dates and producer cleared</string>
+    <string name="engine_metadata_updated">Details updated</string>
+    <string name="engine_title_clean">Clean hidden data</string>
+    <string name="engine_progress_cleaning">Cleaning %1$s</string>
+    <string name="engine_clean_nothing">Nothing hidden was found; the copy is the same document</string>
+    <string name="engine_clean_details">the details</string>
+    <string name="engine_clean_xmp">a hidden XMP copy of them</string>
+    <string name="engine_clean_private">private editing data</string>
+    <string name="engine_clean_removed">Removed %1$s</string>
+    <plurals name="engine_clean_scripts">
+        <item quantity="one">%d script</item>
+        <item quantity="other">%d scripts</item>
+    </plurals>
+    <plurals name="engine_clean_attachments">
+        <item quantity="one">%d attached file</item>
+        <item quantity="other">%d attached files</item>
+    </plurals>
+    <plurals name="engine_clean_comments">
+        <item quantity="one">%d comment</item>
+        <item quantity="other">%d comments</item>
+    </plurals>
+    <plurals name="engine_clean_thumbnails">
+        <item quantity="one">%d page thumbnail</item>
+        <item quantity="other">%d page thumbnails</item>
+    </plurals>
+
+    <!-- Page labels, background -->
+    <string name="engine_title_remove_labels">Remove page labels</string>
+    <string name="engine_title_labels">Page labels</string>
+    <string name="engine_progress_labelling">Labelling %1$s</string>
+    <string name="engine_labels_removed">Page labels removed; readers count from the first page again</string>
+    <plurals name="engine_labels_front">
+        <item quantity="one">%1$s to %2$s for the first page</item>
+        <item quantity="other">%1$s to %2$s for the first %3$d pages</item>
+    </plurals>
+    <string name="engine_labels_range">%1$s to %2$s</string>
+    <string name="engine_labels_then">%1$s, then %2$s</string>
+    <string name="engine_title_background">Page background</string>
+    <string name="engine_progress_colouring">Colouring %1$s</string>
+    <plurals name="engine_all_pages">
+        <item quantity="one">all %d page</item>
+        <item quantity="other">all %d pages</item>
+    </plurals>
+    <string name="engine_background_detail">Background behind %1$s</string>
+
+    <!-- Attachments -->
+    <string name="engine_title_extract_attachments">Extract attachments</string>
+    <string name="engine_title_attach">Attach files</string>
+    <string name="engine_attach_pdf_first">The first file has to be the PDF.</string>
+    <string name="engine_progress_reading_attachments">Reading the attachments</string>
+    <string name="engine_attached_to">Attached to %1$s</string>
+    <string name="engine_attach_nothing">Add the files to attach after the PDF.</string>
+    <plurals name="engine_progress_attaching">
+        <item quantity="one">Attaching %d file</item>
+        <item quantity="other">Attaching %d files</item>
+    </plurals>
+    <string name="engine_attached_one">%1$s attached</string>
+    <plurals name="engine_attached_many">
+        <item quantity="one">%1$d file attached: %2$s</item>
+        <item quantity="other">%1$d files attached: %2$s</item>
+    </plurals>
+
+    <!-- Bookmarks -->
+    <string name="engine_title_remove_bookmarks">Remove bookmarks</string>
+    <string name="engine_title_bookmarks">Bookmarks</string>
+    <string name="engine_progress_writing_bookmarks">Writing the bookmarks</string>
+    <string name="engine_bookmarks_removed">Bookmarks removed</string>
+    <plurals name="engine_bookmarks_written">
+        <item quantity="one">%d bookmark written</item>
+        <item quantity="other">%d bookmarks written</item>
+    </plurals>
+    <string name="engine_bookmarks_nested">%1$s, nested</string>
+
+    <!-- Make searchable -->
+    <string name="engine_title_ocr">Make searchable</string>
+    <string name="engine_title_ocr_script">Make searchable (%1$s)</string>
+    <string name="engine_ocr_unavailable">Text recognition is not available on this device.</string>
+    <string name="engine_progress_reading_page">Reading page %1$d of %2$d</string>
+    <string name="engine_unreadable_document">This document could not be read.</string>
+    <string name="engine_ocr_no_text">No text was found in this document. If it is already text rather than a scan, it is searchable as it is.</string>
+    <string name="engine_ocr_nothing_placed">Nothing could be placed on the page.</string>
+    <string name="engine_progress_writing_page">Writing page %1$d of %2$d</string>
+    <plurals name="engine_ocr_detail">
+        <item quantity="one">Text found on %1$d of %2$d pages - %3$d line is now selectable</item>
+        <item quantity="other">Text found on %1$d of %2$d pages - %3$d lines are now selectable</item>
+    </plurals>
+    <string name="engine_ocr_write_failed">The text layer could not be written.</string>
+
+    <!-- Extract text -->
+    <string name="engine_title_extract_text">Extract text</string>
+    <plurals name="engine_extract_text_no_match">
+        <item quantity="one">No pages matched \"%1$s\". This document has %2$d page.</item>
+        <item quantity="other">No pages matched \"%1$s\". This document has %2$d pages.</item>
+    </plurals>
+    <plurals name="engine_progress_reading_pages">
+        <item quantity="one">Reading %d page</item>
+        <item quantity="other">Reading %d pages</item>
+    </plurals>
+    <string name="engine_extract_text_none">This document has no text in it. It is probably a scan - run Make searchable on it first, then try again.</string>
+    <string name="engine_words_from_pages">%1$s from %2$s</string>
+    <plurals name="engine_words">
+        <item quantity="one">%d word</item>
+        <item quantity="other">%d words</item>
+    </plurals>
+
+    <!-- Archive copy -->
+    <string name="engine_title_pdfa">Archive copy (PDF/A)</string>
+    <string name="engine_progress_archiving">Archiving %1$s</string>
+    <string name="engine_pdfa_done">PDF/A-2b archive copy: colour profile and archive details added</string>
+    <plurals name="engine_pdfa_scripts">
+        <item quantity="one">%d script or action</item>
+        <item quantity="other">%d scripts and actions</item>
+    </plurals>
+    <string name="engine_list_and"> and </string>
+    <string name="engine_clause_separator">; </string>
+    <string name="engine_pdfa_taken_out">%1$s taken out, as the standard asks</string>
+    <string name="engine_pdfa_unlocked">the password is gone, as archives must open for anyone</string>
+    <plurals name="engine_pdfa_fonts_missing">
+        <item quantity="one">%d font the file uses is not inside it, so a strict checker will flag that; saving it again from the program that made it, with fonts embedded, fixes it</item>
+        <item quantity="other">%d fonts the file uses are not inside it, so a strict checker will flag that; saving it again from the program that made it, with fonts embedded, fixes it</item>
+    </plurals>
+
+    <!-- Create a form -->
+    <string name="engine_title_create_form">Create a form</string>
+    <string name="engine_form_nothing">Draw a field on the page and give it a name first.</string>
+    <plurals name="engine_progress_adding_fields">
+        <item quantity="one">Adding %d field</item>
+        <item quantity="other">Adding %d fields</item>
+    </plurals>
+    <plurals name="engine_form_detail">
+        <item quantity="one">%1$s added (%2$d field): anyone can fill it in, in any PDF reader</item>
+        <item quantity="other">%1$s added (%2$d fields): anyone can fill it in, in any PDF reader</item>
+    </plurals>
+    <string name="engine_field_text">Text box</string>
+    <string name="engine_field_multiline">Paragraph box</string>
+    <string name="engine_field_check">Tick box</string>
+    <string name="engine_field_choice">Drop-down list</string>
+    <plurals name="engine_field_count_text">
+        <item quantity="one">%d text box</item>
+        <item quantity="other">%d text boxes</item>
+    </plurals>
+    <plurals name="engine_field_count_multiline">
+        <item quantity="one">%d paragraph box</item>
+        <item quantity="other">%d paragraph boxes</item>
+    </plurals>
+    <plurals name="engine_field_count_check">
+        <item quantity="one">%d tick box</item>
+        <item quantity="other">%d tick boxes</item>
+    </plurals>
+    <plurals name="engine_field_count_choice">
+        <item quantity="one">%d drop-down list</item>
+        <item quantity="other">%d drop-down lists</item>
+    </plurals>
+
+    <!-- Digital signature -->
+    <string name="engine_title_digital_sign">Digital signature</string>
+    <string name="engine_certificate_missing">Add your certificate file (.pfx or .p12).</string>
+    <string name="engine_progress_signing">Signing %1$s</string>
+    <string name="engine_signature_first_page">shown at the foot of the first page</string>
+    <string name="engine_signature_last_page">shown at the foot of the last page</string>
+    <string name="engine_signature_invisible">invisible on the page, listed in any reader\'s signature panel</string>
+    <string name="engine_signed_by">Signed by %1$s, certificate from %2$s; %3$s</string>
+    <string name="engine_signed_by_unlocked">Signed by %1$s, certificate from %2$s; %3$s. The signed copy opens without the password: locking it again would break the signature</string>
+
+    <!-- Resize photo -->
+    <string name="engine_title_resize_photo">Resize photo to %1$s</string>
+    <string name="engine_progress_fitting_one">Fitting it under %1$s…</string>
+    <string name="engine_progress_fitting_many">Fitting picture %1$d of %2$d under %3$s</string>
+    <string name="engine_photo_out_of_memory">This picture is too big for this phone\'s memory.</string>
+    <string name="engine_photo_unreadable">This picture couldn\'t be read. Save it as JPEG or PNG and try again.</string>
+    <string name="engine_photo_not_image">This isn\'t an image this tool can read. Use JPEG, PNG, WebP, GIF, BMP or HEIC.</string>
+    <string name="engine_photo_already_fine">This photo is already a %1$s JPEG, under %2$s, %3$d × %4$d px, with nothing hidden in it. Nothing to change.</string>
+    <string name="engine_photo_stripped">%1$s → %2$s, under %3$s; %4$d × %5$d px, the picture itself untouched%6$s</string>
+    <string name="engine_photo_too_small_kept">%1$s is too small for this picture to stay clear, and it is already as small as it gets (%2$s). Choose a bigger size if the form allows it.</string>
+    <string name="engine_photo_smallest_clear">%1$s → %2$s. %3$s is too small for this picture to stay clear: this is the smallest that still looks right, %4$d × %5$d px%6$s</string>
+    <string name="engine_photo_exact_too_small">%1$s → %2$s. %3$s is too small for %4$d × %5$d px to stay clear: this is the smallest at that size. Type fewer pixels, or choose Keep its shape to let it shrink%6$s</string>
+    <string name="engine_photo_dims">%1$d × %2$d px</string>
+    <string name="engine_photo_dims_passport">passport shape, %1$d × %2$d px</string>
+    <string name="engine_photo_made_smaller">, made smaller to fit (it was %1$d × %2$d)</string>
+    <string name="engine_photo_made_smaller_than">, made smaller than %1$d × %2$d to fit</string>
+    <string name="engine_photo_it_was"> (it was %1$d × %2$d)</string>
+    <string name="engine_photo_not_enlarged">, not enlarged to %1$d × %2$d: the photo has fewer pixels</string>
+    <string name="engine_photo_turned_upright">, turned upright</string>
+    <string name="engine_photo_now_jpeg">, now a JPEG</string>
+    <string name="engine_photo_done">%1$s → %2$s, under %3$s; %4$s%5$s</string>
+    <string name="engine_photo_min_size">Choose a size of at least 2 KB.</string>
+    <string name="engine_photo_pixels_range">Type a width and a height between %1$d and %2$d pixels.</string>
+    <string name="engine_photo_no_avif">This phone can\'t read AVIF images. Save it as JPEG or PNG first.</string>
+    <string name="engine_photo_no_heic">This phone can\'t read this HEIC photo. Share it as JPEG from the phone it came from, then add it again.</string>
+    <string name="engine_photo_hidden_any">; any location and camera details taken out</string>
+    <string name="engine_photo_hidden_location">; location and camera details taken out</string>
+    <string name="engine_photo_hidden_camera">; camera details taken out</string>
+
+    <!-- Fill in a form -->
+    <string name="engine_title_fill_seal">Fill in a form and seal it</string>
+    <string name="engine_title_fill">Fill in a form</string>
+    <string name="engine_fill_nothing">Fill in at least one field first.</string>
+    <string name="engine_progress_filling">Filling in %1$s</string>
+    <plurals name="engine_fields_filled">
+        <item quantity="one">%d field filled</item>
+        <item quantity="other">%d fields filled</item>
+    </plurals>
+    <string name="engine_fields_sealed">%1$s, and sealed so they cannot be retyped</string>
+
+    <!-- Edit text -->
+    <string name="engine_title_edit_text">Edit text</string>
+    <string name="engine_edit_text_nothing">Tap a line of text and change it first.</string>
+    <string name="engine_progress_writing_changes">Writing the changes</string>
+    <string name="engine_edit_text_failed">The changes could not be written.</string>
+    <plurals name="engine_edit_text_detail">
+        <item quantity="one">%d change made. The old words are painted over, not taken out: to remove words for good, use Remove areas</item>
+        <item quantity="other">%d changes made. The old words are painted over, not taken out: to remove words for good, use Remove areas</item>
+    </plurals>
+    <plurals name="engine_edit_text_detail_pages">
+        <item quantity="one">%1$d change made across %2$d pages. The old words are painted over, not taken out: to remove words for good, use Remove areas</item>
+        <item quantity="other">%1$d changes made across %2$d pages. The old words are painted over, not taken out: to remove words for good, use Remove areas</item>
+    </plurals>
+
+    <!-- Edit pictures -->
+    <string name="engine_title_edit_pictures">Edit pictures</string>
+    <string name="engine_edit_pictures_nothing">Move, take out or replace a picture first.</string>
+    <string name="engine_progress_changing_pictures">Changing the pictures</string>
+    <string name="engine_edit_pictures_failed">The pictures could not be changed.</string>
+    <plurals name="engine_pictures_removed">
+        <item quantity="one">%d picture taken out</item>
+        <item quantity="other">%d pictures taken out</item>
+    </plurals>
+    <plurals name="engine_pictures_moved">
+        <item quantity="one">%d picture moved</item>
+        <item quantity="other">%d pictures moved</item>
+    </plurals>
+    <plurals name="engine_pictures_replaced">
+        <item quantity="one">%d picture replaced</item>
+        <item quantity="other">%d pictures replaced</item>
+    </plurals>
+    <plurals name="engine_pictures_missed">
+        <item quantity="one">; %d change could not be made</item>
+        <item quantity="other">; %d changes could not be made</item>
+    </plurals>
+
+    <!-- Recipes -->
+    <string name="engine_recipe_empty">This recipe has no steps.</string>
+    <string name="engine_recipe_step">Step %1$d of %2$d: %3$s</string>
+    <string name="engine_recipe_unchanged">Unchanged</string>
+
+    <!-- Choices the PDF layer names -->
+    <string name="engine_watermark_layout_diagonal">Once, diagonally</string>
+    <string name="engine_watermark_layout_straight">Once, straight across</string>
+    <string name="engine_watermark_layout_tiled">Repeated all over</string>
+    <string name="engine_paper_letter">Letter</string>
+    <string name="engine_paper_legal">Legal</string>
+    <string name="engine_paper_fit_image">Fit the image</string>
+    <string name="engine_compression_light">Light</string>
+    <string name="engine_compression_balanced">Balanced</string>
+    <string name="engine_compression_strong">Strong</string>
+    <string name="engine_ocr_script_latin">English and other Latin scripts</string>
+    <string name="engine_ocr_script_devanagari">Hindi, Marathi, Nepali (Devanagari)</string>
+
+    <!-- Kinds of comment found in a document -->
+    <string name="engine_comment_reply">Reply</string>
+    <string name="engine_comment_note">Note</string>
+    <string name="engine_comment_text_box">Text box</string>
+    <string name="engine_comment_highlight">Highlight</string>
+    <string name="engine_comment_underline">Underline</string>
+    <string name="engine_comment_strikethrough">Strikethrough</string>
+    <string name="engine_comment_squiggle">Squiggle</string>
+    <string name="engine_comment_drawing">Drawing</string>
+    <string name="engine_comment_box">Box</string>
+    <string name="engine_comment_circle">Circle</string>
+    <string name="engine_comment_line">Line</string>
+    <string name="engine_comment_shape">Shape</string>
+    <string name="engine_comment_stamp">Stamp</string>
+    <string name="engine_comment_insertion">Insertion</string>
+    <string name="engine_comment_attached_file">Attached file</string>
+    <string name="engine_comment_sound">Sound</string>
+    <string name="engine_comment_media">Media</string>
+    <string name="engine_comment_redaction">Redaction mark</string>
+
+    <!-- What can go wrong in the PDF layer. The first five lead into a detail after the colon. -->
+    <string name="engine_err_password_required">This document is password-protected.</string>
+    <string name="engine_err_corrupt">This file could not be read as a PDF: %1$s</string>
+    <string name="engine_err_unsupported">This document uses a feature Sheaf cannot handle yet: %1$s</string>
+    <string name="engine_err_out_of_memory">This document is too large to process on this device: %1$s</string>
+    <string name="engine_err_io">Could not read or write the file: %1$s</string>
+    <string name="engine_err_could_not_be_opened">could not be opened</string>
+    <string name="engine_err_unreadable">unreadable</string>
+    <string name="engine_err_could_not_merge">could not merge this document</string>
+    <string name="engine_err_could_not_images">could not make a PDF of these images</string>
+    <string name="engine_err_could_not_receipts">could not write the receipts</string>
+    <string name="engine_err_could_not_lay_out">could not lay out this document</string>
+    <string name="engine_err_could_not_pictures">could not make the pages into pictures</string>
+    <string name="engine_err_could_not_open">could not open this document</string>
+    <string name="engine_err_could_not_process">could not process this document</string>
+    <string name="engine_err_merge_locked">remove the password from \"%1$s\" before merging it</string>
+    <string name="engine_err_oom_merging">merging %1$d documents</string>
+    <string name="engine_err_oom_images">building a PDF from %1$d images</string>
+    <string name="engine_err_oom_page_dpi">page %1$d at %2$d DPI</string>
+    <string name="engine_err_oom_page_size">page %1$d at %2$dx%3$d</string>
+    <string name="engine_err_oom_page">page %1$d</string>
+    <string name="engine_err_oom_opening">opening %1$s</string>
+    <string name="engine_err_not_an_image">%1$s could not be read as an image</string>
+    <string name="engine_err_image_unreadable">the image could not be read</string>
+    <string name="engine_err_page_not_rendered">page %1$d could not be rendered</string>
+    <string name="engine_err_page_not_measured">page %1$d could not be measured</string>
+    <plurals name="engine_err_page_out_of_range">
+        <item quantity="one">page %1$d does not exist in a %2$d-page document</item>
+        <item quantity="other">page %1$d does not exist in a %2$d-page document</item>
+    </plurals>
+    <string name="engine_err_could_not_write">could not write %1$s</string>
+    <string name="engine_err_not_a_file">%1$s is not a file</string>
+    <string name="engine_err_platform_encrypted">the platform renderer cannot open encrypted documents</string>
+    <string name="engine_err_no_form_fields">this document has no form fields in it</string>
+    <string name="engine_err_ocr_page">the text recogniser could not read this page</string>
+    <string name="engine_err_nothing_to_merge">Nothing to merge.</string>
+    <string name="engine_err_no_pages_selected">No pages were selected.</string>
+    <string name="engine_err_no_images_selected">No images were selected.</string>
+    <string name="engine_err_no_such_page">Page %1$d does not exist in this document.</string>
+    <string name="engine_err_pages_typed_missing">None of the pages typed are in this document.</string>
+    <string name="engine_err_password_empty">The password cannot be empty.</string>
+    <string name="engine_err_nothing_to_restrict">Everything is allowed, so there is nothing to restrict.</string>
+    <string name="engine_err_not_protected">This document is not password-protected.</string>
+    <string name="engine_err_words_not_found">Those words were not found. A scanned page has no text to find; run Make searchable first.</string>
+    <string name="engine_err_nothing_to_write">There is nothing to write.</string>
+    <string name="engine_err_draw_field">Draw a field on the page first.</string>
+    <string name="engine_err_fields_off_page">None of the fields landed on a page of this document.</string>
+    <string name="engine_err_not_signed">The document could not be signed: %1$s</string>
+    <string name="engine_err_signature_not_made">the signature could not be made</string>
+    <string name="engine_err_crop_too_much">That much off the edges would leave almost nothing of page %1$d. Use smaller margins.</string>
+    <string name="engine_err_no_margins">No white margins to remove: what is on the pages already runs to their edges, or they are blank.</string>
+    <string name="engine_err_nothing_marked_removal">Nothing was marked for removal.</string>
+    <string name="engine_err_nothing_marked">Nothing was marked on any page.</string>
+    <string name="engine_err_no_header_footer">There is no header or footer text to add.</string>
+    <string name="engine_err_all_blank">That would replace every page with blank ones.</string>
+    <string name="engine_err_insert_empty">The document to insert has no pages in it.</string>
+    <string name="engine_err_pick_attachment">Pick at least one file to attach.</string>
+    <string name="engine_err_no_attachments">This document has no files attached to it.</string>
+    <string name="engine_err_attachments_unreadable">The attached files could not be read out of this document.</string>
+    <string name="engine_err_no_pages_to_write">There are no pages to write.</string>
+    <string name="engine_err_pictures_not_found">Those pictures could not be found in the page\'s drawing, so nothing was changed. A picture inside a drawing or a scan cannot be edited on its own.</string>
+    <string name="engine_err_certificate_password">That is not the certificate\'s password.</string>
+    <string name="engine_err_certificate_unreadable">This is not a certificate file Sheaf can read: it wants a .pfx or .p12.</string>
+    <string name="engine_err_certificate_no_key">This certificate file has no private key in it, so it cannot sign anything.</string>
+    <string name="engine_err_certificate_empty">This certificate file has no certificate in it.</string>
+    <string name="engine_err_certificate_expired">This certificate ran out on %1$s. A reader would mark the signature as not valid, so it was not used. Renew it with whoever issued it.</string>
+    <string name="engine_err_not_word">This is not a Word file: it has no document inside.</string>
+    <string name="engine_err_not_spreadsheet">This is not a spreadsheet: it has no sheets inside.</string>
+    <string name="engine_err_deck_empty">A deck needs at least one slide.</string>
+</resources>

@@ -1,6 +1,8 @@
 package com.layerbit.sheaf.ops
 
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.files.SheafFile
+import com.layerbit.sheaf.text.Strings
 
 /**
  * Several tools, one after another, on any number of files: a recipe.
@@ -21,7 +23,7 @@ class RecipeOp(private val name: String, private val steps: List<Op>) : Op {
         context: OpContext,
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> {
-        if (steps.isEmpty()) return listOf(OpOutcome.Failed("", "This recipe has no steps."))
+        if (steps.isEmpty()) return listOf(OpOutcome.Failed("", Strings.get(R.string.engine_recipe_empty)))
         val originals = inputs.map { it.file }.toSet()
         var current = inputs
         val failures = mutableListOf<OpOutcome>()
@@ -31,7 +33,7 @@ class RecipeOp(private val name: String, private val steps: List<Op>) : Op {
 
         for ((k, op) in steps.withIndex()) {
             context.checkCancelled()
-            val label = "Step ${k + 1} of ${steps.size}: ${op.title}"
+            val label = Strings.get(R.string.engine_recipe_step, k + 1, steps.size, op.title)
             onProgress(Progress(k, steps.size, label))
             val outcomes = if (op.arity == Op.Arity.ExactlyOne) {
                 current.flatMap { file -> op.run(listOf(file), context) { p -> onProgress(Progress(k, steps.size, "$label. ${p.label}")) } }
@@ -69,11 +71,11 @@ class RecipeOp(private val name: String, private val steps: List<Op>) : Op {
             lastProduced = produced
             if (current.isEmpty()) break
         }
-        onProgress(Progress(steps.size, steps.size, "Done"))
+        onProgress(Progress(steps.size, steps.size, Strings.get(R.string.engine_done)))
 
         val results = current.map { file ->
             lastProduced.firstOrNull { it.file.file == file.file }
-                ?: OpOutcome.Produced(file, notes[file.file.path] ?: "Unchanged")
+                ?: OpOutcome.Produced(file, notes[file.file.path] ?: Strings.get(R.string.engine_recipe_unchanged))
         }
         return results + failures
     }

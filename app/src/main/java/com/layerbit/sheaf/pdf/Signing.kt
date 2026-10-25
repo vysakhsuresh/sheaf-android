@@ -1,5 +1,7 @@
 package com.layerbit.sheaf.pdf
 
+import com.layerbit.sheaf.R
+import com.layerbit.sheaf.text.Strings
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.interactive.digitalsignature.PDSignature
 import com.tom_roush.pdfbox.pdmodel.interactive.digitalsignature.SignatureInterface
@@ -44,16 +46,16 @@ internal object Signing {
             val wrongPassword = e.message?.contains("password", true) == true || e.message?.contains("mac", true) == true ||
                 e.cause?.message?.contains("password", true) == true
             throw PdfException.Refused(
-                if (wrongPassword) "That is not the certificate's password." else "This is not a certificate file Sheaf can read: it wants a .pfx or .p12.",
+                Strings.get(if (wrongPassword) R.string.engine_err_certificate_password else R.string.engine_err_certificate_unreadable),
                 e
             )
         }
         val alias = store.aliases().asSequence().firstOrNull { store.isKeyEntry(it) }
-            ?: throw PdfException.Refused("This certificate file has no private key in it, so it cannot sign anything.")
+            ?: throw PdfException.Refused(Strings.get(R.string.engine_err_certificate_no_key))
         val key = store.getKey(alias, password.toCharArray()) as? PrivateKey
-            ?: throw PdfException.Refused("This certificate file has no private key in it, so it cannot sign anything.")
+            ?: throw PdfException.Refused(Strings.get(R.string.engine_err_certificate_no_key))
         val chain = store.getCertificateChain(alias)?.mapNotNull { it as? X509Certificate }.orEmpty()
-        if (chain.isEmpty()) throw PdfException.Refused("This certificate file has no certificate in it.")
+        if (chain.isEmpty()) throw PdfException.Refused(Strings.get(R.string.engine_err_certificate_empty))
         return Credentials(key, chain)
     }
 
@@ -72,7 +74,7 @@ internal object Signing {
         val now = Date()
         if (credentials.certificate.notAfter.before(now)) {
             val day = java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.getDefault()).format(credentials.certificate.notAfter)
-            throw PdfException.Refused("This certificate ran out on $day. A reader would mark the signature as not valid, so it was not used. Renew it with whoever issued it.")
+            throw PdfException.Refused(Strings.get(R.string.engine_err_certificate_expired, day))
         }
         val signature = PDSignature().apply {
             setFilter(PDSignature.FILTER_ADOBE_PPKLITE)

@@ -1,0 +1,538 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Shared by many tools -->
+    <string name="engine_no_document">డాక్యుమెంట్ ఏదీ ఎంచుకోలేదు.</string>
+    <string name="engine_pick_pdf_first">ముందుగా PDFను ఎంచుకోండి.</string>
+    <string name="engine_pick_one_pdf">ఒక PDFను ఎంచుకోండి.</string>
+    <string name="engine_failed">విఫలమైంది.</string>
+    <string name="engine_done">పూర్తయింది</string>
+    <string name="engine_unreadable">చదవడం సాధ్యం కాదు.</string>
+    <string name="engine_list_separator">, </string>
+    <plurals name="engine_count_pages">
+        <item quantity="one">%d పేజీ</item>
+        <item quantity="other">%d పేజీలు</item>
+    </plurals>
+    <plurals name="engine_pages_listed">
+        <item quantity="one">పేజీ %1$s</item>
+        <item quantity="other">పేజీలు %1$s</item>
+    </plurals>
+    <plurals name="engine_pages_typed_not_in_file">
+        <item quantity="one">ఈ ఫైల్‌లో %d పేజీ ఉంది; మీరు టైప్ చేసిన పేజీలు ఏవీ ఇందులో లేవు.</item>
+        <item quantity="other">ఈ ఫైల్‌లో %d పేజీలు ఉన్నాయి; మీరు టైప్ చేసిన పేజీలు ఏవీ ఇందులో లేవు.</item>
+    </plurals>
+
+    <!-- Watermark -->
+    <string name="engine_title_watermark">వాటర్‌మార్క్ \"%1$s\"</string>
+    <string name="engine_watermark_no_text">వాటర్‌మార్క్ టెక్స్ట్‌ను టైప్ చేయండి, ఉదా. DRAFT లేదా COPY.</string>
+    <string name="engine_progress_watermark">%1$sకి వాటర్‌మార్క్ వేస్తోంది</string>
+    <string name="engine_watermark_detail">%2$s అంతటా \"%1$s\"</string>
+    <string name="engine_watermark_detail_tiled">%2$s అంతటా \"%1$s\" పదేపదే</string>
+
+    <!-- Page numbers -->
+    <string name="engine_title_bates">Bates నంబర్‌లు</string>
+    <string name="engine_title_page_numbers">పేజీ నంబర్‌లు</string>
+    <string name="engine_progress_numbering">%1$sకి నంబర్‌లు వేస్తోంది</string>
+    <string name="engine_numbered_none">ఏ పేజీకీ నంబర్ వేయలేదు</string>
+    <plurals name="engine_numbered_detail">
+        <item quantity="one">%4$d పేజీలో %3$d పేజీపై %1$s నుండి %2$s వరకు</item>
+        <item quantity="other">%4$d పేజీలలో %3$d పేజీలపై %1$s నుండి %2$s వరకు</item>
+    </plurals>
+
+    <!-- Crop -->
+    <string name="engine_title_remove_margins">తెల్లని మార్జిన్‌లను తీసివేయి</string>
+    <string name="engine_title_crop">పేజీలను క్రాప్ చేయి</string>
+    <string name="engine_crop_nothing">ముందుగా ఎంత కత్తిరించాలో లేదా పేజీ సైజ్‌ను ఎంచుకోండి.</string>
+    <string name="engine_progress_cropping">%1$s క్రాప్ చేస్తోంది</string>
+    <string name="engine_crop_auto">%1$s నుండి తెల్లని మార్జిన్‌లు తీసివేయబడ్డాయి</string>
+    <string name="engine_crop_trimmed">%2$s నుండి %1$s కత్తిరించబడింది</string>
+    <string name="engine_crop_then_paper">%1$s, ఆపై %2$s పేపర్‌పై ఉంచబడింది</string>
+    <string name="engine_crop_on_paper">%1$s %2$s పేపర్‌పై ఉంచబడ్డాయి</string>
+    <string name="engine_crop_real_size">%1$s, చిన్న పేజీలు వాటి అసలు సైజ్‌లోనే</string>
+    <string name="engine_crop_all_round">అన్ని వైపులా %1$s</string>
+    <string name="engine_crop_edge_top">పైన %1$s</string>
+    <string name="engine_crop_edge_right">కుడివైపు %1$s</string>
+    <string name="engine_crop_edge_bottom">కింద %1$s</string>
+    <string name="engine_crop_edge_left">ఎడమవైపు %1$s</string>
+
+    <!-- Redact -->
+    <string name="engine_title_redact">భాగాలను తీసివేయి</string>
+    <string name="engine_redact_nothing">ముందుగా తీసివేయాల్సిన దానిపై బాక్స్ గీయండి.</string>
+    <string name="engine_progress_redacting">%2$dలో %1$dవ పేజీ నుండి తీసివేస్తోంది</string>
+    <string name="engine_redact_detail">%1$s: %2$s</string>
+    <plurals name="engine_redact_areas">
+        <item quantity="one">%d భాగం తీసివేయబడింది</item>
+        <item quantity="other">%d భాగాలు తీసివేయబడ్డాయి</item>
+    </plurals>
+    <plurals name="engine_redact_pages">
+        <item quantity="one">%d పేజీ నుండి, అది ఇప్పుడు ఇమేజ్‌గా మారింది</item>
+        <item quantity="other">%d పేజీల నుండి, అవి ఇప్పుడు ఇమేజ్‌లుగా మారాయి</item>
+    </plurals>
+
+    <!-- Sign, add an image -->
+    <string name="engine_title_sign">సంతకం చేయి</string>
+    <string name="engine_sign_nothing">ముందుగా మీ సంతకాన్ని గీయండి.</string>
+    <string name="engine_progress_placing_signature">సంతకాన్ని ఉంచుతోంది</string>
+    <string name="engine_signed_on_page">పేజీ %1$dలో సంతకం చేయబడింది</string>
+    <string name="engine_title_add_image">ఇమేజ్‌ను జోడించు</string>
+    <string name="engine_add_image_missing">పేజీపై ఉంచాల్సిన ఇమేజ్‌ను జోడించండి.</string>
+    <string name="engine_progress_placing">%1$s ఉంచుతోంది</string>
+    <string name="engine_image_placed">%1$s పేజీ %2$dలో ఉంచబడింది</string>
+
+    <!-- Mark up -->
+    <string name="engine_title_annotate">మార్క్ చేయి</string>
+    <string name="engine_annotate_nothing">ముందుగా ఏదైనా హైలైట్ చేయండి లేదా గీయండి.</string>
+    <string name="engine_progress_drawing">%2$dలో %1$dవ పేజీపై గీస్తోంది</string>
+    <string name="engine_marks_on_pages">%2$s పై %1$s</string>
+    <plurals name="engine_marks">
+        <item quantity="one">%d గుర్తు</item>
+        <item quantity="other">%d గుర్తులు</item>
+    </plurals>
+
+    <!-- Header and footer -->
+    <string name="engine_title_header_footer">హెడర్, ఫుటర్</string>
+    <string name="engine_hf_nothing">ముందుగా హెడర్ లేదా ఫుటర్‌ను టైప్ చేయండి.</string>
+    <string name="engine_progress_stamping">%1$sపై ముద్రిస్తోంది</string>
+    <plurals name="engine_hf_added_both">
+        <item quantity="one">%2$d పేజీలో %1$d పేజీకి హెడర్, ఫుటర్ జోడించబడ్డాయి</item>
+        <item quantity="other">%2$d పేజీలలో %1$d పేజీలకు హెడర్, ఫుటర్ జోడించబడ్డాయి</item>
+    </plurals>
+    <plurals name="engine_hf_added_header">
+        <item quantity="one">%2$d పేజీలో %1$d పేజీకి హెడర్ జోడించబడింది</item>
+        <item quantity="other">%2$d పేజీలలో %1$d పేజీలకు హెడర్ జోడించబడింది</item>
+    </plurals>
+    <plurals name="engine_hf_added_footer">
+        <item quantity="one">%2$d పేజీలో %1$d పేజీకి ఫుటర్ జోడించబడింది</item>
+        <item quantity="other">%2$d పేజీలలో %1$d పేజీలకు ఫుటర్ జోడించబడింది</item>
+    </plurals>
+
+    <!-- Add text -->
+    <string name="engine_title_add_text">టెక్స్ట్‌ను జోడించు</string>
+    <string name="engine_add_text_nothing">ముందుగా టెక్స్ట్‌ను టైప్ చేయండి.</string>
+    <string name="engine_progress_writing_on_page">పేజీ %1$dపై రాస్తోంది</string>
+    <plurals name="engine_lines_added">
+        <item quantity="one">పేజీ %2$dకి ఒక లైన్ జోడించబడింది</item>
+        <item quantity="other">పేజీ %2$dకి %1$d లైన్‌లు జోడించబడ్డాయి</item>
+    </plurals>
+    <string name="engine_lines_added_covering">%1$s, కింద ఉన్నదాన్ని కప్పివేస్తూ</string>
+
+    <!-- Compress -->
+    <string name="engine_title_compress_to">%1$s లోపుకు కంప్రెస్ చేయి</string>
+    <string name="engine_title_compress">కంప్రెస్ చేయి (%1$s)</string>
+    <string name="engine_compress_larger">ఇప్పటికే వీలైనంత చిన్నగా ఉంది - కంప్రెస్ చేస్తే పెద్దదైంది, కాబట్టి అసలు ఫైల్‌నే ఉంచాము.</string>
+    <string name="engine_compress_text_only">కంప్రెస్ చేయడానికి ఏమీ లేదు - ఈ డాక్యుమెంట్ టెక్స్ట్, స్కాన్ చేసిన ఇమేజ్‌లు కాదు.</string>
+    <string name="engine_compress_negligible">%1$d%% మాత్రమే తగ్గింది, కాబట్టి అసలు ఫైల్‌నే ఉంచాము.</string>
+    <plurals name="engine_compress_detail">
+        <item quantity="one">%1$d%% చిన్నదైంది - %2$d ఇమేజ్ మళ్లీ ఎన్‌కోడ్ చేయబడింది</item>
+        <item quantity="other">%1$d%% చిన్నదైంది - %2$d ఇమేజ్‌లు మళ్లీ ఎన్‌కోడ్ చేయబడ్డాయి</item>
+    </plurals>
+    <string name="engine_compress_failed">కంప్రెషన్ విఫలమైంది.</string>
+    <string name="engine_compress_already_under">ఇప్పటికే %1$s లోపు ఉంది, కాబట్టి మార్చలేదు.</string>
+    <string name="engine_compress_trying">%1$s ప్రయత్నిస్తోంది</string>
+    <string name="engine_compress_under_at">%3$s కంప్రెషన్‌తో %2$s వద్ద %1$s లోపు</string>
+    <string name="engine_compress_cannot_get_under">%1$s లోపుకు తగ్గించలేము: చిత్రాలు ఇప్పటికే వీలైనంత చిన్నగా ఉన్నాయి, మళ్లీ ఎన్‌కోడ్ చేస్తే ఫైల్ పెద్దదైంది. \"సైజ్ ప్రకారం విభజించు\" దీన్ని సరిపోయే భాగాలుగా విడదీయగలదు.</string>
+    <string name="engine_compress_still_over">ఇంకా %1$s కంటే ఎక్కువే ఉంది: %3$s కంప్రెషన్‌తో అతి చిన్నగా %2$s వరకే తగ్గుతుంది. \"సైజ్ ప్రకారం విభజించు\" దీన్ని సరిపోయే భాగాలుగా విడదీయగలదు.</string>
+    <string name="engine_compress_trying_pictures">%1$d dpi వద్ద పేజీలను చిత్రాలుగా</string>
+    <string name="engine_compress_as_pictures">%1$s → %2$s, %3$s లోపు; పేజీలు ఇప్పుడు %4$d dpi చిత్రాలు, వెతకడానికి, కాపీ చేయడానికి వాటి పదాలు కింద అలాగే ఉన్నాయి</string>
+
+    <!-- Passwords -->
+    <string name="engine_title_restrict">PDFను పరిమితం చేయి</string>
+    <string name="engine_title_add_password">పాస్‌వర్డ్‌ను జోడించు</string>
+    <string name="engine_withheld_printing">ప్రింట్ చేయడం</string>
+    <string name="engine_withheld_copying">టెక్స్ట్ కాపీ చేయడం</string>
+    <string name="engine_withheld_changes">మార్పులు చేయడం</string>
+    <string name="engine_list_or"> లేదా </string>
+    <string name="engine_password_empty">ముందుగా పాస్‌వర్డ్‌ను ఎంటర్ చేయండి.</string>
+    <string name="engine_restrict_nothing">పరిమితం చేయడానికి కనీసం ఒక దాన్ని ఎంచుకోండి.</string>
+    <string name="engine_restricted_detail">పాస్‌వర్డ్ లేకుండా తెరుచుకుంటుంది; %1$s అనుమతించవద్దని రీడర్‌లను కోరుతుంది</string>
+    <string name="engine_encrypted">AES-256తో ఎన్‌క్రిప్ట్ చేయబడింది</string>
+    <string name="engine_encrypted_restricted">AES-256తో ఎన్‌క్రిప్ట్ చేయబడింది, %1$s అనుమతించవద్దని రీడర్‌లను కోరుతుంది</string>
+    <string name="engine_password_add_failed">పాస్‌వర్డ్‌ను జోడించడం సాధ్యం కాలేదు.</string>
+    <string name="engine_title_remove_password">పాస్‌వర్డ్‌ను తీసివేయి</string>
+    <string name="engine_password_needed">ఈ డాక్యుమెంట్‌ను అన్‌లాక్ చేయడానికి Sheafకి దాని పాస్‌వర్డ్ కావాలి.</string>
+    <string name="engine_unlocked">పాస్‌వర్డ్ లేకుండా తెరుచుకుంటుంది</string>
+    <string name="engine_password_wrong">ఆ పాస్‌వర్డ్‌తో ఈ డాక్యుమెంట్ తెరుచుకోలేదు.</string>
+    <string name="engine_password_remove_failed">పాస్‌వర్డ్‌ను తీసివేయడం సాధ్యం కాలేదు.</string>
+
+    <!-- Pages per sheet -->
+    <plurals name="engine_title_nup">
+        <item quantity="one">ఒక్కో షీట్‌కు %d పేజీ</item>
+        <item quantity="other">ఒక్కో షీట్‌కు %d పేజీలు</item>
+    </plurals>
+    <string name="engine_progress_laying_out">%1$s అమరుస్తోంది</string>
+    <string name="engine_nup_detail">%1$s, %3$s పేపర్‌లోని %2$s పై</string>
+    <plurals name="engine_count_sheets">
+        <item quantity="one">%d షీట్</item>
+        <item quantity="other">%d షీట్‌లు</item>
+    </plurals>
+
+    <!-- Split by size -->
+    <string name="engine_title_split_size">%1$s లోపు భాగాలుగా విభజించు</string>
+    <string name="engine_split_limit_small">పరిమితి కనీసం 1 MB ఉండాలి.</string>
+    <string name="engine_split_already_under">ఈ డాక్యుమెంట్ ఇప్పటికే %1$s లోపు ఉంది, కాబట్టి మార్చలేదు.</string>
+    <string name="engine_progress_measuring">ఎక్కడ విభజించాలో కొలుస్తోంది</string>
+    <string name="engine_progress_measuring_pages">కొలుస్తోంది: %2$d పేజీలలో %1$d ఉంచబడ్డాయి</string>
+    <string name="engine_no_pages">ఈ డాక్యుమెంట్‌లో పేజీలు లేవు.</string>
+    <string name="engine_progress_writing_part">%2$dలో %1$dవ భాగాన్ని రాస్తోంది</string>
+    <string name="engine_split_part_page">పేజీ %1$d</string>
+    <string name="engine_split_part_pages">పేజీలు %1$d-%2$d</string>
+    <string name="engine_split_part_over">%1$s - ఈ ఒక్క పేజీయే %2$s కంటే పెద్దది</string>
+    <string name="engine_split_part_failed">ఈ భాగాన్ని రాయడం సాధ్యం కాలేదు.</string>
+
+    <!-- Extract images -->
+    <string name="engine_title_extract_images">ఇమేజ్‌లను సంగ్రహించు</string>
+    <string name="engine_progress_page_of">%2$dలో %1$dవ పేజీ</string>
+    <string name="engine_extract_images_none">ఈ డాక్యుమెంట్‌లో ఇమేజ్‌లు ఏవీ లేవు. పేజీలనే చిత్రాలుగా కావాలంటే, \"PDF నుండి ఇమేజ్‌లు\"ను ఉపయోగించండి.</string>
+
+    <!-- Metadata, clean -->
+    <string name="engine_title_strip_metadata">మెటాడేటాను తీసివేయి</string>
+    <string name="engine_title_edit_details">వివరాలను ఎడిట్ చేయి</string>
+    <string name="engine_progress_writing">%1$s రాస్తోంది</string>
+    <string name="engine_metadata_stripped">టైటిల్, రచయిత, తేదీలు, ప్రొడ్యూసర్ తీసివేయబడ్డాయి</string>
+    <string name="engine_metadata_updated">వివరాలు అప్‌డేట్ చేయబడ్డాయి</string>
+    <string name="engine_title_clean">దాగి ఉన్న డేటాను క్లీన్ చేయి</string>
+    <string name="engine_progress_cleaning">%1$s క్లీన్ చేస్తోంది</string>
+    <string name="engine_clean_nothing">దాగి ఉన్నది ఏదీ కనిపించలేదు; కాపీ అదే డాక్యుమెంట్</string>
+    <string name="engine_clean_details">వివరాలు</string>
+    <string name="engine_clean_xmp">వాటి దాగి ఉన్న XMP కాపీ</string>
+    <string name="engine_clean_private">ప్రైవేట్ ఎడిటింగ్ డేటా</string>
+    <string name="engine_clean_removed">తీసివేయబడినవి: %1$s</string>
+    <plurals name="engine_clean_scripts">
+        <item quantity="one">%d స్క్రిప్ట్</item>
+        <item quantity="other">%d స్క్రిప్ట్‌లు</item>
+    </plurals>
+    <plurals name="engine_clean_attachments">
+        <item quantity="one">%d అటాచ్ చేసిన ఫైల్</item>
+        <item quantity="other">%d అటాచ్ చేసిన ఫైల్‌లు</item>
+    </plurals>
+    <plurals name="engine_clean_comments">
+        <item quantity="one">%d కామెంట్</item>
+        <item quantity="other">%d కామెంట్‌లు</item>
+    </plurals>
+    <plurals name="engine_clean_thumbnails">
+        <item quantity="one">%d పేజీ థంబ్‌నెయిల్</item>
+        <item quantity="other">%d పేజీ థంబ్‌నెయిల్‌లు</item>
+    </plurals>
+
+    <!-- Page labels, background -->
+    <string name="engine_title_remove_labels">పేజీ లేబుల్‌లను తీసివేయి</string>
+    <string name="engine_title_labels">పేజీ లేబుల్‌లు</string>
+    <string name="engine_progress_labelling">%1$sకి లేబుల్‌లు వేస్తోంది</string>
+    <string name="engine_labels_removed">పేజీ లేబుల్‌లు తీసివేయబడ్డాయి; రీడర్‌లు మళ్లీ మొదటి పేజీ నుండి లెక్కిస్తాయి</string>
+    <plurals name="engine_labels_front">
+        <item quantity="one">మొదటి పేజీకి %1$s నుండి %2$s వరకు</item>
+        <item quantity="other">మొదటి %3$d పేజీలకు %1$s నుండి %2$s వరకు</item>
+    </plurals>
+    <string name="engine_labels_range">%1$s నుండి %2$s వరకు</string>
+    <string name="engine_labels_then">%1$s, ఆపై %2$s</string>
+    <string name="engine_title_background">పేజీ బ్యాక్‌గ్రౌండ్</string>
+    <string name="engine_progress_colouring">%1$sకి రంగు వేస్తోంది</string>
+    <plurals name="engine_all_pages">
+        <item quantity="one">మొత్తం %d పేజీ</item>
+        <item quantity="other">మొత్తం %d పేజీలు</item>
+    </plurals>
+    <string name="engine_background_detail">%1$s వెనుక బ్యాక్‌గ్రౌండ్</string>
+
+    <!-- Attachments -->
+    <string name="engine_title_extract_attachments">అటాచ్‌మెంట్‌లను సంగ్రహించు</string>
+    <string name="engine_title_attach">ఫైల్‌లను అటాచ్ చేయి</string>
+    <string name="engine_attach_pdf_first">మొదటి ఫైల్ PDF అయి ఉండాలి.</string>
+    <string name="engine_progress_reading_attachments">అటాచ్‌మెంట్‌లను చదువుతోంది</string>
+    <string name="engine_attached_to">%1$sకి అటాచ్ చేయబడింది</string>
+    <string name="engine_attach_nothing">PDF తర్వాత అటాచ్ చేయాల్సిన ఫైల్‌లను జోడించండి.</string>
+    <plurals name="engine_progress_attaching">
+        <item quantity="one">%d ఫైల్‌ను అటాచ్ చేస్తోంది</item>
+        <item quantity="other">%d ఫైల్‌లను అటాచ్ చేస్తోంది</item>
+    </plurals>
+    <string name="engine_attached_one">%1$s అటాచ్ చేయబడింది</string>
+    <plurals name="engine_attached_many">
+        <item quantity="one">%1$d ఫైల్ అటాచ్ చేయబడింది: %2$s</item>
+        <item quantity="other">%1$d ఫైల్‌లు అటాచ్ చేయబడ్డాయి: %2$s</item>
+    </plurals>
+
+    <!-- Bookmarks -->
+    <string name="engine_title_remove_bookmarks">బుక్‌మార్క్‌లను తీసివేయి</string>
+    <string name="engine_title_bookmarks">బుక్‌మార్క్‌లు</string>
+    <string name="engine_progress_writing_bookmarks">బుక్‌మార్క్‌లను రాస్తోంది</string>
+    <string name="engine_bookmarks_removed">బుక్‌మార్క్‌లు తీసివేయబడ్డాయి</string>
+    <plurals name="engine_bookmarks_written">
+        <item quantity="one">%d బుక్‌మార్క్ రాయబడింది</item>
+        <item quantity="other">%d బుక్‌మార్క్‌లు రాయబడ్డాయి</item>
+    </plurals>
+    <string name="engine_bookmarks_nested">%1$s, ఒకదానిలో ఒకటిగా</string>
+
+    <!-- Make searchable -->
+    <string name="engine_title_ocr">సెర్చ్ చేయగలిగేలా చేయి</string>
+    <string name="engine_title_ocr_script">సెర్చ్ చేయగలిగేలా చేయి (%1$s)</string>
+    <string name="engine_ocr_unavailable">ఈ పరికరంలో టెక్స్ట్ గుర్తింపు అందుబాటులో లేదు.</string>
+    <string name="engine_progress_reading_page">%2$dలో %1$dవ పేజీని చదువుతోంది</string>
+    <string name="engine_unreadable_document">ఈ డాక్యుమెంట్‌ను చదవడం సాధ్యం కాలేదు.</string>
+    <string name="engine_ocr_no_text">ఈ డాక్యుమెంట్‌లో టెక్స్ట్ ఏదీ కనిపించలేదు. ఇది స్కాన్ కాకుండా ఇప్పటికే టెక్స్ట్ అయితే, దీన్ని ఇలాగే సెర్చ్ చేయవచ్చు.</string>
+    <string name="engine_ocr_nothing_placed">పేజీపై ఏదీ ఉంచడం సాధ్యం కాలేదు.</string>
+    <string name="engine_progress_writing_page">%2$dలో %1$dవ పేజీని రాస్తోంది</string>
+    <plurals name="engine_ocr_detail">
+        <item quantity="one">%2$d పేజీలలో %1$d పేజీలపై టెక్స్ట్ కనిపించింది - %3$d లైన్‌ను ఇప్పుడు ఎంచుకోవచ్చు</item>
+        <item quantity="other">%2$d పేజీలలో %1$d పేజీలపై టెక్స్ట్ కనిపించింది - %3$d లైన్‌లను ఇప్పుడు ఎంచుకోవచ్చు</item>
+    </plurals>
+    <string name="engine_ocr_write_failed">టెక్స్ట్ లేయర్‌ను రాయడం సాధ్యం కాలేదు.</string>
+
+    <!-- Extract text -->
+    <string name="engine_title_extract_text">టెక్స్ట్‌ను సంగ్రహించు</string>
+    <plurals name="engine_extract_text_no_match">
+        <item quantity="one">\"%1$s\"కి సరిపోయే పేజీలు ఏవీ లేవు. ఈ డాక్యుమెంట్‌లో %2$d పేజీ ఉంది.</item>
+        <item quantity="other">\"%1$s\"కి సరిపోయే పేజీలు ఏవీ లేవు. ఈ డాక్యుమెంట్‌లో %2$d పేజీలు ఉన్నాయి.</item>
+    </plurals>
+    <plurals name="engine_progress_reading_pages">
+        <item quantity="one">%d పేజీని చదువుతోంది</item>
+        <item quantity="other">%d పేజీలను చదువుతోంది</item>
+    </plurals>
+    <string name="engine_extract_text_none">ఈ డాక్యుమెంట్‌లో టెక్స్ట్ ఏదీ లేదు. ఇది బహుశా స్కాన్ కావచ్చు - ముందుగా దీనిపై \"సెర్చ్ చేయగలిగేలా చేయి\"ని అమలు చేసి, మళ్లీ ప్రయత్నించండి.</string>
+    <string name="engine_words_from_pages">%2$s నుండి %1$s</string>
+    <plurals name="engine_words">
+        <item quantity="one">%d పదం</item>
+        <item quantity="other">%d పదాలు</item>
+    </plurals>
+
+    <!-- Archive copy -->
+    <string name="engine_title_pdfa">ఆర్కైవ్ కాపీ (PDF/A)</string>
+    <string name="engine_progress_archiving">%1$s ఆర్కైవ్ చేస్తోంది</string>
+    <string name="engine_pdfa_done">PDF/A-2b ఆర్కైవ్ కాపీ: కలర్ ప్రొఫైల్, ఆర్కైవ్ వివరాలు జోడించబడ్డాయి</string>
+    <plurals name="engine_pdfa_scripts">
+        <item quantity="one">%d స్క్రిప్ట్ లేదా యాక్షన్</item>
+        <item quantity="other">%d స్క్రిప్ట్‌లు, యాక్షన్‌లు</item>
+    </plurals>
+    <string name="engine_list_and"> మరియు </string>
+    <string name="engine_clause_separator">; </string>
+    <string name="engine_pdfa_taken_out">ప్రమాణం కోరినట్లుగా %1$s తీసివేయబడ్డాయి</string>
+    <string name="engine_pdfa_unlocked">ఆర్కైవ్‌లు అందరికీ తెరుచుకోవాలి కాబట్టి పాస్‌వర్డ్ తీసివేయబడింది</string>
+    <plurals name="engine_pdfa_fonts_missing">
+        <item quantity="one">ఫైల్ ఉపయోగించే %d ఫాంట్ దానిలో లేదు, కాబట్టి కఠినమైన చెకర్ దాన్ని గుర్తిస్తుంది; దాన్ని తయారు చేసిన ప్రోగ్రామ్ నుండి ఫాంట్‌లను ఎంబెడ్ చేసి మళ్లీ సేవ్ చేస్తే సరిపోతుంది</item>
+        <item quantity="other">ఫైల్ ఉపయోగించే %d ఫాంట్‌లు దానిలో లేవు, కాబట్టి కఠినమైన చెకర్ దాన్ని గుర్తిస్తుంది; దాన్ని తయారు చేసిన ప్రోగ్రామ్ నుండి ఫాంట్‌లను ఎంబెడ్ చేసి మళ్లీ సేవ్ చేస్తే సరిపోతుంది</item>
+    </plurals>
+
+    <!-- Create a form -->
+    <string name="engine_title_create_form">ఫారమ్‌ను సృష్టించు</string>
+    <string name="engine_form_nothing">ముందుగా పేజీపై ఒక ఫీల్డ్‌ను గీసి, దానికి పేరు ఇవ్వండి.</string>
+    <plurals name="engine_progress_adding_fields">
+        <item quantity="one">%d ఫీల్డ్‌ను జోడిస్తోంది</item>
+        <item quantity="other">%d ఫీల్డ్‌లను జోడిస్తోంది</item>
+    </plurals>
+    <plurals name="engine_form_detail">
+        <item quantity="one">%1$s జోడించబడింది (%2$d ఫీల్డ్): ఏ PDF రీడర్‌లోనైనా ఎవరైనా దీన్ని నింపవచ్చు</item>
+        <item quantity="other">%1$s జోడించబడ్డాయి (%2$d ఫీల్డ్‌లు): ఏ PDF రీడర్‌లోనైనా ఎవరైనా దీన్ని నింపవచ్చు</item>
+    </plurals>
+    <string name="engine_field_text">టెక్స్ట్ బాక్స్</string>
+    <string name="engine_field_multiline">పేరాగ్రాఫ్ బాక్స్</string>
+    <string name="engine_field_check">టిక్ బాక్స్</string>
+    <string name="engine_field_choice">డ్రాప్-డౌన్ లిస్ట్</string>
+    <plurals name="engine_field_count_text">
+        <item quantity="one">%d టెక్స్ట్ బాక్స్</item>
+        <item quantity="other">%d టెక్స్ట్ బాక్స్‌లు</item>
+    </plurals>
+    <plurals name="engine_field_count_multiline">
+        <item quantity="one">%d పేరాగ్రాఫ్ బాక్స్</item>
+        <item quantity="other">%d పేరాగ్రాఫ్ బాక్స్‌లు</item>
+    </plurals>
+    <plurals name="engine_field_count_check">
+        <item quantity="one">%d టిక్ బాక్స్</item>
+        <item quantity="other">%d టిక్ బాక్స్‌లు</item>
+    </plurals>
+    <plurals name="engine_field_count_choice">
+        <item quantity="one">%d డ్రాప్-డౌన్ లిస్ట్</item>
+        <item quantity="other">%d డ్రాప్-డౌన్ లిస్ట్‌లు</item>
+    </plurals>
+
+    <!-- Digital signature -->
+    <string name="engine_title_digital_sign">డిజిటల్ సంతకం</string>
+    <string name="engine_certificate_missing">మీ సర్టిఫికెట్ ఫైల్‌ను (.pfx లేదా .p12) జోడించండి.</string>
+    <string name="engine_progress_signing">%1$sపై సంతకం చేస్తోంది</string>
+    <string name="engine_signature_first_page">మొదటి పేజీ దిగువన చూపబడుతుంది</string>
+    <string name="engine_signature_last_page">చివరి పేజీ దిగువన చూపబడుతుంది</string>
+    <string name="engine_signature_invisible">పేజీపై కనిపించదు, ఏ రీడర్ సంతకం ప్యానెల్‌లోనైనా జాబితా చేయబడుతుంది</string>
+    <string name="engine_signed_by">%1$s సంతకం చేశారు, సర్టిఫికెట్ %2$s నుండి; %3$s</string>
+    <string name="engine_signed_by_unlocked">%1$s సంతకం చేశారు, సర్టిఫికెట్ %2$s నుండి; %3$s. సంతకం చేసిన కాపీ పాస్‌వర్డ్ లేకుండా తెరుచుకుంటుంది: మళ్లీ లాక్ చేస్తే సంతకం చెల్లకుండా పోతుంది</string>
+
+    <!-- Resize photo -->
+    <string name="engine_title_resize_photo">ఫోటోను %1$sకి మార్చు</string>
+    <string name="engine_progress_fitting_one">%1$s లోపుకు సరిపెడుతోంది…</string>
+    <string name="engine_progress_fitting_many">%2$dలో %1$dవ చిత్రాన్ని %3$s లోపుకు సరిపెడుతోంది</string>
+    <string name="engine_photo_out_of_memory">ఈ చిత్రం ఈ ఫోన్ మెమరీకి చాలా పెద్దది.</string>
+    <string name="engine_photo_unreadable">ఈ చిత్రాన్ని చదవడం సాధ్యం కాలేదు. దీన్ని JPEG లేదా PNGగా సేవ్ చేసి, మళ్లీ ప్రయత్నించండి.</string>
+    <string name="engine_photo_not_image">ఇది ఈ టూల్ చదవగలిగే ఇమేజ్ కాదు. JPEG, PNG, WebP, GIF, BMP లేదా HEICను ఉపయోగించండి.</string>
+    <string name="engine_photo_already_fine">ఈ ఫోటో ఇప్పటికే %1$s JPEG, %2$s లోపు, %3$d × %4$d px, దీనిలో దాగి ఉన్నది ఏదీ లేదు. మార్చడానికి ఏమీ లేదు.</string>
+    <string name="engine_photo_stripped">%1$s → %2$s, %3$s లోపు; %4$d × %5$d px, చిత్రాన్ని మార్చలేదు%6$s</string>
+    <string name="engine_photo_too_small_kept">ఈ చిత్రం స్పష్టంగా ఉండటానికి %1$s చాలా తక్కువ, ఇది ఇప్పటికే వీలైనంత చిన్నగా ఉంది (%2$s). ఫారమ్ అనుమతిస్తే పెద్ద సైజ్‌ను ఎంచుకోండి.</string>
+    <string name="engine_photo_smallest_clear">%1$s → %2$s. ఈ చిత్రం స్పష్టంగా ఉండటానికి %3$s చాలా తక్కువ: ఇంకా సరిగ్గా కనిపించే అతి చిన్న సైజ్ ఇదే, %4$d × %5$d px%6$s</string>
+    <string name="engine_photo_exact_too_small">%1$s → %2$s. %4$d × %5$d px స్పష్టంగా ఉండటానికి %3$s చాలా తక్కువ: ఆ సైజ్‌లో అతి చిన్నది ఇదే. తక్కువ పిక్సెల్‌లు టైప్ చేయండి, లేదా చిన్నదవ్వడానికి \"ఆకారాన్ని అలాగే ఉంచు\"ను ఎంచుకోండి%6$s</string>
+    <string name="engine_photo_dims">%1$d × %2$d px</string>
+    <string name="engine_photo_dims_passport">పాస్‌పోర్ట్ ఆకారం, %1$d × %2$d px</string>
+    <string name="engine_photo_made_smaller">, సరిపోయేలా చిన్నదిగా చేయబడింది (ఇంతకు ముందు %1$d × %2$d)</string>
+    <string name="engine_photo_made_smaller_than">, సరిపోయేలా %1$d × %2$d కంటే చిన్నదిగా చేయబడింది</string>
+    <string name="engine_photo_it_was"> (ఇంతకు ముందు %1$d × %2$d)</string>
+    <string name="engine_photo_not_enlarged">, %1$d × %2$dకి పెద్దది చేయలేదు: ఫోటోలో అన్ని పిక్సెల్‌లు లేవు</string>
+    <string name="engine_photo_turned_upright">, నిటారుగా తిప్పబడింది</string>
+    <string name="engine_photo_now_jpeg">, ఇప్పుడు JPEG</string>
+    <string name="engine_photo_done">%1$s → %2$s, %3$s లోపు; %4$s%5$s</string>
+    <string name="engine_photo_min_size">కనీసం 2 KB సైజ్‌ను ఎంచుకోండి.</string>
+    <string name="engine_photo_pixels_range">%1$d నుండి %2$d పిక్సెల్‌ల మధ్య వెడల్పు, ఎత్తును టైప్ చేయండి.</string>
+    <string name="engine_photo_no_avif">ఈ ఫోన్ AVIF ఇమేజ్‌లను చదవలేదు. ముందుగా దీన్ని JPEG లేదా PNGగా సేవ్ చేయండి.</string>
+    <string name="engine_photo_no_heic">ఈ ఫోన్ ఈ HEIC ఫోటోను చదవలేదు. ఇది వచ్చిన ఫోన్ నుండి JPEGగా షేర్ చేసి, మళ్లీ జోడించండి.</string>
+    <string name="engine_photo_hidden_any">; ఏవైనా లొకేషన్, కెమెరా వివరాలు ఉంటే తీసివేయబడ్డాయి</string>
+    <string name="engine_photo_hidden_location">; లొకేషన్, కెమెరా వివరాలు తీసివేయబడ్డాయి</string>
+    <string name="engine_photo_hidden_camera">; కెమెరా వివరాలు తీసివేయబడ్డాయి</string>
+
+    <!-- Fill in a form -->
+    <string name="engine_title_fill_seal">ఫారమ్‌ను నింపి సీల్ చేయి</string>
+    <string name="engine_title_fill">ఫారమ్‌ను నింపు</string>
+    <string name="engine_fill_nothing">ముందుగా కనీసం ఒక ఫీల్డ్‌ను నింపండి.</string>
+    <string name="engine_progress_filling">%1$s నింపుతోంది</string>
+    <plurals name="engine_fields_filled">
+        <item quantity="one">%d ఫీల్డ్ నింపబడింది</item>
+        <item quantity="other">%d ఫీల్డ్‌లు నింపబడ్డాయి</item>
+    </plurals>
+    <string name="engine_fields_sealed">%1$s, మళ్లీ టైప్ చేయలేనట్లు సీల్ చేయబడ్డాయి</string>
+
+    <!-- Edit text -->
+    <string name="engine_title_edit_text">టెక్స్ట్‌ను ఎడిట్ చేయి</string>
+    <string name="engine_edit_text_nothing">ముందుగా టెక్స్ట్ లైన్‌ను ట్యాప్ చేసి మార్చండి.</string>
+    <string name="engine_progress_writing_changes">మార్పులను రాస్తోంది</string>
+    <string name="engine_edit_text_failed">మార్పులను రాయడం సాధ్యం కాలేదు.</string>
+    <plurals name="engine_edit_text_detail">
+        <item quantity="one">%d మార్పు చేయబడింది. పాత పదాలపై రంగు వేయబడింది, తీసివేయలేదు: పదాలను శాశ్వతంగా తీసివేయడానికి \"భాగాలను తీసివేయి\"ని ఉపయోగించండి</item>
+        <item quantity="other">%d మార్పులు చేయబడ్డాయి. పాత పదాలపై రంగు వేయబడింది, తీసివేయలేదు: పదాలను శాశ్వతంగా తీసివేయడానికి \"భాగాలను తీసివేయి\"ని ఉపయోగించండి</item>
+    </plurals>
+    <plurals name="engine_edit_text_detail_pages">
+        <item quantity="one">%2$d పేజీలలో %1$d మార్పు చేయబడింది. పాత పదాలపై రంగు వేయబడింది, తీసివేయలేదు: పదాలను శాశ్వతంగా తీసివేయడానికి \"భాగాలను తీసివేయి\"ని ఉపయోగించండి</item>
+        <item quantity="other">%2$d పేజీలలో %1$d మార్పులు చేయబడ్డాయి. పాత పదాలపై రంగు వేయబడింది, తీసివేయలేదు: పదాలను శాశ్వతంగా తీసివేయడానికి \"భాగాలను తీసివేయి\"ని ఉపయోగించండి</item>
+    </plurals>
+
+    <!-- Edit pictures -->
+    <string name="engine_title_edit_pictures">చిత్రాలను ఎడిట్ చేయి</string>
+    <string name="engine_edit_pictures_nothing">ముందుగా ఒక చిత్రాన్ని తరలించండి, తీసివేయండి లేదా మార్చండి.</string>
+    <string name="engine_progress_changing_pictures">చిత్రాలను మారుస్తోంది</string>
+    <string name="engine_edit_pictures_failed">చిత్రాలను మార్చడం సాధ్యం కాలేదు.</string>
+    <plurals name="engine_pictures_removed">
+        <item quantity="one">%d చిత్రం తీసివేయబడింది</item>
+        <item quantity="other">%d చిత్రాలు తీసివేయబడ్డాయి</item>
+    </plurals>
+    <plurals name="engine_pictures_moved">
+        <item quantity="one">%d చిత్రం తరలించబడింది</item>
+        <item quantity="other">%d చిత్రాలు తరలించబడ్డాయి</item>
+    </plurals>
+    <plurals name="engine_pictures_replaced">
+        <item quantity="one">%d చిత్రం మార్చబడింది</item>
+        <item quantity="other">%d చిత్రాలు మార్చబడ్డాయి</item>
+    </plurals>
+    <plurals name="engine_pictures_missed">
+        <item quantity="one">; %d మార్పు చేయడం సాధ్యం కాలేదు</item>
+        <item quantity="other">; %d మార్పులు చేయడం సాధ్యం కాలేదు</item>
+    </plurals>
+
+    <!-- Recipes -->
+    <string name="engine_recipe_empty">ఈ రెసిపీలో దశలు ఏవీ లేవు.</string>
+    <string name="engine_recipe_step">%2$dలో %1$dవ దశ: %3$s</string>
+    <string name="engine_recipe_unchanged">మార్పు లేదు</string>
+
+    <!-- Choices the PDF layer names -->
+    <string name="engine_watermark_layout_diagonal">ఒకసారి, వికర్ణంగా</string>
+    <string name="engine_watermark_layout_straight">ఒకసారి, అడ్డంగా</string>
+    <string name="engine_watermark_layout_tiled">అంతటా పదేపదే</string>
+    <string name="engine_paper_letter">Letter</string>
+    <string name="engine_paper_legal">Legal</string>
+    <string name="engine_paper_fit_image">ఇమేజ్‌కు సరిపోయేలా</string>
+    <string name="engine_compression_light">తేలికపాటి</string>
+    <string name="engine_compression_balanced">సమతుల్య</string>
+    <string name="engine_compression_strong">బలమైన</string>
+    <string name="engine_ocr_script_latin">ఇంగ్లీష్, ఇతర లాటిన్ లిపులు</string>
+    <string name="engine_ocr_script_devanagari">హిందీ, మరాఠీ, నేపాలీ (దేవనాగరి)</string>
+
+    <!-- Kinds of comment found in a document -->
+    <string name="engine_comment_reply">రిప్లై</string>
+    <string name="engine_comment_note">నోట్</string>
+    <string name="engine_comment_text_box">టెక్స్ట్ బాక్స్</string>
+    <string name="engine_comment_highlight">హైలైట్</string>
+    <string name="engine_comment_underline">అండర్‌లైన్</string>
+    <string name="engine_comment_strikethrough">స్ట్రైక్‌త్రూ</string>
+    <string name="engine_comment_squiggle">వంకర గీత</string>
+    <string name="engine_comment_drawing">డ్రాయింగ్</string>
+    <string name="engine_comment_box">బాక్స్</string>
+    <string name="engine_comment_circle">వృత్తం</string>
+    <string name="engine_comment_line">గీత</string>
+    <string name="engine_comment_shape">ఆకారం</string>
+    <string name="engine_comment_stamp">స్టాంప్</string>
+    <string name="engine_comment_insertion">చొప్పింపు</string>
+    <string name="engine_comment_attached_file">అటాచ్ చేసిన ఫైల్</string>
+    <string name="engine_comment_sound">సౌండ్</string>
+    <string name="engine_comment_media">మీడియా</string>
+    <string name="engine_comment_redaction">తీసివేత గుర్తు</string>
+
+    <!-- What can go wrong in the PDF layer. The first five lead into a detail after the colon. -->
+    <string name="engine_err_password_required">ఈ డాక్యుమెంట్ పాస్‌వర్డ్‌తో రక్షించబడింది.</string>
+    <string name="engine_err_corrupt">ఈ ఫైల్‌ను PDFగా చదవడం సాధ్యం కాలేదు: %1$s</string>
+    <string name="engine_err_unsupported">ఈ డాక్యుమెంట్ Sheaf ఇంకా నిర్వహించలేని ఫీచర్‌ను ఉపయోగిస్తోంది: %1$s</string>
+    <string name="engine_err_out_of_memory">ఈ పరికరంలో ప్రాసెస్ చేయడానికి ఈ డాక్యుమెంట్ చాలా పెద్దది: %1$s</string>
+    <string name="engine_err_io">ఫైల్‌ను చదవడం లేదా రాయడం సాధ్యం కాలేదు: %1$s</string>
+    <string name="engine_err_could_not_be_opened">తెరవడం సాధ్యం కాలేదు</string>
+    <string name="engine_err_unreadable">చదవడం సాధ్యం కాదు</string>
+    <string name="engine_err_could_not_merge">ఈ డాక్యుమెంట్‌ను విలీనం చేయడం సాధ్యం కాలేదు</string>
+    <string name="engine_err_could_not_images">ఈ ఇమేజ్‌లతో PDFను తయారు చేయడం సాధ్యం కాలేదు</string>
+    <string name="engine_err_could_not_receipts">రసీదులను రాయడం సాధ్యం కాలేదు</string>
+    <string name="engine_err_could_not_lay_out">ఈ డాక్యుమెంట్‌ను అమర్చడం సాధ్యం కాలేదు</string>
+    <string name="engine_err_could_not_pictures">పేజీలను చిత్రాలుగా మార్చడం సాధ్యం కాలేదు</string>
+    <string name="engine_err_could_not_open">ఈ డాక్యుమెంట్‌ను తెరవడం సాధ్యం కాలేదు</string>
+    <string name="engine_err_could_not_process">ఈ డాక్యుమెంట్‌ను ప్రాసెస్ చేయడం సాధ్యం కాలేదు</string>
+    <string name="engine_err_merge_locked">\"%1$s\"ను విలీనం చేసే ముందు దాని పాస్‌వర్డ్‌ను తీసివేయండి</string>
+    <string name="engine_err_oom_merging">%1$d డాక్యుమెంట్‌లను విలీనం చేస్తున్నప్పుడు</string>
+    <string name="engine_err_oom_images">%1$d ఇమేజ్‌లతో PDFను తయారు చేస్తున్నప్పుడు</string>
+    <string name="engine_err_oom_page_dpi">%2$d DPI వద్ద పేజీ %1$d</string>
+    <string name="engine_err_oom_page_size">%2$dx%3$d వద్ద పేజీ %1$d</string>
+    <string name="engine_err_oom_page">పేజీ %1$d</string>
+    <string name="engine_err_oom_opening">%1$s తెరుస్తున్నప్పుడు</string>
+    <string name="engine_err_not_an_image">%1$sను ఇమేజ్‌గా చదవడం సాధ్యం కాలేదు</string>
+    <string name="engine_err_image_unreadable">ఇమేజ్‌ను చదవడం సాధ్యం కాలేదు</string>
+    <string name="engine_err_page_not_rendered">పేజీ %1$dను రెండర్ చేయడం సాధ్యం కాలేదు</string>
+    <string name="engine_err_page_not_measured">పేజీ %1$dను కొలవడం సాధ్యం కాలేదు</string>
+    <plurals name="engine_err_page_out_of_range">
+        <item quantity="one">%2$d పేజీ ఉన్న డాక్యుమెంట్‌లో పేజీ %1$d లేదు</item>
+        <item quantity="other">%2$d పేజీల డాక్యుమెంట్‌లో పేజీ %1$d లేదు</item>
+    </plurals>
+    <string name="engine_err_could_not_write">%1$sను రాయడం సాధ్యం కాలేదు</string>
+    <string name="engine_err_not_a_file">%1$s ఫైల్ కాదు</string>
+    <string name="engine_err_platform_encrypted">ప్లాట్‌ఫామ్ రెండరర్ ఎన్‌క్రిప్ట్ చేసిన డాక్యుమెంట్‌లను తెరవలేదు</string>
+    <string name="engine_err_no_form_fields">ఈ డాక్యుమెంట్‌లో ఫారమ్ ఫీల్డ్‌లు ఏవీ లేవు</string>
+    <string name="engine_err_ocr_page">టెక్స్ట్ గుర్తింపు ఈ పేజీని చదవలేకపోయింది</string>
+    <string name="engine_err_nothing_to_merge">విలీనం చేయడానికి ఏమీ లేదు.</string>
+    <string name="engine_err_no_pages_selected">పేజీలు ఏవీ ఎంచుకోలేదు.</string>
+    <string name="engine_err_no_images_selected">ఇమేజ్‌లు ఏవీ ఎంచుకోలేదు.</string>
+    <string name="engine_err_no_such_page">ఈ డాక్యుమెంట్‌లో పేజీ %1$d లేదు.</string>
+    <string name="engine_err_pages_typed_missing">మీరు టైప్ చేసిన పేజీలు ఏవీ ఈ డాక్యుమెంట్‌లో లేవు.</string>
+    <string name="engine_err_password_empty">పాస్‌వర్డ్ ఖాళీగా ఉండకూడదు.</string>
+    <string name="engine_err_nothing_to_restrict">అన్నీ అనుమతించబడ్డాయి, కాబట్టి పరిమితం చేయడానికి ఏమీ లేదు.</string>
+    <string name="engine_err_not_protected">ఈ డాక్యుమెంట్ పాస్‌వర్డ్‌తో రక్షించబడలేదు.</string>
+    <string name="engine_err_words_not_found">ఆ పదాలు కనిపించలేదు. స్కాన్ చేసిన పేజీలో వెతకడానికి టెక్స్ట్ ఉండదు; ముందుగా \"సెర్చ్ చేయగలిగేలా చేయి\"ని అమలు చేయండి.</string>
+    <string name="engine_err_nothing_to_write">రాయడానికి ఏమీ లేదు.</string>
+    <string name="engine_err_draw_field">ముందుగా పేజీపై ఒక ఫీల్డ్‌ను గీయండి.</string>
+    <string name="engine_err_fields_off_page">ఫీల్డ్‌లు ఏవీ ఈ డాక్యుమెంట్‌లోని ఏ పేజీపైనా పడలేదు.</string>
+    <string name="engine_err_not_signed">డాక్యుమెంట్‌పై సంతకం చేయడం సాధ్యం కాలేదు: %1$s</string>
+    <string name="engine_err_signature_not_made">సంతకాన్ని తయారు చేయడం సాధ్యం కాలేదు</string>
+    <string name="engine_err_crop_too_much">అంచుల నుండి అంత కత్తిరిస్తే పేజీ %1$dలో దాదాపు ఏమీ మిగలదు. చిన్న మార్జిన్‌లను ఉపయోగించండి.</string>
+    <string name="engine_err_no_margins">తీసివేయడానికి తెల్లని మార్జిన్‌లు లేవు: పేజీలలోని కంటెంట్ ఇప్పటికే అంచుల వరకు ఉంది, లేదా అవి ఖాళీగా ఉన్నాయి.</string>
+    <string name="engine_err_nothing_marked_removal">తీసివేయడానికి ఏదీ గుర్తించలేదు.</string>
+    <string name="engine_err_nothing_marked">ఏ పేజీపైనా ఏదీ గుర్తించలేదు.</string>
+    <string name="engine_err_no_header_footer">జోడించడానికి హెడర్ లేదా ఫుటర్ టెక్స్ట్ లేదు.</string>
+    <string name="engine_err_all_blank">అలా చేస్తే ప్రతి పేజీ ఖాళీ పేజీగా మారిపోతుంది.</string>
+    <string name="engine_err_insert_empty">చొప్పించాల్సిన డాక్యుమెంట్‌లో పేజీలు లేవు.</string>
+    <string name="engine_err_pick_attachment">అటాచ్ చేయడానికి కనీసం ఒక ఫైల్‌ను ఎంచుకోండి.</string>
+    <string name="engine_err_no_attachments">ఈ డాక్యుమెంట్‌కు ఫైల్‌లు ఏవీ అటాచ్ చేయలేదు.</string>
+    <string name="engine_err_attachments_unreadable">ఈ డాక్యుమెంట్ నుండి అటాచ్ చేసిన ఫైల్‌లను చదవడం సాధ్యం కాలేదు.</string>
+    <string name="engine_err_no_pages_to_write">రాయడానికి పేజీలు లేవు.</string>
+    <string name="engine_err_pictures_not_found">ఆ చిత్రాలు పేజీ డ్రాయింగ్‌లో కనిపించలేదు, కాబట్టి ఏదీ మార్చలేదు. డ్రాయింగ్ లేదా స్కాన్‌లో భాగమైన చిత్రాన్ని విడిగా ఎడిట్ చేయలేము.</string>
+    <string name="engine_err_certificate_password">అది సర్టిఫికెట్ పాస్‌వర్డ్ కాదు.</string>
+    <string name="engine_err_certificate_unreadable">ఇది Sheaf చదవగలిగే సర్టిఫికెట్ ఫైల్ కాదు: .pfx లేదా .p12 ఫైల్ కావాలి.</string>
+    <string name="engine_err_certificate_no_key">ఈ సర్టిఫికెట్ ఫైల్‌లో ప్రైవేట్ కీ లేదు, కాబట్టి దీనితో సంతకం చేయలేము.</string>
+    <string name="engine_err_certificate_empty">ఈ సర్టిఫికెట్ ఫైల్‌లో సర్టిఫికెట్ లేదు.</string>
+    <string name="engine_err_certificate_expired">ఈ సర్టిఫికెట్ గడువు %1$sన ముగిసింది. రీడర్ సంతకాన్ని చెల్లనిదిగా చూపుతుంది, కాబట్టి దీన్ని ఉపయోగించలేదు. దీన్ని జారీ చేసిన వారి వద్ద రెన్యూ చేయించుకోండి.</string>
+    <string name="engine_err_not_word">ఇది Word ఫైల్ కాదు: దీనిలో డాక్యుమెంట్ లేదు.</string>
+    <string name="engine_err_not_spreadsheet">ఇది స్ప్రెడ్‌షీట్ కాదు: దీనిలో షీట్‌లు లేవు.</string>
+    <string name="engine_err_deck_empty">డెక్‌లో కనీసం ఒక స్లయిడ్ ఉండాలి.</string>
+</resources>

@@ -2,6 +2,7 @@ package com.layerbit.sheaf.convert
 
 import com.layerbit.sheaf.pdf.Block
 import com.layerbit.sheaf.pdf.FlowDocument
+import com.layerbit.sheaf.text.Strings
 import java.io.File
 
 /**
@@ -473,7 +474,7 @@ object PptxWriter {
     private const val EMU_PER_POINT = 12700
 
     fun write(title: String, slides: List<SlideSpec>, output: File) {
-        require(slides.isNotEmpty()) { "A deck needs at least one slide." }
+        require(slides.isNotEmpty()) { Strings.get(com.layerbit.sheaf.R.string.engine_err_deck_empty) }
         val first = slides.first()
         val slideWidth = (first.widthPoints.coerceIn(72f, 4000f) * EMU_PER_POINT).toLong()
         val slideHeight = (first.heightPoints.coerceIn(72f, 4000f) * EMU_PER_POINT).toLong()

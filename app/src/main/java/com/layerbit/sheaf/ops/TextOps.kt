@@ -1,6 +1,7 @@
 package com.layerbit.sheaf.ops
 
 import android.graphics.Bitmap
+import com.layerbit.sheaf.R
 import com.layerbit.sheaf.files.SheafFile
 import com.layerbit.sheaf.pdf.BitmapBudget
 import com.layerbit.sheaf.pdf.PageSelection
@@ -8,6 +9,7 @@ import com.layerbit.sheaf.pdf.OcrScript
 import com.layerbit.sheaf.pdf.PdfException
 import com.layerbit.sheaf.pdf.PdfInput
 import com.layerbit.sheaf.pdf.TextPlacement
+import com.layerbit.sheaf.text.Strings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -26,7 +28,11 @@ import kotlinx.coroutines.withContext
 class OcrOp(private val dpi: Int = DEFAULT_DPI, private val script: OcrScript = OcrScript.LATIN) : Op {
 
     override val tool = ToolId.OCR
-    override val title = if (script == OcrScript.LATIN) "Make searchable" else "Make searchable (${script.label})"
+    override val title = if (script == OcrScript.LATIN) {
+        Strings.get(R.string.engine_title_ocr)
+    } else {
+        Strings.get(R.string.engine_title_ocr_script, script.label)
+    }
     override val arity = Op.Arity.EachIndependently
 
     override suspend fun run(
@@ -37,7 +43,7 @@ class OcrOp(private val dpi: Int = DEFAULT_DPI, private val script: OcrScript = 
         val ocr = context.ocr
         if (!ocr.available) {
             return@withContext listOf(
-                OpOutcome.Failed("", "Text recognition is not available on this device.")
+                OpOutcome.Failed("", Strings.get(R.string.engine_ocr_unavailable))
             )
         }
 
@@ -50,7 +56,7 @@ class OcrOp(private val dpi: Int = DEFAULT_DPI, private val script: OcrScript = 
             val info = try {
                 context.surgeon.inspect(pdfInput)
             } catch (e: PdfException) {
-                outcomes += OpOutcome.Failed(input.displayName, e.message ?: "Unreadable.")
+                outcomes += OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_unreadable))
                 continue
             }
 
@@ -78,7 +84,7 @@ class OcrOp(private val dpi: Int = DEFAULT_DPI, private val script: OcrScript = 
                 engine.open(input.file, context.passwords[input.file.path]).use { doc ->
                     for (index in 0 until doc.pageCount) {
                         context.checkCancelled()
-                        onProgress(Progress(index, total, "Reading page ${index + 1} of ${doc.pageCount}"))
+                        onProgress(Progress(index, total, Strings.get(R.string.engine_progress_reading_page, index + 1, doc.pageCount)))
 
                         val size = doc.pageSize(index)
                         val width = BitmapBudget.widthForDpi(size.widthPoints, dpi)
@@ -120,7 +126,7 @@ class OcrOp(private val dpi: Int = DEFAULT_DPI, private val script: OcrScript = 
             } catch (e: OpCancelled) {
                 throw e
             } catch (e: Exception) {
-                e.message ?: "This document could not be read."
+                e.message ?: Strings.get(R.string.engine_unreadable_document)
             } finally {
                 // Per document, not per batch: the next file's pages are a different size as
                 // often as not, and a sheet carried across would be refused anyway.
@@ -137,10 +143,9 @@ class OcrOp(private val dpi: Int = DEFAULT_DPI, private val script: OcrScript = 
                 outcomes += OpOutcome.Skipped(
                     input.displayName,
                     if (recognised == 0) {
-                        "No text was found in this document. If it is already text rather than " +
-                            "a scan, it is searchable as it is."
+                        Strings.get(R.string.engine_ocr_no_text)
                     } else {
-                        "Nothing could be placed on the page."
+                        Strings.get(R.string.engine_ocr_nothing_placed)
                     }
                 )
                 continue
@@ -150,7 +155,7 @@ class OcrOp(private val dpi: Int = DEFAULT_DPI, private val script: OcrScript = 
             outcomes += try {
                 context.surgeon.addTextLayer(pdfInput, layers, output) { done, count ->
                     context.checkCancelled()
-                    onProgress(Progress(info.pageCount + done, total, "Writing page $done of $count"))
+                    onProgress(Progress(info.pageCount + done, total, Strings.get(R.string.engine_progress_writing_page, done, count)))
                 }
                 OpOutcome.Produced(
                     SheafFile(
@@ -158,16 +163,17 @@ class OcrOp(private val dpi: Int = DEFAULT_DPI, private val script: OcrScript = 
                         "${input.baseName} searchable.pdf",
                         SheafFile.Origin.Derived("searchable")
                     ),
-                    "Text found on $recognised of ${info.pageCount} pages - " +
-                        "${layers.values.sumOf { it.size }} lines are now selectable"
+                    layers.values.sumOf { it.size }.let { lines ->
+                        Strings.plural(R.plurals.engine_ocr_detail, lines, recognised, info.pageCount, lines)
+                    }
                 )
             } catch (e: PdfException) {
                 output.delete()
-                OpOutcome.Failed(input.displayName, e.message ?: "The text layer could not be written.")
+                OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_ocr_write_failed))
             }
         }
 
-        onProgress(Progress(1, 1, "Done"))
+        onProgress(Progress(1, 1, Strings.get(R.string.engine_done)))
         outcomes
     }
 
@@ -194,7 +200,7 @@ class OcrOp(private val dpi: Int = DEFAULT_DPI, private val script: OcrScript = 
 class ExtractTextOp(private val pageSpec: String? = null) : Op {
 
     override val tool = ToolId.EXTRACT_TEXT
-    override val title = "Extract text"
+    override val title = Strings.get(R.string.engine_title_extract_text)
     override val arity = Op.Arity.ExactlyOne
 
     override suspend fun run(
@@ -203,13 +209,13 @@ class ExtractTextOp(private val pageSpec: String? = null) : Op {
         onProgress: (Progress) -> Unit
     ): List<OpOutcome> = withContext(Dispatchers.IO) {
         val input = inputs.firstOrNull()
-            ?: return@withContext listOf(OpOutcome.Failed("", "No document was selected."))
+            ?: return@withContext listOf(OpOutcome.Failed("", Strings.get(R.string.engine_no_document)))
 
         val pdfInput = PdfInput(input.file, context.passwords[input.file.path])
         val info = try {
             context.surgeon.inspect(pdfInput)
         } catch (e: PdfException) {
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Unreadable."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_unreadable)))
         }
 
         val pages = if (pageSpec.isNullOrBlank()) {
@@ -221,16 +227,16 @@ class ExtractTextOp(private val pageSpec: String? = null) : Op {
             return@withContext listOf(
                 OpOutcome.Failed(
                     input.displayName,
-                    "No pages matched \"$pageSpec\". This document has ${info.pageCount} pages."
+                    Strings.plural(R.plurals.engine_extract_text_no_match, info.pageCount, pageSpec.orEmpty(), info.pageCount)
                 )
             )
         }
 
-        onProgress(Progress(0, 1, "Reading ${pages.size} pages"))
+        onProgress(Progress(0, 1, Strings.plural(R.plurals.engine_progress_reading_pages, pages.size)))
         val byPage = try {
             context.surgeon.extractText(pdfInput, pages)
         } catch (e: PdfException) {
-            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: "Failed."))
+            return@withContext listOf(OpOutcome.Failed(input.displayName, e.message ?: Strings.get(R.string.engine_failed)))
         }
 
         val body = pages.joinToString("\n\n") { index ->
@@ -242,15 +248,14 @@ class ExtractTextOp(private val pageSpec: String? = null) : Op {
             return@withContext listOf(
                 OpOutcome.Skipped(
                     input.displayName,
-                    "This document has no text in it. It is probably a scan - run Make " +
-                        "searchable on it first, then try again."
+                    Strings.get(R.string.engine_extract_text_none)
                 )
             )
         }
 
         val output = context.workspace.newOutput(input.baseName, "text", "txt")
         output.writeText(body)
-        onProgress(Progress(1, 1, "Done"))
+        onProgress(Progress(1, 1, Strings.get(R.string.engine_done)))
 
         val words = body.split(Regex("\\s+")).count { it.isNotBlank() }
         listOf(
@@ -261,7 +266,11 @@ class ExtractTextOp(private val pageSpec: String? = null) : Op {
                     origin = SheafFile.Origin.Derived("text"),
                     mimeType = SheafFile.MIME_TEXT
                 ),
-                "$words words from ${pages.size} ${if (pages.size == 1) "page" else "pages"}"
+                Strings.get(
+                    R.string.engine_words_from_pages,
+                    Strings.plural(R.plurals.engine_words, words),
+                    Strings.plural(R.plurals.engine_count_pages, pages.size)
+                )
             )
         )
     }
